@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Designing Parallel Programs</title>
-    <meta content="Designing a parallel program means turning one large computation into smaller units of work that can run at the same time." name="description" />
+    <meta content="Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs"
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs",
-            "description": "Designing a parallel program means turning one large computation into smaller units of work that can run at the same time.",
-            "dateModified": "2026-07-11"
+            "description": "Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -191,7 +191,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: July 11, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -211,59 +211,67 @@
                     </button></div>
             </div>
             <h2 id="designing-parallel-programs">Designing Parallel Programs</h2>
-            <p>Designing a parallel program means turning one large computation into smaller units of work that can run at the same time. A good design does more than create many tasks: it keeps processors busy, limits communication, preserves data locality, and maps work onto hardware in a way that reduces waiting.</p>
-            <p>A useful design framework is <strong>PCAM</strong>:</p>
+            <p>Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate. A good design does more than create many tasks: it exposes enough parallelism, keeps processors busy, limits communication and synchronization, preserves data locality, and maps work onto hardware in a way that reduces waiting.</p>
+            <p>A useful design framework is <strong>PCAM</strong>, which has four steps.</p>
             <ol>
                 <li><strong>Partitioning</strong> — split the computation and data into tasks.</li>
                 <li><strong>Communication</strong> — identify what data tasks must exchange.</li>
                 <li><strong>Agglomeration</strong> — combine small tasks into larger units when that improves efficiency.</li>
                 <li><strong>Mapping</strong> — assign tasks to processors, cores, nodes, or accelerators.</li>
             </ol>
+            <p>PCAM is best treated as an <strong>iterative design process</strong>, not a one-way checklist. A mapping decision may reveal that communication is too expensive; agglomeration may then need to change, which can in turn require a different partitioning. The final design should be validated with measurements rather than assumed to be optimal from the decomposition alone.</p>
+            <p>Three questions are useful throughout the process:</p>
+            <ul>
+                <li><strong>Where is the parallelism?</strong> Identify independent work and the critical dependencies that limit concurrency.</li>
+                <li><strong>What does parallelism cost?</strong> Account for communication, synchronization, scheduling, memory traffic, and I/O.</li>
+                <li><strong>Where should the work run?</strong> Match task size, locality, and communication patterns to the actual hardware topology.</li>
+            </ul>
             <div>
                 <pre><code class="language-shell">+-----------------------------+
-|         Big Problem          |
+|         Big Problem         |
 +--------------+--------------+
                |
                v
 +-----------------------------+
-| 1. Partitioning              |
-| Break the problem into       |
-| smaller parallel tasks       |
+| 1. Partitioning             |
+| Break the problem into      |
+| smaller parallel tasks      |
 +--------------+--------------+
                |
                v
 +-----------------------------+
-| 2. Communication             |
-| Identify what data must be   |
-| exchanged between tasks      |
+| 2. Communication            |
+| Identify what data must be  |
+| exchanged between tasks     |
 +--------------+--------------+
                |
                v
 +-----------------------------+
-| 3. Agglomeration             |
-| Combine tasks where useful   |
-| to reduce overhead           |
+| 3. Agglomeration            |
+| Combine tasks where useful  |
+| to reduce overhead          |
 +--------------+--------------+
                |
                v
 +-----------------------------+
-| 4. Mapping                   |
-| Assign tasks to processors   |
-| or hardware resources        |
+| 4. Mapping                  |
+| Assign tasks to processors  |
+| or hardware resources       |
 +-----------------------------+</code></pre>
             </div>
             <h3 id="partitioning">Partitioning</h3>
-            <p>Partitioning divides the problem into smaller pieces that can run concurrently. The goal is to expose enough parallel work while avoiding unnecessary dependencies between tasks.</p>
+            <p>Partitioning divides the problem into smaller pieces that can run concurrently. The goal is to expose enough parallel work while keeping dependencies manageable. A useful partition should create more potential tasks than there are processors, but each task must still be large enough that scheduling and communication do not overwhelm its computation.</p>
+            <p>For irregular problems, it is often helpful to view the computation as a <strong>dependency graph</strong>. Nodes represent units of work, while edges represent data or ordering dependencies. The longest dependency chain forms the <strong>critical path</strong>, which limits the minimum possible execution time even if unlimited processors were available.</p>
             <div>
                 <pre><code class="language-shell">+-----------------------+
 |      Big Problem      |
-      +-----------+-----------+
-                  |
-        +---------+---------+
-        |         |         |
-   +----+----+ +--+--+ +----+----+
-   | Part 1  | |Part2| | Part 3  |
-   +---------+ +-----+ +---------+</code></pre>
++-----------+-----------+
+            |
+     +--- --+------------+
+     |         |         |
++----+----+ +--+--+ +----+----+
+| Part 1  | |Part2| | Part 3  |
++---------+ +-----+ +---------+</code></pre>
             </div>
             <h4 id="goals">Goals</h4>
             <p><strong>I. Balance the workload among tasks</strong></p>
@@ -280,14 +288,15 @@
             </ul>
             <p><strong>III. Expose enough concurrency</strong></p>
             <ul>
-                <li>Create enough tasks to keep all available processors busy.</li>
+                <li>Create enough tasks to keep all available processors busy and to leave some flexibility for load balancing.</li>
                 <li>Avoid creating so many tiny tasks that scheduling and communication overhead dominate the computation.</li>
+                <li>Remember that available parallelism can change during execution; phases near the beginning or end of an algorithm may expose fewer runnable tasks.</li>
             </ul>
             <h3 id="types-of-decomposition">Types of Decomposition</h3>
             <h4 id="i-domain-decomposition">I. Domain Decomposition</h4>
             <p>Domain decomposition splits the <strong>data space</strong> into chunks. Each worker receives a portion of the data and performs the same or similar computation on that portion.</p>
-            <p>This works well when computation is mostly local, such as image processing, simulations, matrix operations, and grid-based numerical methods.</p>
-            <p><strong>Example: blurring a 4000 × 4000 image</strong></p>
+            <p>This works well when computation is mostly local, such as image processing, simulations, matrix operations, and grid-based numerical methods. The shape of each partition matters as much as its size: compact subdomains usually reduce boundary communication because they have a smaller surface-to-volume ratio than long, thin partitions.</p>
+            <p>Consider blurring a 4000 × 4000 image.</p>
             <ul>
                 <li>Split the image into four 2000 × 2000 tiles: top-left, top-right, bottom-left, and bottom-right.</li>
                 <li>Each worker blurs its own tile.</li>
@@ -303,15 +312,15 @@
 |     Worker 3          |      Worker 4         |
 +-----------------------+-----------------------+</code></pre>
             </div>
-            <p><strong>Why it works:</strong> most pixels depend only on nearby pixels, so most computation can run independently. Only the tile boundaries require communication.</p>
+            <p>This decomposition works well because most pixels depend only on nearby pixels, so almost all computation stays inside each tile. Only the tile boundaries need data from neighboring partitions. For a two-dimensional square tile with side length (L), computation grows roughly with (L^2), while boundary data grows roughly with (L). Larger tiles therefore do more computation for each boundary element exchanged, although making tiles too large eventually reduces the amount of parallel work available.</p>
             <h4 id="ii-functional-decomposition">II. Functional Decomposition</h4>
             <p>Functional decomposition splits the work by <strong>type of operation</strong> rather than by data region. It is often used to build pipelines.</p>
-            <p><strong>Example: web request pipeline</strong></p>
+            <p>A web request pipeline is a simple example.</p>
             <ul>
-                <li><strong>Authentication stage:</strong> verify the token or cookie.</li>
-                <li><strong>Data stage:</strong> query the database.</li>
-                <li><strong>Transform stage:</strong> sort, filter, or format results.</li>
-                <li><strong>Render stage:</strong> generate HTML or JSON.</li>
+                <li>First, verify the token or cookie.</li>
+                <li>Then query the database.</li>
+                <li>Next, sort, filter, or format the result.</li>
+                <li>Finally, generate HTML or JSON.</li>
             </ul>
             <div>
                 <pre><code class="language-shell">Request
@@ -321,7 +330,7 @@
 | Auth   | --&gt; | Data  | --&gt; | Transform | --&gt; | Render |
 +--------+     +-------+     +-----------+     +--------+</code></pre>
             </div>
-            <p>Each stage can scale independently. For example, if database access becomes the bottleneck, you can allocate more workers to the Data stage.</p>
+            <p>Each stage can be replicated or assigned a different number of workers. For example, if database access becomes the bottleneck, more workers can be allocated to the Data stage—provided the database itself can sustain the additional concurrency. Pipeline throughput is ultimately limited by the slowest stage, so queue lengths and service rates should be measured rather than assuming that adding workers will always help.</p>
             <p>Functional decomposition is useful when:</p>
             <ul>
                 <li>Different stages require different resources.</li>
@@ -331,7 +340,7 @@
             <h4 id="iii-cyclic-decomposition">III. Cyclic Decomposition</h4>
             <p>In parallel programming, cyclic decomposition usually means distributing tasks or loop iterations in a <strong>round-robin</strong> pattern across workers.</p>
             <p>Instead of giving each worker one large contiguous block, cyclic decomposition assigns item <code>i</code> to worker <code>i mod P</code>, where <code>P</code> is the number of workers.</p>
-            <p><strong>Example: 12 loop iterations on 4 workers</strong></p>
+            <p>For example, 12 loop iterations can be distributed across 4 workers like this.</p>
             <p>
             <table>
                 <tr>
@@ -372,13 +381,13 @@ Worker 1: iterations 1, 5, 9
 Worker 2: iterations 2, 6, 10
 Worker 3: iterations 3, 7, 11</code></pre>
             </div>
-            <p><strong>When cyclic decomposition helps:</strong></p>
+            <p>Cyclic decomposition is especially useful when the work is uneven or difficult to predict.</p>
             <ul>
                 <li>Work per iteration is uneven or hard to predict.</li>
                 <li>Expensive iterations are scattered throughout the input.</li>
                 <li>A simple block split would overload one worker.</li>
             </ul>
-            <p><strong>Tradeoff:</strong> cyclic decomposition often improves load balance, but it can reduce locality because each worker touches data spread across the whole domain.</p>
+            <p>The main tradeoff is locality. Cyclic decomposition often improves load balance, but each worker may touch data spread across the whole domain. A <strong>block-cyclic</strong> distribution is a common compromise because nearby items stay together inside each block while the blocks themselves are distributed round-robin to smooth uneven work.</p>
             <h4 id="iv-block-decomposition">IV. Block Decomposition</h4>
             <p>Block decomposition divides arrays or matrices into contiguous blocks. Each worker receives one or more blocks and operates on them as units.</p>
             <p>This is common in matrix algorithms, stencil computations, and cache-aware numerical methods.</p>
@@ -402,17 +411,22 @@ Worker 3: iterations 3, 7, 11</code></pre>
                 A_{21}=\begin{pmatrix}4 &amp; 5 \ 4 &amp; 5\end{pmatrix}, \quad
                 A_{22}=\begin{pmatrix}0 &amp; 0 \ 0 &amp; 0\end{pmatrix}.
                 $$</p>
-            <p><strong>Why blocks help:</strong></p>
+            <p>Block decomposition helps in several ways.</p>
             <ul>
-                <li><strong>Block multiplication:</strong> if <code>C = A B</code>, then $C_{11}=A_{11}B_{11}+A_{12}B_{21}$ and similarly for the other blocks. This lets the program reuse optimized kernels on smaller pieces.</li>
-                <li><strong>Cache locality:</strong> contiguous blocks often fit better in cache than whole matrices.</li>
-                <li><strong>Parallelism:</strong> independent blocks can be processed by different workers.</li>
-                <li><strong>Structure detection:</strong> block-diagonal matrices can be solved as smaller independent problems.</li>
+                <li>In block matrix multiplication, if <code>C = A B</code>, then $C_{11}=A_{11}B_{11}+A_{12}B_{21}$ and similarly for the other blocks. This lets the program reuse optimized kernels on smaller pieces.</li>
+                <li>Contiguous blocks often have better cache locality than accesses spread across an entire matrix.</li>
+                <li>Independent blocks can be processed by different workers.</li>
+                <li>Block-diagonal structure can turn one large problem into several smaller independent ones.</li>
             </ul>
-            <p><strong>Related strategy: block-cyclic decomposition</strong></p>
-            <p>Block-cyclic decomposition combines block and cyclic ideas. It assigns blocks round-robin across workers, which helps balance load while still preserving some locality.</p>
+            <p>A closely related strategy is block-cyclic decomposition.</p>
+            <p>Block-cyclic decomposition combines block and cyclic ideas. It assigns blocks round-robin across workers, which helps balance load while still preserving some locality. Distributed dense-linear-algebra libraries commonly use two-dimensional block-cyclic layouts because they spread expensive matrix regions across many processes without reducing every operation to element-level cyclic access.</p>
             <h3 id="communication">Communication</h3>
-            <p>Communication is the exchange of data between tasks. It is necessary when one task needs another task’s results. The best parallel designs minimize communication without sacrificing correctness.</p>
+            <p>Communication is the exchange of data between tasks. It is necessary when one task needs another task’s results. The best parallel designs minimize communication without sacrificing correctness and distinguish <strong>data movement</strong> from <strong>synchronization</strong>. Two tasks may need to wait for one another even when very little data is exchanged.</p>
+            <p>A simple communication cost model is:</p>
+            <p>$$
+                T_{\text{message}} \approx \alpha + \frac{n}{B}
+                $$</p>
+            <p>where $\alpha$ is startup latency, $n$ is the number of bytes, and $B$ is the effective bandwidth. This explains why many tiny messages can be expensive even when their total byte count is small, while large messages are often dominated by bandwidth.</p>
             <h4 id="goals">Goals</h4>
             <p><strong>I. Minimize communication volume and frequency</strong></p>
             <ul>
@@ -433,8 +447,8 @@ Worker 3: iterations 3, 7, 11</code></pre>
             </ul>
             <h3 id="types-of-communication">Types of Communication</h3>
             <h4 id="i-local-communication">I. Local Communication</h4>
-            <p>Local communication occurs between tasks on the same processor, socket, or node. It usually uses shared memory and is faster than network communication.</p>
-            <p><strong>Example:</strong> two cores on the same CPU socket share data through memory.</p>
+            <p>Local communication occurs between tasks on the same processor, socket, or node. Depending on the programming model, it may use shared memory, cache-coherent loads and stores, queues, or operating-system IPC. It is usually lower-latency than communication across a network, but it is not free: cache-coherence traffic, NUMA placement, memory bandwidth, and false sharing can all become bottlenecks.</p>
+            <p>For example, two cores on the same CPU socket can communicate through cache-coherent shared memory.</p>
             <div>
                 <pre><code class="language-shell">+-----------+     +-----------+
 | Core 1    | &lt;-&gt; | Core 2    |
@@ -447,8 +461,8 @@ Worker 3: iterations 3, 7, 11</code></pre>
        +-------------+</code></pre>
             </div>
             <h4 id="ii-global-communication">II. Global Communication</h4>
-            <p>Global communication occurs between tasks on different nodes or physical machines. It usually travels over a network and is more expensive than local communication.</p>
-            <p><strong>Example:</strong> MPI ranks running on separate servers exchange boundary data.</p>
+            <p>Here, <strong>global communication</strong> refers to communication that crosses a node boundary. It usually travels over a network and is more expensive than same-node communication. In other contexts, the word <em>global</em> may instead mean that many or all participants are involved, as in a global reduction, so the intended meaning should be clear.</p>
+            <p>For example, MPI ranks running on separate servers may exchange boundary data over the network.</p>
             <div>
                 <pre><code class="language-shell">+-------------+        Network        +-------------+
 | Node 1      | &lt;-------------------&gt; | Node 2      |
@@ -470,8 +484,8 @@ Worker 3: iterations 3, 7, 11</code></pre>
                 <li>Direct socket messages</li>
             </ul>
             <h4 id="iv-collective-communication">IV. Collective Communication</h4>
-            <p>Collective communication involves a group of tasks. Common collective operations include broadcast, scatter, gather, reduce, and all-reduce.</p>
-            <p><strong>Scatter:</strong> one task sends different pieces of data to different tasks.</p>
+            <p>Collective communication involves a group of tasks that participate in the same communication operation. Common collectives include broadcast, scatter, gather, reduce, and all-reduce. Efficient libraries usually implement these operations with trees, rings, recursive-doubling schemes, or topology-aware algorithms rather than routing every message through one process.</p>
+            <p>With a scatter operation, one task sends different pieces of data to different tasks.</p>
             <div>
                 <pre><code class="language-shell">Scatter:
        +-----------------------+
@@ -484,7 +498,7 @@ Worker 3: iterations 3, 7, 11</code></pre>
   |   A   |    |   B   |    |   C   |
   +-------+    +-------+    +-------+</code></pre>
             </div>
-            <p><strong>Broadcast:</strong> one task sends the same data to all tasks.</p>
+            <p>With a broadcast, one task sends the same data to every task in the group.</p>
             <div>
                 <pre><code class="language-shell">Broadcast:
        +-----------------------+
@@ -497,14 +511,13 @@ Worker 3: iterations 3, 7, 11</code></pre>
   |  ABC  |    |  ABC  |    |  ABC  |
   +-------+    +-------+    +-------+</code></pre>
             </div>
-            <p><strong>Reduce:</strong> many tasks contribute values, and one result is produced.</p>
+            <p>A reduction combines values contributed by many tasks into one result.</p>
             <div>
                 <pre><code class="language-shell">Worker values:  4, 7, 2, 9
 Operation:      sum
 Result:         22</code></pre>
             </div>
-            <p><strong>All-reduce:</strong> every task receives the reduced result. This is common in simulations and machine learning training.</p>
-            <hr />
+            <p>An all-reduce performs the same reduction but returns the result to every task. This is common in simulations and distributed machine learning.</p>
             <h3 id="communication-modes">Communication Modes</h3>
             <h4 id="i-blocking-communication">I. Blocking Communication</h4>
             <p>Blocking communication waits until the operation is complete before the task continues.</p>
@@ -514,13 +527,14 @@ Result:         22</code></pre>
                 <li>Can cause idle time if a task waits while it could have been doing useful work.</li>
             </ul>
             <h4 id="ii-nonblocking-communication">II. Nonblocking Communication</h4>
-            <p>Nonblocking communication starts an operation and allows the task to continue while the message is in progress.</p>
+            <p>Nonblocking communication starts an operation and returns before the transfer is complete.</p>
             <ul>
-                <li>Enables overlap between communication and computation.</li>
-                <li>Requires careful handling to ensure buffers are not modified too early.</li>
-                <li>Usually requires a later wait or test operation.</li>
+                <li>It can enable overlap between communication and computation when independent work exists and the runtime or communication library makes progress on the transfer.</li>
+                <li>It requires careful handling to ensure send buffers are not modified and receive buffers are not consumed before completion.</li>
+                <li>It usually requires a later wait or test operation.</li>
+                <li>Nonblocking calls do not guarantee overlap by themselves; actual progress depends on the implementation, transport, and how often the program re-enters the communication library.</li>
             </ul>
-            <p><strong>Example pattern:</strong></p>
+            <p>A common pattern looks like this:</p>
             <ol>
                 <li>Post nonblocking receives.</li>
                 <li>Send boundary data.</li>
@@ -530,15 +544,16 @@ Result:         22</code></pre>
             </ol>
             <h3 id="concepts-in-communication">Concepts in Communication</h3>
             <h4 id="i-overhead">I. Overhead</h4>
-            <p>Overhead is time spent managing communication rather than doing the main computation. It includes message setup, synchronization, copying, packing, unpacking, and scheduling.</p>
+            <p>Overhead is work introduced by parallel execution that would not be needed in the equivalent serial computation. It includes message setup, synchronization, copying, packing and unpacking, scheduling, thread/process management, redundant work, and time lost to load imbalance.</p>
             <h4 id="ii-latency">II. Latency</h4>
-            <p>Latency is the time required for a message to begin reaching its destination. It matters most when messages are small and frequent.</p>
+            <p>Latency is the fixed startup delay associated with initiating and delivering communication. For small messages, this fixed cost often dominates transfer time, which is why algorithms with many tiny messages may scale poorly even when the total number of bytes is modest.</p>
             <h4 id="iii-bandwidth">III. Bandwidth</h4>
-            <p>Bandwidth is the amount of data that can be transferred per second. It matters most when messages are large.</p>
+            <p>Bandwidth is the sustained amount of data that can be transferred per second. It matters most when messages are large enough that transfer time dominates startup latency. Effective application bandwidth may be lower than link peak bandwidth because of protocol overhead, contention, topology, and memory-copy costs.</p>
             <h4 id="iv-contention">IV. Contention</h4>
-            <p>Contention occurs when multiple tasks compete for the same memory bus, network link, file system, or synchronization point.</p>
+            <p>Contention occurs when multiple tasks compete for the same finite resource, such as a memory controller, cache line, network link, file system, lock, or synchronization point. Contention can make communication costs nonlinear: doubling the number of communicating tasks does not necessarily preserve per-task bandwidth.</p>
             <h3 id="agglomeration">Agglomeration</h3>
-            <p>Agglomeration combines smaller tasks into larger tasks after the initial partitioning step. The purpose is to reduce overhead, improve locality, and create tasks that better match the target hardware.</p>
+            <p>Agglomeration combines smaller logical tasks into larger execution units after the initial partitioning step. The purpose is to reduce overhead, improve locality, and create tasks that better match the target hardware.</p>
+            <p>Agglomeration is a tradeoff. Larger tasks usually communicate less frequently and reuse data better, but they also reduce the number of independently schedulable units. The design should therefore preserve enough tasks to balance load while making each task large enough to amortize runtime and communication costs.</p>
             <h4 id="goals">Goals</h4>
             <p><strong>I. Improve computational granularity</strong></p>
             <ul>
@@ -558,42 +573,23 @@ Result:         22</code></pre>
                 <li>Ideally, inner working sets should fit cache or high-bandwidth memory when possible.</li>
             </ul>
             <h3 id="granularity">Granularity</h3>
-            <p>Granularity describes how much computation occurs per communication event.</p>
+            <p>Granularity describes the amount of useful computation performed by each task relative to coordination costs. A common informal measure is the computation-to-communication ratio:</p>
             <p>$$
-                \text{Granularity} = \frac{\text{Computation}}{\text{Communication}}
+                \text{Granularity} \propto \frac{\text{Computation}}{\text{Communication + synchronization + scheduling overhead}}
                 $$</p>
+            <p>This is not a universal unit of measurement, but it is a useful design intuition: the useful work inside a task should be large enough to amortize the cost of managing that task.</p>
             <h4 id="fine-grained-parallelism">Fine-Grained Parallelism</h4>
             <p>Fine-grained parallelism uses many small tasks.</p>
-            <p><strong>Advantages:</strong></p>
-            <ul>
-                <li>Excellent load balancing.</li>
-                <li>Many opportunities for parallel execution.</li>
-                <li>Useful when work is irregular and dynamic scheduling is available.</li>
-            </ul>
-            <p><strong>Disadvantages:</strong></p>
-            <ul>
-                <li>High scheduling overhead.</li>
-                <li>Frequent communication.</li>
-                <li>Lower computation-to-communication ratio.</li>
-            </ul>
+            <p>This style exposes a lot of parallel work and can balance irregular workloads well, especially when the runtime can schedule tasks dynamically. The cost is that scheduling, synchronization, and communication happen more often, so overhead can become a large fraction of total runtime.</p>
             <h4 id="coarse-grained-parallelism">Coarse-Grained Parallelism</h4>
             <p>Coarse-grained parallelism uses fewer, larger tasks.</p>
-            <p><strong>Advantages:</strong></p>
-            <ul>
-                <li>Lower communication overhead.</li>
-                <li>Better locality.</li>
-                <li>Higher computation-to-communication ratio.</li>
-            </ul>
-            <p><strong>Disadvantages:</strong></p>
-            <ul>
-                <li>Potential load imbalance.</li>
-                <li>Less flexibility for dynamic scheduling.</li>
-                <li>Some processors may become idle if tasks are uneven.</li>
-            </ul>
+            <p>Larger tasks usually improve locality and reduce scheduling and communication overhead. The downside is less flexibility: if a few tasks take much longer than the others, some processors may finish early and sit idle.</p>
             <h4 id="practical-balance">Practical Balance</h4>
             <p>The best granularity depends on the problem, hardware, and runtime system. A good design usually starts with many logical tasks, then agglomerates them until communication and scheduling overhead are acceptable.</p>
+            <p>A practical way to tune granularity is to measure <strong>useful work per task</strong> against <strong>task overhead</strong>. If a task takes only a few microseconds but scheduling it also costs microseconds, it is too fine-grained for that runtime. Conversely, tasks that run for seconds may be too coarse if a few slow tasks leave most processors idle near the end of a phase.</p>
             <h3 id="mapping">Mapping</h3>
-            <p>Mapping assigns agglomerated tasks to hardware resources such as cores, sockets, nodes, GPUs, or clusters. Good mapping improves load balance and reduces communication distance.</p>
+            <p>Mapping assigns agglomerated tasks to hardware resources such as cores, sockets, nodes, or accelerators. Good mapping improves load balance and reduces communication distance. On hierarchical machines, <em>where</em> a task runs affects not only network traffic but also cache sharing, NUMA locality, accelerator access, and memory bandwidth.</p>
+            <p>Mapping also interacts with the operating system and runtime. Thread affinity, process pinning, GPU selection, and first-touch memory placement can materially change performance even when the algorithm itself is unchanged.</p>
             <h4 id="goals">Goals</h4>
             <p><strong>I. Balance computational load across processors</strong></p>
             <ul>
@@ -615,27 +611,30 @@ Result:         22</code></pre>
             <h3 id="mapping-strategies">Mapping Strategies</h3>
             <h4 id="i-static-mapping">I. Static Mapping</h4>
             <p>Tasks are assigned before execution and remain fixed.</p>
-            <p><strong>Best for:</strong> predictable workloads with uniform task sizes.</p>
+            <p>Static mapping works best when the workload is predictable and task sizes are fairly uniform.</p>
             <h4 id="ii-dynamic-mapping">II. Dynamic Mapping</h4>
-            <p>Tasks are assigned during execution based on current load.</p>
-            <p><strong>Best for:</strong> irregular workloads where task cost is hard to predict.</p>
+            <p>Tasks are assigned during execution based on current load, often through work queues, work stealing, or runtime scheduling.</p>
+            <p>Dynamic mapping is a better fit when task costs are irregular or difficult to predict in advance.</p>
+            <p>Dynamic mapping improves balance but adds scheduling overhead and may reduce locality because work can migrate away from the data it uses. The runtime must therefore balance responsiveness against data placement.</p>
             <h4 id="iii-hierarchical-mapping">III. Hierarchical Mapping</h4>
-            <p>Tasks are mapped in levels: for example, first to nodes, then sockets, then cores.</p>
-            <p><strong>Best for:</strong> multi-node systems with NUMA domains, GPUs, or complex network topology.</p>
+            <p>Tasks are mapped in levels: for example, first to nodes, then sockets or NUMA domains, then cores or accelerators.</p>
+            <p>Hierarchical mapping is especially useful on multi-node systems with NUMA domains, GPUs, or a complex network topology.</p>
+            <p>Hierarchical mapping mirrors the machine: expensive communication should cross the fewest high-cost boundaries possible. For example, tightly coupled threads may share a NUMA domain, while only coarse-grained halo exchanges cross nodes.</p>
             <h4 id="iv-task-clustering">IV. Task Clustering</h4>
             <p>Tasks that communicate frequently are grouped and placed near each other.</p>
-            <p><strong>Best for:</strong> graph algorithms, stencil computations, and workflows with known communication patterns.</p>
+            <p>Task clustering is useful for graph algorithms, stencil computations, and other workloads with known communication patterns.</p>
             <h4 id="v-graph-partitioning">V. Graph Partitioning</h4>
             <p>Represent tasks as graph nodes and communication as graph edges. Then partition the graph so that heavily connected tasks stay together and edge cuts are minimized.</p>
-            <p><strong>Best for:</strong> irregular meshes, sparse matrix computations, and graph analytics.</p>
+            <p>Graph partitioning is particularly useful for irregular meshes, sparse matrix computations, and graph analytics.</p>
             <h2 id="example-workflow">Example Workflow</h2>
             <h3 id="2-d-heat-diffusion">2-D Heat Diffusion</h3>
-            <p><strong>Problem:</strong> simulate heat diffusion on a 4096 × 4096 grid for 5,000 time steps using a 5-point stencil in double precision.</p>
+            <p>The worked example simulates heat diffusion on a 4096 × 4096 grid for 5,000 time steps using a 5-point stencil in double precision.</p>
             <p>The program uses two row-major arrays, <code>A[nx][ny]</code> and <code>B[nx][ny]</code>, which alternate roles each step. This is often called a <strong>ping-pong buffer</strong> pattern.</p>
-            <p>A typical 5-point stencil update is:</p>
+            <p>A typical Jacobi-style update derived from a 5-point stencil is:</p>
             <p>$$
                 B[i,j] = 0.25 \times (A[i-1,j] + A[i+1,j] + A[i,j-1] + A[i,j+1])
                 $$</p>
+            <p>The underlying 5-point stencil consists of the center cell plus its four axial neighbors. In this simple averaging update, the new center value is computed from the four neighbors, so the old center value does not appear explicitly in the formula.</p>
             <p>Periodic checkpoints are written to HDF5 files.</p>
             <h3 id="what-we-are-designing">What We Are Designing</h3>
             <ul>
@@ -644,6 +643,7 @@ Result:         22</code></pre>
                 <li>Halo exchanges between neighboring tiles.</li>
                 <li>Hybrid parallelism using MPI between ranks and OpenMP within each rank.</li>
                 <li>Checkpoint output for long-running simulations.</li>
+                <li>A design whose computation, communication, synchronization, and I/O costs can be measured separately.</li>
             </ul>
             <h3 id="why-these-tools">Why These Tools</h3>
             <ul>
@@ -662,14 +662,14 @@ Result:         22</code></pre>
                 <li>Output includes the final temperature field and periodic checkpoints.</li>
             </ul>
             <h3 id="i-partitioning-make-work-even-and-predictable">I. Partitioning: Make Work Even and Predictable</h3>
-            <p><strong>Goal:</strong> split the domain into equal, independent tasks.</p>
-            <p><strong>Method:</strong> use an 8 × 8 domain decomposition, giving 64 blocks.</p>
+            <p>We start by splitting the domain into equal-sized tasks while keeping dependencies local. An 8 × 8 decomposition gives 64 blocks.</p>
             <ul>
                 <li>The full grid is 4096 × 4096.</li>
                 <li>Each block is 512 × 512 cells.</li>
                 <li>Each block performs 512 × 512 = 262,144 cell updates per step.</li>
                 <li>Blocks are named <code>T(0,0)</code> through <code>T(7,7)</code> or numbered <code>T0</code> through <code>T63</code> in row-major order.</li>
-                <li>Because every block has the same size, load balance is nearly uniform on homogeneous CPUs.</li>
+                <li>Because every block has the same size and performs the same stencil, computational load is nearly uniform on homogeneous CPUs.</li>
+                <li>Equal block sizes do not guarantee perfect balance once communication, operating-system noise, NUMA placement, or checkpoint I/O are included, so per-rank timings should still be measured.</li>
             </ul>
             <div>
                 <pre><code class="language-shell">+---------------------------------------------------------------+
@@ -692,8 +692,7 @@ Example partition view:
 +---------------------------------------+</code></pre>
             </div>
             <h3 id="ii-communication-keep-it-correct-and-overlapped">II. Communication: Keep It Correct and Overlapped</h3>
-            <p><strong>Goal:</strong> exchange only the boundary data needed for each stencil step.</p>
-            <p><strong>Method:</strong> use nonblocking point-to-point halo exchanges and occasional collectives.</p>
+            <p>Next, the ranks exchange only the boundary data needed for each stencil step. Nonblocking point-to-point communication handles the halo traffic, while occasional collectives handle global quantities such as the residual.</p>
             <p>For each time step:</p>
             <ol>
                 <li>Each tile exchanges one row or column with its north, south, east, and west neighbors.</li>
@@ -705,7 +704,7 @@ Example partition view:
                 512 \times 1 \times 8\text{ bytes} = 4096\text{ bytes} = 4\text{ KB}
                 $$</p>
             <ol>
-                <li>With four edges, each block exchanges about 16 KB per step.</li>
+                <li>With four edges, each block <strong>sends</strong> about 16 KB per step and receives roughly the same amount, for about 32 KB of one-way application payload counted in both directions.</li>
                 <li>Every 100 steps, an <code>Allreduce</code> computes a global residual using one double value.</li>
             </ol>
             <div>
@@ -729,17 +728,19 @@ Each step:
 - Compute interior cells while halo messages are in flight.
 - Compute border cells after halo data arrives.</code></pre>
             </div>
-            <p><strong>Recommended overlap pattern:</strong></p>
+            <p>A practical overlap sequence is:</p>
             <div>
                 <pre><code class="language-text">1. Post Irecv for north/south/east/west halos.
 2. Pack and Isend local boundary rows/columns.
 3. Compute the interior region that does not need new halos.
 4. Wait/Test for halo receives to complete.
-5. Unpack halos and compute border cells.</code></pre>
+5. Unpack halos and compute border cells.
+6. Wait for sends to complete before reusing send buffers.</code></pre>
             </div>
+            <p>Rows are contiguous in row-major storage, but columns are strided. Columns can therefore be packed into contiguous buffers or described with an MPI derived datatype. Packing adds CPU and memory-copy work; derived datatypes reduce explicit code but still need to be benchmarked because implementation quality varies.</p>
+            <p>The interior region must be large enough to hide a useful fraction of communication time. If halo transfer completes only after all interior work is already finished, nonblocking communication improves structure but not runtime.</p>
             <h3 id="iii-agglomeration-reduce-rank-count-but-keep-memory-safe">III. Agglomeration: Reduce Rank Count but Keep Memory Safe</h3>
-            <p><strong>Goal:</strong> reduce communication overhead and MPI rank count without exceeding memory limits.</p>
-            <p><strong>Method:</strong> merge 2 × 2 blocks into one larger tile and use OpenMP threads inside each MPI rank.</p>
+            <p>The next step is to reduce MPI rank count and communication overhead without creating tiles that are too large for memory. Here, four neighboring blocks are merged into one 1024 × 1024 tile, and OpenMP threads handle the work inside each MPI rank.</p>
             <p>Assume the cluster has:</p>
             <ul>
                 <li>4 nodes.</li>
@@ -750,31 +751,33 @@ Each step:
                 <li>128 GB RAM per node.</li>
                 <li>100 Gbps InfiniBand.</li>
             </ul>
-            <p><strong>Before agglomeration:</strong></p>
+            <p>Before agglomeration, the configuration is:</p>
             <ul>
                 <li>64 MPI ranks.</li>
                 <li>Each rank owns one 512 × 512 block.</li>
                 <li>Many small halo messages.</li>
             </ul>
-            <p><strong>After agglomeration:</strong></p>
+            <p>After agglomeration, it becomes:</p>
             <ul>
                 <li>16 MPI ranks.</li>
                 <li>Each rank owns one 1024 × 1024 tile made from a 2 × 2 group of blocks.</li>
                 <li>Each rank uses 8 OpenMP threads.</li>
                 <li>Fewer ranks and fewer messages.</li>
+                <li>A larger interior-to-boundary ratio, so more stencil work is performed per halo element.</li>
             </ul>
             <p>For a 1024 × 1024 tile:</p>
             <p>$$
                 1024 \times 1 \times 8\text{ bytes} = 8192\text{ bytes} = 8\text{ KB per edge}
                 $$</p>
-            <p>Four edges produce about 32 KB of halo data per rank per step.</p>
+            <p>Four edges produce about 32 KB of outbound halo payload per rank per step and roughly 32 KB inbound, so counting both directions gives about 64 KB of application payload per rank per step.</p>
             <p>Memory per rank:</p>
             <ul>
                 <li>Array <code>A</code>: 1024 × 1024 × 8 bytes ≈ 8 MB.</li>
                 <li>Array <code>B</code>: 1024 × 1024 × 8 bytes ≈ 8 MB.</li>
                 <li>Halos and scratch space: about 1–4 MB.</li>
-                <li>Total: roughly 17–20 MB per rank, well below a 512 MB per-rank budget.</li>
+                <li>Total: roughly 17–20 MB per rank for the core arrays and small working buffers, well below a 512 MB per-rank budget.</li>
             </ul>
+            <p>The application may still use substantially more memory once MPI buffers, HDF5 buffers, runtime metadata, and additional diagnostic arrays are included, so production sizing should measure resident memory rather than relying only on the two main arrays.</p>
             <div>
                 <pre><code class="language-shell">Before: 64 MPI ranks, each 512 x 512
 After:  16 MPI ranks, each 1024 x 1024
@@ -794,8 +797,7 @@ Effect:
 - OpenMP threads handle work inside each tile</code></pre>
             </div>
             <h3 id="iv-mapping-place-work-where-data-moves-least">IV. Mapping: Place Work Where Data Moves Least</h3>
-            <p><strong>Goal:</strong> minimize cross-node traffic and NUMA penalties.</p>
-            <p><strong>Method:</strong> use a Cartesian rank layout and core pinning.</p>
+            <p>Finally, map the ranks so that communication stays as local as possible and OpenMP threads remain close to their memory. A Cartesian rank layout together with explicit core binding provides a straightforward starting point.</p>
             <p>Final configuration:</p>
             <ul>
                 <li>16 MPI ranks.</li>
@@ -831,9 +833,10 @@ Node D: R12  R13  R14  R15</code></pre>
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close</code></pre>
             </div>
-            <p>This keeps threads close to the rank’s memory allocation and reduces NUMA overhead.</p>
+            <p>This asks OpenMP to bind each team to cores close to the thread that created the team. MPI rank binding must also reserve the same eight cores per rank; otherwise all eight OpenMP threads may compete inside a smaller CPU set.</p>
+            <p>NUMA placement matters as well. With <strong>first-touch allocation</strong>, each rank initializes its large arrays in parallel using the same thread placement that will later update them. This encourages memory pages to be allocated near the threads that use them.</p>
             <h3 id="runbook">Runbook</h3>
-            <p><strong>Code:</strong> <code>heat2d.c</code></p>
+            <p>The example implementation is assumed to live in <code>heat2d.c</code>.</p>
             <p>Expected implementation features:</p>
             <ul>
                 <li>Ping-pong buffers <code>A</code> and <code>B</code>.</li>
@@ -847,23 +850,25 @@ export OMP_PROC_BIND=close</code></pre>
             <h4 id="build-and-quick-check">Build and Quick Check</h4>
             <div>
                 <pre><code class="language-bash">mpicc -O3 -march=native -fopenmp heat2d.c -o heat2d
-./heat2d --nx 512 --ny 512 --steps 10 --tile 512 --verify analytic</code></pre>
+mpirun -n 1 ./heat2d --nx 512 --ny 512 --steps 10 --tile 512 --verify analytic</code></pre>
             </div>
             <h4 id="distributed-run">Distributed Run</h4>
             <div>
-                <pre><code class="language-bash">mpirun -n 16 --map-by ppr:4:node --bind-to core --report-bindings \
+                <pre><code class="language-bash">OMP_NUM_THREADS=8 OMP_PLACES=cores OMP_PROC_BIND=close \
+mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core --report-bindings \
   ./heat2d --nx 4096 --ny 4096 --steps 5000 --tile 1024</code></pre>
             </div>
             <h4 id="full-run-with-threads-and-checkpoints">Full Run with Threads and Checkpoints</h4>
             <div>
                 <pre><code class="language-bash">OMP_NUM_THREADS=8 OMP_PLACES=cores OMP_PROC_BIND=close \
-mpirun -n 16 --map-by ppr:4:node --bind-to core \
+mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core \
   ./heat2d --nx 4096 --ny 4096 --steps 5000 --tile 1024 --checkpoint 200</code></pre>
             </div>
             <h4 id="outputs-and-logging">Outputs and Logging</h4>
             <ul>
-                <li>Checkpoint files: <code>chkpt_t&lt;step&gt;_tile&lt;rank&gt;.h5</code>.</li>
-                <li>Final output file: <code>final_temp.h5</code>.</li>
+                <li>If using <strong>collective Parallel HDF5</strong>, use one logical checkpoint file such as <code>chkpt_t&lt;step&gt;.h5</code>, with each rank writing its hyperslab collectively.</li>
+                <li>If using independent per-rank files instead, a pattern such as <code>chkpt_t&lt;step&gt;_rank&lt;rank&gt;.h5</code> is simpler but can create metadata pressure on large file systems.</li>
+                <li>Final output file: <code>final_temp.h5</code> when using collective output.</li>
                 <li>Dataset names: <code>temp_step_&lt;t&gt;</code>.</li>
                 <li>Logs should include:</li>
                 <li>residual every 100 steps,</li>
@@ -912,24 +917,36 @@ mpirun -n 16 --map-by ppr:4:node --bind-to core \
                     <td>Has the program been profiled?</td>
                     <td>Confirms bottlenecks instead of guessing.</td>
                 </tr>
+                <tr>
+                    <td>Does strong scaling still improve runtime?</td>
+                    <td>Reveals when communication and synchronization dominate added compute resources.</td>
+                </tr>
+                <tr>
+                    <td>Are rank and thread affinities verified?</td>
+                    <td>Prevents accidental oversubscription or poor NUMA placement.</td>
+                </tr>
+                <tr>
+                    <td>Is I/O architecture consistent with the file system?</td>
+                    <td>Avoids turning checkpoints into the dominant scalability bottleneck.</td>
+                </tr>
             </table>
             </p>
             <h3 id="principles">Principles</h3>
             <ul>
-                <li><strong>Load balancing:</strong> processors should finish their assigned work at similar times. Poor load balance leaves some processors waiting.</li>
-                <li><strong>Minimizing communication:</strong> fewer and better-organized messages reduce overhead. Batching halo data into one buffer per edge is usually better than sending many tiny messages.</li>
-                <li><strong>Scalability:</strong> adding processors should produce useful speedup. Poor scaling often indicates too much communication, synchronization, load imbalance, or serial work.</li>
-                <li><strong>Locality:</strong> tasks that frequently exchange data should be placed close together in memory or network topology.</li>
-                <li><strong>Granularity:</strong> tasks should be large enough to do meaningful work between communication events but small enough to balance load.</li>
+                <li>Aim for processors to finish their assigned work at roughly the same time; otherwise, faster workers spend time waiting for the slowest ones.</li>
+                <li>Keep communication deliberate and compact. For example, one halo buffer per edge is usually better than many tiny messages.</li>
+                <li>Add processors only while they still produce useful speedup. Poor scaling usually points to communication, synchronization, load imbalance, serial work, or too little computation per worker.</li>
+                <li>Place tasks that communicate frequently close together in memory and in the network topology.</li>
+                <li>Make tasks large enough to amortize overhead, but not so large that load balancing becomes difficult.</li>
             </ul>
             <h3 id="tools-and-techniques">Tools and Techniques</h3>
             <ul>
-                <li><strong>MPI:</strong> communication across distributed-memory systems. MPI is commonly used for halo exchanges, reductions, and multi-node execution.</li>
-                <li><strong>OpenMP:</strong> shared-memory parallelism inside a node. It is useful for threading loops within each MPI rank.</li>
-                <li><strong>Hybrid MPI + OpenMP:</strong> combines distributed-memory and shared-memory parallelism. It often reduces rank count and improves memory use on modern clusters.</li>
-                <li><strong>Parallel HDF5:</strong> scalable file output for checkpoints and final simulation results.</li>
-                <li><strong>Profiling tools:</strong> Intel VTune, GNU gprof, Linux <code>perf</code>, HPCToolkit, TAU, and MPI profilers can reveal computation hotspots and communication bottlenecks.</li>
-                <li><strong>Pinning and affinity:</strong> environment variables such as <code>OMP_PLACES</code>, <code>OMP_PROC_BIND</code>, and MPI binding options help keep threads and ranks close to their data.</li>
+                <li>Use MPI for communication across distributed-memory systems, including halo exchanges, reductions, and multi-node execution.</li>
+                <li>Use OpenMP for shared-memory parallelism inside a node, especially for threading loops within each MPI rank.</li>
+                <li>A hybrid MPI + OpenMP design can reduce rank count, inter-rank communication, and replicated MPI state, but it also makes thread affinity and NUMA placement more important.</li>
+                <li>Parallel HDF5 provides scalable shared-file output for checkpoints and final simulation results.</li>
+                <li>Profilers such as Intel VTune, Linux <code>perf</code>, HPCToolkit, TAU, and MPI-specific tools help separate computation hotspots from communication bottlenecks.</li>
+                <li>Use pinning and affinity controls such as <code>OMP_PLACES</code>, <code>OMP_PROC_BIND</code>, and MPI binding options to keep threads and ranks close to their data.</li>
             </ul>
             <h3 id="common-mistakes">Common Mistakes</h3>
             <p>
@@ -951,8 +968,8 @@ mpirun -n 16 --map-by ppr:4:node --bind-to core \
                 </tr>
                 <tr>
                     <td>Using blocking communication everywhere</td>
-                    <td>Ranks wait instead of computing</td>
-                    <td>Use nonblocking communication for predictable exchanges</td>
+                    <td>Ranks may wait instead of computing</td>
+                    <td>Use nonblocking communication when independent work exists, then verify that overlap actually occurs</td>
                 </tr>
                 <tr>
                     <td>Mapping ranks without topology awareness</td>
@@ -968,6 +985,26 @@ mpirun -n 16 --map-by ppr:4:node --bind-to core \
                     <td>Optimizing before profiling</td>
                     <td>Time is spent on the wrong bottleneck</td>
                     <td>Profile computation, communication, and I/O</td>
+                </tr>
+                <tr>
+                    <td>Assuming nonblocking MPI guarantees overlap</td>
+                    <td>Transfers may make little progress during computation</td>
+                    <td>Measure overlap; use appropriate MPI progress settings or communication structure</td>
+                </tr>
+                <tr>
+                    <td>Binding one hybrid rank to one core</td>
+                    <td>OpenMP threads oversubscribe the same CPU set</td>
+                    <td>Reserve the full core set for each rank, e.g. <code>PE=8</code> for eight threads</td>
+                </tr>
+                <tr>
+                    <td>Treating per-rank HDF5 files as Parallel HDF5</td>
+                    <td>File-count and metadata overhead can grow rapidly</td>
+                    <td>Use collective Parallel HDF5 for shared datasets when appropriate</td>
+                </tr>
+                <tr>
+                    <td>Ignoring surface-to-volume ratio</td>
+                    <td>Communication grows too large relative to local stencil work</td>
+                    <td>Use compact subdomains and avoid over-partitioning</td>
                 </tr>
             </table>
             </p>

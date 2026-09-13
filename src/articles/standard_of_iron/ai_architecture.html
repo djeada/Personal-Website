@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Current state</title>
-    <meta content="This document describes the current enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard." name="description" />
+    <title>The decision pipeline</title>
+    <meta content="Standard of Iron runs one strategic AI instance per computer-controlled owner." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Current state",
+            "headline": "The decision pipeline",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/ai_architecture"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/ai_architecture",
-            "description": "This document describes the current enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard.",
-            "dateModified": "2026-06-06"
+            "description": "Standard of Iron runs one strategic AI instance per computer-controlled owner.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -78,66 +78,88 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#current-state">Current state</a></li>
-                    <li><a href="#design-goals">Design goals</a></li>
-                    <li><a href="#high-level-update-loop">High-level update loop</a></li>
-                    <li><a href="#main-files">Main files</a></li>
-                    <li><a href="#what-the-ai-knows">What the AI knows</a>
+                    <li><a href="#the-decision-pipeline">The decision pipeline</a></li>
+                    <li><a href="#timing-and-deterministic-application">Timing and deterministic application</a></li>
+                    <li><a href="#snapshot-what-the-ai-can-observe">Snapshot: what the AI can observe</a></li>
+                    <li><a href="#persistent-strategic-context">Persistent strategic context</a></li>
+                    <li><a href="#strategic-state-machine">Strategic state machine</a></li>
+                    <li><a href="#strategy-configuration">Strategy configuration</a>
                         <ol>
-                            <li><a href="#snapshot">Snapshot</a></li>
-                            <li><a href="#context">Context</a></li>
+                            <li><a href="#supported-strategies">Supported strategies</a></li>
                         </ol>
                     </li>
-                    <li><a href="#state-machine">State machine</a></li>
-                    <li><a href="#behaviors-and-priorities">Behaviors and priorities</a></li>
-                    <li><a href="#force-organization">Force organization</a>
+                    <li><a href="#posture">Posture</a>
                         <ol>
-                            <li><a href="#main-army">Main army</a></li>
-                            <li><a href="#reserve-force">Reserve force</a></li>
-                            <li><a href="#harass-force">Harass force</a></li>
-                            <li><a href="#commanders">Commanders</a></li>
+                            <li><a href="#garrison">Garrison</a></li>
+                            <li><a href="#field">Field</a></li>
                         </ol>
                     </li>
-                    <li><a href="#macro-and-building-logic">Macro and building logic</a></li>
-                    <li><a href="#expansion-logic">Expansion logic</a>
+                    <li><a href="#personality">Personality</a></li>
+                    <li><a href="#difficulty">Difficulty</a></li>
+                    <li><a href="#behavior-composition">Behavior composition</a></li>
+                    <li><a href="#command-ownership-and-arbitration">Command ownership and arbitration</a></li>
+                    <li><a href="#force-partitioning">Force partitioning</a>
                         <ol>
-                            <li><a href="#what-it-currently-does">What it currently does</a></li>
-                            <li><a href="#what-it-does-not-do-yet">What it does not do yet</a></li>
+                            <li><a href="#main-force">Main force</a></li>
+                            <li><a href="#garrison-and-reserve">Garrison and reserve</a></li>
+                            <li><a href="#harass-detachment">Harass detachment</a></li>
+                            <li><a href="#scripted-assault-units">Scripted assault units</a></li>
+                            <li><a href="#commander">Commander</a></li>
                         </ol>
                     </li>
-                    <li><a href="#style-personality-and-difficulty">Style, personality, and difficulty</a>
-                        <ol>
-                            <li><a href="#strategy-preset">Strategy preset</a></li>
-                            <li><a href="#personality-inputs">Personality inputs</a></li>
-                            <li><a href="#difficulty-tuning">Difficulty tuning</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#mission-json-usage">Mission JSON usage</a>
-                        <ol>
-                            <li><a href="#example-balanced-frontline-opponent">Example: balanced frontline opponent</a></li>
-                            <li><a href="#example-forward-pressure-harasser">Example: forward pressure harasser</a></li>
-                            <li><a href="#notes-for-authors">Notes for authors</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#debugging-and-validation">Debugging and validation</a></li>
-                    <li><a href="#what-is-already-strong">What is already strong</a></li>
-                    <li><a href="#biggest-remaining-gaps">Biggest remaining gaps</a></li>
-                    <li><a href="#recommended-next-expansion-order">Recommended next expansion order</a></li>
+                    <li><a href="#local-engagement-vs-strategic-attack">Local engagement vs strategic attack</a></li>
+                    <li><a href="#committed-attack-waves">Committed attack waves</a></li>
+                    <li><a href="#mission-reinforcement-waves">Mission reinforcement waves</a></li>
+                    <li><a href="#economy-and-production">Economy and production</a></li>
+                    <li><a href="#commander-doctrines">Commander doctrines</a></li>
+                    <li><a href="#town-plans">Town plans</a></li>
+                    <li><a href="#base-model">Base model</a></li>
+                    <li><a href="#expansion-and-outposts">Expansion and outposts</a></li>
+                    <li><a href="#stations-and-muster-positions">Stations and muster positions</a></li>
+                    <li><a href="#formation-integration">Formation integration</a></li>
+                    <li><a href="#defence-model">Defence model</a></li>
+                    <li><a href="#observability">Observability</a></li>
+                    <li><a href="#testing">Testing</a></li>
+                    <li><a href="#architectural-invariants">Architectural invariants</a></li>
+                    <li><a href="#source-map">Source map</a></li>
                 </ol>
             </div>
             <div id="related-articles">
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
-                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
@@ -145,7 +167,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -165,535 +187,385 @@
                     </button></div>
             </div>
             <header>AI Architecture</header>
-            <p>This document describes the <strong>current</strong> enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard.</p>
-            <h2 id="current-state">Current state</h2>
-            <p>The AI is no longer a passive "units occasionally wander" layer. It now has a cheap centralized planner that can:</p>
-            <ul>
-                <li>gather a main army before proactive attacks</li>
-                <li>keep a <strong>reserve</strong> near home for local defense</li>
-                <li>run a separate <strong>harass detachment</strong></li>
-                <li>defend based on <strong>local threat memory</strong> instead of global omniscience</li>
-                <li>push toward hidden <strong>strategic objectives</strong> even when tactical contacts are gone</li>
-                <li>build a base using shared macro targets</li>
-                <li>plan and escort a first <strong>forward outpost</strong></li>
-                <li>separate <strong>style/personality</strong> from <strong>difficulty/execution tuning</strong></li>
-            </ul>
-            <p>It is still intentionally lightweight: one AI brain per player, throttled updates, immutable snapshots, small force-role heuristics, and behavior modules instead of expensive per-unit thinking.</p>
-            <h2 id="design-goals">Design goals</h2>
-            <p>The system optimizes for four things:</p>
-            <ol>
-                <li><strong>Cheap execution</strong>: one planner per AI player, not one behavior tree per unit.</li>
-                <li><strong>Visible activity</strong>: the AI should keep producing, gathering, defending, harassing, attacking, and expanding instead of stalling in idle loops.</li>
-                <li><strong>Authorable variation</strong>: missions can shape AI with JSON through strategy, personality, and difficulty.</li>
-                <li><strong>Extensibility</strong>: reserve, harass, and outpost logic are foundations for future siege groups, multi-base roles, difficulty ladders, and personality packs.</li>
-            </ol>
-            <h2 id="high-level-update-loop">High-level update loop</h2>
-            <p>The AI runs in a snapshot -&gt; reason -&gt; execute -&gt; apply pipeline.</p>
+            <p>Standard of Iron runs one strategic AI instance per computer-controlled owner. The AI is deliberately separated from the live ECS world: the world-owning thread builds an immutable snapshot, worker code reasons from that snapshot, the result is converted into typed AI commands, command conflicts are filtered, and accepted commands enter the same simulation command path used by other command producers.</p>
+            <p>This architecture keeps AI decision work parallel without turning gameplay components into shared mutable state. It also keeps player, mission, replay, and AI orders under the same validation and execution rules.</p>
+            <p>The implementation is concentrated under <code>game/systems/ai_system/</code>, with strategy configuration in <code>ai_strategy.cpp</code>, mission setup in the mission/runtime layer, and commander/town-plan data under <code>assets/data/ai/</code>.</p>
+            <h2 id="the-decision-pipeline">The decision pipeline</h2>
+            <p>One AI decision round follows this shape:</p>
             <div>
-                <pre><code class="language-text">world state
-   |
-   v
+                <pre><code class="language-text">live World
+   │
+   │ snapshot on world-owning thread
+   ▼
 AISnapshotBuilder
-   |
-   v
-AISnapshot (immutable, thread-safe)
-   |
-   v
-AIReasoner
-  - updates persistent context
-  - refreshes force roles
-  - advances state machine
-   |
-   v
-AIExecutor
-  - runs eligible behaviors by priority
-  - emits AICommand list
-   |
-   v
-AICommandFilter / AICommandApplier
-   |
-   v
-game world</code></pre>
+   │
+   ▼
+AISnapshot ───────────────┐
+   │                      │ immutable observation
+   ▼                      │
+AIReasoner                │
+   │                      │
+   ▼                      │
+AIExecutor + behaviors    │ worker-side planning
+   │                      │
+   ▼                      │
+AICommand list ◄──────────┘
+   │
+   ▼
+AICommandFilter
+   │ arbitration / validation
+   ▼
+AICommandApplier
+   │
+   ▼
+shared gameplay command/effect path</code></pre>
             </div>
-            <p>The expensive part is the thinking, so it is throttled and handed to a worker thread. The snapshot is immutable specifically so AI code can reason off-thread without touching live world state.</p>
-            <h2 id="main-files">Main files</h2>
-            <p>Most AI code lives in <code>game/systems/ai_system/</code>.</p>
+            <p>The important boundary is the snapshot. Worker-side AI does not walk the mutable world while simulation is advancing.</p>
+            <h2 id="timing-and-deterministic-application">Timing and deterministic application</h2>
+            <p>AI work is asynchronous, but command application is tied to simulation time rather than worker completion time.</p>
+            <p>A decision job records the simulation update on which its result is due. If the worker is late, the simulation waits for the result instead of applying it on a later tick simply because a thread happened to finish later. This prevents host scheduling from changing when an AI order enters the deterministic command stream.</p>
+            <p>That rule gives the AI two separate clocks:</p>
+            <ul>
+                <li><strong>wall-clock worker time</strong>, which determines how long reasoning physically takes; and</li>
+                <li><strong>simulation update time</strong>, which determines when the result becomes authoritative.</li>
+            </ul>
+            <p>Only the second one affects gameplay.</p>
+            <p>The startup path uses the same worker system. Mission loading can wait for the initial decision set before hiding the loading overlay; see <a href="MISSION_STARTUP.md">MISSION_STARTUP.md</a>.</p>
+            <h2 id="snapshot-what-the-ai-can-observe">Snapshot: what the AI can observe</h2>
+            <p><code>AISnapshot</code> is the read-only input to one decision round. It contains the match facts required by the strategic and tactical behaviors, including:</p>
+            <ul>
+                <li>friendly forces and their current state;</li>
+                <li>visible or remembered hostile contacts used by the AI;</li>
+                <li>strategic objectives and known enemy holdings;</li>
+                <li>economy and production information;</li>
+                <li>building/base information;</li>
+                <li>navigation-related facts required for planning;</li>
+                <li>unit readiness and assignment-relevant state; and</li>
+                <li>simulation time.</li>
+            </ul>
+            <p>The snapshot is not a second world. It is a purpose-built observation of the authoritative match. If a behavior needs new live information, the correct change is normally to add that information to the snapshot builder rather than let the worker read ECS state directly.</p>
+            <h2 id="persistent-strategic-context">Persistent strategic context</h2>
+            <p><code>AIContext</code> survives across decision rounds and stores the AI's ongoing plan and memory.</p>
+            <p>Important categories include:</p>
+            <ul>
+                <li>current strategic state and timers;</li>
+                <li>main/base anchors and rally information;</li>
+                <li>reserve, garrison, harass, attack-wave, and behavior assignments;</li>
+                <li>threat memory;</li>
+                <li>clustered bases and their roles;</li>
+                <li>expansion/outpost planning state;</li>
+                <li>settlement/station information; and</li>
+                <li>diagnostics consumed by tests and tracing.</li>
+            </ul>
+            <p>The distinction is simple:</p>
+            <ul>
+                <li><code>AISnapshot</code> says <strong>what the AI sees now</strong>;</li>
+                <li><code>AIContext</code> says <strong>what the AI is in the middle of doing</strong>.</li>
+            </ul>
+            <p>This prevents a decision from being recomputed as if the AI had no memory every time a new snapshot arrives.</p>
+            <h2 id="strategic-state-machine">Strategic state machine</h2>
+            <p>The current strategic state set is:</p>
+            <ul>
+                <li><code>Idle</code>;</li>
+                <li><code>Gathering</code>;</li>
+                <li><code>Attacking</code>;</li>
+                <li><code>Defending</code>;</li>
+                <li><code>Retreating</code>; and</li>
+                <li><code>Expanding</code>.</li>
+            </ul>
+            <p>State transitions are influenced by the selected strategy, posture, threat state, force readiness, expansion status, and committed-wave state.</p>
+            <p>These states are broad strategic modes, not exclusive ownership of every unit. A force can be strategically <code>Attacking</code> while still retaining a home garrison, a commander escort, or mission assault units under separate behavior ownership.</p>
+            <h2 id="strategy-configuration">Strategy configuration</h2>
+            <p><code>AIStrategyFactory</code> builds an <code>AIStrategyConfig</code> from the selected strategy and then applies posture, personality, difficulty, and commander doctrine overrides.</p>
+            <h3 id="supported-strategies">Supported strategies</h3>
+            <p><code>AIStrategyFactory::parse_strategy()</code> accepts:</p>
+            <ul>
+                <li><code>balanced</code>;</li>
+                <li><code>aggressive</code>;</li>
+                <li><code>defensive</code>;</li>
+                <li><code>expansionist</code>;</li>
+                <li><code>economic</code>;</li>
+                <li><code>harasser</code> / <code>harassment</code>;</li>
+                <li><code>rusher</code> / <code>rush</code>; and</li>
+                <li><code>sepulcher_defense</code> / <code>undead_defense</code>.</li>
+            </ul>
+            <p>Unknown values resolve to <code>Balanced</code>.</p>
+            <p>A strategy config contains macro targets and thresholds such as desired builders, homes, barracks, towers, catapults, attack assembly size, reserve/harass size, scouting distance, local-response limits, expansion distance, and attack thresholds.</p>
+            <p>The strategy therefore defines the shape of the plan rather than scripting a fixed sequence of orders.</p>
+            <h2 id="posture">Posture</h2>
+            <p>Posture controls whether an AI is expected to operate as a local defender or as a field opponent.</p>
+            <p><code>AIStrategyFactory::parse_posture()</code> recognizes:</p>
+            <ul>
+                <li><code>garrison</code>, <code>hold</code>, <code>defend</code> → <code>Garrison</code>;</li>
+                <li><code>field</code>, <code>open</code>, <code>expand</code> → <code>Field</code>.</li>
+            </ul>
+            <h3 id="garrison">Garrison</h3>
+            <p>A garrison AI keeps ordinary strategic behavior centered on its holdings. It can still:</p>
+            <ul>
+                <li>defend bases;</li>
+                <li>maintain its economy;</li>
+                <li>recruit and construct;</li>
+                <li>respond to local contacts; and</li>
+                <li>command mission-authored assault waves.</li>
+            </ul>
+            <p>What it does not do is treat ordinary strategic attack/expansion as if it were a field opponent.</p>
+            <h3 id="field">Field</h3>
+            <p>A field AI can use the full ordinary attack and expansion behaviors in addition to defence and economy.</p>
+            <p>Mission setup chooses posture according to authored mission configuration, while skirmish opponents use the field-oriented path.</p>
+            <h2 id="personality">Personality</h2>
+            <p>Mission/commander personality inputs expose normalized aggression, defense, and harassment values.</p>
+            <p><code>AIStrategyFactory::apply_personality()</code> modifies the selected strategy config. Personality therefore biases a known strategy instead of replacing the strategy enum with an opaque collection of one-off values.</p>
+            <p>This lets two commanders share a strategic family while still differing in reserve size, willingness to harass, or attack pressure.</p>
+            <h2 id="difficulty">Difficulty</h2>
+            <p><code>AIStrategyFactory::apply_difficulty()</code> modifies execution tuning such as decision cadence, production multiplier, and scouting behavior.</p>
+            <p>Difficulty does not create a different command system. The AI still produces the same command types and uses the same movement, construction, production, combat, and formation rules as any other issuer.</p>
+            <h2 id="behavior-composition">Behavior composition</h2>
+            <p>The AI is built from behavior modules rather than one monolithic <code>update()</code> function.</p>
+            <p>The active behavior set includes:</p>
+            <ul>
+                <li>retreat;</li>
+                <li>base defence;</li>
+                <li>scripted assault waves;</li>
+                <li>troop production;</li>
+                <li>builder/economy construction;</li>
+                <li>commander positioning and abilities;</li>
+                <li>expansion;</li>
+                <li>local engagement;</li>
+                <li>main-force attack;</li>
+                <li>harassment; and</li>
+                <li>gathering/stationing.</li>
+            </ul>
+            <p>A decision round can therefore produce several kinds of work at once: defend one base, keep builders working, hold a garrison, advance an assault wave, and recruit units for the next strategic cycle.</p>
+            <h2 id="command-ownership-and-arbitration">Command ownership and arbitration</h2>
+            <p>Multiple behaviors can notice the same unit. The AI resolves this through explicit priority and ownership rather than relying on whichever behavior happens to run last.</p>
+            <p><code>AICommandFilter::arbitrate_move_ownership()</code> gives movement ownership to the highest-priority claim when competing behaviors try to move one subject in the same decision batch.</p>
+            <p>The application side also validates subjects before applying commands. A command cannot act on an entity merely because the entity ID existed in an older snapshot. Ownership, lifetime, and current validity are checked again at application time.</p>
+            <p>This protects against cases such as:</p>
+            <ul>
+                <li>a unit dying after the snapshot was built;</li>
+                <li>an entity slot being recycled;</li>
+                <li>ownership changing; or</li>
+                <li>a higher-priority behavior already claiming movement.</li>
+            </ul>
+            <h2 id="force-partitioning">Force partitioning</h2>
+            <p>The strategic AI does not treat every combat unit as one interchangeable pool.</p>
+            <h3 id="main-force">Main force</h3>
+            <p>The main force is the general-purpose pool used for gathering, strategic attacks, committed waves, expansion escorts, and ordinary field movement after units reserved elsewhere are excluded.</p>
+            <h3 id="garrison-and-reserve">Garrison and reserve</h3>
+            <p>Reserve/garrison assignments keep home defence from disappearing simply because the AI has enough troops to form an offensive force. Strategy and commander doctrine tune the amount held back.</p>
+            <p>Defence behavior can escalate when an actual base threat appears, allowing strategic assignments to respond to the match instead of remaining static quotas.</p>
+            <h3 id="harass-detachment">Harass detachment</h3>
+            <p>Strategies that allocate harassment units remove them from the main-force pool and hand them to <code>HarassBehavior</code>.</p>
+            <p>Harass sizing is strategy/personality driven. Defensive pressure can reclaim those units when the home force needs them.</p>
+            <h3 id="scripted-assault-units">Scripted assault units</h3>
+            <p>Mission reinforcement waves receive <code>AssaultWaveComponent</code> and are owned by <code>AssaultBehavior</code>.</p>
+            <p>These units are intentionally separated from the AI's ordinary strategic posture. A mission can keep the owning AI in a garrison posture while authored reinforcement waves attack on schedule.</p>
+            <p>Assault-wave units are excluded from ordinary reserve, gathering, expansion, and retreat pools. Their attack path advances toward eligible hostile targets and can breach obstructing barriers when movement toward the objective has stalled.</p>
+            <h3 id="commander">Commander</h3>
+            <p><code>CommanderBehavior</code> manages the commander separately from line units. It positions the commander relative to the force, uses commander abilities, and respects doctrine/health/escort constraints.</p>
+            <p>This prevents the commander from being treated as merely another infantry entity in a bulk movement pool.</p>
+            <h2 id="local-engagement-vs-strategic-attack">Local engagement vs strategic attack</h2>
+            <p>The AI distinguishes reacting to nearby threats from launching a committed strategic attack.</p>
+            <p>Local engagement handles contacts that can be answered without turning the entire army into an attack wave. Strategic attack behavior operates on the assembled main force and uses strategic targets, stations, garrison exclusions, and wave commitment state.</p>
+            <p>This separation matters because a small contact near a base should not automatically dissolve the AI's higher-level plan, while a committed attack should not be rebuilt from scratch every time one frontline unit enters combat.</p>
+            <h2 id="committed-attack-waves">Committed attack waves</h2>
+            <p><code>game/systems/ai_system/ai_attack_wave.cpp</code> manages strategic attack-wave membership.</p>
+            <p>A committed wave latches its members. Once assembled, those unit IDs remain part of the wave instead of being recalculated every decision round from whichever troops currently look idle.</p>
+            <p>The flow is broadly:</p>
+            <div>
+                <pre><code class="language-text">available strategic force
+        │
+        ├─ remove garrison/reserve
+        ├─ remove separately owned roles
+        ▼
+select committed-wave members
+        │
+        ▼
+assemble at station/rally
+        │
+        ├─ readiness threshold
+        └─ assembly patience
+        ▼
+commit wave
+        │
+        ▼
+advance toward strategic objective</code></pre>
+            </div>
+            <p>Targets can come from known strategic objectives as well as currently visible enemies. An army can therefore continue toward a known enemy holding even if the target is not visible at the exact decision moment.</p>
+            <p>Commander doctrine can tune committed wave size, garrison requirements, regroup timing, spent-wave threshold, and target priority.</p>
+            <h2 id="mission-reinforcement-waves">Mission reinforcement waves</h2>
+            <p>Mission <code>ai_setups[].waves</code> are not the same system as strategic committed waves.</p>
+            <p>Mission waves are authored reinforcements. When spawned, their units receive the mission assault ownership path and are handled by <code>AssaultBehavior</code> independently of the AI's strategic state.</p>
+            <p>That distinction lets a scenario author say, for example, “this fortress AI remains a garrison, but these three assault columns attack from authored entry points.”</p>
+            <p>See <a href="MISSION_FRAMEWORK.md">MISSION_FRAMEWORK.md</a> for wave schema and the built-in archetype catalogue.</p>
+            <h2 id="economy-and-production">Economy and production</h2>
+            <p>The AI uses the same economy and production systems as the player.</p>
+            <p>Its macro context tracks needs such as:</p>
+            <ul>
+                <li>builders;</li>
+                <li>homes;</li>
+                <li>farms;</li>
+                <li>military production;</li>
+                <li>defensive structures;</li>
+                <li>siege production; and</li>
+                <li>resource/manpower support for those goals.</li>
+            </ul>
+            <p>Builder and production behaviors share strategic configuration so settlement growth, workforce allocation, recruitment, and fortification operate as one plan rather than unrelated fixed thresholds.</p>
+            <p>Food and manpower are part of this loop. Farms and food collection support homes, homes produce civilians, and civilians feed reserve/manpower into production buildings through the same systems documented in <a href="FOOD_AND_FARMS.md">FOOD_AND_FARMS.md</a>.</p>
+            <h2 id="commander-doctrines">Commander doctrines</h2>
+            <p>Commander-specific AI configuration is loaded from <code>assets/data/ai/doctrines.json</code>.</p>
+            <p>A doctrine can tune or override:</p>
+            <ul>
+                <li>strategy and posture;</li>
+                <li>personality;</li>
+                <li>recruitment mix;</li>
+                <li>town-plan choice;</li>
+                <li>committed attack-wave size;</li>
+                <li>regroup timing;</li>
+                <li>spent-wave threshold;</li>
+                <li>target priorities; and</li>
+                <li>garrison size/fraction.</li>
+            </ul>
+            <p>Optional fields fall back through the compiled/default strategy path. The doctrine data refines existing runtime concepts rather than creating a separate commander-only AI implementation.</p>
+            <h2 id="town-plans">Town plans</h2>
+            <p><code>assets/data/ai/town_plans.json</code> defines ordered settlement layouts in a local coordinate frame.</p>
+            <p>A town plan can describe buildings, walls, gates, and defensive structures. Runtime construction rotates the plan toward the selected enemy-facing axis and then applies ordinary construction rules such as affordability, site clearance, queue limits, and strategic priority.</p>
+            <p><code>TownPlan::form()</code> derives the plan's form from wall geometry rather than trusting a separately authored shape label.</p>
+            <p>Commander-specific Roman and Carthaginian plans therefore share the same builder behavior while producing different settlement geometry.</p>
+            <h2 id="base-model">Base model</h2>
+            <p><code>AIBaseManager</code> clusters owned buildings into persistent bases and assigns roles such as:</p>
+            <ul>
+                <li><code>Main</code>;</li>
+                <li><code>Forward</code>;</li>
+                <li><code>Production</code>; and</li>
+                <li><code>Defensive</code>.</li>
+            </ul>
+            <p>Base identity is matched across updates so a cluster can retain role and threat history while buildings are added or destroyed.</p>
+            <p>The main base anchors strategic state, but it is not the only base the AI understands. Defence can respond to whichever clustered base is actually threatened. Forward and production bases retain their own useful rally/production context.</p>
+            <h2 id="expansion-and-outposts">Expansion and outposts</h2>
+            <p>Field AI can plan expansion sites and outposts.</p>
+            <p>Expansion context records:</p>
+            <ul>
+                <li>the selected site;</li>
+                <li>pending construction;</li>
+                <li>failed attempts; and</li>
+                <li>sites temporarily abandoned after repeated placement failure.</li>
+            </ul>
+            <p>This makes failed placement part of strategic memory. The AI does not have to retry the same unusable site forever simply because it remains geometrically attractive in the next snapshot.</p>
+            <h2 id="stations-and-muster-positions">Stations and muster positions</h2>
+            <p>Strategic movement uses <code>AIStation</code> as the resolved muster/deployment position.</p>
+            <p>Candidate stations can come from:</p>
+            <ul>
+                <li>authored settlement/town-plan positions;</li>
+                <li>the main-base rally; and</li>
+                <li>the reasoner's strategic anchor.</li>
+            </ul>
+            <p><code>resolve_station()</code> fits the candidate against the formation footprint and navigation grid. If the roster cannot fit around the candidate, the resolver probes translated alternatives. A station that still cannot fit is marked unusable, and gathering behavior does not order the army into an invalid deployment.</p>
+            <h2 id="formation-integration">Formation integration</h2>
+            <p>AI strategic movement uses the same army-formation planning infrastructure as player-controlled groups.</p>
+            <p>The planner returns per-slot placement status. Commands are emitted for placeable slots; blocked slots are not turned into impossible movement orders.</p>
+            <p>That means AI formation behavior inherits the same terrain fitting, doctrine templates, movement policies, and slot semantics documented in <a href="FORMATION_ARCHITECTURE.md">FORMATION_ARCHITECTURE.md</a>.</p>
+            <h2 id="defence-model">Defence model</h2>
+            <p>Base defence combines strategic assignments with current threat information.</p>
+            <p>The AI can retain a garrison in advance, but active defence still evaluates where the threat is, which base is affected, which defenders are available, and whether ordinary strategic units need to be pulled into the response.</p>
+            <p>This is separate from mission assault-wave ownership, so a mission AI can defend its fortification while authored attackers continue their own objective.</p>
+            <h2 id="observability">Observability</h2>
+            <p>The AI exposes diagnostics for tests and runtime tracing. Context records strategic state, assignments, wave/base information, and other decision facts. The formation path also has its own debug logging.</p>
+            <p>For formation decisions, enable:</p>
+            <div>
+                <pre><code class="language-sh">QT_LOGGING_RULES="soi.ai.formation.debug=true"</code></pre>
+            </div>
+            <p>The trace reports doctrine, intent, member count, anchor, facing, resulting footprint, and blocked/adjusted placement information.</p>
+            <p>When debugging AI behavior, it is useful to identify which layer made the decision:</p>
+            <ol>
+                <li>snapshot observation;</li>
+                <li>strategy/context state;</li>
+                <li>behavior ownership;</li>
+                <li>command arbitration;</li>
+                <li>command validation/application; or</li>
+                <li>downstream movement/combat execution.</li>
+            </ol>
+            <p>That decomposition avoids treating every visible bad movement as a “reasoner” problem when the failure may actually be station fitting, pathing, or command rejection.</p>
+            <h2 id="testing">Testing</h2>
+            <p>AI behavior is exercised through simulation tests and scenario-level coverage.</p>
+            <p>Current coverage includes:</p>
+            <ul>
+                <li>strategy and posture parsing;</li>
+                <li>strategic state transitions;</li>
+                <li>command filtering and stale-subject rejection;</li>
+                <li>perception and strategic objectives;</li>
+                <li>reserve/garrison/harass role separation;</li>
+                <li>local engagement;</li>
+                <li>scripted assault-wave behavior;</li>
+                <li>base clustering and base identity across updates;</li>
+                <li>per-base rally/production behavior;</li>
+                <li>expansion and outpost abandonment;</li>
+                <li>commander doctrine loading;</li>
+                <li>town-plan construction;</li>
+                <li>attack-wave assembly and commitment;</li>
+                <li>station resolution; and</li>
+                <li>formation placement.</li>
+            </ul>
+            <p>The primary simulation suite can be run with:</p>
+            <div>
+                <pre><code class="language-sh">./build/bin/simulation_tests --gtest_color=no --gtest_brief=1</code></pre>
+            </div>
+            <p>Arena scenarios add complete settlement and battle coverage where the useful observation is the behavior of the whole AI rather than one isolated service.</p>
+            <h2 id="architectural-invariants">Architectural invariants</h2>
+            <p>The current AI design depends on several invariants:</p>
+            <ul>
+                <li>workers reason from snapshots, not the mutable world;</li>
+                <li>persistent planning memory lives in <code>AIContext</code>, not hidden statics;</li>
+                <li>worker completion time does not decide application tick;</li>
+                <li>behaviors claim roles/subjects explicitly;</li>
+                <li>AI orders are validated before they affect the world;</li>
+                <li>mission assault waves remain distinct from strategic committed waves;</li>
+                <li>AI uses production, construction, formation, movement, and combat systems shared with the rest of the game; and</li>
+                <li>authored commander data tunes existing systems instead of bypassing them.</li>
+            </ul>
+            <p>These invariants are more important than any individual strategy number because they determine whether AI behavior remains deterministic, testable, and compatible with the rest of the simulation.</p>
+            <h2 id="source-map">Source map</h2>
             <p>
             <table>
                 <tr>
-                    <td>File</td>
-                    <td>Responsibility</td>
+                    <td>Concern</td>
+                    <td>Source</td>
                 </tr>
                 <tr>
-                    <td><code>ai_types.h</code></td>
-                    <td>Snapshot, context, strategy config, commands</td>
+                    <td>AI snapshot/context/reasoning</td>
+                    <td><code>game/systems/ai_system/</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_snapshot_builder.cpp</code></td>
-                    <td>Reads visible world state into <code>AISnapshot</code></td>
+                    <td>Strategy/posture/personality/difficulty</td>
+                    <td><code>game/systems/ai_system/ai_strategy.cpp</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_reasoner.cpp</code></td>
-                    <td>Updates persistent AI context and state</td>
+                    <td>Strategic committed waves</td>
+                    <td><code>game/systems/ai_system/ai_attack_wave.cpp</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_executor.cpp</code></td>
-                    <td>Runs behaviors and collects commands</td>
+                    <td>Commander doctrines</td>
+                    <td><code>assets/data/ai/doctrines.json</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_worker.cpp</code></td>
-                    <td>Background worker wrapper</td>
+                    <td>Town plans</td>
+                    <td><code>assets/data/ai/town_plans.json</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_command_filter.cpp</code></td>
-                    <td>Prevents duplicate/spammy commands</td>
+                    <td>Mission AI setup/waves</td>
+                    <td><code>game/map/mission_definition.h</code>, mission assets</td>
                 </tr>
                 <tr>
-                    <td><code>ai_command_applier.cpp</code></td>
-                    <td>Applies AI commands back to the game</td>
+                    <td>Formation behavior</td>
+                    <td>formation planner/runtime under <code>game/formation/</code></td>
                 </tr>
                 <tr>
-                    <td><code>ai_strategy.cpp</code></td>
-                    <td>Strategy presets, personality shaping, difficulty tuning</td>
-                </tr>
-                <tr>
-                    <td><code>ai_utils.h</code></td>
-                    <td>Assignment cleanup and force-role helper functions</td>
-                </tr>
-                <tr>
-                    <td><code>behaviors/*.cpp</code></td>
-                    <td>Tactical and macro behavior implementations</td>
-                </tr>
-                <tr>
-                    <td><code>game/systems/ai_system.cpp</code></td>
-                    <td>Owns AI instances and update cadence</td>
+                    <td>AI startup readiness</td>
+                    <td>mission startup/game engine path</td>
                 </tr>
             </table>
             </p>
-            <h2 id="what-the-ai-knows">What the AI knows</h2>
-            <p>The AI uses two data models:</p>
-            <ul>
-                <li><strong><code>AISnapshot</code></strong>: what is true <strong>right now</strong></li>
-                <li><strong><code>AIContext</code></strong>: what the AI <strong>remembers</strong></li>
-            </ul>
-            <h3 id="snapshot">Snapshot</h3>
-            <p><code>AISnapshot</code> is intentionally compact:</p>
-            <ul>
-                <li><code>friendly_units</code></li>
-                <li><code>visible_enemies</code></li>
-                <li><code>strategic_objectives</code></li>
-                <li><code>game_time</code></li>
-            </ul>
-            <p>The important change is <code>strategic_objectives</code>: the AI keeps enemy structures and commanders as long-range objectives even when they are outside tactical vision. That prevents the classic RTS failure mode where the army stops doing anything just because no enemy is currently visible.</p>
-            <h3 id="context">Context</h3>
-            <p><code>AIContext</code> is where most of the AI’s current strength lives. In addition to basic unit counts and state, it tracks:</p>
-            <ul>
-                <li>a <strong>sticky primary barracks</strong> used as the main base anchor</li>
-                <li>rally and base positions</li>
-                <li><strong>local threat memory</strong> (<code>last_local_threat_time</code>)</li>
-                <li><strong>reserve unit IDs</strong></li>
-                <li><strong>harass unit IDs</strong></li>
-                <li><strong>assembled unit count</strong></li>
-                <li>shared <strong>macro targets</strong></li>
-                <li>outpost planning data:</li>
-                <li><code>has_expansion_site</code></li>
-                <li><code>expansion_site_x/z</code></li>
-                <li><code>outpost_barracks_count</code></li>
-                <li><code>outpost_home_count</code></li>
-                <li><code>expansion_construction_pending</code></li>
-                <li><code>last_expansion_order_time</code></li>
-            </ul>
-            <p>This is still heuristic AI, not a heavyweight planner, but the persistent context makes it feel much more intentional.</p>
-            <h2 id="state-machine">State machine</h2>
-            <p>The AI operates in these strategic states:</p>
-            <ul>
-                <li><code>Idle</code></li>
-                <li><code>Gathering</code></li>
-                <li><code>Attacking</code></li>
-                <li><code>Defending</code></li>
-                <li><code>Retreating</code></li>
-                <li><code>Expanding</code></li>
-            </ul>
-            <p>The transitions are driven by cheap battlefield signals:</p>
-            <ul>
-                <li>nearby or remembered local threats -&gt; <code>Defending</code></li>
-                <li>low health / unfavorable posture -&gt; <code>Retreating</code></li>
-                <li>enough committed force -&gt; <code>Attacking</code></li>
-                <li>need to capture a neutral barracks or establish an outpost -&gt; <code>Expanding</code></li>
-                <li>otherwise regroup / assemble -&gt; <code>Gathering</code></li>
-            </ul>
-            <p>The important modern behavior is that <strong>Defending is no longer sticky forever</strong>. It decays from local threat memory instead of global enemy visibility, so the AI can leave defense mode once the base area has actually calmed down.</p>
-            <h2 id="behaviors-and-priorities">Behaviors and priorities</h2>
-            <p>Behaviors are modular and ordered by priority.</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Behavior</td>
-                    <td>Priority</td>
-                    <td>Concurrent?</td>
-                    <td>Current job</td>
-                </tr>
-                <tr>
-                    <td><code>RetreatBehavior</code></td>
-                    <td>Critical</td>
-                    <td>No</td>
-                    <td>Pull damaged armies back to safety</td>
-                </tr>
-                <tr>
-                    <td><code>DefendBehavior</code></td>
-                    <td>Critical</td>
-                    <td>No</td>
-                    <td>React to local threats, prefer reserve first</td>
-                </tr>
-                <tr>
-                    <td><code>ProductionBehavior</code></td>
-                    <td>High</td>
-                    <td>Yes</td>
-                    <td>Keep barracks producing from style-aware targets</td>
-                </tr>
-                <tr>
-                    <td><code>BuilderBehavior</code></td>
-                    <td>High</td>
-                    <td>Yes</td>
-                    <td>Build homes, barracks, towers, catapults, and outposts</td>
-                </tr>
-                <tr>
-                    <td><code>CommanderBehavior</code></td>
-                    <td>High</td>
-                    <td>Yes</td>
-                    <td>Move commanders and trigger rally ability</td>
-                </tr>
-                <tr>
-                    <td><code>ExpandBehavior</code></td>
-                    <td>High</td>
-                    <td>No</td>
-                    <td>Capture neutral barracks or escort the main force to an outpost site</td>
-                </tr>
-                <tr>
-                    <td><code>AttackBehavior</code></td>
-                    <td>Normal</td>
-                    <td>No</td>
-                    <td>Main-army pushes, target chasing, blind marches to strategic objectives</td>
-                </tr>
-                <tr>
-                    <td><code>HarassBehavior</code></td>
-                    <td>Low</td>
-                    <td>Yes</td>
-                    <td>Raider detachment against isolated or strategic targets</td>
-                </tr>
-                <tr>
-                    <td><code>GatherBehavior</code></td>
-                    <td>Low</td>
-                    <td>No</td>
-                    <td>Assemble the main army around the rally area</td>
-                </tr>
-            </table>
-            </p>
-            <p>Three concurrency rules matter:</p>
-            <ol>
-                <li><strong>Production</strong>, <strong>builder</strong>, and <strong>commander</strong> logic keep running during attacks and defenses.</li>
-                <li><strong>HarassBehavior</strong> can run alongside the main strategic behavior.</li>
-                <li>Exclusive force behaviors still rely on unit claiming so they do not fight each other for the same troops.</li>
-            </ol>
-            <h2 id="force-organization">Force organization</h2>
-            <p>This is the current force model.</p>
-            <h3 id="main-army">Main army</h3>
-            <p>The main army is the attack-capable pool after excluding:</p>
-            <ul>
-                <li>builders</li>
-                <li>reserve units</li>
-                <li>harass units</li>
-            </ul>
-            <p><code>GatherBehavior</code> organizes this force near the rally point, and <code>AttackBehavior</code> uses it for proactive attacks and objective marches.</p>
-            <h3 id="reserve-force">Reserve force</h3>
-            <p>The reserve is a stable home-defense group stored in <code>reserve_unit_ids</code>.</p>
-            <p>Current rules:</p>
-            <ul>
-                <li>reserve membership is sticky across updates</li>
-                <li>reserve size is clamped so the AI does not starve its reactive attack floor</li>
-                <li><code>DefendBehavior</code> prefers reserve first</li>
-                <li><code>GatherBehavior</code> keeps reserve near base</li>
-                <li><code>AttackBehavior</code> never sends reserve units forward</li>
-            </ul>
-            <p>This is the first real "do not commit everything" rule in the AI.</p>
-            <h3 id="harass-force">Harass force</h3>
-            <p>The harass force is a separate detachment stored in <code>harass_unit_ids</code>.</p>
-            <p>Current rules:</p>
-            <ul>
-                <li>harass size is style-driven</li>
-                <li>harass is clamped against reserve and defense needs</li>
-                <li>harass units are excluded from main-army readiness</li>
-                <li>harass shuts off while retreating or when the home area is threatened</li>
-            </ul>
-            <p>This gives the AI a second offensive layer without making the main planner much heavier.</p>
-            <h3 id="commanders">Commanders</h3>
-            <p>Commanders are handled separately:</p>
-            <ul>
-                <li>they are not treated as generic line units</li>
-                <li>they reposition behind the army centroid</li>
-                <li>they periodically trigger the rally ability</li>
-            </ul>
-            <h2 id="macro-and-building-logic">Macro and building logic</h2>
-            <p>The AI now uses shared macro targets instead of scattered hardcoded thresholds.</p>
-            <p><code>AIStrategyConfig</code> feeds these targets into context:</p>
-            <ul>
-                <li>builder count</li>
-                <li>home count</li>
-                <li>barracks count</li>
-                <li>defense tower count</li>
-                <li>catapult count</li>
-                <li>desired assembly size</li>
-                <li>assembly radius</li>
-                <li>gather spacing</li>
-            </ul>
-            <p><code>BuilderBehavior</code> then builds toward the largest deficit while preserving important early priorities like homes and the first barracks.</p>
-            <p><code>ProductionBehavior</code> also reads from the same config, so unit production and structure growth are at least pulling in the same strategic direction.</p>
-            <h2 id="expansion-logic">Expansion logic</h2>
-            <p>The AI now has a <strong>first outpost planner</strong>.</p>
-            <h3 id="what-it-currently-does">What it currently does</h3>
-            <ul>
-                <li>keeps the original main-base barracks sticky instead of letting the anchor drift</li>
-                <li>chooses an expansion site from <strong>real enemy strategic objectives</strong></li>
-                <li>ignores neutral barracks when deciding outpost direction</li>
-                <li>tracks pending construction at the chosen site</li>
-                <li>builds an outpost barracks first, then an outpost home</li>
-                <li>sends only the main attack force to escort the outpost</li>
-            </ul>
-            <h3 id="what-it-does-not-do-yet">What it does not do yet</h3>
-            <ul>
-                <li>manage several active bases with distinct production roles</li>
-                <li>abandon and retarget failed outposts with richer policies</li>
-                <li>shift strategic center-of-gravity from main base to forward base</li>
-            </ul>
-            <p>So this is a real step beyond passive single-base AI, but it is not yet a full multi-base RTS economy.</p>
-            <h2 id="style-personality-and-difficulty">Style, personality, and difficulty</h2>
-            <p>The system now deliberately separates <strong>what the AI wants</strong> from <strong>how efficiently it executes</strong>.</p>
-            <h3 id="strategy-preset">Strategy preset</h3>
-            <p>The strategy preset is the coarse style template:</p>
-            <ul>
-                <li><code>balanced</code></li>
-                <li><code>aggressive</code></li>
-                <li><code>defensive</code></li>
-                <li><code>expansionist</code></li>
-                <li><code>economic</code></li>
-                <li><code>harasser</code> / <code>harassment</code></li>
-                <li><code>rusher</code> / <code>rush</code></li>
-            </ul>
-            <p>These presets set the default shape of the AI:</p>
-            <ul>
-                <li>how many builders it wants</li>
-                <li>how many barracks/towers/catapults it prefers</li>
-                <li>how large an army it assembles before attacking</li>
-                <li>how much reserve it keeps</li>
-                <li>how many harassers it sends</li>
-                <li>whether it wants an outpost and how far forward it should be</li>
-            </ul>
-            <h3 id="personality-inputs">Personality inputs</h3>
-            <p>Mission JSON can then nudge a preset using three normalized floats:</p>
-            <ul>
-                <li><code>aggression</code></li>
-                <li><code>defense</code></li>
-                <li><code>harassment</code></li>
-            </ul>
-            <p>These values tune things like:</p>
-            <ul>
-                <li>attack thresholds</li>
-                <li>reserve size</li>
-                <li>tower count</li>
-                <li>harass detachment size</li>
-                <li>scouting distance</li>
-                <li>outpost ambition</li>
-            </ul>
-            <h3 id="difficulty-tuning">Difficulty tuning</h3>
-            <p>Difficulty now affects execution efficiency, not strategic identity.</p>
-            <p>Supported values:</p>
-            <ul>
-                <li><code>easy</code></li>
-                <li><code>hard</code></li>
-                <li><code>very_hard</code></li>
-                <li><code>medium</code> currently falls back to <code>normal</code></li>
-                <li>anything else / omitted -&gt; <code>normal</code></li>
-            </ul>
-            <p>Difficulty currently changes:</p>
-            <ul>
-                <li>AI update interval</li>
-                <li>production speed multiplier</li>
-                <li>scouting reach multiplier</li>
-            </ul>
-            <p>That means a defensive AI on <code>hard</code> is still defensive; it just reacts and scales more efficiently.</p>
-            <h2 id="mission-json-usage">Mission JSON usage</h2>
-            <p>Mission files are the current authoring surface for AI setup. The loader reads <code>strategy</code>, <code>personality</code>, <code>difficulty</code>, <code>team_id</code>, starting spawns, and optional mission waves from <code>ai_setups</code>.</p>
-            <h3 id="example-balanced-frontline-opponent">Example: balanced frontline opponent</h3>
-            <div>
-                <pre><code class="language-json">{
-  "id": "roman_legion_alpha",
-  "nation": "roman_republic",
-  "faction": "roman",
-  "color": "red",
-  "team_id": 1,
-  "difficulty": "hard",
-  "strategy": "balanced",
-  "personality": {
-    "aggression": 0.62,
-    "defense": 0.55,
-    "harassment": 0.30
-  },
-  "starting_buildings": [
-    {
-      "type": "barracks",
-      "position": { "x": 132, "z": 84 },
-      "max_population": 180
-    }
-  ],
-  "starting_units": [
-    {
-      "type": "spearman",
-      "count": 8,
-      "position": { "x": 128, "z": 86 }
-    },
-    {
-      "type": "builder",
-      "count": 2,
-      "position": { "x": 134, "z": 82 }
-    }
-  ],
-  "commander_troop": "roman_field_commander"
-}</code></pre>
-            </div>
-            <p>Resulting feel:</p>
-            <ul>
-                <li>maintains a moderate reserve</li>
-                <li>assembles before larger attacks</li>
-                <li>grows the base steadily</li>
-                <li>pushes harder than <code>easy</code> because the execution cadence is faster</li>
-            </ul>
-            <h3 id="example-forward-pressure-harasser">Example: forward pressure harasser</h3>
-            <div>
-                <pre><code class="language-json">{
-  "id": "numidian_raiders",
-  "nation": "carthage",
-  "faction": "carthaginian",
-  "color": "yellow",
-  "difficulty": "medium",
-  "strategy": "harasser",
-  "personality": {
-    "aggression": 0.74,
-    "defense": 0.28,
-    "harassment": 0.84
-  },
-  "starting_units": [
-    {
-      "type": "horse_swordsman",
-      "count": 5,
-      "position": { "x": 18, "z": 80 }
-    },
-    {
-      "type": "builder",
-      "count": 1,
-      "position": { "x": 16, "z": 82 }
-    }
-  ],
-  "starting_buildings": [
-    {
-      "type": "barracks",
-      "position": { "x": 14, "z": 80 },
-      "max_population": 120
-    }
-  ]
-}</code></pre>
-            </div>
-            <p>Resulting feel:</p>
-            <ul>
-                <li>smaller main-army thresholds</li>
-                <li>real raider detachment</li>
-                <li>lower reserve</li>
-                <li>more forward scouting and earlier pressure</li>
-            </ul>
-            <h3 id="notes-for-authors">Notes for authors</h3>
-            <ul>
-                <li><code>strategy</code> is optional; omitted means <code>balanced</code></li>
-                <li><code>personality</code> fields default to <code>0.5</code></li>
-                <li><code>difficulty</code> can be omitted; the AI falls back to normal execution tuning</li>
-                <li><code>team_id</code> is optional; omitted AIs are auto-assigned separate enemy teams</li>
-                <li><code>waves</code> add scripted reinforcements on top of the normal AI economy/behavior layer</li>
-            </ul>
-            <h2 id="debugging-and-validation">Debugging and validation</h2>
-            <p>The main regression coverage lives in <code>tests/systems/ai_system_test.cpp</code>.</p>
-            <p>Current AI test coverage includes:</p>
-            <ul>
-                <li>assignment lifecycle cleanup</li>
-                <li>command filtering</li>
-                <li>vision-filtered perception</li>
-                <li>state transitions</li>
-                <li>macro targets</li>
-                <li>strategic objective marching</li>
-                <li>reserve and harass role separation</li>
-                <li>outpost planning and duplicate-order suppression</li>
-            </ul>
-            <p>For repo validation, the reliable test binary is:</p>
-            <div>
-                <pre><code class="language-bash">./build/bin/standard_of_iron_tests --gtest_color=no --gtest_brief=1</code></pre>
-            </div>
-            <h2 id="what-is-already-strong">What is already strong</h2>
-            <p>Relative to the original passive AI, the current system is much better at:</p>
-            <ul>
-                <li>staying active</li>
-                <li>not deadlocking force ownership</li>
-                <li>not freezing when enemies leave vision</li>
-                <li>keeping a home guard</li>
-                <li>creating distinct playstyles cheaply</li>
-                <li>laying real foundations for expansion</li>
-            </ul>
-            <h2 id="biggest-remaining-gaps">Biggest remaining gaps</h2>
-            <p>The AI is improved, but it is not yet "finished RTS AI." The most important remaining gaps are:</p>
-            <ol>
-                <li><strong>True multi-base planning</strong></li>
-                <li>multiple active bases</li>
-                <li>per-base rally points</li>
-                <li>per-base production roles</li>
-                <li>
-                    <p>better outpost abandonment / retarget logic</p>
-                </li>
-                <li>
-                    <p><strong>Richer force planner</strong></p>
-                </li>
-                <li>siege groups</li>
-                <li>flankers</li>
-                <li>synchronized attack waves</li>
-                <li>
-                    <p>regroup / reform logic after failed pushes</p>
-                </li>
-                <li>
-                    <p><strong>Data-driven profiles</strong></p>
-                </li>
-                <li>move strategy presets out of code into assets/data</li>
-                <li>
-                    <p>let designers tune AI personalities without recompiling</p>
-                </li>
-                <li>
-                    <p><strong>Stronger strategic economy awareness</strong></p>
-                </li>
-                <li>more explicit resource pressure</li>
-                <li>better builder safety / routing</li>
-                <li>
-                    <p>broader structure placement logic</p>
-                </li>
-                <li>
-                    <p><strong>Team and campaign coordination</strong></p>
-                </li>
-                <li>allied AI timing</li>
-                <li>shared fronts</li>
-                <li>mission-aware operational goals</li>
-            </ol>
-            <h2 id="recommended-next-expansion-order">Recommended next expansion order</h2>
-            <p>If you want the next biggest gains per engineering effort, the recommended order is:</p>
-            <ol>
-                <li><strong>Data-driven AI profiles</strong> so design can iterate quickly</li>
-                <li><strong>True multi-base roles</strong> built on the current outpost foundation</li>
-                <li><strong>Richer force planner</strong> for siege / flank / regroup behavior</li>
-                <li><strong>Coordinated allied AI</strong> for campaign-scale scenarios</li>
-            </ol>
-            <p>That sequence builds on the current architecture instead of fighting it.</p>
+            <p>The capabilities in this document describe current runtime paths. They are not a backlog or an estimate of what the AI might support later.</p>
         </article-section>
     </div>
     <footer>

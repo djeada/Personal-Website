@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>High-level startup flow</title>
+    <meta content="Mission startup separates preparation from playable simulation." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "High-level startup flow",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/mission_startup"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/mission_startup",
+            "description": "Mission startup separates preparation from playable simulation.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#high-level-startup-flow">High-level startup flow</a></li>
+                    <li><a href="#startup-profiler-phases">Startup profiler phases</a></li>
+                    <li><a href="#shared-map-context">Shared map context</a></li>
+                    <li><a href="#why-map-context-is-shared">Why map context is shared</a></li>
+                    <li><a href="#cache-invalidation">Cache invalidation</a></li>
+                    <li><a href="#world-load-phase">World load phase</a></li>
+                    <li><a href="#mission-setup-phase">Mission setup phase</a></li>
+                    <li><a href="#commander-setup-ordering">Commander setup ordering</a></li>
+                    <li><a href="#ai-initialization">AI initialization</a></li>
+                    <li><a href="#initial-ai-decision-budget">Initial AI decision budget</a></li>
+                    <li><a href="#ai-worker-ownership">AI worker ownership</a></li>
+                    <li><a href="#deterministic-ai-result-timing">Deterministic AI result timing</a></li>
+                    <li><a href="#first-frame-readiness-gate">First-frame readiness gate</a>
+                        <ol>
+                            <li><a href="#terrain-scatter">Terrain scatter</a></li>
+                            <li><a href="#ai-initial-decisions">AI initial decisions</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#loading-overlay-maximum-wait">Loading-overlay maximum wait</a></li>
+                    <li><a href="#minimum-display-time">Minimum display time</a></li>
+                    <li><a href="#simulation-during-final-loading">Simulation during final loading</a></li>
+                    <li><a href="#terrain-scatter-readiness">Terrain-scatter readiness</a></li>
+                    <li><a href="#startup-tracing">Startup tracing</a></li>
+                    <li><a href="#useful-counters">Useful counters</a></li>
+                    <li><a href="#interpreting-a-slow-startup">Interpreting a slow startup</a>
+                        <ol>
+                            <li><a href="#high-map-parses">High map.parses</a></li>
+                            <li><a href="#long-world-load">Long world.load</a></li>
+                            <li><a href="#long-mission-setup">Long mission.setup</a></li>
+                            <li><a href="#long-ai-initial_preparation">Long ai.initial_preparation</a></li>
+                            <li><a href="#loading-overlay-reaches-15-s">Loading overlay reaches 15 s</a></li>
+                            <li><a href="#first-playable-frames-are-slow">First playable frames are slow</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#relationship-to-frame-pacing">Relationship to frame pacing</a></li>
+                    <li><a href="#relationship-to-save-load">Relationship to save/load</a></li>
+                    <li><a href="#startup-tests">Startup tests</a></li>
+                    <li><a href="#architectural-invariants">Architectural invariants</a></li>
+                    <li><a href="#source-map">Source map</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Mission Startup Architecture</header>
+            <p>Mission startup separates <strong>preparation</strong> from <strong>playable simulation</strong>. Loading a battle is not one monolithic map parse: the application resolves the authored map, constructs the world, applies mission ownership/setup, initializes AI, prepares renderer-facing terrain/scatter state, starts simulation, and keeps the loading overlay visible until the required first-playable conditions are ready or the bounded maximum wait is reached.</p>
+            <p>The current startup contract is designed to avoid two opposite failures:</p>
+            <ul>
+                <li>revealing the battlefield before important runtime state is ready; and</li>
+                <li>holding the loading screen forever because one asynchronous component never reports readiness.</li>
+            </ul>
+            <h2 id="high-level-startup-flow">High-level startup flow</h2>
+            <p>The mission/skirmish startup path begins from <code>GameEngine::start_skirmish_internal()</code> and is coordinated through <code>SkirmishRuntimeCoordinator</code>.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">mission/skirmish request
+        │
+        ▼
+resolve/acquire map context
+        │
+        ▼
+construct world + terrain + authored entities
+        │
+        ▼
+apply mission/player/AI ownership setup
+        │
+        ▼
+initialize runtime systems
+        │
+        ├─ terrain/scatter preparation
+        ├─ minimap/view preparation
+        ├─ registries/index rebuilds
+        └─ AI instances + initial decisions
+        ▼
+start fixed-step simulation
+        │
+        ▼
+loading overlay waits on readiness gate
+        │
+        ├─ terrain scatter GPU ready?
+        ├─ initial AI decisions ready?
+        ├─ minimum display time met?
+        └─ maximum wait not exceeded?
+        ▼
+first playable presentation</code></pre>
+            </div>
+            <p>The simulation can already be advancing during the last portion of the loading overlay. “Simulation started” and “battlefield revealed” are therefore separate milestones.</p>
+            <h2 id="startup-profiler-phases">Startup profiler phases</h2>
+            <p><code>Engine::Core::StartupProfiler</code> records named phases and counters across startup.</p>
+            <p>The main phases currently include:</p>
+            <ol>
+                <li><strong><code>world.load</code></strong> — map context use, terrain, authored entities, environment systems, minimap setup, registry/index rebuilds, and renderer-facing preparation.</li>
+                <li><strong><code>mission.commander_setup</code> / <code>mission.setup</code></strong> — owner/nation/team assignment, starting forces, objectives, waves, stages, and commander-related mission state.</li>
+                <li><strong><code>ai.initial_preparation</code></strong> — AI instances and first decision jobs.</li>
+                <li><strong>runtime finalization</strong> — simulation stepping begins while the loading overlay waits for first-playable readiness.</li>
+            </ol>
+            <p>The profiler also records the transition from loading to first playable presentation and early frame timing after startup.</p>
+            <h2 id="shared-map-context">Shared map context</h2>
+            <p><code>Game::Map::MapContextStore</code> is the shared parsed-map cache used by mission startup.</p>
+            <p><code>MapContextStore::acquire()</code> resolves the map path and keys the cached <code>MapDefinition</code> using:</p>
+            <ul>
+                <li>resolved path;</li>
+                <li>file size; and</li>
+                <li>modification timestamp.</li>
+            </ul>
+            <p>A matching stamp reuses the existing immutable:</p>
+            <div>
+                <pre><code class="language-clike">shared_ptr&lt;const MapDefinition&gt;</code></pre>
+            </div>
+            <p>A changed file is parsed again.</p>
+            <p>The cache retains the three most recently used maps:</p>
+            <div>
+                <pre><code class="language-text">k_retained_maps = 3</code></pre>
+            </div>
+            <h2 id="why-map-context-is-shared">Why map context is shared</h2>
+            <p>Several startup subsystems need information from the map: world construction, mission setup, environment/terrain services, AI setup, minimap/view preparation, and content-dependent initialization.</p>
+            <p>Without a shared parsed context, each subsystem could reopen and reparse the same JSON independently. <code>MapContextStore</code> gives them one immutable parsed representation for the current startup.</p>
+            <p>The store exposes statistics through <code>MapContextStore::statistics()</code>, including request, parse, and reuse counts.</p>
+            <p><code>MissionStartupTest.ParsesTheMissionMapOnce</code> verifies that the startup path reuses the shared map context rather than repeatedly parsing the same file.</p>
+            <h2 id="cache-invalidation">Cache invalidation</h2>
+            <p>Map reuse is not based only on path.</p>
+            <p>The file size and modification timestamp participate in the cache stamp. If an authored map changes on disk, a subsequent acquisition does not blindly reuse the older parsed representation.</p>
+            <p>This matters for developer/editor workflows where a map can be changed without renaming it.</p>
+            <h2 id="world-load-phase">World load phase</h2>
+            <p>The <code>world.load</code> phase is broader than raw JSON parsing.</p>
+            <p>It covers the work required to turn the authored map into a runtime world, including areas such as:</p>
+            <ul>
+                <li>terrain service construction;</li>
+                <li>authored entity/spawn creation;</li>
+                <li>environmental state;</li>
+                <li>collision/navigation-related rebuilds;</li>
+                <li>runtime registry preparation;</li>
+                <li>minimap/view setup; and</li>
+                <li>renderer-facing terrain/scatter preparation.</li>
+            </ul>
+            <p>The startup profiler should therefore be used to distinguish map parsing from total world initialization. A slow <code>world.load</code> does not automatically imply that JSON parsing is the bottleneck.</p>
+            <h2 id="mission-setup-phase">Mission setup phase</h2>
+            <p>Mission setup layers scenario rules over the constructed world.</p>
+            <p>The current mission setup path applies concepts such as:</p>
+            <ul>
+                <li>player/AI owner registration;</li>
+                <li>nation and team state;</li>
+                <li>mission starting forces/buildings/resources;</li>
+                <li>victory/defeat rules;</li>
+                <li>scripted waves;</li>
+                <li>stages/objectives;</li>
+                <li>commander setup/message state; and</li>
+                <li>other mission runtime data.</li>
+            </ul>
+            <p>See <a href="MISSION_FRAMEWORK.md">MISSION_FRAMEWORK.md</a> for the schema and runtime ownership of those features.</p>
+            <h2 id="commander-setup-ordering">Commander setup ordering</h2>
+            <p>Commander and owner configuration must exist before systems that depend on final mission ownership are initialized.</p>
+            <p>That is why mission startup separates general world creation from mission-specific owner/commander setup and final AI preparation.</p>
+            <p>AI cannot build a correct first snapshot for an owner that has not yet been registered into the match.</p>
+            <h2 id="ai-initialization">AI initialization</h2>
+            <p><code>GameEngine::prepare_mission_ai_state()</code> prepares the first AI decision work during loading.</p>
+            <p>For campaign missions, skirmish-level AI initialization can be deferred through the <code>defer_ai_initialization</code> path until mission owners are known.</p>
+            <p>After owner registration, startup initializes AI for the actual mission owner set and calls:</p>
+            <div>
+                <pre><code class="language-clike">ai_system-&gt;prepare_initial_decisions(*m_world);</code></pre>
+            </div>
+            <p>This means the first strategic decision batch is prepared before the game is fully revealed to the player.</p>
+            <h2 id="initial-ai-decision-budget">Initial AI decision budget</h2>
+            <p>The engine waits up to:</p>
+            <div>
+                <pre><code class="language-text">k_initial_decision_budget = 1500 ms</code></pre>
+            </div>
+            <p>for the initial AI batch during preparation.</p>
+            <p>If the work is still running after that budget, startup logs the condition rather than blocking indefinitely at that synchronous wait point.</p>
+            <p>The loading-overlay readiness gate remains separate and can continue to report <code>AI initial decisions</code> as pending until the AI reports readiness or the overall overlay maximum wait is reached.</p>
+            <p>This gives startup two different safeguards:</p>
+            <ul>
+                <li>a 1.5 s bounded initial wait for the first AI batch; and</li>
+                <li>a larger loading-overlay maximum wait protecting the overall reveal flow.</li>
+            </ul>
+            <h2 id="ai-worker-ownership">AI worker ownership</h2>
+            <p>AI workers reason from immutable snapshots.</p>
+            <p>The world-owning thread builds each <code>AISnapshot</code> and submits it to the worker. Worker code does not walk the mutable ECS world while startup/simulation continues.</p>
+            <p>That ownership model is the same one used after the mission becomes playable; startup does not create a special shared-world AI path.</p>
+            <p>See <a href="AI_ARCHITECTURE.md">AI_ARCHITECTURE.md</a>.</p>
+            <h2 id="deterministic-ai-result-timing">Deterministic AI result timing</h2>
+            <p>An AI decision job carries the simulation update at which its result is due:</p>
+            <div>
+                <pre><code class="language-text">job_due_update = m_update_count + k_decision_latency_updates</code></pre>
+            </div>
+            <p><code>process_results()</code> applies the result on that update.</p>
+            <p>If the worker is late, the simulation waits for it rather than shifting the decision to a later update. Faster or slower worker hardware can therefore affect wall-clock cost without changing the simulation update on which the AI command enters the match.</p>
+            <p>That is important during startup as well as ordinary gameplay: precomputing the first decision is a performance optimization around a deterministic scheduling contract, not a change to gameplay timing.</p>
+            <h2 id="first-frame-readiness-gate">First-frame readiness gate</h2>
+            <p><code>GameEngine::mission_startup_pending_components()</code> is the source of truth for the runtime components that can keep the loading overlay active.</p>
+            <p>The current implementation reports two pending conditions.</p>
+            <h3 id="terrain-scatter">Terrain scatter</h3>
+            <p>Reported when:</p>
+            <ul>
+                <li><code>m_scatter</code> exists; and</li>
+                <li><code>m_scatter-&gt;is_gpu_ready()</code> is false.</li>
+            </ul>
+            <p>This represents renderer-facing terrain scatter preparation that should finish before the battlefield is normally revealed.</p>
+            <h3 id="ai-initial-decisions">AI initial decisions</h3>
+            <p>Reported when:</p>
+            <ul>
+                <li>an <code>AISystem</code> exists; and</li>
+                <li><code>initial_decisions_ready()</code> is false.</li>
+            </ul>
+            <p>This prevents the match from being revealed while the computer opponent's initial strategic state is still unprepared under normal startup conditions.</p>
+            <h2 id="loading-overlay-maximum-wait">Loading-overlay maximum wait</h2>
+            <p>The loading overlay has a hard maximum wait:</p>
+            <div>
+                <pre><code class="language-text">k_loading_overlay_max_wait_ms = 15000</code></pre>
+            </div>
+            <p>If the readiness conditions are still pending when that limit is reached, the engine logs which components remain pending instead of holding the loading screen indefinitely.</p>
+            <p>This is a fallback for robustness, not an assertion that the pending work completed successfully.</p>
+            <p>The difference matters operationally:</p>
+            <ul>
+                <li>normal release means readiness conditions became satisfied;</li>
+                <li>timeout release means the runtime chose not to block the player forever and recorded the unresolved components for diagnosis.</li>
+            </ul>
+            <h2 id="minimum-display-time">Minimum display time</h2>
+            <p>The loading flow also respects its minimum display timing before reveal.</p>
+            <p>That prevents a very fast load from producing a visually unstable flash of the loading surface while still allowing readiness to extend the overlay when actual startup work needs more time.</p>
+            <p>The minimum display rule and readiness gate solve different UX problems and should not be conflated.</p>
+            <h2 id="simulation-during-final-loading">Simulation during final loading</h2>
+            <p>The fixed-step simulation can be active while the loading overlay remains on screen.</p>
+            <p>That allows systems to advance toward their first stable presentation state while the player still sees the loading surface.</p>
+            <p>The startup profiler distinguishes overlay release and first playable frame so this overlap can be measured rather than guessed.</p>
+            <h2 id="terrain-scatter-readiness">Terrain-scatter readiness</h2>
+            <p>Terrain scatter is part of rendering/presentation, but its readiness participates in mission startup because a battlefield can be technically simulated while still visually incomplete.</p>
+            <p>The startup gate does not wait for every possible renderer cache in the application. It waits on the explicit current readiness contract exposed by terrain scatter and AI initial decisions.</p>
+            <p>See <a href="RENDERING_ARCHITECTURE.md">RENDERING_ARCHITECTURE.md</a> for the rendering ownership model.</p>
+            <h2 id="startup-tracing">Startup tracing</h2>
+            <p>Enable startup tracing with:</p>
+            <div>
+                <pre><code class="language-sh">SOI_STARTUP_TRACE=1</code></pre>
+            </div>
+            <p>This emits the text report path used by the current startup profiler integration.</p>
+            <p>To write structured output for tooling, set:</p>
+            <div>
+                <pre><code class="language-sh">SOI_STARTUP_TRACE_FILE=&lt;path&gt;</code></pre>
+            </div>
+            <p>The two environment variables are independent.</p>
+            <p>This allows interactive logging and artifact generation to be enabled separately.</p>
+            <h2 id="useful-counters">Useful counters</h2>
+            <p>Current startup counters include values such as:</p>
+            <ul>
+                <li><code>map.requests</code>;</li>
+                <li><code>map.parses</code>;</li>
+                <li><code>map.reuses</code>;</li>
+                <li><code>ai.owners</code>; and</li>
+                <li><code>world.units</code> when the trace path requests that count.</li>
+            </ul>
+            <p>The most direct signal for duplicate parsing is:</p>
+            <div>
+                <pre><code class="language-text">map.parses</code></pre>
+            </div>
+            <p>while:</p>
+            <div>
+                <pre><code class="language-text">map.requests - map.parses</code></pre>
+            </div>
+            <p>is the number of acquisitions served from an already parsed context.</p>
+            <h2 id="interpreting-a-slow-startup">Interpreting a slow startup</h2>
+            <p>Startup traces are most useful when broken down by phase.</p>
+            <h3 id="high-map-parses">High <code>map.parses</code></h3>
+            <p>Investigate map-context reuse or invalidation. Multiple requests are not themselves a problem; multiple parses of an unchanged map are.</p>
+            <h3 id="long-world-load">Long <code>world.load</code></h3>
+            <p>Inspect terrain construction, entity spawning, indexes/registries, environment setup, renderer-facing terrain preparation, and other world initialization. Do not assume the parser is responsible without the counters.</p>
+            <h3 id="long-mission-setup">Long <code>mission.setup</code></h3>
+            <p>Inspect mission owner/setup/objective/wave/commander initialization rather than terrain parsing.</p>
+            <h3 id="long-ai-initial_preparation">Long <code>ai.initial_preparation</code></h3>
+            <p>Inspect snapshot construction, worker reasoning, number of AI owners, and whether the worker misses the 1500 ms preparation budget.</p>
+            <h3 id="loading-overlay-reaches-15-s">Loading overlay reaches 15 s</h3>
+            <p>Inspect the pending-component log. The timeout should identify whether terrain scatter, AI initial decisions, or both failed to become ready within the normal reveal window.</p>
+            <h3 id="first-playable-frames-are-slow">First playable frames are slow</h3>
+            <p>Startup may have released before expensive presentation work was completely prewarmed. Compare startup traces with <a href="FRAME_PACING.md">FRAME_PACING.md</a> and post-playable asset-work counters.</p>
+            <h2 id="relationship-to-frame-pacing">Relationship to frame pacing</h2>
+            <p>Startup and frame pacing measure different intervals.</p>
+            <p>Startup profiling covers map/world/mission/AI preparation and the transition to first playable presentation.</p>
+            <p>Frame pacing measures the battle after it is in the playable measurement window and expects zero post-playable asset work under the performance gate.</p>
+            <p>Moving work from “first combat frame” into startup can therefore improve frame pacing, but startup profiling should show the corresponding cost rather than hiding it.</p>
+            <h2 id="relationship-to-save-load">Relationship to save/load</h2>
+            <p>Loading a saved match and starting a fresh mission share some runtime preparation concerns—world replacement, renderer snapshot publication, derived-state rebuild—but they are not the same flow.</p>
+            <p>Mission startup begins from authored map/mission data. Save/load begins from a validated serialized world/session snapshot.</p>
+            <p>Both ultimately need a stable simulation state and fresh presentation state before the player can interact normally.</p>
+            <p>See <a href="SAVE_LOAD_SYSTEM.md">SAVE_LOAD_SYSTEM.md</a>.</p>
+            <h2 id="startup-tests">Startup tests</h2>
+            <p>Startup tests use the authored <code>hold_the_sallow_ford</code> mission. It is small enough for inexpensive automated coverage while still containing an AI opponent and exercising the real mission startup contracts.</p>
+            <p>Coverage includes:</p>
+            <ul>
+                <li>shared map-context acquisition;</li>
+                <li>parse/reuse statistics;</li>
+                <li>preparation of initial AI decisions;</li>
+                <li>AI readiness behavior; and</li>
+                <li>loading-gate behavior needed before reveal.</li>
+            </ul>
+            <p><code>MissionStartupTest.ParsesTheMissionMapOnce</code> specifically locks the shared-map-context contract.</p>
+            <h2 id="architectural-invariants">Architectural invariants</h2>
+            <p>The current mission startup path depends on these invariants:</p>
+            <ul>
+                <li>the map is parsed through the shared <code>MapContextStore</code>;</li>
+                <li>unchanged map contexts can be reused;</li>
+                <li>mission ownership/setup is established before final AI preparation;</li>
+                <li>AI workers reason from snapshots rather than the mutable world;</li>
+                <li>AI results keep deterministic due simulation updates;</li>
+                <li>terrain scatter and initial AI decisions are the explicit current readiness blockers;</li>
+                <li>the loading overlay has a bounded maximum wait; and</li>
+                <li>startup profiling records enough phase/counter data to distinguish parsing, world construction, mission setup, and AI preparation.</li>
+            </ul>
+            <h2 id="source-map">Source map</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Concern</td>
+                    <td>Source</td>
+                </tr>
+                <tr>
+                    <td>Startup orchestration</td>
+                    <td><code>app/core/game_engine.cpp</code> and runtime coordinator path</td>
+                </tr>
+                <tr>
+                    <td>Map context/cache</td>
+                    <td><code>game/map/map_context.*</code></td>
+                </tr>
+                <tr>
+                    <td>Mission schema/setup</td>
+                    <td><code>game/map/</code>, mission runtime</td>
+                </tr>
+                <tr>
+                    <td>AI initial preparation</td>
+                    <td>AI system + game-engine startup integration</td>
+                </tr>
+                <tr>
+                    <td>Terrain scatter readiness</td>
+                    <td>renderer/scatter path exposed to <code>GameEngine</code></td>
+                </tr>
+                <tr>
+                    <td>Startup profiling</td>
+                    <td><code>Engine::Core::StartupProfiler</code> integration</td>
+                </tr>
+                <tr>
+                    <td>Startup tests</td>
+                    <td>mission startup tests including <code>MissionStartupTest.ParsesTheMissionMapOnce</code></td>
+                </tr>
+            </table>
+            </p>
+            <p>The current startup contract is explicit: reuse the parsed map context, construct the world, apply mission ownership before final AI initialization, prepare the first AI decision batch during loading, and keep the overlay active while terrain scatter or initial AI decisions remain pending—subject to the 15-second maximum wait.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

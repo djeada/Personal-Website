@@ -165,7 +165,10 @@
     }
 
     function setPlottedEigenpairs(values, vectors) {
-        plottedEigenpairs = values.map((value, index) => ({ value, vector: vectors[index] }));
+        plottedEigenpairs = values.map((value, index) => ({
+            value,
+            vector: vectors[index]
+        }));
         plotEigenpair.innerHTML = "";
         plottedEigenpairs.forEach((pair, index) => {
             const option = document.createElement("option");
@@ -186,7 +189,9 @@
         document.querySelectorAll(".basis-legend").forEach(item => item.hidden = mode !== "basis");
         document.querySelectorAll(".vector-legend").forEach(item => item.hidden = mode === "basis");
         if (mode === "eigenvector" && pair) {
-            pair.vector.forEach((value, index) => { vectorInputs[index].value = formatNumber(value); });
+            pair.vector.forEach((value, index) => {
+                vectorInputs[index].value = formatNumber(value);
+            });
             transformDescription.textContent = "The dashed line is invariant: Av stays on the same direction as v.";
         } else if (mode === "basis") {
             transformDescription.textContent = "The first two matrix columns show where the coordinate basis vectors move.";
@@ -253,15 +258,18 @@
 
     function matrixPlotExtent(matrix, currentVector) {
         const candidates = [
-            [1, 0], [0, 1],
+            [1, 0],
+            [0, 1],
             [matrix[0][0], matrix[1]?.[0] || 0],
             [matrix[0][1] || 0, matrix[1]?.[1] || 0],
             currentVector, multiplyMatrixVector(matrix, currentVector)
         ];
 
-        // Keep one viewport for every eigenpair so changing the selection does not
-        // visually change the scale of the transformation.
-        plottedEigenpairs.forEach(({ vector }) => {
+
+
+        plottedEigenpairs.forEach(({
+            vector
+        }) => {
             candidates.push(vector, multiplyMatrixVector(matrix, vector));
         });
 
@@ -313,9 +321,9 @@
         const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
         const projectedVector = [vector[0] || 0, vector[1] || 0];
         const projectedResult = [result[0] || 0, result[1] || 0];
-        // Eigenvectors are commonly normalized in 3D, which can leave their x-y
-        // projection only a few pixels long. Normalize that projection for the
-        // drawing while preserving Av = lambda*v and the original numeric values.
+
+
+
         const projectedLength = Math.hypot(...projectedVector);
         const displayBoost = mode === "eigenvector" && projectedLength > 1e-10 ? 1 / projectedLength : 1;
         const displayVector = projectedVector.map(value => value * displayBoost);
@@ -337,8 +345,14 @@
             const px = originX + cleanValue * scale;
             const py = originY - cleanValue * scale;
             ctx.globalAlpha = cleanValue === 0 ? 0.34 : 0.10;
-            ctx.beginPath(); ctx.moveTo(px, 18); ctx.lineTo(px, height - 18); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(18, py); ctx.lineTo(width - 18, py); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(px, 18);
+            ctx.lineTo(px, height - 18);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(18, py);
+            ctx.lineTo(width - 18, py);
+            ctx.stroke();
             if (cleanValue !== 0) {
                 ctx.globalAlpha = .55;
                 ctx.fillStyle = textColor;
@@ -360,7 +374,10 @@
         const vectorColor = "#ffd54a";
         const resultColor = "#3b8cff";
         if (mode === "basis") {
-            [[1, 0], [0, 1]].forEach((basis, index) => {
+            [
+                [1, 0],
+                [0, 1]
+            ].forEach((basis, index) => {
                 const [endX, endY] = map(basis);
                 drawArrow(ctx, originX, originY, endX, endY, textColor, `e${index + 1}`, 2, {
                     dashed: true,

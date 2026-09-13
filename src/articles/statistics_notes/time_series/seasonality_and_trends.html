@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: an additive seasonal effect</title>
+    <meta content="Trend and seasonality are systematic forms of time structure that operate on different scales." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: an additive seasonal effect",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends",
+            "description": "Trend and seasonality are systematic forms of time structure that operate on different scales.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-an-additive-seasonal-effect">Worked calculation: an additive seasonal effect</a>
+                        <ol>
+                            <li><a href="#seasonality">Seasonality</a>
+                                <ol>
+                                    <li><a href="#characteristics-of-seasonality">Characteristics of Seasonality</a></li>
+                                    <li><a href="#examples-of-seasonal-patterns">Examples of Seasonal Patterns</a></li>
+                                    <li><a href="#decomposing-seasonality">Decomposing Seasonality</a></li>
+                                    <li><a href="#practical-decomposition-workflow">Practical Decomposition Workflow</a></li>
+                                    <li><a href="#differencing-as-an-alternative">Differencing as an Alternative</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#trends">Trends</a>
+                                <ol>
+                                    <li><a href="#identifying-trends">Identifying Trends</a></li>
+                                    <li><a href="#detrending-methods">Detrending Methods</a></li>
+                                    <li><a href="#visualization-of-trends">Visualization of Trends</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#modeling-seasonality-and-trends">Modeling Seasonality and Trends</a>
+                                <ol>
+                                    <li><a href="#seasonal-arima-sarima-">Seasonal ARIMA (SARIMA)</a></li>
+                                    <li><a href="#exponential-smoothing-state-space-models-ets-">Exponential Smoothing State Space Models (ETS)</a></li>
+                                    <li><a href="#seasonal-decomposition-of-time-series-stl-forecasting">Seasonal Decomposition of Time Series (STL) Forecasting</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-choose-the-seasonal-representation-before-fitting">Student guide: choose the seasonal representation before fitting</a>
+                        <ol>
+                            <li><a href="#additive-versus-multiplicative-numbers">Additive versus multiplicative numbers</a></li>
+                            <li><a href="#seasonal-differencing">Seasonal differencing</a></li>
+                            <li><a href="#seasonal-indices">Seasonal indices</a></li>
+                            <li><a href="#trend-smoothing-and-boundary-effects">Trend smoothing and boundary effects</a></li>
+                            <li><a href="#seasonal-validation">Seasonal validation</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Seasonality and Trends</header>
+            <p>Trend and seasonality are systematic forms of time structure that operate on different scales. A trend is a persistent long-run movement in level or slope, while seasonality is a pattern that repeats at a fixed and known period such as day of week, month of year, or quarter.</p>
+            <p>Decomposition, smoothing, differencing, SARIMA, and exponential-smoothing models handle these structures in different ways. The useful choice depends on whether the pattern is deterministic, evolving, stochastic, or multiplicative, and should be validated on future-like data rather than selected only because it makes a plot look cleaner.</p>
+            <h2 id="worked-calculation-an-additive-seasonal-effect">Worked calculation: an additive seasonal effect</h2>
+            <p>Suppose a quarterly series is</p>
+            <p>$$
+                y_t=50+2t+s_t+\varepsilon_t,
+                \qquad
+                s_t=(-3,1,4,-2),
+                $$</p>
+            <p>with the seasonal pattern repeated every four observations. At $t=5$, the trend part is</p>
+            <p>$$
+                50+2(5)=60,
+                $$</p>
+            <p>and the first seasonal position contributes $-3$, so the deterministic value is 57 before the noise term.</p>
+            <p>The seasonal indices satisfy</p>
+            <p>$$
+                -3+1+4-2=0,
+                $$</p>
+            <p>which is the usual normalization for an additive decomposition. If the size of the seasonal swing grows with the level, a log transformation or multiplicative representation may be more appropriate.</p>
+            <p>The seasonal-differencing figure below shows another way to remove a repeating component: compare each observation with the same position in the previous cycle.</p>
+            <p><img alt="Worked seasonal and ordinary differences" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/12_arima_and_seasonal_differencing.png" /></p>
+            <p>The figure distinguishes ordinary changes from seasonal changes. Ordinary differencing compares adjacent observations, while seasonal differencing compares observations separated by the seasonal period.</p>
+            <p><strong>Seasonality</strong> and <strong>trend</strong> describe systematic structure at different time scales. A trend is a persistent long-run movement in the level. Seasonality is a pattern tied to a fixed and known period, such as hour of day, day of week, or month of year. Cycles can also occur, but unlike seasonality their duration is not fixed.</p>
+            <p>Random or irregular variation is what remains after the modeled systematic components have been removed. The goal is not to eliminate every fluctuation, but to represent the repeatable structure in a way that supports interpretation and forecasting.</p>
+            <h3 id="seasonality">Seasonality</h3>
+            <p><strong>Seasonality</strong> is a pattern that repeats at a regular interval. Common causes include weather, holidays, work schedules, school calendars, billing cycles, and institutional deadlines.</p>
+            <h4 id="characteristics-of-seasonality">Characteristics of Seasonality</h4>
+            <ul>
+                <li><strong>Periodicity:</strong> the pattern repeats at a fixed interval, such as every 24 hours, 7 days, 12 months, or 4 quarters.</li>
+                <li><strong>Additive seasonality:</strong> the seasonal effect is roughly constant in absolute size as the level changes.</li>
+                <li><strong>Multiplicative seasonality:</strong> the seasonal effect changes approximately in proportion to the level.</li>
+                <li><strong>Stability:</strong> a useful seasonal representation assumes that at least part of the pattern is repeatable, although its amplitude or shape may evolve.</li>
+                <li><strong>External drivers:</strong> holidays, weather, trading calendars, and other recurring mechanisms can create seasonal structure that may be modeled directly rather than only through lag dependence.</li>
+            </ul>
+            <h4 id="examples-of-seasonal-patterns">Examples of Seasonal Patterns</h4>
+            <p>Electricity consumption can have daily peaks, retail activity can vary systematically by weekday, tourism can follow annual weather cycles, and administrative processes can generate recurring month- or quarter-end effects.</p>
+            <p><img alt="seasonal_pattern" src="https://github.com/user-attachments/assets/0b8772f9-2f2f-4bd8-b194-2002e99d810b" /></p>
+            <p>The figure shows repeated fluctuations around a broader level. The regular spacing of similar peaks and troughs is what distinguishes seasonality from an irregular cycle.</p>
+            <h4 id="decomposing-seasonality">Decomposing Seasonality</h4>
+            <p>A decomposition separates a series into interpretable components. In an additive decomposition,</p>
+            <p>$$
+                X_t=T_t+S_t+R_t,
+                $$</p>
+            <p>where $T_t$ is the trend, $S_t$ is the seasonal component, and $R_t$ is the remainder.</p>
+            <p>A multiplicative decomposition is often written conceptually as</p>
+            <p>$$
+                X_t=T_tS_tR_t.
+                $$</p>
+            <p>When the seasonal amplitude and residual variation grow with the level, taking logs can turn a multiplicative relationship into an additive one:</p>
+            <p>$$
+                \log X_t=\log T_t+\log S_t+\log R_t.
+                $$</p>
+            <p><img alt="Additive and multiplicative seasonality" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/arima_seasonality/02_additive_multiplicative_seasonality.png" /></p>
+            <p>The figure shows the practical distinction: additive seasonal swings remain similar in absolute size, while multiplicative swings widen as the level rises.</p>
+            <h5>Decomposition Methods</h5>
+            <p><strong>Moving average method.</strong> A centered moving average spanning one seasonal period can estimate a slowly varying trend. For an odd period $d=2q+1$,</p>
+            <p>$$
+                \hat m_t=\frac{1}{d}\sum_{j=-q}^{q}X_{t+j}.
+                $$</p>
+            <p>For an even period $d=2q$, a centered average can be written with half-weighted endpoints:</p>
+            <p>$$
+                \hat m_t=
+                \frac{0.5X_{t-q}+\sum_{j=-q+1}^{q-1}X_{t+j}+0.5X_{t+q}}{d}.
+                $$</p>
+            <p>These are linear filters of the form</p>
+            <p>$$
+                \hat m_t=\sum_j a_jX_{t-j}.
+                $$</p>
+            <p>The weights determine which frequencies are preserved or attenuated. Centered smoothers are useful for historical decomposition, but because they use future observations relative to $t$, they are not directly available as real-time forecasting features at the sample boundary.</p>
+            <p>The Spencer 15-point moving average is one historical example of a symmetric smoother:</p>
+            <p>$$
+                \frac{1}{320}[-3,-6,-5,3,21,46,67,74,67,46,21,3,-5,-6,-3].
+                $$</p>
+            <p>It was designed to preserve low-order polynomial trends while smoothing higher-frequency variation.</p>
+            <p><strong>Seasonal-Trend decomposition using Loess (STL).</strong> STL estimates trend and seasonal components using locally weighted regression. Standard STL is additive. For a series whose seasonal amplitude grows with level, a log or Box-Cox transformation is commonly applied before STL so that the transformed seasonality is closer to additive. Robust STL options can reduce the influence of outliers on the estimated components.</p>
+            <p><strong>Additive versus multiplicative decomposition.</strong> Choose the representation by examining how seasonal amplitude changes with the level and by considering the data-generating mechanism. A transformation can often make an otherwise multiplicative pattern easier to model additively.</p>
+            <p><strong>Additional trend smoothing options.</strong> Recursive exponential smoothers, polynomial regression, splines, and low-pass filters provide alternative trend estimates. They impose different assumptions about smoothness, boundary behavior, and real-time availability.</p>
+            <p><strong>Spectral smoothing.</strong> A low-pass filter suppresses high-frequency Fourier components and retains slower variation. With a discrete transform written schematically as</p>
+            <p>$$
+                X(\omega)=\sum_{t=0}^{n-1}X_te^{-i2\pi\omega t},
+                $$</p>
+            <p>one can attenuate or remove frequencies above a chosen cutoff and transform back to the time domain.</p>
+            <p><img alt="spectral smoothing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/spectral_smoothing.png" /></p>
+            <p>The spectral-smoothing example shows that trend estimation can be viewed as a frequency-selection problem. The cutoff controls how much short-run variation is treated as noise rather than trend.</p>
+            <h4 id="practical-decomposition-workflow">Practical Decomposition Workflow</h4>
+            <p>When trend and seasonality are both present, a classical additive workflow is:</p>
+            <ol>
+                <li>estimate the trend with a smoother spanning the seasonal cycle;</li>
+                <li>subtract the trend to expose seasonal effects;</li>
+                <li>estimate seasonal indices by averaging detrended values within each season;</li>
+                <li>normalize and remove the seasonal component;</li>
+                <li>inspect the remainder and, if needed, refine the trend estimate.</li>
+            </ol>
+            <p><img alt="simple decomposition" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/simple_decomposition.png" /></p>
+            <p>The decomposition figure shows the intended progression from the observed series to trend, seasonality, and remainder. A useful decomposition leaves the remainder without obvious structure that should have been assigned to the other components.</p>
+            <p><img alt="Additive decomposition" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/arima_seasonality/03_additive_decomposition.png" /></p>
+            <p>This second decomposition view emphasizes that the components should add back to the observed series under an additive model. The seasonal pattern is interpreted relative to the estimated trend rather than as an isolated plot.</p>
+            <h5>Classical Estimation (Trend + Seasonal)</h5>
+            <p>Let $d$ be the seasonal period and $\hat m_t$ a centered trend estimate. For additive seasonality, define the detrended values</p>
+            <p>$$
+                Y_t=X_t-\hat m_t.
+                $$</p>
+            <p>For seasonal position $k$, average the available detrended observations:</p>
+            <p>$$
+                w_k=\text{average of }{Y_{k+jd}},
+                \qquad k=1,\ldots,d.
+                $$</p>
+            <p>Normalize the seasonal indices so they sum to zero:</p>
+            <p>$$
+                \hat s_k=w_k-\frac{1}{d}\sum_{i=1}^{d}w_i.
+                $$</p>
+            <p>For multiplicative decomposition, ratios $X_t/\hat m_t$ can be averaged by season and normalized to have mean 1.</p>
+            <p><img alt="trend smoothing filters" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/trend_smoothing_filters.png" /></p>
+            <p>The filter comparison demonstrates that trend estimates depend on the smoothing rule. A smoother that reacts quickly preserves more local movement, while a broader filter produces a smoother trend but can blur turning points and worsen boundary effects.</p>
+            <h4 id="differencing-as-an-alternative">Differencing as an Alternative</h4>
+            <p>Differencing does not estimate a trend or seasonal component explicitly. Instead, it changes the target so that selected forms of persistence cancel algebraically.</p>
+            <p>An ordinary first difference is</p>
+            <p>$$
+                \nabla X_t=X_t-X_{t-1}=(1-B)X_t.
+                $$</p>
+            <p>A seasonal difference with period $s$ is</p>
+            <p>$$
+                \nabla_sX_t=X_t-X_{t-s}=(1-B^s)X_t.
+                $$</p>
+            <p>Combined differencing is</p>
+            <p>$$
+                (1-B)(1-B^s)X_t.
+                $$</p>
+            <p>For a deterministic polynomial trend of degree $k$, applying $k$ ordinary differences reduces it to a constant; one more difference removes that constant. In stochastic time-series modeling, however, differencing order should be chosen according to the integration structure and diagnostics rather than by mechanically increasing the order until the plot looks flat.</p>
+            <p>Higher-order differences are defined recursively:</p>
+            <p>$$
+                \nabla^kX_t=\nabla(\nabla^{k-1}X_t),
+                \qquad
+                \nabla^0X_t=X_t.
+                $$</p>
+            <p>For an additive decomposition</p>
+            <p>$$
+                X_t=m_t+s_t+Y_t
+                $$</p>
+            <p>with exactly repeating seasonal component $s_t=s_{t-s}$,</p>
+            <p>$$
+                \nabla_sX_t=(m_t-m_{t-s})+(Y_t-Y_{t-s}).
+                $$</p>
+            <p>The seasonal component cancels, while trend changes and differenced remainder remain.</p>
+            <p><img alt="seasonal differencing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/seasonal_differencing.png" /></p>
+            <p>The figure shows the before-and-after effect of seasonal differencing. Repeated seasonal level shifts are reduced, but the transformation can leave ordinary trend or induce additional short-run dependence.</p>
+            <p><img alt="Seasonal differencing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/arima_seasonality/01_differencing_orders.png" /></p>
+            <p>This companion view compares differencing orders and reinforces the main caution: use the smallest combination that makes the remaining process suitable for the intended model.</p>
+            <h3 id="trends">Trends</h3>
+            <p>A <strong>trend</strong> is a systematic long-run movement in the level of a series. It can be represented deterministically, such as a linear function of time, or stochastically, such as the accumulated shocks of a random walk.</p>
+            <p>An upward or downward path in one realization does not by itself identify which mechanism is present. That distinction matters because a deterministic trend can be extrapolated and detrended, while a stochastic trend has permanently accumulating uncertainty.</p>
+            <p><img alt="trends" src="https://github.com/user-attachments/assets/00cb585e-e378-4b99-8ff8-cbdf91e9fef8" /></p>
+            <p>The figure provides visual examples of different long-run directions. The next step is to determine whether the apparent trend is stable, deterministic, stochastic, or interrupted by breaks.</p>
+            <h4 id="identifying-trends">Identifying Trends</h4>
+            <p>Visual inspection is the starting point, but a slow ACF decay can result from a deterministic trend, unit root, seasonal structure, or break. Trend tests such as Mann-Kendall can detect monotone association under their assumptions, while unit-root and stationarity tests address different null hypotheses.</p>
+            <p>Use plots, domain knowledge, transformations, repeated forecast behavior, and formal tests together rather than treating any single diagnostic as definitive.</p>
+            <h4 id="detrending-methods">Detrending Methods</h4>
+            <p>Detrending changes the representation so that the remaining series can be modeled more simply. Different methods remove different structures.</p>
+            <h5>Differencing</h5>
+            <p>First-order differencing is</p>
+            <p>$$
+                Y_t=X_t-X_{t-1}.
+                $$</p>
+            <p>For a deterministic linear trend $X_t=a+bt+u_t$, differencing removes the level and leaves the constant trend increment $b$ plus differenced noise. For a random walk, first differencing removes the stochastic accumulation and recovers the innovations. These are different mechanisms even if the transformed plots look similar.</p>
+            <p>Second-order differencing is</p>
+            <p>$$
+                Y_t=X_t-2X_{t-1}+X_{t-2}.
+                $$</p>
+            <p>It removes the constant first difference of a deterministic linear trend and can reduce higher-order polynomial behavior. In stochastic models, repeated differencing can over-difference the series and introduce unnecessary negative autocorrelation, so higher orders should be justified carefully.</p>
+            <h5>Transformation</h5>
+            <p>A log transformation is</p>
+            <p>$$
+                Y_t=\log X_t,
+                $$</p>
+            <p>for positive $X_t$. It compresses large values and can stabilize variance when fluctuations scale with the level. It can also turn multiplicative growth and seasonality into additive structure. A log transform does not, by itself, remove a unit root or deterministic time trend.</p>
+            <h5>Regression Modeling</h5>
+            <p>A deterministic linear trend can be modeled as</p>
+            <p>$$
+                X_t=\beta_0+\beta_1t+\varepsilon_t.
+                $$</p>
+            <p>The detrended series is the residual around the fitted line. A quadratic trend uses</p>
+            <p>$$
+                X_t=\beta_0+\beta_1t+\beta_2t^2+\varepsilon_t.
+                $$</p>
+            <p>Higher-order polynomials can fit flexible curves but extrapolate poorly and can become unstable near the boundaries. Use the simplest trend form that matches the mechanism and validation evidence.</p>
+            <h4 id="visualization-of-trends">Visualization of Trends</h4>
+            <p>A level plot reveals the overall movement, while a detrended plot shows what remains after the specified trend has been removed. The comparison is meaningful only when the fitted trend is introduced explicitly and the residual is interpreted relative to that model.</p>
+            <h3 id="modeling-seasonality-and-trends">Modeling Seasonality and Trends</h3>
+            <p>Forecasting models incorporate trend and seasonality in different ways. The appropriate representation depends on whether the components are deterministic, evolving, stochastic, or better described through dependence at seasonal lags.</p>
+            <h4 id="seasonal-arima-sarima-">Seasonal ARIMA (SARIMA)</h4>
+            <p>SARIMA combines ordinary and seasonal differencing with AR and MA terms:</p>
+            <p>$$
+                \Phi_P(B^s)\phi_p(B)(1-B^s)^D(1-B)^dX_t
+                =\Theta_Q(B^s)\theta_q(B)\varepsilon_t.
+                $$</p>
+            <p>Here $p,d,q$ describe the non-seasonal component; $P,D,Q$ describe the seasonal component; and $s$ is the seasonal period. Seasonal differencing targets repeating stochastic level structure, while seasonal AR and MA terms model dependence that remains at seasonal lags.</p>
+            <h4 id="exponential-smoothing-state-space-models-ets-">Exponential Smoothing State Space Models (ETS)</h4>
+            <p>ETS models represent evolving level, trend, and seasonal states with recursive update equations. An additive observation structure can be thought of schematically as</p>
+            <p>$$
+                X_t=L_t+T_t+S_t+\varepsilon_t,
+                $$</p>
+            <p>while multiplicative variants allow the size of errors or seasonal effects to scale with the level. Exact ETS equations depend on the selected error, trend, seasonal, and damping components; the model is more than a static decomposition identity.</p>
+            <h4 id="seasonal-decomposition-of-time-series-stl-forecasting">Seasonal Decomposition of Time Series (STL) Forecasting</h4>
+            <p>STL decomposes a transformed or untransformed series additively as</p>
+            <p>$$
+                X_t=T_t+S_t+R_t.
+                $$</p>
+            <p>Forecasting after STL requires separate assumptions for extending the trend and seasonal components. The remainder is usually modeled or forecast around zero rather than projected as an independently persistent component by default.</p>
+            <p>The following synthetic series contains a rising trend, repeated seasonality, and random noise:</p>
+            <p><img alt="output(3)" src="https://github.com/djeada/Statistics-Notes/assets/37275728/b10c0196-3455-4c59-8807-a64d11ebc651" /></p>
+            <p>Its visible structure motivates decomposition before forecasting.</p>
+            <p><img alt="output(4)" src="https://github.com/djeada/Statistics-Notes/assets/37275728/6cd784df-8e35-411c-92bd-f94b9529e191" /></p>
+            <p>The decomposed panels separate the upward trend, repeating seasonal pattern, and remainder. The remainder should be inspected for leftover autocorrelation, changing variance, or outliers rather than assumed to be random simply because it is labeled "residual."</p>
+            <h2 id="student-guide-choose-the-seasonal-representation-before-fitting">Student guide: choose the seasonal representation before fitting</h2>
+            <p>Seasonality can be represented through deterministic seasonal indicators, Fourier terms, seasonal differencing, seasonal AR or MA terms, a seasonal state in an exponential-smoothing or state-space model, or a seasonal-naive forecast.</p>
+            <p>These choices answer different questions. A seasonal index describes a repeating conditional mean pattern, while a seasonal AR term describes dependence after the mean structure has been accounted for.</p>
+            <h3 id="additive-versus-multiplicative-numbers">Additive versus multiplicative numbers</h3>
+            <p>Suppose the trend level is 100. An additive seasonal effect of $+10$ gives</p>
+            <p>$$
+                100+10=110.
+                $$</p>
+            <p>A multiplicative seasonal factor of $1.10$ also gives</p>
+            <p>$$
+                100(1.10)=110.
+                $$</p>
+            <p>At level 200, however,</p>
+            <p>$$
+                \text{additive}=200+10=210,
+                \qquad
+                \text{multiplicative}=200(1.10)=220.
+                $$</p>
+            <p>If seasonal amplitude grows proportionally with level, a log transformation can make the relationship additive:</p>
+            <p>$$
+                \log(T_tS_t)=\log T_t+\log S_t.
+                $$</p>
+            <h3 id="seasonal-differencing">Seasonal differencing</h3>
+            <p>For monthly observations,</p>
+            <p>$$
+                \nabla_{12}y_t=y_t-y_{t-12}.
+                $$</p>
+            <p>If last year's January value is 92 and this year's January value is 100, the seasonal change is 8. Seasonal differencing removes an exactly repeating seasonal level, but it does not guarantee that ordinary trend, changing variance, holiday effects, or other structure has been handled.</p>
+            <p>Combined differencing is</p>
+            <p>$$
+                (1-B)(1-B^{12})y_t
+                =y_t-y_{t-1}-y_{t-12}+y_{t-13}.
+                $$</p>
+            <p>Each difference reduces the usable sample and can introduce moving-average dependence. Use the smallest order that leaves a defensible residual process.</p>
+            <h3 id="seasonal-indices">Seasonal indices</h3>
+            <p>For an additive decomposition, seasonal indices are commonly normalized so that</p>
+            <p>$$
+                \sum_{j=1}^{s}\hat S_j=0.
+                $$</p>
+            <p>For a multiplicative decomposition, factors are often normalized to have mean 1:</p>
+            <p>$$
+                \frac{1}{s}\sum_{j=1}^{s}\hat S_j=1.
+                $$</p>
+            <p>These are identification conventions that determine how the overall level is divided between trend and seasonal components. Applied consistently, they do not change the reconstructed fitted series.</p>
+            <h3 id="trend-smoothing-and-boundary-effects">Trend smoothing and boundary effects</h3>
+            <p>A centered moving average uses observations on both sides of time $t$. That is appropriate for historical decomposition but unavailable at the end of a live series. A trailing smoother uses only current and past observations but has different lag and phase behavior.</p>
+            <p>Software may shorten the output, pad boundaries, reflect data, or use asymmetric filters near the ends. Inspect those choices before interpreting the first and last seasonal cycles.</p>
+            <h3 id="seasonal-validation">Seasonal validation</h3>
+            <p>Use seasonal forecast origins and a seasonal-naive benchmark. For period-12 data, report errors at horizons such as 1, 3, 6, and 12. A model can perform well one month ahead and poorly one year ahead because the seasonal extrapolation mechanism differs by horizon.</p>
+            <p><img alt="Seasonal naive forecast" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/arima_seasonality/07_seasonal_naive_forecast.png" /></p>
+            <p>The seasonal-naive figure provides the benchmark that any more elaborate seasonal model should beat on future-like data. Repeating the most recent value from the same season is simple, but it can be difficult to improve upon when the seasonal pattern is stable.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

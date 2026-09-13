@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>System shape</title>
+    <meta content="Standard of Iron is organized around one rule: gameplay state belongs to the simulation, while application code, UI, rendering, tools, persistence, and AI consume or transform that state through explicit boundaries." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/architecture" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "System shape",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/architecture"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/architecture",
+            "description": "Standard of Iron is organized around one rule: gameplay state belongs to the simulation, while application code, UI, rendering, tools, persistence, and AI consume or transform that state through explicit boundaries.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#system-shape">System shape</a></li>
+                    <li><a href="#runtime-ownership">Runtime ownership</a></li>
+                    <li><a href="#session-authority">Session authority</a>
+                        <ol>
+                            <li><a href="#world-to-session-binding">World-to-session binding</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#entity-identity-and-ecs-boundary">Entity identity and ECS boundary</a></li>
+                    <li><a href="#command-pipeline">Command pipeline</a></li>
+                    <li><a href="#fixed-step-simulation">Fixed-step simulation</a></li>
+                    <li><a href="#determinism">Determinism</a></li>
+                    <li><a href="#render-dependency-boundary">Render dependency boundary</a>
+                        <ol>
+                            <li><a href="#render-snapshots">Render snapshots</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#persistence-boundary">Persistence boundary</a></li>
+                    <li><a href="#ai-boundary">AI boundary</a></li>
+                    <li><a href="#mission-and-campaign-boundary">Mission and campaign boundary</a></li>
+                    <li><a href="#application-and-ui-boundary">Application and UI boundary</a></li>
+                    <li><a href="#tools-reuse-production-paths">Tools reuse production paths</a></li>
+                    <li><a href="#architecture-enforcement">Architecture enforcement</a>
+                        <ol>
+                            <li><a href="#link-boundaries">Link boundaries</a></li>
+                            <li><a href="#source-policy-checks">Source-policy checks</a></li>
+                            <li><a href="#documentation-accuracy">Documentation accuracy</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#performance-sensitive-boundaries">Performance-sensitive boundaries</a></li>
+                    <li><a href="#failure-and-replacement-boundaries">Failure and replacement boundaries</a></li>
+                    <li><a href="#known-limitations">Known limitations</a></li>
+                    <li><a href="#reading-the-code-by-concern">Reading the code by concern</a></li>
+                    <li><a href="#related-architecture-references">Related architecture references</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Architecture</header>
+            <p>Standard of Iron is organized around one rule: gameplay state belongs to the simulation, while application code, UI, rendering, tools, persistence, and AI consume or transform that state through explicit boundaries.</p>
+            <p>That rule is visible in both the C++ target graph and the runtime ownership model. The build separates low-level ECS and domain libraries from the application shell, while <code>SessionContext</code>, <code>CommandQueue</code>, render snapshots, and save snapshots define the main data boundaries inside a running match.</p>
+            <p>This document describes the architecture as it exists in the repository now. It focuses on ownership, dependency direction, data flow, deterministic execution, persistence, and the checks that keep those contracts from drifting.</p>
+            <h2 id="system-shape">System shape</h2>
+            <p>The main runtime dependency shape is:</p>
+            <div>
+                <pre><code class="language-text">animation / scene
+        │
+        ▼
+   engine_core
+        │
+        ▼
+   domain libraries
+        │
+        ▼
+     game_sim
+       ├── soi_ai
+       ├── soi_missions / soi_campaign
+       ├── soi_persistence / soi_runtime
+       ├── game_view
+       └── render_gl
+                │
+                ▼
+             app_core
+                │
+                ▼
+        standard_of_iron</code></pre>
+            </div>
+            <p><code>engine_core</code> contains the ECS and low-level world/session primitives. Domain libraries add navigation, units, formations, movement, economy, combat, wildlife, terrain, and related gameplay services. <code>game_sim</code> composes the simulation-facing runtime used by the live application and by headless tools.</p>
+            <p>Above that kernel, application code coordinates Qt/QML-facing controllers, match setup, persistence orchestration, and presentation. Rendering links downward to simulation data. Simulation does not reach upward into Qt UI or renderer implementation.</p>
+            <p>The exact domain split is reflected in the root CMake graph. The important architectural property is direction: a lower gameplay layer does not need to know which screen, renderer, or packaging workflow will eventually present its output.</p>
+            <h2 id="runtime-ownership">Runtime ownership</h2>
+            <p>A running match has several kinds of state, but only one of them is authoritative gameplay state.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>State class</td>
+                    <td>Owner</td>
+                    <td>Examples</td>
+                </tr>
+                <tr>
+                    <td>Authoritative simulation</td>
+                    <td><code>SessionContext</code> / <code>World</code> and simulation services</td>
+                    <td>entities, resources, ownership, combat state, mission state, RNG</td>
+                </tr>
+                <tr>
+                    <td>Commands</td>
+                    <td><code>CommandQueue</code> and command dispatch</td>
+                    <td>player orders, AI orders, replay commands, scripted commands</td>
+                </tr>
+                <tr>
+                    <td>Derived simulation caches</td>
+                    <td>subsystem-owned runtime services</td>
+                    <td>spatial indexes, movement facts, collision indexes, engagement caches</td>
+                </tr>
+                <tr>
+                    <td>Presentation snapshots</td>
+                    <td>simulation-published immutable/read-only data</td>
+                    <td>render snapshot, minimap/read-model state</td>
+                </tr>
+                <tr>
+                    <td>Application/UI state</td>
+                    <td><code>app/</code>, view models, QML</td>
+                    <td>selected panel, menus, settings, transient UI interaction</td>
+                </tr>
+                <tr>
+                    <td>Renderer caches</td>
+                    <td>renderer/backend</td>
+                    <td>GPU resources, prepared meshes, animation presentation data</td>
+                </tr>
+                <tr>
+                    <td>Persistent storage</td>
+                    <td>save database + snapshot formats</td>
+                    <td>serialized world/session state, campaign progress, save metadata</td>
+                </tr>
+            </table>
+            </p>
+            <p>The distinction matters because it determines what can be rebuilt, what must be serialized, and what can safely lag behind by a presentation frame.</p>
+            <h2 id="session-authority">Session authority</h2>
+            <p>Per-match authority lives in <code>Game::Session::SessionContext</code>.</p>
+            <p>A session owns or exposes the state required to advance one match, including:</p>
+            <ul>
+                <li>the <code>World</code>;</li>
+                <li>terrain and map services;</li>
+                <li>ownership and nation state;</li>
+                <li>economy state;</li>
+                <li>the fixed-step simulation clock;</li>
+                <li>deterministic RNG state;</li>
+                <li>command and replay state; and</li>
+                <li>the runtime systems registered for that session.</li>
+            </ul>
+            <p>The world contains entity/component state. Session services contain match-level state that does not naturally belong to one entity. Code that needs per-match services resolves them from the world/session relationship instead of creating an unrelated process-global authority.</p>
+            <h3 id="world-to-session-binding">World-to-session binding</h3>
+            <p><code>Game::Session::services_for(world)</code> resolves the session services associated with a world.</p>
+            <p>Worlds created inside a <code>SessionContext</code> have an explicit binding. A world created outside a session can still fall back to the ambient session; this compatibility path is instrumented and can be made fatal with:</p>
+            <div>
+                <pre><code class="language-sh">SOI_STRICT_WORLD_BINDING=1</code></pre>
+            </div>
+            <p>or programmatically with:</p>
+            <div>
+                <pre><code class="language-clike">Game::Session::set_strict_world_binding(true);</code></pre>
+            </div>
+            <p><code>SessionServiceOwnershipDeathTest.StrictBindingRefusesAWorldWithNoSession</code> covers the strict path.</p>
+            <p>The compatibility fallback exists so older call sites can continue to resolve match services, but it is not equivalent to explicit ownership. The repository tracks the remaining ambient access sites and prevents that count from increasing unnoticed.</p>
+            <h2 id="entity-identity-and-ecs-boundary">Entity identity and ECS boundary</h2>
+            <p>Entities use a 64-bit <code>EntityID</code>. The handle packs a 32-bit index and a 32-bit generation, allowing an entity slot to be reused without making an old handle silently identify the new entity occupying that slot.</p>
+            <p>Components are plain data-oriented types rather than objects inheriting through a polymorphic component base. Systems query the world for the component combinations they need and mutate authoritative components only from simulation-owned code paths.</p>
+            <p>This keeps entity identity, storage, and iteration independent from presentation classes. A renderer, QML component, or save row does not become the owner of a gameplay entity merely because it refers to the entity's ID.</p>
+            <h2 id="command-pipeline">Command pipeline</h2>
+            <p>Player input, AI, replay playback, and scripted systems converge on typed commands.</p>
+            <div>
+                <pre><code class="language-text">player input ─┐
+AI            ├──► typed Game::Command ─► CommandQueue ─► validation/dispatch ─► systems
+mission/tools ┤
+replay        ┘</code></pre>
+            </div>
+            <p><code>CommandQueue</code> is the match command boundary. The application can ask simulation services whether an action is available so it can show useful feedback, but authoritative mutation occurs through command dispatch rather than through a parallel client-side implementation of the same order.</p>
+            <p>This gives different command producers the same rules. A move issued by the player, an AI move, and a replayed move enter the same simulation path instead of carrying three independent versions of movement legality.</p>
+            <p>Accepted commands also form the deterministic replay stream. Replay playback can replace live command producers while exercising the same command application path.</p>
+            <h2 id="fixed-step-simulation">Fixed-step simulation</h2>
+            <p>Gameplay advances in fixed simulation steps. Presentation may run at a different cadence.</p>
+            <p>That separation has several consequences:</p>
+            <ul>
+                <li>gameplay timers derive from simulation time, not rendering frame time;</li>
+                <li>command ordering is tied to simulation updates;</li>
+                <li>AI decisions are scheduled against simulation updates;</li>
+                <li>replay digests compare deterministic simulation state rather than visual frames; and</li>
+                <li>the renderer can skip or interpolate presentation frames without changing the authoritative battle.</li>
+            </ul>
+            <p>The live application, <code>soi_headless</code>, replay verification, <code>balance_sim</code>, Arena scenarios, and performance tooling all reuse this simulation-facing contract.</p>
+            <h2 id="determinism">Determinism</h2>
+            <p>Determinism is an architectural requirement because replays and headless verification depend on it.</p>
+            <p>The main ingredients are:</p>
+            <ul>
+                <li>fixed simulation updates;</li>
+                <li>typed, ordered commands;</li>
+                <li>deterministic RNG owned by the session;</li>
+                <li>AI results applied on scheduled simulation updates rather than on whichever wall-clock instant a worker finishes;</li>
+                <li>save/replay snapshots that capture authoritative non-entity state; and</li>
+                <li>world digests used by replay verification.</li>
+            </ul>
+            <p>Presentation randomness and visual interpolation can remain renderer-side as long as they do not feed back into authoritative gameplay decisions.</p>
+            <h2 id="render-dependency-boundary">Render dependency boundary</h2>
+            <p>The root CMake graph is explicit: <code>render_gl</code> links <code>game_sim</code>.</p>
+            <p>The renderer consumes simulation output; simulation does not link the renderer. Higher AI, campaign, mission, and persistence facades are also not pulled into the renderer merely because their results eventually become visible.</p>
+            <p><code>game_view</code> contains camera-, picking-, and minimap-facing services that sit between raw simulation and presentation concerns without becoming part of the renderer backend itself.</p>
+            <h3 id="render-snapshots">Render snapshots</h3>
+            <p>The renderer does not need to walk the mutable live world while drawing. Simulation publishes render snapshots containing the state required for presentation. The render thread acquires those published snapshots and builds draw work from them.</p>
+            <p>That boundary provides three useful properties:</p>
+            <ol>
+                <li>simulation can continue to own mutation rules;</li>
+                <li>rendering works with a stable view of the frame; and</li>
+                <li>renderer caches can be discarded or rebuilt without changing gameplay state.</li>
+            </ol>
+            <p>The production renderer does not use a live-world fallback when a render snapshot is unavailable. The frame can be skipped rather than violating ownership.</p>
+            <p>See <a href="RENDERING_ARCHITECTURE.md">RENDERING_ARCHITECTURE.md</a> for the full scene-walk and backend path.</p>
+            <h2 id="persistence-boundary">Persistence boundary</h2>
+            <p>Persistence captures authoritative state without serializing every cache and presentation object in the process.</p>
+            <p>World entities are serialized through <code>game/save/serialization.*</code>. Non-entity authoritative subsystem state is captured through <code>Game::Session::SessionSnapshot</code>.</p>
+            <p><code>game/save/snapshot_contract.*</code> classifies data as:</p>
+            <ul>
+                <li>authoritative serialized;</li>
+                <li>derived/rebuilt;</li>
+                <li>presentation-only; or</li>
+                <li>campaign-level.</li>
+            </ul>
+            <p>That classification is important because a save file should not accidentally promote a cache to a second source of truth. Spatial indexes, transient movement facts, and renderer interpolation state are rebuilt. Simulation time, deterministic RNG, explored visibility, mission progress, AI strategic state, and other authoritative fields are explicitly preserved where required.</p>
+            <p>Load restoration is staged before the live match is replaced, and the storage layer adds compression, checksums, database schema migration, integrity checks, and quarantine/recovery. See <a href="SAVE_LOAD_SYSTEM.md">SAVE_LOAD_SYSTEM.md</a>.</p>
+            <h2 id="ai-boundary">AI boundary</h2>
+            <p>AI is a command producer, not an alternate simulation.</p>
+            <p>The main thread builds immutable AI snapshots from the match. Worker threads reason over those snapshots and produce typed AI commands. Commands are filtered and later applied through the gameplay command path on their scheduled simulation update.</p>
+            <p>Workers therefore do not own the live ECS world. This keeps AI threading from turning ordinary gameplay components into shared mutable state.</p>
+            <p>See <a href="AI_ARCHITECTURE.md">AI_ARCHITECTURE.md</a>.</p>
+            <h2 id="mission-and-campaign-boundary">Mission and campaign boundary</h2>
+            <p>Maps, missions, and campaigns form separate data layers.</p>
+            <p>Maps define battlefield geometry and world authoring. Missions reference maps and add player/AI setup, objectives, scripted waves, stages, and events. Campaigns order mission IDs and store progression outside the mission schema.</p>
+            <p>The runtime translates mission data into the same simulation systems used elsewhere: AI setup becomes AI configuration, mission objectives become victory/defeat rules, and mission waves become runtime assault units rather than a private combat implementation.</p>
+            <p>See <a href="MISSION_FRAMEWORK.md">MISSION_FRAMEWORK.md</a>.</p>
+            <h2 id="application-and-ui-boundary">Application and UI boundary</h2>
+            <p><code>app/</code> owns application composition and Qt-facing orchestration. It can expose read models, preferences, selection state, command availability, save/load status, and similar information to QML, but it is not a second gameplay simulation.</p>
+            <p>The UI design system centralizes presentation tokens and persistent UI preferences. Command panels and tooltips may explain current gameplay values, but those values are provided by application/simulation read models rather than duplicated as balance constants in QML.</p>
+            <p>This distinction is what allows headless tools to use <code>game_sim</code> without Qt Quick and allows simulation tests to exercise gameplay without constructing the UI.</p>
+            <h2 id="tools-reuse-production-paths">Tools reuse production paths</h2>
+            <p>Repository tools are most useful when they exercise production code rather than approximations.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li><code>soi_headless</code> using the simulation runtime without a window;</li>
+                <li>replay verification using the command stream and world digest;</li>
+                <li><code>balance_sim</code> using current troop/combat data;</li>
+                <li>Arena scenarios using production mission, movement, formation, combat, animation, and rendering paths;</li>
+                <li>content validation loading the same authored data structures as runtime; and</li>
+                <li>performance gates consuming runtime profiling counters and reports.</li>
+            </ul>
+            <p>A tool can add orchestration or measurement, but it should not invent a second rule set for the subsystem it is measuring.</p>
+            <h2 id="architecture-enforcement">Architecture enforcement</h2>
+            <p>The architecture is guarded at several levels.</p>
+            <h3 id="link-boundaries">Link boundaries</h3>
+            <p>CMake target dependencies prevent many invalid upward dependencies from compiling or linking without an explicit build-graph change.</p>
+            <h3 id="source-policy-checks">Source-policy checks</h3>
+            <p><code>scripts/check-pr-policy.py</code> runs compiler-free architecture/source checks in the pull-request policy lane. The repository also contains focused checkers for command boundaries, module direction, ambient access, world scans, documentation claims, and related invariants.</p>
+            <h3 id="documentation-accuracy">Documentation accuracy</h3>
+            <p><code>scripts/check-architecture-doc.py</code> compares selected documentation claims with machine-readable repository sources. It currently verifies:</p>
+            <ul>
+                <li>ambient session-access counts against <code>scripts/ambient_instance_budget.json</code>;</li>
+                <li>full-world scan counts against <code>scripts/world_scan_budget.json</code> and <code>scripts/world_scan_nested_allow.json</code>; and</li>
+                <li>the public dependency that <code>render_gl</code> has in the root <code>CMakeLists.txt</code>.</li>
+            </ul>
+            <p><code>tests/architecture/documentation_accuracy_test.cpp</code> also checks key statements, including the presence of <code>game_sim</code>, <code>game_view</code>, <code>SessionContext</code>, <code>CommandQueue</code>, and this document's <code>Known limitations</code> section.</p>
+            <p>A number written in an architecture article is therefore not merely explanatory prose when a repository check owns the same fact.</p>
+            <h2 id="performance-sensitive-boundaries">Performance-sensitive boundaries</h2>
+            <p>Several architecture choices also exist to keep large battles tractable:</p>
+            <ul>
+                <li>shared spatial indexes avoid repeated full-world proximity scans;</li>
+                <li>render snapshots avoid locking/reading the mutable ECS throughout a frame;</li>
+                <li>fixed-step systems can profile their own simulation phases;</li>
+                <li>renderer work is collected into queue/back-end stages;</li>
+                <li>AI workers reason from compact snapshots; and</li>
+                <li>asset and frame-pacing instrumentation separates simulation cost, render-thread cost, GPU timing, upload traffic, and post-playable asset work.</li>
+            </ul>
+            <p>Performance work should improve those boundaries without making caches authoritative. A faster spatial index is still derived state; a faster renderer is still a consumer of the match.</p>
+            <h2 id="failure-and-replacement-boundaries">Failure and replacement boundaries</h2>
+            <p>Operations that replace large parts of runtime state are coordinated explicitly.</p>
+            <p>Save loading stages a candidate world before replacing the active one. World clearing advances content/version state used to invalidate stale render data. <code>WorldFreeze</code> coordinates destructive world replacement/rebuild operations so simulation and presentation do not continue through the mutation window.</p>
+            <p>The same ownership principle applies: replacement happens at a defined boundary rather than allowing arbitrary systems to partially rebuild the world while other threads continue reading it.</p>
+            <h2 id="known-limitations">Known limitations</h2>
+            <p>The limitations in this section are repository-backed rather than roadmap estimates.</p>
+            <p><strong>56 call sites still reach per-match state through the ambient access path:</strong> <code>app/world</code> 2, <code>game/core</code> 1, <code>game/formation</code> 4, <code>game/map</code> 14, <code>game/systems</code> 22, <code>game/units</code> 9, <code>game/visuals</code> 1, <code>game/wildlife</code> 3. <code>scripts/ambient_instance_budget.json</code> is the source of truth, and <code>scripts/check-architecture-doc.py</code> fails when this sentence disagrees with it.</p>
+            <p><strong>74 full-world entity scans remain, of which 0 are allow-listed as loop-nested scans.</strong> <code>scripts/world_scan_budget.json</code> and <code>scripts/world_scan_nested_allow.json</code> are the source of truth for those counts, and the same documentation check verifies them.</p>
+            <p><strong>Unbound worlds still have a compatibility fallback to the ambient session.</strong> <code>services_for(world)</code> reports the unbound lookup and returns ambient services unless strict world binding is enabled. The strict environment/configuration paths above turn the same condition into a fatal error.</p>
+            <p>These are current implementation constraints. They are not a list of proposed features or a schedule for future work.</p>
+            <h2 id="reading-the-code-by-concern">Reading the code by concern</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Concern</td>
+                    <td>Primary locations</td>
+                </tr>
+                <tr>
+                    <td>ECS and entity identity</td>
+                    <td><code>game/core/</code>, <code>engine_core</code> target</td>
+                </tr>
+                <tr>
+                    <td>Session ownership</td>
+                    <td><code>game/session/</code></td>
+                </tr>
+                <tr>
+                    <td>Typed commands</td>
+                    <td><code>game/command/</code></td>
+                </tr>
+                <tr>
+                    <td>AI</td>
+                    <td><code>game/systems/ai_system/</code></td>
+                </tr>
+                <tr>
+                    <td>Missions/campaign</td>
+                    <td><code>game/map/</code>, mission/campaign assets</td>
+                </tr>
+                <tr>
+                    <td>Persistence</td>
+                    <td><code>game/save/</code>, <code>game/systems/save_*</code>, <code>app/persistence/</code></td>
+                </tr>
+                <tr>
+                    <td>Rendering</td>
+                    <td><code>render/</code>, <code>scene/</code>, <code>animation/</code></td>
+                </tr>
+                <tr>
+                    <td>UI/application</td>
+                    <td><code>app/</code>, <code>ui/</code></td>
+                </tr>
+                <tr>
+                    <td>Validation/policy</td>
+                    <td><code>scripts/</code>, <code>tests/architecture/</code></td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="related-architecture-references">Related architecture references</h2>
+            <ul>
+                <li><a href="RENDERING_ARCHITECTURE.md">RENDERING_ARCHITECTURE.md</a> — snapshot consumption, scene submission, graphics profiles, and render backends.</li>
+                <li><a href="AI_ARCHITECTURE.md">AI_ARCHITECTURE.md</a> — snapshots, workers, strategies, behaviors, and command production.</li>
+                <li><a href="FORMATION_ARCHITECTURE.md">FORMATION_ARCHITECTURE.md</a> — unit layouts, army formations, terrain fitting, cohesion, and traversal.</li>
+                <li><a href="COMBAT_SYSTEM.md">COMBAT_SYSTEM.md</a> — combat update order, targeting, contact, damage, and special processors.</li>
+                <li><a href="SAVE_LOAD_SYSTEM.md">SAVE_LOAD_SYSTEM.md</a> — save snapshot composition, storage, migration, recovery, and restoration.</li>
+                <li><a href="MISSION_FRAMEWORK.md">MISSION_FRAMEWORK.md</a> — mission schema, AI setup, waves, objectives, and campaign membership.</li>
+                <li><a href="MISSION_STARTUP.md">MISSION_STARTUP.md</a> — map-context reuse, startup readiness, and initial AI preparation.</li>
+                <li><a href="FRAME_PACING.md">FRAME_PACING.md</a> — presentation performance budgets and qualification workflow.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -30,8 +30,14 @@
     const presets = {
         geometric: {
             dims: [2, 2, 2, 2],
-            A: [[1, -0.65], [0.45, 1]],
-            B: [[1.4, 0.35], [0, 0.75]]
+            A: [
+                [1, -0.65],
+                [0.45, 1]
+            ],
+            B: [
+                [1.4, 0.35],
+                [0, 0.75]
+            ]
         },
         standard: {
             dims: [2, 3, 3, 2],
@@ -242,18 +248,40 @@
         }
 
         const apply = (M, point) => [M[0][0] * point[0] + M[0][1] * point[1], M[1][0] * point[0] + M[1][1] * point[1]];
-        const stages = [
-            { title: "1. Input", matrix: [[1, 0], [0, 1]], formula: "x", note: "unit square" },
-            { title: "2. Apply B", matrix: B, formula: "Bx", note: "B acts first" },
-            { title: "3. Apply A", matrix: C, formula: "A(Bx) = ABx", note: "the final product" }
+        const stages = [{
+                title: "1. Input",
+                matrix: [
+                    [1, 0],
+                    [0, 1]
+                ],
+                formula: "x",
+                note: "unit square"
+            },
+            {
+                title: "2. Apply B",
+                matrix: B,
+                formula: "Bx",
+                note: "B acts first"
+            },
+            {
+                title: "3. Apply A",
+                matrix: C,
+                formula: "A(Bx) = ABx",
+                note: "the final product"
+            }
         ];
         const panelGap = 18;
         const panelWidth = (width - 40 - panelGap * 2) / 3;
         const plotTop = 82;
         const plotHeight = height - 126;
-        // Fit the meaningful geometry, not the far-away grid corners. The grid is
-        // deliberately allowed to run beyond the panel and is clipped below.
-        const shapePoints = [[0, 0], [1, 0], [0, 1], [1, 1]];
+
+
+        const shapePoints = [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+            [1, 1]
+        ];
         const determinant = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
         const drawArrow = (from, to, color, offset = 0) => {
             const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
@@ -261,19 +289,31 @@
             from = [from[0] + normal[0], from[1] + normal[1]];
             to = [to[0] + normal[0], to[1] + normal[1]];
             ctx.save();
-            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 6;
-            ctx.lineCap = "round"; ctx.lineJoin = "round";
-            ctx.shadowColor = color; ctx.shadowBlur = 12;
-            ctx.beginPath(); ctx.moveTo(...from); ctx.lineTo(...to); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(...to); ctx.lineTo(to[0] - 15 * Math.cos(angle - .48), to[1] - 15 * Math.sin(angle - .48)); ctx.lineTo(to[0] - 15 * Math.cos(angle + .48), to[1] - 15 * Math.sin(angle + .48)); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 6;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(...from);
+            ctx.lineTo(...to);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(...to);
+            ctx.lineTo(to[0] - 15 * Math.cos(angle - .48), to[1] - 15 * Math.sin(angle - .48));
+            ctx.lineTo(to[0] - 15 * Math.cos(angle + .48), to[1] - 15 * Math.sin(angle + .48));
+            ctx.closePath();
+            ctx.fill();
             ctx.restore();
         };
         stages.forEach((stage, index) => {
             const matrix = index === geometryStage && geometryTweenMatrix ? geometryTweenMatrix : stage.matrix;
             const left = 20 + index * (panelWidth + panelGap);
             const origin = [left + panelWidth / 2, plotTop + plotHeight / 2];
-            // Auto-fit every stage independently. A large final product must not
-            // shrink the input and intermediate vectors into unreadable dots.
+
+
             const stageExtent = Math.max(.72, ...shapePoints.flatMap(point =>
                 apply(matrix, point).map(Math.abs)
             )) * 1.24;
@@ -281,37 +321,100 @@
             const mapRaw = p => [origin[0] + p[0] * scale, origin[1] - p[1] * scale];
             const map = p => mapRaw(apply(matrix, p));
             ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.12)" : "rgba(148,163,184,.025)";
-            ctx.strokeStyle = index === geometryStage ? accent : border; ctx.lineWidth = index === geometryStage ? 2.5 : 1;
-            ctx.beginPath(); ctx.roundRect(left, 8, panelWidth, height - 18, 10); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = text; ctx.font = "800 18px system-ui"; ctx.textAlign = "center"; ctx.fillText(stage.title, left + panelWidth / 2, 32);
-            ctx.fillStyle = index === geometryStage ? accent : text; ctx.font = "800 14px system-ui"; ctx.fillText(stage.formula, left + panelWidth / 2, 55);
-            ctx.fillStyle = muted; ctx.font = "12px system-ui"; ctx.fillText(`${stage.note} · upright auto-fit view`, left + panelWidth / 2, 73);
-            ctx.save(); ctx.beginPath(); ctx.rect(left + 7, plotTop, panelWidth - 14, plotHeight); ctx.clip();
+            ctx.strokeStyle = index === geometryStage ? accent : border;
+            ctx.lineWidth = index === geometryStage ? 2.5 : 1;
+            ctx.beginPath();
+            ctx.roundRect(left, 8, panelWidth, height - 18, 10);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = text;
+            ctx.font = "800 18px system-ui";
+            ctx.textAlign = "center";
+            ctx.fillText(stage.title, left + panelWidth / 2, 32);
+            ctx.fillStyle = index === geometryStage ? accent : text;
+            ctx.font = "800 14px system-ui";
+            ctx.fillText(stage.formula, left + panelWidth / 2, 55);
+            ctx.fillStyle = muted;
+            ctx.font = "12px system-ui";
+            ctx.fillText(`${stage.note} · upright auto-fit view`, left + panelWidth / 2, 73);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(left + 7, plotTop, panelWidth - 14, plotHeight);
+            ctx.clip();
             for (let k = -6; k <= 6; k++) {
-                let p1 = map([k, -6]), p2 = map([k, 6]); ctx.strokeStyle = k === 0 ? "rgba(255,77,103,.24)" : "rgba(148,163,184,.09)"; ctx.lineWidth = k === 0 ? 1.5 : .7; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-                p1 = map([-6, k]); p2 = map([6, k]); ctx.strokeStyle = k === 0 ? "rgba(36,224,209,.24)" : "rgba(148,163,184,.09)"; ctx.lineWidth = k === 0 ? 1.5 : .7; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+                let p1 = map([k, -6]),
+                    p2 = map([k, 6]);
+                ctx.strokeStyle = k === 0 ? "rgba(255,77,103,.24)" : "rgba(148,163,184,.09)";
+                ctx.lineWidth = k === 0 ? 1.5 : .7;
+                ctx.beginPath();
+                ctx.moveTo(...p1);
+                ctx.lineTo(...p2);
+                ctx.stroke();
+                p1 = map([-6, k]);
+                p2 = map([6, k]);
+                ctx.strokeStyle = k === 0 ? "rgba(36,224,209,.24)" : "rgba(148,163,184,.09)";
+                ctx.lineWidth = k === 0 ? 1.5 : .7;
+                ctx.beginPath();
+                ctx.moveTo(...p1);
+                ctx.lineTo(...p2);
+                ctx.stroke();
             }
-            const vertices = [[0,0],[1,0],[1,1],[0,1]].map(map);
-            ctx.save(); ctx.fillStyle = "rgba(255,213,74,.18)"; ctx.strokeStyle = "#ffd54a"; ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(...vertices[0]); vertices.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
-            vertices.forEach(p => { ctx.save(); ctx.fillStyle = "#fff3a6"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p[0], p[1], 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
-            const firstEnd = map([1,0]);
-            const secondEnd = map([0,1]);
+            const vertices = [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1]
+            ].map(map);
+            ctx.save();
+            ctx.fillStyle = "rgba(255,213,74,.18)";
+            ctx.strokeStyle = "#ffd54a";
+            ctx.lineWidth = 5;
+            ctx.lineJoin = "round";
+            ctx.shadowColor = "#ffd54a";
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.moveTo(...vertices[0]);
+            vertices.slice(1).forEach(p => ctx.lineTo(...p));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+            vertices.forEach(p => {
+                ctx.save();
+                ctx.fillStyle = "#fff3a6";
+                ctx.shadowColor = "#ffd54a";
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+            const firstEnd = map([1, 0]);
+            const secondEnd = map([0, 1]);
             const cross = Math.abs((firstEnd[0] - origin[0]) * (secondEnd[1] - origin[1]) - (firstEnd[1] - origin[1]) * (secondEnd[0] - origin[0]));
             const nearlyOverlapping = cross < 900;
             drawArrow(origin, firstEnd, "#ff4d67", nearlyOverlapping ? -5 : 0);
             drawArrow(origin, secondEnd, "#24e0d1", nearlyOverlapping ? 5 : 0);
             ctx.restore();
-            // Keep explanatory values stable while the geometry is tweening.
+
             const det = determinant(stage.matrix);
             const first = apply(stage.matrix, [1, 0]);
             const second = apply(stage.matrix, [0, 1]);
             const prefix = index === 0 ? "" : index === 1 ? "B" : "AB";
-            ctx.font = "800 12px ui-monospace, monospace"; ctx.textAlign = "center";
-            ctx.fillStyle = "#ff4d67"; ctx.fillText(`${prefix}e₁ = (${fmt(first[0])}, ${fmt(first[1])})`, left + panelWidth * .27, height - 50);
-            ctx.fillStyle = "#24e0d1"; ctx.fillText(`${prefix}e₂ = (${fmt(second[0])}, ${fmt(second[1])})`, left + panelWidth * .73, height - 50);
-            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#ffd54a" : text; ctx.font = "800 12px system-ui";
+            ctx.font = "800 12px ui-monospace, monospace";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#ff4d67";
+            ctx.fillText(`${prefix}e₁ = (${fmt(first[0])}, ${fmt(first[1])})`, left + panelWidth * .27, height - 50);
+            ctx.fillStyle = "#24e0d1";
+            ctx.fillText(`${prefix}e₂ = (${fmt(second[0])}, ${fmt(second[1])})`, left + panelWidth * .73, height - 50);
+            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#ffd54a" : text;
+            ctx.font = "800 12px system-ui";
             ctx.fillText(Math.abs(det) < 1e-8 ? "The square collapses to a line (area = 0)" : `Yellow area scales by |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 25);
-            if (index < 2) { ctx.fillStyle = accent; ctx.font = "900 24px system-ui"; ctx.fillText("→", left + panelWidth + panelGap / 2, height / 2); }
+            if (index < 2) {
+                ctx.fillStyle = accent;
+                ctx.font = "900 24px system-ui";
+                ctx.fillText("→", left + panelWidth + panelGap / 2, height / 2);
+            }
         });
         geometryMessage.textContent = geometryStage === 0 ? "Start: the yellow unit square has area 1." : geometryStage === 1 ? "B acts first. The red and teal arrows are B's columns; they show where the original basis vectors land." : "A now acts on Bx. The last panel is the single transformation C = AB.";
         geometryCanvas.dataset.available = "true";
@@ -320,7 +423,13 @@
     }
 
     function renderProductPlot(A, B, C, selectedRow = 0, selectedCol = 0) {
-        lastProductPlot = { A, B, C, selectedRow, selectedCol };
+        lastProductPlot = {
+            A,
+            B,
+            C,
+            selectedRow,
+            selectedCol
+        };
         drawGeometricProduct(A, B, C);
     }
 
@@ -447,7 +556,10 @@
         const playButton = document.getElementById("play-geometry");
         playButton.disabled = true;
         playButton.textContent = "Animating…";
-        const identity = [[1, 0], [0, 1]];
+        const identity = [
+            [1, 0],
+            [0, 1]
+        ];
         const stages = [identity, lastProductPlot.B, lastProductPlot.C];
         let transition = 0;
         let started = performance.now();
@@ -460,8 +572,11 @@
             document.querySelectorAll("[data-geometry-stage]").forEach(button => button.classList.toggle("is-active", Number(button.dataset.geometryStage) === geometryStage));
             drawGeometricProduct(lastProductPlot.A, lastProductPlot.B, lastProductPlot.C);
             if (raw < 1) geometryAnimationFrame = requestAnimationFrame(frame);
-            else if (transition === 0) { transition = 1; started = now + 900; geometryAnimationFrame = requestAnimationFrame(frame); }
-            else {
+            else if (transition === 0) {
+                transition = 1;
+                started = now + 900;
+                geometryAnimationFrame = requestAnimationFrame(frame);
+            } else {
                 geometryTweenMatrix = null;
                 setGeometryStage(2);
                 playButton.disabled = false;

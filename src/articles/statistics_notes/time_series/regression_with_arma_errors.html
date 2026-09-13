@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: a regression mean plus serial error</title>
+    <meta content="Regression with ARMA errors separates two kinds of structure that often appear together in time series." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: a regression mean plus serial error",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors",
+            "description": "Regression with ARMA errors separates two kinds of structure that often appear together in time series.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-a-regression-mean-plus-serial-error">Worked calculation: a regression mean plus serial error</a>
+                        <ol>
+                            <li><a href="#why-this-matters">Why This Matters</a></li>
+                            <li><a href="#practical-workflow">Practical Workflow</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-estimate-the-mean-and-the-error-process-together">Student guide: estimate the mean and the error process together</a>
+                        <ol>
+                            <li><a href="#numerical-example">Numerical example</a></li>
+                            <li><a href="#why-ordinary-least-squares-can-mislead">Why ordinary least squares can mislead</a></li>
+                            <li><a href="#gls-intuition">GLS intuition</a></li>
+                            <li><a href="#workflow">Workflow</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Regression with ARMA Errors</header>
+            <p>Regression with ARMA errors separates two kinds of structure that often appear together in time series. The regression explains how observed predictors shift the conditional mean, while the ARMA component models serial dependence that remains in the unexplained part.</p>
+            <p>This distinction matters for both inference and forecasting. Autocorrelated errors change the uncertainty around regression coefficients and can contain additional predictive information, so a good model must handle the mean relationship and the temporal error process as parts of one coherent specification.</p>
+            <h2 id="worked-calculation-a-regression-mean-plus-serial-error">Worked calculation: a regression mean plus serial error</h2>
+            <p>Consider</p>
+            <p>$$
+                y_t=1+2x_t+n_t,
+                \qquad
+                n_t=0.7n_{t-1}+\varepsilon_t.
+                $$</p>
+            <p>If $x_t=3$ and the current error happens to be $n_t=0.4$, then</p>
+            <p>$$
+                y_t=1+2(3)+0.4=7.4.
+                $$</p>
+            <p>The regression mean is $1+2(3)=7$, but the error is serially dependent. Under suitable exogeneity, ordinary least squares can still estimate the mean coefficients consistently, but the usual independent-error standard errors and forecast formulas are no longer appropriate. Modeling the ARMA error captures the predictable part of $n_t$ and produces uncertainty estimates that reflect the temporal dependence.</p>
+            <p><img alt="A regression mean with autocorrelated errors" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/16_dynamic_regression.png" /></p>
+            <p>The figure separates the regression mean from the serial error around it. The covariates explain the systematic mean structure, while the ARMA component describes dependence that remains after conditioning on those predictors.</p>
+            <p>In many applications, the response $Y_t$ depends on observed covariates and still has autocorrelated residual variation. A <strong>regression with ARMA errors</strong> writes</p>
+            <p>$$
+                Y_t=\beta^TX_t+R_t,
+                $$</p>
+            <p>where the error process follows an ARMA model such as</p>
+            <p>$$
+                R_t=\phi_1R_{t-1}+\cdots+\phi_pR_{t-p}
+                +Z_t-\theta_1Z_{t-1}-\cdots-\theta_qZ_{t-q}.
+                $$</p>
+            <p>Here $Z_t$ is white noise. The signs on the MA coefficients are a convention; some texts and software use plus signs instead, so compare full model equations rather than parameter labels alone.</p>
+            <h3 id="why-this-matters">Why This Matters</h3>
+            <p>Serially correlated errors affect both inference and forecasting. Even when the regression coefficients remain consistently estimable under appropriate exogeneity assumptions, the ordinary independent-error covariance formula is generally wrong. Ignoring residual dependence can therefore produce misleading standard errors, confidence intervals, and tests.</p>
+            <p>A fitted error process also improves dynamic forecasts because part of the current residual may be predictable from previous residuals. This is different from merely adjusting standard errors after fitting the mean model.</p>
+            <h3 id="practical-workflow">Practical Workflow</h3>
+            <p>A practical workflow is:</p>
+            <ol>
+                <li>align the response and predictors and specify the regression mean;</li>
+                <li>inspect residual ACF/PACF and plots after fitting a simple mean model;</li>
+                <li>choose a parsimonious ARMA structure for the remaining serial dependence;</li>
+                <li>estimate the regression coefficients and error process together, commonly by maximum likelihood or generalized least squares methods;</li>
+                <li>check that the final standardized residuals no longer contain systematic autocorrelation;</li>
+                <li>evaluate forecasts using only predictors and observations available at each forecast origin.</li>
+            </ol>
+            <p>This structure combines explanatory regression with a time-series model for the unexplained dynamics.</p>
+            <h2 id="student-guide-estimate-the-mean-and-the-error-process-together">Student guide: estimate the mean and the error process together</h2>
+            <p>Write</p>
+            <p>$$
+                y_t=x_t^\top\beta+n_t,
+                \qquad
+                \phi(B)n_t=\theta(B)\varepsilon_t.
+                $$</p>
+            <p>The regression part describes how the conditional mean changes with the predictors. The ARMA part describes serial dependence left after that mean has been specified. Keeping those roles separate helps avoid using lagged error structure to compensate for a missing predictor or trend.</p>
+            <h3 id="numerical-example">Numerical example</h3>
+            <p>Suppose</p>
+            <p>$$
+                y_t=1+2x_t+n_t,
+                \qquad
+                n_t=0.7n_{t-1}+\varepsilon_t.
+                $$</p>
+            <p>For $x_t=3$ and $n_t=0.4$,</p>
+            <p>$$
+                y_t=1+2(3)+0.4=7.4.
+                $$</p>
+            <p>The regression mean is 7. If $n_{t-1}=0.5$, the predictable AR contribution to the current error is</p>
+            <p>$$
+                0.7(0.5)=0.35,
+                $$</p>
+            <p>so the innovation is</p>
+            <p>$$
+                \varepsilon_t=0.4-0.35=0.05.
+                $$</p>
+            <p>This decomposition shows how the observed value can depart from the regression mean in a way that is partly predictable from earlier errors and partly new information.</p>
+            <h3 id="why-ordinary-least-squares-can-mislead">Why ordinary least squares can mislead</h3>
+            <p>Under suitable exogeneity, OLS can estimate $\beta$ consistently even when the errors are autocorrelated. Its usual independent-error variance estimator, however, is generally invalid, and OLS is no longer efficient among linear unbiased estimators when the covariance structure is known.</p>
+            <p>A heteroskedasticity-and-autocorrelation robust covariance estimator can improve inference about $\beta$ without specifying a full dynamic error model. It does not, by itself, model the serial errors or provide the same recursive forecasts. Choose between these approaches according to the inferential or forecasting objective.</p>
+            <h3 id="gls-intuition">GLS intuition</h3>
+            <p>If the error covariance matrix $\Sigma$ were known, generalized least squares would estimate</p>
+            <p>$$
+                \hat\beta_{\mathrm{GLS}}
+                =(X^\top\Sigma^{-1}X)^{-1}X^\top\Sigma^{-1}y.
+                $$</p>
+            <p>The transformation accounts for the fact that observations with correlated errors contain overlapping information. In practice, $\Sigma$ is unknown and must be estimated from the ARMA parameters, often jointly or iteratively. Misspecifying the error model can therefore affect both coefficient uncertainty and forecasts.</p>
+            <p><img alt="Regression with dynamic errors" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/dynamic_multivariate/01_dynamic_regression_errors.png" /></p>
+            <p>The figure illustrates this joint view: the regression component follows the predictor-driven mean, while the dynamic error model accounts for systematic departures around it.</p>
+            <h3 id="workflow">Workflow</h3>
+            <ol>
+                <li>Align the response and predictors on the correct timestamps.</li>
+                <li>Fit a simple, interpretable mean model.</li>
+                <li>Inspect residual ACF/PACF and squared residuals.</li>
+                <li>Choose a parsimonious error structure.</li>
+                <li>Estimate the combined model.</li>
+                <li>Check standardized residuals and parameter stability.</li>
+                <li>Backtest predictions using only information available at each forecast origin.</li>
+            </ol>
+            <p>See <a href="dynamic_regression.md">dynamic regression</a> for predictor availability, lagged effects, and forecast scenarios for future covariates.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

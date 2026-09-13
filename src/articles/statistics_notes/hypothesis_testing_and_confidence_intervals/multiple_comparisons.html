@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Data Snooping and the Multiple Testing Fallacy</title>
+    <meta content="When conducting multiple hypothesis tests, the probability of making at least one Type I error—falsely rejecting a true null hypothesis—increases." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Data Snooping and the Multiple Testing Fallacy",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons",
+            "description": "When conducting multiple hypothesis tests, the probability of making at least one Type I error\u2014falsely rejecting a true null hypothesis\u2014increases.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#data-snooping-and-the-multiple-testing-fallacy">Data Snooping and the Multiple Testing Fallacy</a>
+                        <ol>
+                            <li><a href="#multiple-comparisons-problem">Multiple Comparisons Problem</a></li>
+                            <li><a href="#reproducibility-and-replicability-crisis">Reproducibility and Replicability Crisis</a></li>
+                            <li><a href="#addressing-the-multiple-testing-problem">Addressing the Multiple Testing Problem</a></li>
+                            <li><a href="#false-discovery-rate-fdr-">False Discovery Rate (FDR)</a></li>
+                            <li><a href="#using-a-validation-set-to-avoid-data-snooping">Using a Validation Set to Avoid Data Snooping</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#family-wise-error-rate-fwer-">Family-wise Error Rate (FWER)</a>
+                        <ol>
+                            <li><a href="#bonferroni-correction">Bonferroni Correction</a></li>
+                            <li><a href="#example-bonferroni-correction">Example: Bonferroni Correction</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#false-discovery-rate-fdr-">False Discovery Rate (FDR)</a>
+                        <ol>
+                            <li><a href="#benjamini-hochberg-procedure">Benjamini-Hochberg Procedure</a></li>
+                            <li><a href="#example-multiple-hypothesis-testing">Example: Multiple Hypothesis Testing</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Multiple Comparisons</header>
+            <p>When conducting multiple hypothesis tests, the probability of making at least one Type I error—falsely rejecting a true null hypothesis—increases. This is known as the <strong>multiple comparisons problem</strong> or, in some contexts, the <strong>look-elsewhere effect</strong>.</p>
+            <p>Methods for addressing this problem typically adjust significance thresholds or p-values. Different methods control different types of error and involve different trade-offs between false positives and statistical power.</p>
+            <h3 id="data-snooping-and-the-multiple-testing-fallacy">Data Snooping and the Multiple Testing Fallacy</h3>
+            <ul>
+                <li>A <strong>1992 Swedish study</strong> reported a statistically significant association between living near power lines and childhood leukemia, but later studies did not consistently replicate the finding.</li>
+                <li>The study examined a large number of possible associations, increasing the chance that some results would appear statistically significant by chance.</li>
+                <li>The <strong>multiple testing fallacy</strong> occurs when many tests are performed without accounting for the increased chance of false positives. For example, if 800 independent null hypotheses are all true and each is tested at a 1% significance level, about 8 false positives would be expected on average.</li>
+            </ul>
+            <h4 id="multiple-comparisons-problem">Multiple Comparisons Problem</h4>
+            <ul>
+                <li>A <strong>p-value</strong> is the probability, assuming the null hypothesis is true, of obtaining a result at least as extreme as the one observed. A smaller p-value indicates stronger evidence against the null hypothesis.</li>
+                <li>The <strong>look-elsewhere effect</strong> refers to the increased chance of finding an apparently significant result when many possible comparisons are examined.</li>
+                <li><strong>Data snooping</strong> is the broader practice of repeatedly exploring data and then treating selected patterns as if they had been specified in advance.</li>
+            </ul>
+            <h4 id="reproducibility-and-replicability-crisis">Reproducibility and Replicability Crisis</h4>
+            <ul>
+                <li><strong>Reproducibility</strong> refers to obtaining the same results using the same data and analysis procedures, while <strong>replicability</strong> refers to obtaining consistent results in a new study using new data.</li>
+                <li>Concerns about the reliability of published findings are often described as the <strong>reproducibility and replicability crisis</strong>. Practices such as extensive data exploration, selective reporting, and uncorrected multiple testing can contribute to this problem. John Ioannidis's 2005 paper, <em>"Why Most Published Research Findings Are False,"</em> discusses several related issues.</li>
+            </ul>
+            <h4 id="addressing-the-multiple-testing-problem">Addressing the Multiple Testing Problem</h4>
+            <ul>
+                <li>The <strong>Bonferroni correction</strong> controls the probability of making at least one Type I error across a family of tests. It can be implemented by dividing the desired family-wise significance level by the number of tests, or equivalently by multiplying each p-value by the number of tests. The method is simple but can be conservative, reducing statistical power.</li>
+                <li>The <strong>false discovery proportion (FDP)</strong> is the proportion of rejected null hypotheses that are actually false discoveries. For example, if 80 true discoveries and 41 false discoveries are made, then the FDP is:</li>
+            </ul>
+            <p>$$
+                \frac{41}{80+41}\approx0.34
+                $$</p>
+            <p>so about 34% of the reported discoveries are false positives.</p>
+            <h4 id="false-discovery-rate-fdr-">False Discovery Rate (FDR)</h4>
+            <ul>
+                <li>The <strong>false discovery rate (FDR)</strong> is the expected value of the false discovery proportion.</li>
+                <li>The <strong>Benjamini-Hochberg procedure</strong> controls the FDR by ranking p-values and comparing them with thresholds that depend on their rank. It is generally less conservative than methods designed to control the family-wise error rate.</li>
+            </ul>
+            <h4 id="using-a-validation-set-to-avoid-data-snooping">Using a Validation Set to Avoid Data Snooping</h4>
+            <ul>
+                <li>The <strong>validation set approach</strong> divides the available data into separate sets so that exploratory findings can be evaluated on data that were not used to generate them.</li>
+                <li>The <strong>model-building set</strong> is used to explore the data and identify possible relationships.</li>
+                <li>The <strong>validation set</strong> is reserved for evaluating hypotheses or models that emerged during the exploratory phase.</li>
+                <li>It is important that the validation set remain separate from the exploratory analysis. Repeatedly examining or tuning decisions based on the validation set can reintroduce data snooping.</li>
+            </ul>
+            <h3 id="family-wise-error-rate-fwer-">Family-wise Error Rate (FWER)</h3>
+            <p>The family-wise error rate (FWER) is the probability of making at least one Type I error among a defined family of hypothesis tests. Controlling FWER limits the probability of any false rejection within that family.</p>
+            <h4 id="bonferroni-correction">Bonferroni Correction</h4>
+            <p>The Bonferroni correction is a common method for controlling the FWER. If the desired family-wise significance level is $\alpha$ and $m$ tests are performed, each individual test uses:</p>
+            <p>$$
+                \alpha_{\text{adjusted}} = \frac{\alpha}{m}
+                $$</p>
+            <p>The Bonferroni correction is conservative, particularly when many tests are performed. This reduces the probability of false positives but can increase the probability of Type II errors, where a false null hypothesis is not rejected.</p>
+            <h4 id="example-bonferroni-correction">Example: Bonferroni Correction</h4>
+            <p>Suppose we conduct 20 hypothesis tests and want to control the family-wise error rate at $\alpha = 0.05$. The Bonferroni-adjusted significance level is:</p>
+            <p>$$
+                \alpha_{\text{adjusted}} = \frac{\alpha}{m} = \frac{0.05}{20} = 0.0025
+                $$</p>
+            <p>where:</p>
+            <ul>
+                <li>$\alpha = 0.05$ is the desired family-wise significance level,</li>
+                <li>$m = 20$ is the number of tests.</li>
+            </ul>
+            <p><strong>Conclusion:</strong></p>
+            <p>After applying the Bonferroni correction, we reject the null hypothesis for an individual test only if its p-value is less than or equal to $0.0025$.</p>
+            <p>This controls the family-wise error rate at no more than 0.05, but the stricter threshold also reduces power and can increase the number of false negatives.</p>
+            <h3 id="false-discovery-rate-fdr-">False Discovery Rate (FDR)</h3>
+            <p>Unlike FWER, which controls the probability of making at least one false rejection, the false discovery rate controls the expected proportion of false discoveries among all rejected null hypotheses.</p>
+            <p>FDR-controlling procedures are generally more powerful than FWER-controlling methods, making them useful in exploratory settings where many hypotheses are tested and some false discoveries can be tolerated.</p>
+            <h4 id="benjamini-hochberg-procedure">Benjamini-Hochberg Procedure</h4>
+            <p>The Benjamini-Hochberg (BH) procedure controls the FDR by ordering the p-values from smallest to largest:</p>
+            <p>$$
+                p_{(1)} \leq p_{(2)} \leq \cdots \leq p_{(m)}
+                $$</p>
+            <p>Each ordered p-value is compared with:</p>
+            <p>$$
+                \frac{i}{m}\alpha
+                $$</p>
+            <p>where:</p>
+            <ul>
+                <li>$i$ is the rank of the p-value,</li>
+                <li>$m$ is the total number of tests,</li>
+                <li>$\alpha$ is the desired FDR level.</li>
+            </ul>
+            <p>We find the largest rank $k$ such that:</p>
+            <p>$$
+                p_{(k)} \leq \frac{k}{m}\alpha
+                $$</p>
+            <p>and reject the null hypotheses corresponding to:</p>
+            <p>$$
+                p_{(1)},\ldots,p_{(k)}.
+                $$</p>
+            <h4 id="example-multiple-hypothesis-testing">Example: Multiple Hypothesis Testing</h4>
+            <p>Suppose we conduct six hypothesis tests and obtain the p-values:</p>
+            <p>$$
+                {0.001, 0.008, 0.039, 0.041, 0.042, 0.06}
+                $$</p>
+            <p>The following example uses the <strong>Holm-Bonferroni procedure</strong>, which controls the family-wise error rate rather than the false discovery rate.</p>
+            <p>We apply the procedure at $\alpha = 0.05$ by comparing each ordered p-value with a sequentially adjusted significance level.</p>
+            <p><strong>Step-by-Step Procedure:</strong></p>
+            <p>I. <strong>Order the p-values</strong> in ascending order:</p>
+            <p>$$
+                0.001, 0.008, 0.039, 0.041, 0.042, 0.06
+                $$</p>
+            <p>II. <strong>Adjust the significance level</strong> for each test:</p>
+            <p>$$
+                \alpha_i = \frac{\alpha}{m-i+1}
+                $$</p>
+            <p>where $m=6$ and $\alpha=0.05$.</p>
+            <p>III. <strong>Compare each p-value with its adjusted threshold</strong>:</p>
+            <p>For $p_1 = 0.001$:</p>
+            <p>$$
+                0.001 &lt; \frac{0.05}{6} \approx 0.00833
+                \quad \text{(Reject $H_0$)}
+                $$</p>
+            <p>For $p_2 = 0.008$:</p>
+            <p>$$
+                0.008 &lt; \frac{0.05}{5} = 0.01
+                \quad \text{(Reject $H_0$)}
+                $$</p>
+            <p>For $p_3 = 0.039$:</p>
+            <p>$$
+                0.039 &gt; \frac{0.05}{4} = 0.0125
+                \quad \text{(Fail to reject $H_0$)}
+                $$</p>
+            <p>The Holm-Bonferroni procedure stops at the first hypothesis that is not rejected. Therefore, the remaining hypotheses are also not rejected.</p>
+            <p><img alt="output(29)" src="https://github.com/user-attachments/assets/e1dfbabc-e720-448d-a8b3-228f91d665eb" /></p>
+            <p>Using the Holm-Bonferroni procedure, we reject the first two null hypotheses and fail to reject the remaining four.</p>
+            <p>The procedure controls the family-wise error rate while generally being less conservative than the standard Bonferroni correction. As with other multiple-testing procedures, stronger protection against false positives comes at the cost of reduced power and a greater risk of failing to detect real effects.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

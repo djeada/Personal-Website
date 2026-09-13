@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: three errors and one scale</title>
+    <meta content="Forecast evaluation measures how an entire forecasting procedure performs on observations that were genuinely unknown when each prediction was made." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: three errors and one scale",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation",
+            "description": "Forecast evaluation measures how an entire forecasting procedure performs on observations that were genuinely unknown when each prediction was made.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-three-errors-and-one-scale">Worked calculation: three errors and one scale</a></li>
+                    <li><a href="#preserve-temporal-order">Preserve Temporal Order</a></li>
+                    <li><a href="#rolling-origin-evaluation">Rolling-Origin Evaluation</a></li>
+                    <li><a href="#baselines-first">Baselines First</a></li>
+                    <li><a href="#point-forecast-metrics">Point Forecast Metrics</a></li>
+                    <li><a href="#prediction-intervals">Prediction Intervals</a></li>
+                    <li><a href="#leakage">Leakage</a></li>
+                    <li><a href="#student-guide-make-the-forecast-experiment-explicit">Student guide: make the forecast experiment explicit</a>
+                        <ol>
+                            <li><a href="#information-sets-and-forecast-origins">Information sets and forecast origins</a></li>
+                            <li><a href="#a-concrete-expanding-window-calculation">A concrete expanding-window calculation</a></li>
+                            <li><a href="#baselines-are-part-of-the-scientific-question">Baselines are part of the scientific question</a></li>
+                            <li><a href="#point-metrics-and-what-they-reward">Point metrics and what they reward</a></li>
+                            <li><a href="#interval-forecasts">Interval forecasts</a></li>
+                            <li><a href="#leakage-audit">Leakage audit</a></li>
+                            <li><a href="#comparing-models-fairly">Comparing models fairly</a></li>
+                            <li><a href="#reproducible-evaluation-recipe">Reproducible evaluation recipe</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Forecast Evaluation and Backtesting</header>
+            <p>Forecast evaluation measures how an entire forecasting procedure performs on observations that were genuinely unknown when each prediction was made. It is therefore different from in-sample fit: transformations, feature construction, parameter estimation, predictor values, and model selection all have to respect the historical information boundary.</p>
+            <p>A useful backtest preserves chronological order, compares against sensible baselines, and reports accuracy by the horizons and loss functions that matter in deployment. Point metrics, interval calibration, and error behavior over time answer different questions, while leakage at any stage can make all of them look better than the live forecasting process would actually be.</p>
+            <h2 id="worked-calculation-three-errors-and-one-scale">Worked calculation: three errors and one scale</h2>
+            <p>Suppose the actual values are $(10,12,9)$ and forecasts are $(9,11,10)$. Using the convention $e=y-\hat y$, the errors are $(1,1,-1)$, so</p>
+            <p>$$
+                \mathrm{MAE}=\frac{1+1+1}{3}=1,
+                \qquad
+                \mathrm{RMSE}=\sqrt{\frac{1+1+1}{3}}=1.
+                $$</p>
+            <p>If the in-sample naive scale is 2, then</p>
+            <p>$$
+                \mathrm{MASE}=\frac{1}{2}=0.5.
+                $$</p>
+            <p>The scale must be calculated using only the training portion available at each forecast origin. Reusing a scale computed from the full series introduces leakage. A rolling-origin evaluation repeats this calculation through time so that every forecast is produced using past information only.</p>
+            <p><img alt="Rolling-origin forecasts and forecast errors" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/15_forecast_backtesting.png" /></p>
+            <p>The figure makes the evaluation design explicit: the forecast origin moves forward, the model is refit or updated using the information available at that date, and the later observation is used only to score the forecast.</p>
+            <p>Forecast evaluation asks a different question from in-sample fit: <strong>How well would this forecasting procedure have predicted observations that were genuinely in the future when each forecast was issued?</strong></p>
+            <h2 id="preserve-temporal-order">Preserve Temporal Order</h2>
+            <p>Randomly shuffling observations destroys the information structure of a forecasting problem. A valid evaluation keeps training observations earlier than validation or test observations. Validation periods can be used for model or hyperparameter selection, while the final test period should remain untouched until the procedure has been selected.</p>
+            <p><img alt="Temporal leakage" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/07_temporal_leakage.png" /></p>
+            <p>The figure contrasts a valid chronological split with a leaked evaluation. The issue is not only where the target rows are split: preprocessing, feature construction, imputation, and predictor forecasts must also respect the same information boundary.</p>
+            <h2 id="rolling-origin-evaluation">Rolling-Origin Evaluation</h2>
+            <p>A single holdout period can give a noisy or regime-specific result. <strong>Rolling-origin evaluation</strong> repeats the forecasting experiment at several historical origins. An expanding window keeps all available history, while a rolling window retains only the most recent observations and can be useful when older regimes are less relevant.</p>
+            <p>For horizon $h$, define the forecast error at origin $t$ as</p>
+            <p>$$
+                e_{t,h}=y_{t+h}-\hat y_{t+h\mid t}.
+                $$</p>
+            <p><img alt="Rolling origins" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/02_rolling_origins.png" /></p>
+            <p>The rolling-origin figure shows how the training window, origin, and forecast horizon move together. Accuracy should be reported by horizon whenever short- and long-horizon decisions have different importance.</p>
+            <h2 id="baselines-first">Baselines First</h2>
+            <p>Useful baselines include naive, seasonal-naive, drift, and historical-mean forecasts. A complicated method that cannot improve on a sensible baseline on the same evaluation origins has not demonstrated additional forecasting value.</p>
+            <p><img alt="Forecast baselines" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/01_baseline_forecasts.png" /></p>
+            <p>The baseline figure shows that different simple rules encode different assumptions: persistence, repeating seasonality, linear drift, or reversion to a stable historical mean. Choose the baseline that reflects the simplest plausible structure in the problem.</p>
+            <h2 id="point-forecast-metrics">Point Forecast Metrics</h2>
+            <p>For errors $e_i=y_i-\hat y_i$,</p>
+            <p>$$
+                \mathrm{MAE}=\frac{1}{n}\sum_{i=1}^{n}|e_i|,
+                \qquad
+                \mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}e_i^2}.
+                $$</p>
+            <p>Mean Absolute Scaled Error compares the absolute forecast error with an in-sample naive scale. For seasonal period $m$,</p>
+            <p>$$
+                \mathrm{MASE}=
+                \frac{\frac{1}{n}\sum_{i=1}^{n}|e_i|}
+                {\frac{1}{T-m}\sum_{t=m+1}^{T}|y_t-y_{t-m}|}.
+                $$</p>
+            <p>MAPE can be useful when values are strictly positive and comfortably away from zero, but it is undefined at zero and unstable near zero.</p>
+            <p><img alt="Point metrics" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/03_point_metrics.png" /></p>
+            <p>The point-metrics figure illustrates that MAE and RMSE can rank the same errors differently because RMSE gives more weight to large misses. Metric choice should reflect the loss that matters in deployment rather than habit.</p>
+            <h2 id="prediction-intervals">Prediction Intervals</h2>
+            <p>Prediction intervals should be evaluated for both calibration and sharpness. Coverage measures how often observations fall inside the stated interval, while width measures how informative the interval is. Coverage should also be inspected by forecast horizon and regime.</p>
+            <p><img alt="Interval coverage" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/04_interval_coverage.png" /></p>
+            <p>The figure shows why nominal coverage alone is not enough: intervals can achieve high coverage simply by being too wide. A useful interval is both appropriately calibrated and reasonably narrow.</p>
+            <p>For probabilistic forecasts, quantile or pinball loss evaluates predicted quantiles directly and can be aggregated across several quantile levels.</p>
+            <h2 id="leakage">Leakage</h2>
+            <p>Common leakage sources include full-data normalization, future-aware imputation, centered rolling features, selecting hyperparameters on the final test period, using future exogenous values that would not have been known at the forecast origin, and shuffled cross-validation.</p>
+            <p>Every feature should answer the same question: <strong>Would this value have been available when the forecast was issued?</strong></p>
+            <p>Information criteria such as AIC, AICc, and BIC can help select candidates in sample, but they are not substitutes for out-of-sample forecast evaluation.</p>
+            <p>See the companion <a href="../../notebooks/time_series/forecast_backtesting.ipynb">forecast-backtesting notebook</a> for an additional worked environment.</p>
+            <h2 id="student-guide-make-the-forecast-experiment-explicit">Student guide: make the forecast experiment explicit</h2>
+            <p>Forecast evaluation is an experiment repeated at historical dates. The central object is not only a fitted model; it is the entire <strong>forecasting procedure</strong>:</p>
+            <ol>
+                <li>how the data are transformed;</li>
+                <li>how features are constructed;</li>
+                <li>how parameters are estimated;</li>
+                <li>how future predictors are obtained;</li>
+                <li>how the forecast is produced;</li>
+                <li>how the error or interval score is recorded.</li>
+            </ol>
+            <p>If any step uses information from after the forecast origin, the evaluation is optimistic even if the final model equation itself looks valid.</p>
+            <h3 id="information-sets-and-forecast-origins">Information sets and forecast origins</h3>
+            <p>Let $\mathcal F_t$ denote the information available immediately after observing $y_t$. Under squared-error loss, the optimal one-step conditional-mean forecast is</p>
+            <p>$$
+                \hat y_{t+1|t}=E(y_{t+1}\mid\mathcal F_t),
+                $$</p>
+            <p>and a two-step forecast is</p>
+            <p>$$
+                \hat y_{t+2|t}=E(y_{t+2}\mid\mathcal F_t).
+                $$</p>
+            <p>The notation emphasizes the information boundary. A forecast made at time $t$ cannot use $y_{t+1}$ to tune a transformation, estimate a scaling constant, choose a lag order, or fill a missing value.</p>
+            <p>For fixed horizon $h$,</p>
+            <p>$$
+                e_{t,h}=y_{t+h}-\hat y_{t+h|t}.
+                $$</p>
+            <p>State the sign convention because directional bias changes sign if error is defined as forecast minus actual. MAE and RMSE are unaffected by that reversal, but mean error and calibration plots are not.</p>
+            <h3 id="a-concrete-expanding-window-calculation">A concrete expanding-window calculation</h3>
+            <p>Suppose the observed series is</p>
+            <p>
+            <table>
+                <tr>
+                    <td>time</td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>4</td>
+                    <td>5</td>
+                    <td>6</td>
+                    <td>7</td>
+                </tr>
+                <tr>
+                    <td>$y_t$</td>
+                    <td>10</td>
+                    <td>12</td>
+                    <td>11</td>
+                    <td>14</td>
+                    <td>13</td>
+                    <td>16</td>
+                    <td>15</td>
+                </tr>
+            </table>
+            </p>
+            <p>Use the naive rule $\hat y_{t+1|t}=y_t$ and evaluate one-step forecasts at origins $t=3,4,5,6$:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>origin $t$</td>
+                    <td>training values</td>
+                    <td>forecast</td>
+                    <td>actual</td>
+                    <td>error</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>10, 12, 11</td>
+                    <td>11</td>
+                    <td>14</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>10, 12, 11, 14</td>
+                    <td>14</td>
+                    <td>13</td>
+                    <td>-1</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>10, 12, 11, 14, 13</td>
+                    <td>13</td>
+                    <td>16</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>10, 12, 11, 14, 13, 16</td>
+                    <td>16</td>
+                    <td>15</td>
+                    <td>-1</td>
+                </tr>
+            </table>
+            </p>
+            <p>The four errors are $(3,-1,3,-1)$. Therefore,</p>
+            <p>$$
+                \mathrm{MAE}=\frac{3+1+3+1}{4}=2,
+                $$</p>
+            <p>and</p>
+            <p>$$
+                \mathrm{RMSE}
+                =\sqrt{\frac{3^2+(-1)^2+3^2+(-1)^2}{4}}
+                =\sqrt5
+                \approx2.236.
+                $$</p>
+            <p>The mean error is</p>
+            <p>$$
+                \mathrm{ME}=\frac{3-1+3-1}{4}=1,
+                $$</p>
+            <p>so the forecasts underpredict on average in this short evaluation. A single absolute-error score would hide that directional bias.</p>
+            <p>An expanding window uses every observation that has become available. A rolling window instead retains the most recent $w$ observations and can adapt more quickly after a structural change.</p>
+            <h3 id="baselines-are-part-of-the-scientific-question">Baselines are part of the scientific question</h3>
+            <p>The most useful baseline depends on the structure of the series.</p>
+            <p>For a persistent non-seasonal level, the naive forecast is</p>
+            <p>$$
+                \hat y_{t+h|t}=y_t.
+                $$</p>
+            <p>For seasonal period $s$, a seasonal-naive forecast reuses the most recent observed value from the same season:</p>
+            <p>$$
+                \hat y_{t+h|t}=y_{t+h-s\lceil h/s\rceil}.
+                $$</p>
+            <p>A common drift forecast extrapolates the average historical change:</p>
+            <p>$$
+                \hat y_{t+h|t}
+                =y_t+h\frac{y_t-y_1}{t-1}.
+                $$</p>
+            <p>For a stable series without meaningful persistence, a historical-mean forecast is</p>
+            <p>$$
+                \hat y_{t+h|t}=\frac{1}{t}\sum_{j=1}^{t}y_j.
+                $$</p>
+            <p>The baseline is not a disposable preliminary. If an advanced procedure cannot improve on it using the same origins and horizons, the extra complexity has not shown forecasting value.</p>
+            <h3 id="point-metrics-and-what-they-reward">Point metrics and what they reward</h3>
+            <p>For $n$ evaluation cases,</p>
+            <p>$$
+                \mathrm{MAE}=\frac{1}{n}\sum_{i=1}^{n}|e_i|,
+                \qquad
+                \mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}e_i^2}.
+                $$</p>
+            <p>MAE weights absolute errors linearly. RMSE gives disproportionately more influence to large misses. The appropriate choice depends on the decision loss.</p>
+            <p>Mean error,</p>
+            <p>$$
+                \mathrm{ME}=\frac{1}{n}\sum_{i=1}^{n}e_i,
+                $$</p>
+            <p>measures directional bias but can be close to zero when positive and negative errors cancel. Report it alongside an absolute metric when systematic over- or under-prediction matters.</p>
+            <p>For seasonal period $m$, define the training scale</p>
+            <p>$$
+                Q_m=\frac{1}{T-m}\sum_{t=m+1}^{T}|y_t-y_{t-m}|,
+                $$</p>
+            <p>then</p>
+            <p>$$
+                \mathrm{MASE}=\frac{\frac{1}{n}\sum_i|e_i|}{Q_m}.
+                $$</p>
+            <p>When the evaluation is designed to reproduce deployment, recompute the scale within each training window. A MASE below 1 means the method's average absolute error is smaller than the corresponding in-sample seasonal-naive change scale.</p>
+            <p>MAPE is</p>
+            <p>$$
+                \mathrm{MAPE}=\frac{100}{n}\sum_i\left|\frac{e_i}{y_i}\right|.
+                $$</p>
+            <p>It is undefined when $y_i=0$ and can become arbitrarily large when $y_i$ is near zero. Percentage metrics should therefore be chosen only when their denominator is meaningful for the application.</p>
+            <h3 id="interval-forecasts">Interval forecasts</h3>
+            <p>For interval forecast $(L_i,U_i)$ with nominal coverage $1-\alpha$, empirical coverage is</p>
+            <p>$$
+                \widehat{\mathrm{Coverage}}
+                =\frac{1}{n}\sum_{i=1}^{n}\mathbf 1{L_i\le y_i\le U_i}.
+                $$</p>
+            <p>Coverage alone is insufficient. An interval from negative infinity to positive infinity has perfect coverage and no practical value. A useful report includes coverage, average width, coverage by horizon, the size of misses, and whether misses cluster in high-volatility or changing-regime periods.</p>
+            <p>For a Gaussian stationary AR(1) with coefficient $\phi$ and innovation variance $\sigma^2$, the $h$-step forecast-error variance is</p>
+            <p>$$
+                \sigma_h^2
+                =\sigma^2\sum_{j=0}^{h-1}\phi^{2j}
+                =\sigma^2\frac{1-\phi^{2h}}{1-\phi^2}.
+                $$</p>
+            <p>When $|\phi|&lt;1$, this approaches the unconditional variance $\sigma^2/(1-\phi^2)$ as the horizon grows.</p>
+            <h3 id="leakage-audit">Leakage audit</h3>
+            <p>Ask the same question of every operation: <strong>Could this value have been computed at the forecast origin?</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Operation</td>
+                    <td>Unsafe version</td>
+                    <td>Safe version</td>
+                </tr>
+                <tr>
+                    <td>scaling</td>
+                    <td>fit mean and standard deviation on all rows</td>
+                    <td>fit them inside each training window</td>
+                </tr>
+                <tr>
+                    <td>imputation</td>
+                    <td>interpolate using observations after the gap</td>
+                    <td>use past-only rules or an explicit forecasting model</td>
+                </tr>
+                <tr>
+                    <td>rolling feature</td>
+                    <td>centered rolling mean</td>
+                    <td>trailing rolling mean ending at $t$</td>
+                </tr>
+                <tr>
+                    <td>feature selection</td>
+                    <td>choose lags using the final test period</td>
+                    <td>choose using training/validation origins</td>
+                </tr>
+                <tr>
+                    <td>external predictor</td>
+                    <td>use realized $x_{t+h}$</td>
+                    <td>forecast $x_{t+h}$ or use a value known in advance</td>
+                </tr>
+                <tr>
+                    <td>seasonal normalization</td>
+                    <td>estimate seasonal indices from the full sample</td>
+                    <td>estimate them from data available at each origin</td>
+                </tr>
+            </table>
+            </p>
+            <p>Leakage can also enter through software defaults, cached preprocessing objects, or feature tables built before the split. Inspect at least one forecast origin by hand and verify the timestamp of every input.</p>
+            <h3 id="comparing-models-fairly">Comparing models fairly</h3>
+            <p>Evaluate all candidates on identical origins, horizons, transformations, and target rows. A comparison might look like</p>
+            <p>
+            <table>
+                <tr>
+                    <td>model</td>
+                    <td>MAE $h=1$</td>
+                    <td>MAE $h=3$</td>
+                    <td>RMSE $h=1$</td>
+                    <td>mean error</td>
+                </tr>
+                <tr>
+                    <td>seasonal naive</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>ARIMA</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>dynamic regression</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+            </p>
+            <p><img alt="Error by horizon" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/05_error_by_horizon.png" /></p>
+            <p>The horizon plot shows why one average score can hide important differences. A model can be best at one-step prediction and lose that advantage at longer horizons.</p>
+            <p>Model classes also differ in how they adapt as new observations arrive. Exponential smoothing, for example, updates a latent level recursively rather than refitting a large parameter set at each step.</p>
+            <p><img alt="Exponential smoothing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/06_exponential_smoothing.png" /></p>
+            <p>This figure is useful in evaluation because the update rule itself is part of the forecasting procedure. A fair backtest must reproduce that update chronologically rather than estimate the smoothed state using future observations.</p>
+            <p>Plot errors over calendar time as well as by horizon.</p>
+            <p><img alt="Forecast errors over time" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/08_forecast_errors_over_time.png" /></p>
+            <p>The time plot can reveal regime-specific failures that disappear in an overall average. Statistical tests comparing forecast errors also require care because errors from adjacent origins can overlap, especially for multi-step horizons.</p>
+            <h3 id="reproducible-evaluation-recipe">Reproducible evaluation recipe</h3>
+            <ol>
+                <li>State the response, sampling interval, horizon, and decision loss.</li>
+                <li>Reserve a final test period before tuning.</li>
+                <li>Choose at least one domain-appropriate baseline.</li>
+                <li>Specify expanding or rolling origins.</li>
+                <li>At each origin, fit preprocessing and the model using past data only.</li>
+                <li>Produce point and interval forecasts.</li>
+                <li>Record errors, interval scores, fit failures, and the available sample.</li>
+                <li>Summarize by horizon and inspect errors over time.</li>
+                <li>Refit the selected procedure on all allowed historical data.</li>
+                <li>Record how the live forecast will obtain future predictors and update itself.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

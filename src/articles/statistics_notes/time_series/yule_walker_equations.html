@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: AR(2) autocorrelations</title>
+    <meta content="The Yule-Walker equations connect an autoregressive model's coefficients to its autocovariances and autocorrelations." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: AR(2) autocorrelations",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations",
+            "description": "The Yule-Walker equations connect an autoregressive model's coefficients to its autocovariances and autocorrelations.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-ar-2-autocorrelations">Worked calculation: AR(2) autocorrelations</a>
+                        <ol>
+                            <li><a href="#definition">Definition</a></li>
+                            <li><a href="#deriving-the-yule-walker-equations">Deriving the Yule-Walker Equations</a>
+                                <ol>
+                                    <li><a href="#assumptions">Assumptions</a></li>
+                                    <li><a href="#derivation-steps">Derivation Steps</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#example-yule-walker-equations-for-an-ar-2-process">Example: Yule-Walker Equations for an AR(2) Process</a>
+                                <ol>
+                                    <li><a href="#write-down-the-model">Write down the model</a></li>
+                                    <li><a href="#derive-the-yule-walker-equations">Derive the Yule-Walker equations</a></li>
+                                    <li><a href="#convert-to-autocorrelations">Convert to autocorrelations</a></li>
+                                    <li><a href="#solve-the-homogeneous-difference-equation">Solve the homogeneous difference equation</a></li>
+                                    <li><a href="#determine-c_1-and-c_2-">Determine $c_1$ and $c_2$</a></li>
+                                    <li><a href="#quick-check-a-stationary-alternative">Quick check: a stationary alternative</a></li>
+                                    <li><a href="#matrix-form">Matrix form</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-solve-the-equations-and-check-the-result">Student guide: solve the equations and check the result</a>
+                        <ol>
+                            <li><a href="#ar-2-by-hand">AR(2) by hand</a></li>
+                            <li><a href="#matrix-form">Matrix form</a></li>
+                            <li><a href="#innovation-variance">Innovation variance</a></li>
+                            <li><a href="#when-not-to-use-yule-walker-blindly">When not to use Yule-Walker blindly</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Yule-Walker Equations</header>
+            <p>The Yule-Walker equations connect an autoregressive model's coefficients to its autocovariances and autocorrelations. They translate a recursion written in terms of lagged observations into a set of moment relationships that can be studied theoretically or estimated from data.</p>
+            <p>For a stationary AR process, this link works in both directions: known coefficients determine the ACF recursion, while estimated autocovariances can be used to solve for the coefficients. The equations are therefore useful for understanding AR dependence, estimating parameters, and checking whether an implied correlation pattern is compatible with stationarity.</p>
+            <h2 id="worked-calculation-ar-2-autocorrelations">Worked calculation: AR(2) autocorrelations</h2>
+            <p>For an AR(2) with $\phi_1=0.6$ and $\phi_2=-0.2$, the first two Yule-Walker equations give</p>
+            <p>$$
+                \rho_1=\phi_1+\phi_2\rho_1
+                \quad\Longrightarrow\quad
+                \rho_1=\frac{0.6}{1-(-0.2)}=0.5,
+                $$</p>
+            <p>and</p>
+            <p>$$
+                \rho_2=\phi_1\rho_1+\phi_2
+                =0.6(0.5)-0.2=0.1.
+                $$</p>
+            <p>For later lags, use the recursion</p>
+            <p>$$
+                \rho_h=0.6\rho_{h-1}-0.2\rho_{h-2}.
+                $$</p>
+            <p>For example, $\rho_3=0.6(0.1)-0.2(0.5)=-0.04$. The equations turn AR coefficients into restrictions on the autocorrelation pattern that can be compared with a sample ACF.</p>
+            <p><img alt="Yule-Walker recursion for an AR(2)" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/09_yule_walker_ar2.png" /></p>
+            <p>The <strong>Yule-Walker equations</strong> are linear relationships connecting the autocovariances or autocorrelations of a stationary autoregressive process to its AR coefficients. They provide a direct link between a model written in terms of lagged values and the second-order dependence visible in its ACF.</p>
+            <h3 id="definition">Definition</h3>
+            <p>Consider a zero-mean stationary AR($p$) process</p>
+            <p>$$
+                X_t=\phi_1X_{t-1}+\phi_2X_{t-2}+\dots+\phi_pX_{t-p}+Z_t,
+                $$</p>
+            <p>where $Z_t$ is white noise with</p>
+            <p>$$
+                E(Z_t)=0,
+                \qquad
+                \mathrm{Var}(Z_t)=\sigma_Z^2,
+                $$</p>
+            <p>and is uncorrelated with past values of the process.</p>
+            <p>Define the autocovariance function (ACVF) and autocorrelation function (ACF) by</p>
+            <p>$$
+                \gamma(k)=\mathrm{Cov}(X_t,X_{t-k}),
+                \qquad
+                \rho(k)=\frac{\gamma(k)}{\gamma(0)},
+                \qquad
+                k\in\mathbb Z.
+                $$</p>
+            <p>The covariance form of the Yule-Walker equations is</p>
+            <p>$$
+                \gamma(k)=\sum_{j=1}^{p}\phi_j\gamma(k-j),
+                \qquad k=1,2,\dots,p,
+                $$</p>
+            <p>with the variance equation</p>
+            <p>$$
+                \gamma(0)=\sum_{j=1}^{p}\phi_j\gamma(j)+\sigma_Z^2.
+                $$</p>
+            <p>Dividing the first set of equations by $\gamma(0)$ gives the autocorrelation form</p>
+            <p>$$
+                \rho(k)=\sum_{j=1}^{p}\phi_j\rho(k-j),
+                \qquad k=1,2,\dots,p.
+                $$</p>
+            <p>Because $\rho(0)=1$, these equations relate the AR coefficients directly to the autocorrelation sequence. In estimation, the theoretical autocorrelations are replaced by sample estimates.</p>
+            <h3 id="deriving-the-yule-walker-equations">Deriving the Yule-Walker Equations</h3>
+            <h4 id="assumptions">Assumptions</h4>
+            <p>The derivation uses two main conditions:</p>
+            <ol>
+                <li><strong>Second-order stationarity:</strong> the mean and variance are constant, and $\gamma(k)$ depends only on the lag $k$.</li>
+                <li><strong>White-noise innovations:</strong> $E(Z_t)=0$, $\mathrm{Var}(Z_t)=\sigma_Z^2$, and $Z_t$ is uncorrelated with $X_{t-k}$ for $k\ge1$.</li>
+            </ol>
+            <h4 id="derivation-steps">Derivation Steps</h4>
+            <p>For a fixed $k\in{1,2,\ldots,p}$, multiply the AR equation by $X_{t-k}$:</p>
+            <p>$$
+                X_tX_{t-k}
+                =\sum_{j=1}^{p}\phi_jX_{t-j}X_{t-k}+Z_tX_{t-k}.
+                $$</p>
+            <p>Taking expectations gives</p>
+            <p>$$
+                E(X_tX_{t-k})
+                =\sum_{j=1}^{p}\phi_jE(X_{t-j}X_{t-k})+E(Z_tX_{t-k}).
+                $$</p>
+            <p>For the zero-mean process used here, these expectations are covariances. Because the innovation is uncorrelated with past values, the final term is zero for $k\ge1$. Therefore,</p>
+            <p>$$
+                \gamma(k)=\sum_{j=1}^{p}\phi_j\gamma(k-j),
+                \qquad k=1,2,\ldots,p.
+                $$</p>
+            <p>At $k=0$, the innovation appears inside $X_t$, so $E(Z_tX_t)=\sigma_Z^2$. This gives</p>
+            <p>$$
+                \gamma(0)=\sum_{j=1}^{p}\phi_j\gamma(j)+\sigma_Z^2.
+                $$</p>
+            <p>Finally, dividing the lag equations by $\gamma(0)$ produces the autocorrelation form.</p>
+            <p>The same equations can be written compactly in matrix form. Let</p>
+            <p>$$
+                r=
+                \begin{pmatrix}
+                \rho(1)\\
+                \rho(2)\\
+                \vdots\\
+                \rho(p)
+                \end{pmatrix},
+                $$</p>
+            <p>and define the Toeplitz matrix</p>
+            <p>$$
+                R=
+                \bigl[\rho(|i-j|)\bigr]_{i,j=1}^{p}
+                =
+                \begin{pmatrix}
+                \rho(0)&amp;\rho(1)&amp;\cdots&amp;\rho(p-1)\\
+                \rho(1)&amp;\rho(0)&amp;\cdots&amp;\rho(p-2)\\
+                \vdots&amp;\vdots&amp;\ddots&amp;\vdots\\
+                \rho(p-1)&amp;\rho(p-2)&amp;\cdots&amp;\rho(0)
+                \end{pmatrix}.
+                $$</p>
+            <p>With</p>
+            <p>$$
+                \phi=
+                \begin{pmatrix}
+                \phi_1\\
+                \phi_2\\
+                \vdots\\
+                \phi_p
+                \end{pmatrix},
+                $$</p>
+            <p>the Yule-Walker system is</p>
+            <p>$$
+                R\phi=r.
+                $$</p>
+            <p>Replacing the theoretical autocorrelations by sample estimates and solving this system gives the Yule-Walker coefficient estimates. The innovation variance can then be estimated from</p>
+            <p>$$
+                \hat\sigma_Z^2
+                =\hat\gamma(0)-\sum_{j=1}^{p}\hat\phi_j\hat\gamma(j).
+                $$</p>
+            <h3 id="example-yule-walker-equations-for-an-ar-2-process">Example: Yule-Walker Equations for an AR(2) Process</h3>
+            <p>This example deliberately contrasts an invalid non-stationary coefficient pair with a stationary alternative. The purpose is to show both how the equations are applied and why their results must still satisfy the basic constraints of an autocorrelation function.</p>
+            <p>The two parameter sets are:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Symbol</td>
+                    <td>Description</td>
+                    <td>Non-stationary run</td>
+                    <td>Stationary check</td>
+                </tr>
+                <tr>
+                    <td>$\phi_1$</td>
+                    <td>AR coefficient on lag 1</td>
+                    <td>$3$</td>
+                    <td>$0.3$</td>
+                </tr>
+                <tr>
+                    <td>$\phi_2$</td>
+                    <td>AR coefficient on lag 2</td>
+                    <td>$2$</td>
+                    <td>$0.2$</td>
+                </tr>
+                <tr>
+                    <td>$\sigma_Z^2$</td>
+                    <td>Innovation variance</td>
+                    <td>kept symbolic</td>
+                    <td>same</td>
+                </tr>
+            </table>
+            </p>
+            <p>For a stationary AR(2), the roots of the AR polynomial</p>
+            <p>$$
+                1-\phi_1z-\phi_2z^2=0
+                $$</p>
+            <p>must lie outside the unit circle. With $\phi_1=3$ and $\phi_2=2$, one root lies inside the unit circle, so the model is not stationary and a valid stationary ACF does not exist. The algebra below is still useful because it shows how the failure appears in the implied correlations.</p>
+            <h4 id="write-down-the-model">Write down the model</h4>
+            <p>For the non-stationary parameter set,</p>
+            <p>$$
+                X_t=3X_{t-1}+2X_{t-2}+Z_t,
+                $$</p>
+            <p>where $Z_t$ is white noise with variance $\sigma_Z^2$.</p>
+            <h4 id="derive-the-yule-walker-equations">Derive the Yule-Walker equations</h4>
+            <p>At lag 1,</p>
+            <p>$$
+                \gamma(1)=3\gamma(0)+2\gamma(1),
+                $$</p>
+            <p>so</p>
+            <p>$$
+                (1-2)\gamma(1)=3\gamma(0)
+                \quad\Longrightarrow\quad
+                \gamma(1)=-3\gamma(0).
+                $$</p>
+            <p>At lag 2,</p>
+            <p>$$
+                \gamma(2)=3\gamma(1)+2\gamma(0),
+                $$</p>
+            <p>which gives</p>
+            <p>$$
+                \gamma(2)=3[-3\gamma(0)]+2\gamma(0)=-7\gamma(0).
+                $$</p>
+            <h4 id="convert-to-autocorrelations">Convert to autocorrelations</h4>
+            <p>Dividing by $\gamma(0)$ gives</p>
+            <p>$$
+                \rho(1)=-3,
+                \qquad
+                \rho(2)=-7.
+                $$</p>
+            <p>An autocorrelation must lie between $-1$ and $1$, so these values are impossible for a stationary covariance process. The contradiction is another indication that the coefficient pair $(3,2)$ does not define a stationary AR(2).</p>
+            <h4 id="solve-the-homogeneous-difference-equation">Solve the homogeneous difference equation</h4>
+            <p>The corresponding AR(2) recursion is</p>
+            <p>$$
+                \rho(k)=3\rho(k-1)+2\rho(k-2),
+                \qquad k\ge2.
+                $$</p>
+            <p>Trying $\rho(k)=\lambda^k$ gives</p>
+            <p>$$
+                \lambda^2-3\lambda-2=0,
+                $$</p>
+            <p>with roots</p>
+            <p>$$
+                \lambda_{1,2}=\frac{3\pm\sqrt{17}}{2},
+                $$</p>
+            <p>or approximately $3.5616$ and $-0.5616$. Hence</p>
+            <p>$$
+                \rho(k)=c_1\lambda_1^k+c_2\lambda_2^k.
+                $$</p>
+            <h4 id="determine-c_1-and-c_2-">Determine $c_1$ and $c_2$</h4>
+            <p>Using $\rho(0)=1$ and the algebraic value $\rho(1)=-3$ gives</p>
+            <p>$$
+                c_1+c_2=1
+                $$</p>
+            <p>and</p>
+            <p>$$
+                c_1\lambda_1+c_2\lambda_2=-3.
+                $$</p>
+            <p>Therefore,</p>
+            <p>$$
+                c_1=\frac{-3-\lambda_2}{\lambda_1-\lambda_2},
+                \qquad
+                c_2=1-c_1.
+                $$</p>
+            <p>Numerically, $c_1\approx-0.592$ and $c_2\approx1.592$. These constants satisfy the formal recursion, but the term involving $|\lambda_1|&gt;1$ grows rather than decays, so the sequence cannot be a stationary ACF.</p>
+            <h4 id="quick-check-a-stationary-alternative">Quick check: a stationary alternative</h4>
+            <p>Now take $\phi_1=0.3$ and $\phi_2=0.2$. The Yule-Walker equations give</p>
+            <p>$$
+                \rho(1)=\frac{0.3}{1-0.2}=0.375,
+                $$</p>
+            <p>and</p>
+            <p>$$
+                \rho(2)=0.3\rho(1)+0.2=0.3125.
+                $$</p>
+            <p>For this parameter set, the roots of the AR polynomial in $z$ lie outside the unit circle. Equivalently, the roots governing the homogeneous recursion in powers of $\lambda$ lie inside the unit circle, so the autocorrelation sequence decays rather than diverges.</p>
+            <h4 id="matrix-form">Matrix form</h4>
+            <p>For a general AR($p$), collect the autocorrelations into</p>
+            <p>$$
+                \mathbf r=
+                \begin{bmatrix}
+                \rho(1)\\
+                \rho(2)\\
+                \vdots\\
+                \rho(p)
+                \end{bmatrix}
+                $$</p>
+            <p>and form</p>
+            <p>$$
+                R=
+                \begin{bmatrix}
+                1&amp;\rho(1)&amp;\rho(2)&amp;\dots&amp;\rho(p-1)\\
+                \rho(1)&amp;1&amp;\rho(1)&amp;\dots&amp;\rho(p-2)\\
+                \vdots&amp;\vdots&amp;\ddots&amp;\ddots&amp;\vdots\\
+                \rho(p-1)&amp;\rho(p-2)&amp;\dots&amp;\rho(1)&amp;1
+                \end{bmatrix}.
+                $$</p>
+            <p>Then</p>
+            <p>$$
+                R\boldsymbol\phi=\mathbf r.
+                $$</p>
+            <p>When $R$ is nonsingular,</p>
+            <p>$$
+                \boldsymbol\phi=R^{-1}\mathbf r.
+                $$</p>
+            <p>In practice, numerical solvers exploit the Toeplitz structure rather than forming the inverse explicitly.</p>
+            <h2 id="student-guide-solve-the-equations-and-check-the-result">Student guide: solve the equations and check the result</h2>
+            <p>For a zero-mean stationary AR($p$), the autocovariances satisfy the AR recursion at sufficiently large lags:</p>
+            <p>$$
+                \gamma(k)=\phi_1\gamma(k-1)+\cdots+\phi_p\gamma(k-p).
+                $$</p>
+            <p>The first $p$ lags supply the boundary equations needed to determine the coefficients. Dividing by $\gamma(0)$ gives the corresponding relations for autocorrelations.</p>
+            <h3 id="ar-2-by-hand">AR(2) by hand</h3>
+            <p>For $\phi_1=0.6$ and $\phi_2=-0.2$,</p>
+            <p>$$
+                \rho_1=\phi_1+\phi_2\rho_1,
+                $$</p>
+            <p>so</p>
+            <p>$$
+                \rho_1=\frac{0.6}{1.2}=0.5.
+                $$</p>
+            <p>The next equation is</p>
+            <p>$$
+                \rho_2=\phi_1\rho_1+\phi_2
+                =0.6(0.5)-0.2=0.1.
+                $$</p>
+            <p>At lag 3,</p>
+            <p>$$
+                \rho_3=0.6(0.1)-0.2(0.5)=-0.04.
+                $$</p>
+            <p>The recursion then continues. A sample ACF will not equal these population values exactly, but its pattern should be broadly compatible with the fitted AR coefficients.</p>
+            <p><img alt="Yule-Walker recursion" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/dependence/07_yule_walker_recursion.png" /></p>
+            <p>The figure shows how each new autocorrelation is generated from earlier lags. For a stable AR model, the recursion produces a sequence that decays rather than growing without bound.</p>
+            <h3 id="matrix-form">Matrix form</h3>
+            <p>For AR(2), define</p>
+            <p>$$
+                R=
+                \begin{bmatrix}
+                1&amp;\rho_1\\
+                \rho_1&amp;1
+                \end{bmatrix},
+                \qquad
+                r=
+                \begin{bmatrix}
+                \rho_1\\
+                \rho_2
+                \end{bmatrix}.
+                $$</p>
+            <p>Then the coefficient vector solves</p>
+            <p>$$
+                R
+                \begin{bmatrix}
+                \phi_1\\
+                \phi_2
+                \end{bmatrix}
+                =
+                \begin{bmatrix}
+                \rho_1\\
+                \rho_2
+                \end{bmatrix}.
+                $$</p>
+            <p>When estimated autocorrelations replace the population values, the solution is affected by sampling noise. At high orders, the Toeplitz matrix can also become poorly conditioned, which makes the coefficient estimates unstable.</p>
+            <h3 id="innovation-variance">Innovation variance</h3>
+            <p>After estimating $\boldsymbol\phi$, the innovation variance follows from the zero-lag equation:</p>
+            <p>$$
+                \sigma_\varepsilon^2
+                =\gamma(0)\left(1-\sum_{j=1}^{p}\phi_j\rho_j\right).
+                $$</p>
+            <p>For an AR(1) with $\phi=0.7$ and $\gamma(0)=1/(1-0.7^2)=1.9608$,</p>
+            <p>$$
+                \sigma_\varepsilon^2
+                =1.9608(1-0.7^2)=1.
+                $$</p>
+            <p>This recovers the innovation variance used to define the process and provides a useful check on the moment calculations.</p>
+            <h3 id="when-not-to-use-yule-walker-blindly">When not to use Yule-Walker blindly</h3>
+            <p>Yule-Walker equations assume a stationary AR structure. They are not, by themselves, a solution for an untransformed random walk, an MA model with latent shocks, a strongly trending series, a process with time-varying coefficients, or a series dominated by a structural break.</p>
+            <p>Use the equations as a transparent estimator or theoretical relationship, then check stationarity, compare with other estimation methods when appropriate, and examine residual diagnostics before accepting the model.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Learning objectives</title>
+    <meta content="Spatial model performance depends not only on which observations are held out, but also on where those observations are located relative to the training data." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Learning objectives",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation",
+            "description": "Spatial model performance depends not only on which observations are held out, but also on where those observations are located relative to the training data.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#learning-objectives">Learning objectives</a></li>
+                    <li><a href="#validation-is-a-question-about-future-information">Validation is a question about future information</a></li>
+                    <li><a href="#three-common-deployment-targets">Three common deployment targets</a></li>
+                    <li><a href="#interpolation">Interpolation</a></li>
+                    <li><a href="#spatial-transfer">Spatial transfer</a></li>
+                    <li><a href="#extrapolation-beyond-observed-conditions">Extrapolation beyond observed conditions</a></li>
+                    <li><a href="#random-train-test-splitting">Random train/test splitting</a></li>
+                    <li><a href="#why-random-splits-can-be-optimistic">Why random splits can be optimistic</a></li>
+                    <li><a href="#a-simple-distance-diagnostic">A simple distance diagnostic</a></li>
+                    <li><a href="#numerical-distance-example">Numerical distance example</a></li>
+                    <li><a href="#spatial-blocks">Spatial blocks</a></li>
+                    <li><a href="#leave-one-block-out-validation">Leave-one-block-out validation</a></li>
+                    <li><a href="#block-size-matters">Block size matters</a></li>
+                    <li><a href="#relationship-to-correlation-range">Relationship to correlation range</a></li>
+                    <li><a href="#buffered-validation">Buffered validation</a></li>
+                    <li><a href="#what-the-buffer-is-doing">What the buffer is doing</a></li>
+                    <li><a href="#numerical-buffer-example">Numerical buffer example</a></li>
+                    <li><a href="#buffers-reduce-training-data">Buffers reduce training data</a></li>
+                    <li><a href="#comparing-performance-with-rmse">Comparing performance with RMSE</a></li>
+                    <li><a href="#worked-rmse-example">Worked RMSE example</a></li>
+                    <li><a href="#validation-design-can-change-the-rmse-substantially">Validation design can change the RMSE substantially</a></li>
+                    <li><a href="#a-toy-spatial-predictor">A toy spatial predictor</a></li>
+                    <li><a href="#why-nearby-training-data-make-spatial-prediction-easier">Why nearby training data make spatial prediction easier</a></li>
+                    <li><a href="#leakage-can-be-spatial">Leakage can be spatial</a></li>
+                    <li><a href="#leakage-example-neighborhood-mean">Leakage example: neighborhood mean</a></li>
+                    <li><a href="#preprocessing-must-be-fold-specific">Preprocessing must be fold-specific</a></li>
+                    <li><a href="#cross-validation-for-kriging">Cross-validation for kriging</a></li>
+                    <li><a href="#kriging-example">Kriging example</a></li>
+                    <li><a href="#refit-the-variogram-inside-each-fold">Refit the variogram inside each fold</a></li>
+                    <li><a href="#when-full-data-covariance-fitting-may-still-be-useful">When full-data covariance fitting may still be useful</a></li>
+                    <li><a href="#hyperparameter-tuning-and-nested-spatial-validation">Hyperparameter tuning and nested spatial validation</a></li>
+                    <li><a href="#final-geographic-test-region">Final geographic test region</a></li>
+                    <li><a href="#unsupported-extrapolation-cannot-be-validated-away">Unsupported extrapolation cannot be validated away</a></li>
+                    <li><a href="#covariate-overlap">Covariate overlap</a></li>
+                    <li><a href="#fold-level-performance-matters">Fold-level performance matters</a></li>
+                    <li><a href="#why-spatial-folds-are-not-independent-replicates">Why spatial folds are not independent replicates</a></li>
+                    <li><a href="#mean-performance-versus-deployment-risk">Mean performance versus deployment risk</a></li>
+                    <li><a href="#block-orientation-can-matter">Block orientation can matter</a></li>
+                    <li><a href="#leave-region-out-validation">Leave-region-out validation</a></li>
+                    <li><a href="#repeated-spatial-validation">Repeated spatial validation</a></li>
+                    <li><a href="#buffer-width-as-a-sensitivity-parameter">Buffer width as a sensitivity parameter</a></li>
+                    <li><a href="#block-size-sensitivity-as-a-diagnostic">Block-size sensitivity as a diagnostic</a></li>
+                    <li><a href="#comparing-validation-schemes">Comparing validation schemes</a></li>
+                    <li><a href="#a-complete-spatial-validation-workflow">A complete spatial-validation workflow</a>
+                        <ol>
+                            <li><a href="#define-deployment">define deployment</a></li>
+                            <li><a href="#map-the-data">map the data</a></li>
+                            <li><a href="#estimate-dependence-scale">estimate dependence scale</a></li>
+                            <li><a href="#choose-validation-geometry">choose validation geometry</a></li>
+                            <li><a href="#put-all-preprocessing-inside-folds">put all preprocessing inside folds</a></li>
+                            <li><a href="#refit-model-components-inside-folds">refit model components inside folds</a></li>
+                            <li><a href="#record-train-test-separation">record train-test separation</a></li>
+                            <li><a href="#report-fold-level-metrics">report fold-level metrics</a></li>
+                            <li><a href="#inspect-covariate-support">inspect covariate support</a></li>
+                            <li><a href="#reserve-final-geographic-testing-if-possible">reserve final geographic testing if possible</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#using-random-cv-for-a-regional-transfer-claim">using random CV for a regional-transfer claim</a></li>
+                            <li><a href="#choosing-blocks-that-are-too-small">choosing blocks that are too small</a></li>
+                            <li><a href="#choosing-a-huge-buffer-without-considering-deployment">choosing a huge buffer without considering deployment</a></li>
+                            <li><a href="#computing-spatial-features-before-splitting">computing spatial features before splitting</a></li>
+                            <li><a href="#fitting-a-variogram-once-on-the-full-dataset-during-cv">fitting a variogram once on the full dataset during CV</a></li>
+                            <li><a href="#reporting-only-mean-rmse-across-spatial-folds">reporting only mean RMSE across spatial folds</a></li>
+                            <li><a href="#treating-folds-as-independent-experimental-replicates">treating folds as independent experimental replicates</a></li>
+                            <li><a href="#assuming-blocked-cv-solves-extrapolation">assuming blocked CV solves extrapolation</a></li>
+                            <li><a href="#tuning-and-evaluating-on-the-same-spatial-folds">tuning and evaluating on the same spatial folds</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#compact-worked-comparison">Compact worked comparison</a>
+                        <ol>
+                            <ol>
+                                <li><a href="#random-cv">Random CV</a></li>
+                                <li><a href="#blocked-cv">Blocked CV</a></li>
+                                <li><a href="#buffered-blocked-cv">Buffered blocked CV</a></li>
+                            </ol>
+                        </ol>
+                    </li>
+                    <li><a href="#concept-map">Concept map</a></li>
+                    <li><a href="#questions-students-should-be-able-to-answer">Questions students should be able to answer</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Spatial Validation</header>
+            <p>Spatial model performance depends not only on which observations are held out, but also on where those observations are located relative to the training data.</p>
+            <p>This makes spatial validation fundamentally different from ordinary random train/test splitting.</p>
+            <p>A random split often leaves test locations surrounded by nearby training observations, so it evaluates an interpolation-like task.</p>
+            <p>A geographically separated holdout asks a harder question:</p>
+            <blockquote>
+                <p>Can the model predict where nearby observations are unavailable?</p>
+            </blockquote>
+            <p>Neither design is universally correct. The appropriate validation design is the one that best reproduces the information conditions expected at deployment.</p>
+            <h2 id="learning-objectives">Learning objectives</h2>
+            <p>After this chapter, you should be able to:</p>
+            <ol>
+                <li>explain why random cross-validation can be optimistic for spatial prediction;</li>
+                <li>distinguish interpolation, spatial transfer, and extrapolation;</li>
+                <li>construct conceptual random, blocked, and buffered validation schemes;</li>
+                <li>explain why block size matters;</li>
+                <li>explain what a spatial buffer accomplishes;</li>
+                <li>calculate RMSE and compare fold-level performance;</li>
+                <li>diagnose validation difficulty using train-to-test distance;</li>
+                <li>identify spatial leakage in preprocessing;</li>
+                <li>explain why kriging variograms should sometimes be re-estimated inside folds;</li>
+                <li>distinguish average predictive performance from uncertainty in the performance estimate;</li>
+                <li>explain why unsupported extrapolation cannot be validated by resampling alone;</li>
+                <li>design a final geographic test set after model selection.</li>
+            </ol>
+            <h2 id="validation-is-a-question-about-future-information">Validation is a question about future information</h2>
+            <p>Suppose a model is trained on observations</p>
+            <p>$$
+                {(s_i,y_i):i\in\mathcal T}
+                $$</p>
+            <p>and tested on observations</p>
+            <p>$$
+                {(s_j,y_j):j\in\mathcal V}.
+                $$</p>
+            <p>A validation score depends on more than the observations assigned to $\mathcal T$ and $\mathcal V$.</p>
+            <p>It also depends on the geometry:</p>
+            <p>$$
+                d(s_j,\mathcal T) =
+                \min_{i\in\mathcal T}
+                d(s_j,s_i).
+                $$</p>
+            <p>This is the distance from test location $s_j$ to its nearest training observation.</p>
+            <p>For many spatial predictors, prediction becomes easier as this distance decreases.</p>
+            <p>Thus, two validation designs with the same number of test observations can represent very different prediction tasks.</p>
+            <h2 id="three-common-deployment-targets">Three common deployment targets</h2>
+            <p>Spatial validation should begin by defining the intended deployment setting.</p>
+            <h2 id="interpolation">Interpolation</h2>
+            <p>Interpolation means predicting inside a region that is already well sampled.</p>
+            <p>A typical target location has nearby training observations.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>filling gaps between monitoring stations;</li>
+                <li>mapping soil properties inside an intensively sampled field;</li>
+                <li>predicting missing raster cells inside an observed domain.</li>
+            </ul>
+            <p>A random split can sometimes approximate this situation because held-out observations remain close to training data.</p>
+            <p><img alt="Random versus spatial holdout geometry" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/01_random_vs_spatial_split.png" /></p>
+            <h2 id="spatial-transfer">Spatial transfer</h2>
+            <p>Spatial transfer means predicting in a geographically distinct region that was not used for training.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>training on northern districts and predicting southern districts;</li>
+                <li>training on sampled forest stands and predicting a new stand;</li>
+                <li>training in several watersheds and predicting another watershed.</li>
+            </ul>
+            <p>A random split is usually too optimistic for this problem.</p>
+            <p>Blocked or leave-region-out validation is more appropriate.</p>
+            <h2 id="extrapolation-beyond-observed-conditions">Extrapolation beyond observed conditions</h2>
+            <p>The most difficult case occurs when a new region differs not only geographically, but also in predictor values or in the data-generating process.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>predicting into a hotter climate regime than observed in training;</li>
+                <li>predicting a species into an elevation range absent from training;</li>
+                <li>applying an urban model to rural areas;</li>
+                <li>transferring a disease model to a population with different demographics.</li>
+            </ul>
+            <p>This is <strong>extrapolation</strong>.</p>
+            <p>No resampling method can create evidence about conditions absent from the original dataset.</p>
+            <p>Validation can estimate extrapolation performance only when genuinely representative extrapolation regions exist in the data.</p>
+            <h2 id="random-train-test-splitting">Random train/test splitting</h2>
+            <p>In a random split, observations are shuffled and assigned to folds without using geography.</p>
+            <p>This is the standard approach in many non-spatial machine-learning settings.</p>
+            <p>For independent observations, random splitting can be appropriate.</p>
+            <p>For spatially dependent observations, however, it can place training and test locations extremely close together.</p>
+            <p>This can create an easier task than the real deployment problem.</p>
+            <h2 id="why-random-splits-can-be-optimistic">Why random splits can be optimistic</h2>
+            <p>Suppose a test location is only</p>
+            <p>$$
+                50\text{ m}
+                $$</p>
+            <p>from a training observation.</p>
+            <p>If the spatial correlation range is</p>
+            <p>$$
+                2\text{ km},
+                $$</p>
+            <p>the training observation contains substantial information about the held-out test value.</p>
+            <p>Now suppose real deployment occurs</p>
+            <p>$$
+                10\text{ km}
+                $$</p>
+            <p>from the nearest observation.</p>
+            <p>The validation and deployment settings are therefore not comparable.</p>
+            <p>The random split estimates:</p>
+            <blockquote>
+                <p>performance when nearby training information is usually available.</p>
+            </blockquote>
+            <p>The deployment task asks:</p>
+            <blockquote>
+                <p>performance when nearby information is unavailable.</p>
+            </blockquote>
+            <h2 id="a-simple-distance-diagnostic">A simple distance diagnostic</h2>
+            <p>For each test observation $j$, calculate</p>
+            <p>$$
+                d_j =
+                \min_{i\in\mathcal T}
+                d(s_j,s_i).
+                $$</p>
+            <p>Then summarize:</p>
+            <ul>
+                <li>median nearest-training distance;</li>
+                <li>90th percentile;</li>
+                <li>maximum distance.</li>
+            </ul>
+            <p>A validation design is more representative of transfer when these distances resemble those expected at deployment.</p>
+            <p><img alt="Nearest train-test distance" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/02_nearest_training_distance.png" /></p>
+            <h2 id="numerical-distance-example">Numerical distance example</h2>
+            <p>Suppose five test locations have nearest-training distances</p>
+            <p>$$
+                0.2,\ 0.3,\ 0.4,\ 0.5,\ 0.6
+                $$</p>
+            <p>km under random CV.</p>
+            <p>The mean distance is</p>
+            <p>$$
+                \frac{0.2+0.3+0.4+0.5+0.6}{5} =
+                \frac{2.0}{5} =
+                0.4\text{ km}.
+                $$</p>
+            <p>Under blocked CV, suppose the distances are</p>
+            <p>$$
+                2.1,\ 2.5,\ 2.7,\ 3.0,\ 3.2.
+                $$</p>
+            <p>The mean is</p>
+            <p>$$
+                \frac{13.5}{5} =
+                2.7\text{ km}.
+                $$</p>
+            <p>These two schemes evaluate very different levels of spatial separation.</p>
+            <h2 id="spatial-blocks">Spatial blocks</h2>
+            <p>A common approach is to partition the study area into geographic blocks and hold out one or more complete blocks.</p>
+            <p>For example, divide a rectangular region into:</p>
+            <ul>
+                <li>vertical strips;</li>
+                <li>horizontal strips;</li>
+                <li>square tiles;</li>
+                <li>ecological regions;</li>
+                <li>watersheds;</li>
+                <li>administrative regions.</li>
+            </ul>
+            <p>The blocks should reflect the intended deployment question.</p>
+            <h2 id="leave-one-block-out-validation">Leave-one-block-out validation</h2>
+            <p>Suppose the region is divided into five spatial blocks.</p>
+            <p>For fold $k$:</p>
+            <ol>
+                <li>block $k$ is the test set;</li>
+                <li>all other blocks are training data;</li>
+                <li>fit the entire modeling pipeline on training data;</li>
+                <li>predict the held-out block;</li>
+                <li>calculate performance.</li>
+            </ol>
+            <p>Repeat for all five blocks.</p>
+            <p>This creates five geographically distinct validation tasks.</p>
+            <h2 id="block-size-matters">Block size matters</h2>
+            <p>Very small spatial blocks can leave test observations almost adjacent to training observations.</p>
+            <p>This weakens the intended geographic separation.</p>
+            <p>Very large blocks create a harder transfer task but may leave too little training data.</p>
+            <p>The block size should reflect:</p>
+            <ul>
+                <li>the spatial dependence range;</li>
+                <li>the expected deployment distance;</li>
+                <li>the spatial support of predictions;</li>
+                <li>practical sample-size constraints.</li>
+            </ul>
+            <p><img alt="Block size sensitivity" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/04_block_size_sensitivity.png" /></p>
+            <h2 id="relationship-to-correlation-range">Relationship to correlation range</h2>
+            <p>Suppose residual correlation becomes weak after approximately</p>
+            <p>$$
+                5\text{ km}.
+                $$</p>
+            <p>If validation blocks are only</p>
+            <p>$$
+                500\text{ m}
+                $$</p>
+            <p>wide, test observations near a block edge can still have strongly correlated training observations immediately outside the block.</p>
+            <p>The validation task remains close to interpolation.</p>
+            <p>Using blocks several kilometers wide may better assess geographic transfer.</p>
+            <p>There is no universal rule such as:</p>
+            <blockquote>
+                <p>block size must equal exactly one variogram range.</p>
+            </blockquote>
+            <p>The dependence range is one useful input, not an automatic choice.</p>
+            <h2 id="buffered-validation">Buffered validation</h2>
+            <p>A buffered split adds another layer of geographic separation.</p>
+            <p>After selecting a test region, remove training observations within distance</p>
+            <p>$$
+                b
+                $$</p>
+            <p>of the test region.</p>
+            <p>The parameter $b$ is the buffer width.</p>
+            <p><img alt="Buffered validation geometry" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/05_buffer_geometry.png" /></p>
+            <h2 id="what-the-buffer-is-doing">What the buffer is doing</h2>
+            <p>Suppose a held-out test block is surrounded by training observations immediately outside its boundary.</p>
+            <p>Even when the test block itself is excluded, the task can remain easy.</p>
+            <p>A buffer imposes an explicit minimum separation.</p>
+            <p>If</p>
+            <p>$$
+                b=3\text{ km},
+                $$</p>
+            <p>training observations within 3 km of the test block are removed for that fold.</p>
+            <p>This asks:</p>
+            <blockquote>
+                <p>How well can the model predict when nearby training information is unavailable?</p>
+            </blockquote>
+            <h2 id="numerical-buffer-example">Numerical buffer example</h2>
+            <p>Suppose a test site has a training observation</p>
+            <p>$$
+                0.4\text{ km}
+                $$</p>
+            <p>away.</p>
+            <p>With no buffer, that observation remains available.</p>
+            <p>With</p>
+            <p>$$
+                b=1\text{ km},
+                $$</p>
+            <p>it is removed.</p>
+            <p>Suppose the next nearest training observation is</p>
+            <p>$$
+                2.3\text{ km}
+                $$</p>
+            <p>away.</p>
+            <p>The effective test-to-training separation changes from</p>
+            <p>$$
+                0.4
+                $$</p>
+            <p>to</p>
+            <p>$$
+                2.3\text{ km}.
+                $$</p>
+            <p>The validation task becomes substantially more difficult.</p>
+            <h2 id="buffers-reduce-training-data">Buffers reduce training data</h2>
+            <p>A larger buffer generally increases train-test separation but decreases the training sample size.</p>
+            <p>This creates a tradeoff between separation and available training data.</p>
+            <p>A very large buffer can produce unrealistic training sets with:</p>
+            <ul>
+                <li>too few observations;</li>
+                <li>poor geographic coverage;</li>
+                <li>missing predictor ranges.</li>
+            </ul>
+            <p>Buffer width should therefore reflect deployment conditions rather than being maximized mechanically.</p>
+            <h2 id="comparing-performance-with-rmse">Comparing performance with RMSE</h2>
+            <p>A common prediction metric is root mean squared error:</p>
+            <p>$$
+                \boxed{
+                \mathrm{RMSE} =
+                \sqrt{
+                \frac1m
+                \sum_{j=1}^m
+                (y_j-\hat y_j)^2
+                }
+                }.
+                $$</p>
+            <p>Smaller RMSE indicates better predictive accuracy on the response scale.</p>
+            <h2 id="worked-rmse-example">Worked RMSE example</h2>
+            <p>Suppose four test observations are</p>
+            <p>$$
+                y=
+                \begin{bmatrix}
+                10\\
+                12\\
+                14\\
+                16
+                \end{bmatrix}
+                $$</p>
+            <p>and predictions are</p>
+            <p>$$
+                \hat y=
+                \begin{bmatrix}
+                11\\
+                11\\
+                13\\
+                18
+                \end{bmatrix}.
+                $$</p>
+            <p>The errors are</p>
+            <p>$$
+                -1,\ 1,\ 1,\ -2.
+                $$</p>
+            <p>Squared errors are</p>
+            <p>$$
+                1,\ 1,\ 1,\ 4.
+                $$</p>
+            <p>Their mean is</p>
+            <p>$$
+                \frac{7}{4} =
+                1.75.
+                $$</p>
+            <p>Therefore</p>
+            <p>$$
+                \mathrm{RMSE} =
+                \sqrt{1.75}
+                $$</p>
+            <p>$$
+                \boxed{
+                \mathrm{RMSE}\approx1.323
+                }.
+                $$</p>
+            <h2 id="validation-design-can-change-the-rmse-substantially">Validation design can change the RMSE substantially</h2>
+            <p>A spatial predictor can achieve:</p>
+            <p>$$
+                \mathrm{RMSE}_{\text{random}} =
+                0.7,
+                $$</p>
+            <p>$$
+                \mathrm{RMSE}_{\text{block}} =
+                1.8,
+                $$</p>
+            <p>and</p>
+            <p>$$
+                \mathrm{RMSE}_{\text{buffered}} =
+                2.4.
+                $$</p>
+            <p>These results are not contradictory.</p>
+            <p>They describe different prediction tasks.</p>
+            <p>The correct question is not:</p>
+            <blockquote>
+                <p>Which RMSE is the true one?</p>
+            </blockquote>
+            <p>It is:</p>
+            <blockquote>
+                <p>Which validation geometry resembles deployment?</p>
+            </blockquote>
+            <p><img alt="Validation RMSE comparison" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/03_validation_rmse.png" /></p>
+            <h2 id="a-toy-spatial-predictor">A toy spatial predictor</h2>
+            <p>Inverse-distance weighting is used here only to demonstrate validation geometry.</p>
+            <p>For a target $s_0$, the predictor is</p>
+            <p>$$
+                \hat y(s_0) =
+                \frac{
+                \sum_{i\in\mathcal N_k(s_0)}
+                w_i y_i
+                }{
+                \sum_{i\in\mathcal N_k(s_0)}w_i
+                },
+                $$</p>
+            <p>with</p>
+            <p>$$
+                w_i =
+                \frac1{d(s_i,s_0)^p+\epsilon}.
+                $$</p>
+            <p>Nearby training observations receive larger weight.</p>
+            <p>This is intentionally simple.</p>
+            <p>The purpose is not to recommend inverse-distance weighting as the preferred spatial model.</p>
+            <p>Its purpose is simply to make the effect of train-test distance easy to see.</p>
+            <h2 id="why-nearby-training-data-make-spatial-prediction-easier">Why nearby training data make spatial prediction easier</h2>
+            <p>Suppose a spatial process is smooth.</p>
+            <p>Then</p>
+            <p>$$
+                y(s)
+                \approx y(s+h)
+                $$</p>
+            <p>for small $h$.</p>
+            <p>If random CV leaves a training site very close to the test location, the model may recover much of the test value from local information.</p>
+            <p>A blocked split reduces that advantage.</p>
+            <p>This is why random CV often estimates interpolation skill rather than spatial transfer skill.</p>
+            <h2 id="leakage-can-be-spatial">Leakage can be spatial</h2>
+            <p>Validation can still be optimistic even when the split itself is geographically appropriate.</p>
+            <p>Leakage occurs whenever information from held-out observations enters the training pipeline.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>calculating neighborhood features using test observations;</li>
+                <li>interpolating a covariate with the full dataset before splitting;</li>
+                <li>estimating a variogram once using all observations;</li>
+                <li>tuning bandwidth using held-out outcomes;</li>
+                <li>normalizing variables using test data;</li>
+                <li>imputing missing values using the complete dataset;</li>
+                <li>defining a regional aggregate that includes the target observation.</li>
+            </ul>
+            <p>All data-dependent operations should therefore be performed within each training fold.</p>
+            <h2 id="leakage-example-neighborhood-mean">Leakage example: neighborhood mean</h2>
+            <p>Suppose the feature for location $i$ is</p>
+            <p>$$
+                x_i^{\text{nbr}} =
+                \frac1{k}
+                \sum_{j\in N_k(i)}y_j.
+                $$</p>
+            <p>This feature directly uses neighboring outcomes.</p>
+            <p>If the neighborhood calculation is performed before splitting, a training row can contain information from a held-out test outcome.</p>
+            <p>The model has then indirectly seen the held-out outcome.</p>
+            <p>The correct procedure is:</p>
+            <ol>
+                <li>split the data;</li>
+                <li>construct the neighborhood feature using training observations only;</li>
+                <li>fit the model;</li>
+                <li>calculate test features using only information that would be available at deployment.</li>
+            </ol>
+            <p><img alt="Spatial leakage" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/06_spatial_leakage.png" /></p>
+            <h2 id="preprocessing-must-be-fold-specific">Preprocessing must be fold-specific</h2>
+            <p>The same principle applies to ordinary preprocessing.</p>
+            <p>If a transformation is estimated from data, it belongs inside the resampling loop.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>feature scaling;</li>
+                <li>PCA;</li>
+                <li>imputation;</li>
+                <li>bandwidth selection;</li>
+                <li>feature selection;</li>
+                <li>spatial basis construction;</li>
+                <li>variogram fitting;</li>
+                <li>covariance-family selection.</li>
+            </ul>
+            <p>This is ordinary machine-learning leakage with an added spatial dimension.</p>
+            <h2 id="cross-validation-for-kriging">Cross-validation for kriging</h2>
+            <p>Leave-one-out kriging removes one sampled site and predicts it from all remaining sites.</p>
+            <p>This often leaves nearby observations in the training data.</p>
+            <p>It therefore mainly assesses local interpolation.</p>
+            <p>That may be exactly the right target for a densely sampled mapping problem.</p>
+            <p>It is not necessarily appropriate for transfer to a new geographic region.</p>
+            <h2 id="kriging-example">Kriging example</h2>
+            <p>Suppose a monitoring site is omitted.</p>
+            <p>Its two nearest remaining sites are only</p>
+            <p>$$
+                150\text{ m}
+                $$</p>
+            <p>and</p>
+            <p>$$
+                220\text{ m}
+                $$</p>
+            <p>away.</p>
+            <p>Leave-one-out kriging can perform very well.</p>
+            <p>But suppose the intended prediction area is</p>
+            <p>$$
+                8\text{ km}
+                $$</p>
+            <p>from the nearest monitor.</p>
+            <p>Leave-one-out accuracy does not directly estimate performance under that deployment setting.</p>
+            <p>A blocked or buffered holdout is more relevant.</p>
+            <h2 id="refit-the-variogram-inside-each-fold">Refit the variogram inside each fold</h2>
+            <p>Suppose the workflow is:</p>
+            <ol>
+                <li>estimate an empirical variogram;</li>
+                <li>select a covariance family;</li>
+                <li>fit covariance parameters;</li>
+                <li>krige;</li>
+                <li>evaluate test error.</li>
+            </ol>
+            <p>If steps 1–3 use the full dataset, the held-out observations influence the model structure before prediction.</p>
+            <p>That creates leakage.</p>
+            <p>For a clean estimate of the full modeling procedure, fit the variogram and covariance parameters using only the training observations in each fold.</p>
+            <h2 id="when-full-data-covariance-fitting-may-still-be-useful">When full-data covariance fitting may still be useful</h2>
+            <p>Sometimes the goal is not to estimate the full model-selection pipeline.</p>
+            <p>For example, an analyst may want to compare prediction formulas conditional on a covariance model fixed externally from previous studies.</p>
+            <p>Then keeping that covariance model fixed can be scientifically justified.</p>
+            <p>The validation design should state clearly which components are fixed and which are re-estimated.</p>
+            <h2 id="hyperparameter-tuning-and-nested-spatial-validation">Hyperparameter tuning and nested spatial validation</h2>
+            <p>Suppose block size, model type, or hyperparameters are chosen by cross-validation.</p>
+            <p>If the same folds are then used to report final performance, the estimate can be optimistic because those folds influenced model selection.</p>
+            <p>A stronger design is:</p>
+            <ol>
+                <li>inner spatial CV for model selection;</li>
+                <li>outer spatial CV or final geographic test set for evaluation.</li>
+            </ol>
+            <p>This is the spatial analogue of nested validation.</p>
+            <h2 id="final-geographic-test-region">Final geographic test region</h2>
+            <p>If the dataset is large enough, reserve a final geographic region that is never used for:</p>
+            <ul>
+                <li>feature engineering;</li>
+                <li>hyperparameter tuning;</li>
+                <li>covariance-family selection;</li>
+                <li>block-size tuning;</li>
+                <li>model comparison.</li>
+            </ul>
+            <p>Use it only for the final performance estimate.</p>
+            <p>This design most closely approximates a future geographic deployment.</p>
+            <h2 id="unsupported-extrapolation-cannot-be-validated-away">Unsupported extrapolation cannot be validated away</h2>
+            <p>Suppose training temperature values lie between</p>
+            <p>$$
+                10^\circ C
+                $$</p>
+            <p>and</p>
+            <p>$$
+                25^\circ C.
+                $$</p>
+            <p>Deployment will occur in a region with temperatures</p>
+            <p>$$
+                35^\circ C
+                $$</p>
+            <p>to</p>
+            <p>$$
+                40^\circ C.
+                $$</p>
+            <p>Random or blocked resampling of the original data cannot evaluate model behavior at 40°C because such conditions are absent.</p>
+            <p>The data simply do not contain empirical evidence for that regime.</p>
+            <p>This is a support problem, not a problem that can be solved by a more elaborate cross-validation scheme.</p>
+            <h2 id="covariate-overlap">Covariate overlap</h2>
+            <p>Spatial transfer should therefore assess not only geographic separation but also predictor overlap.</p>
+            <p>For each test region, ask:</p>
+            <ul>
+                <li>Are predictor values represented in training?</li>
+                <li>Are combinations of predictors represented?</li>
+                <li>Is the land-cover or climate regime new?</li>
+                <li>Are measurement systems comparable?</li>
+            </ul>
+            <p>A geographically separated test set can still represent interpolation in covariate space.</p>
+            <p>Conversely, a geographically nearby test site can still be extrapolative if its predictor values are novel.</p>
+            <h2 id="fold-level-performance-matters">Fold-level performance matters</h2>
+            <p>Suppose five spatial blocks have RMSE:</p>
+            <p>$$
+                1.0,\ 1.1,\ 1.3,\ 2.8,\ 3.1.
+                $$</p>
+            <p>The mean is</p>
+            <p>$$
+                \frac{1.0+1.1+1.3+2.8+3.1}{5} =
+                1.86.
+                $$</p>
+            <p>Reporting only</p>
+            <p>$$
+                \text{mean RMSE}=1.86
+                $$</p>
+            <p>can hide substantial geographic heterogeneity.</p>
+            <p>Two regions are substantially harder than the others.</p>
+            <p><img alt="Fold-level variability" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/spatial_statistics/spatial_validation/08_fold_level_variability.png" /></p>
+            <h2 id="why-spatial-folds-are-not-independent-replicates">Why spatial folds are not independent replicates</h2>
+            <p>Adjacent or ecologically related blocks can share:</p>
+            <ul>
+                <li>climate;</li>
+                <li>geology;</li>
+                <li>measurement practices;</li>
+                <li>unmeasured regional processes.</li>
+            </ul>
+            <p>Five folds are therefore not equivalent to five independent experiments.</p>
+            <p>A standard error calculated as though the folds were iid replicates can give a misleading sense of precision.</p>
+            <p>Report:</p>
+            <ul>
+                <li>fold-level metrics;</li>
+                <li>geographic maps;</li>
+                <li>ranges or quantiles;</li>
+                <li>the number and geometry of folds.</li>
+            </ul>
+            <h2 id="mean-performance-versus-deployment-risk">Mean performance versus deployment risk</h2>
+            <p>Suppose average RMSE is acceptable but one important region performs very poorly.</p>
+            <p>If deployment includes that region, the average alone may be insufficient.</p>
+            <p>Validation should examine the distribution of errors across:</p>
+            <ul>
+                <li>geography;</li>
+                <li>environmental conditions;</li>
+                <li>distance from training;</li>
+                <li>population groups or operational strata when relevant.</li>
+            </ul>
+            <p>The reported metrics should support the actual decision.</p>
+            <h2 id="block-orientation-can-matter">Block orientation can matter</h2>
+            <p>Suppose a process changes mainly east-to-west.</p>
+            <p>Vertical holdout strips may create stronger extrapolation than horizontal strips.</p>
+            <p>If transport follows a river or prevailing wind, directional blocking may be scientifically meaningful.</p>
+            <p>Spatial validation geometry should follow the expected deployment mechanism whenever possible.</p>
+            <h2 id="leave-region-out-validation">Leave-region-out validation</h2>
+            <p>Natural regions can sometimes provide more meaningful folds than arbitrary geometric blocks.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>watersheds;</li>
+                <li>hospitals;</li>
+                <li>cities;</li>
+                <li>farms;</li>
+                <li>ecological reserves;</li>
+                <li>administrative districts.</li>
+            </ul>
+            <p>Leave-one-region-out validation asks:</p>
+            <blockquote>
+                <p>Can the model transfer to a genuinely new region of the same type?</p>
+            </blockquote>
+            <p>This is often easier to interpret scientifically than arbitrary geometric blocking.</p>
+            <h2 id="repeated-spatial-validation">Repeated spatial validation</h2>
+            <p>A single blocking scheme can be sensitive to arbitrary boundary placement.</p>
+            <p>One response is to repeat spatial blocking with different:</p>
+            <ul>
+                <li>origins;</li>
+                <li>orientations;</li>
+                <li>region selections.</li>
+            </ul>
+            <p>This reveals how sensitive the results are to validation geometry.</p>
+            <p>However, repeated folds are still not independent experiments.</p>
+            <p>The purpose is robustness analysis, not artificial inflation of the effective sample size.</p>
+            <h2 id="buffer-width-as-a-sensitivity-parameter">Buffer width as a sensitivity parameter</h2>
+            <p>Instead of choosing a single buffer width, compare several plausible values:</p>
+            <p>$$
+                b=0,\ 1,\ 2,\ 4\text{ km}.
+                $$</p>
+            <p>If performance degrades sharply as $b$ increases, the model relies strongly on very local training information.</p>
+            <p>This can be scientifically informative.</p>
+            <p>It answers:</p>
+            <blockquote>
+                <p>How quickly does predictive skill decay as we remove nearby observations?</p>
+            </blockquote>
+            <h2 id="block-size-sensitivity-as-a-diagnostic">Block-size sensitivity as a diagnostic</h2>
+            <p>Similarly, evaluate several block sizes.</p>
+            <p>Small blocks may approximate interpolation.</p>
+            <p>Larger blocks approximate increasingly difficult transfer.</p>
+            <p>The resulting curve is not merely a tuning exercise.</p>
+            <p>It shows how prediction performance changes as spatial separation increases.</p>
+            <p>This can be more informative than a single cross-validation score.</p>
+            <h2 id="comparing-validation-schemes">Comparing validation schemes</h2>
+            <p>A useful report might include:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Scheme</td>
+                    <td>Deployment interpretation</td>
+                </tr>
+                <tr>
+                    <td>Random CV</td>
+                    <td>interpolation among sampled locations</td>
+                </tr>
+                <tr>
+                    <td>Small blocks</td>
+                    <td>local transfer</td>
+                </tr>
+                <tr>
+                    <td>Large blocks</td>
+                    <td>regional transfer</td>
+                </tr>
+                <tr>
+                    <td>Buffered blocks</td>
+                    <td>prediction with explicit minimum separation</td>
+                </tr>
+                <tr>
+                    <td>Leave-region-out</td>
+                    <td>transfer to a new natural region</td>
+                </tr>
+                <tr>
+                    <td>Final geographic test</td>
+                    <td>closest approximation to final deployment</td>
+                </tr>
+            </table>
+            </p>
+            <p>These designs answer different questions.</p>
+            <p>Do not rank them by difficulty and assume that the hardest design is automatically the most appropriate.</p>
+            <h2 id="a-complete-spatial-validation-workflow">A complete spatial-validation workflow</h2>
+            <h3 id="define-deployment">define deployment</h3>
+            <p>Write down:</p>
+            <ul>
+                <li>where predictions will be made;</li>
+                <li>expected distance to training data;</li>
+                <li>whether new regions are expected;</li>
+                <li>whether predictor conditions may be novel.</li>
+            </ul>
+            <h3 id="map-the-data">map the data</h3>
+            <p>Inspect:</p>
+            <ul>
+                <li>sampling density;</li>
+                <li>clusters;</li>
+                <li>gaps;</li>
+                <li>boundaries;</li>
+                <li>regional differences.</li>
+            </ul>
+            <h3 id="estimate-dependence-scale">estimate dependence scale</h3>
+            <p>Use:</p>
+            <ul>
+                <li>residual variograms;</li>
+                <li>Moran diagnostics;</li>
+                <li>domain knowledge.</li>
+            </ul>
+            <p>This helps inform block and buffer sizes.</p>
+            <h3 id="choose-validation-geometry">choose validation geometry</h3>
+            <p>Select:</p>
+            <ul>
+                <li>random;</li>
+                <li>blocked;</li>
+                <li>buffered;</li>
+                <li>leave-region-out;</li>
+                <li>multiple schemes.</li>
+            </ul>
+            <h3 id="put-all-preprocessing-inside-folds">put all preprocessing inside folds</h3>
+            <p>Prevent both spatial and ordinary leakage.</p>
+            <h3 id="refit-model-components-inside-folds">refit model components inside folds</h3>
+            <p>When estimating the full modeling procedure, refit:</p>
+            <ul>
+                <li>feature engineering;</li>
+                <li>covariance parameters;</li>
+                <li>hyperparameters.</li>
+            </ul>
+            <h3 id="record-train-test-separation">record train-test separation</h3>
+            <p>Summarize nearest-training distances.</p>
+            <h3 id="report-fold-level-metrics">report fold-level metrics</h3>
+            <p>Do not report only the overall mean performance.</p>
+            <h3 id="inspect-covariate-support">inspect covariate support</h3>
+            <p>Check whether held-out conditions are represented in training.</p>
+            <h3 id="reserve-final-geographic-testing-if-possible">reserve final geographic testing if possible</h3>
+            <p>Keep model selection separate from final evaluation.</p>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="using-random-cv-for-a-regional-transfer-claim">using random CV for a regional-transfer claim</h3>
+            <p>Random CV usually leaves nearby training observations available.</p>
+            <h3 id="choosing-blocks-that-are-too-small">choosing blocks that are too small</h3>
+            <p>Test observations can remain almost adjacent to training data.</p>
+            <h3 id="choosing-a-huge-buffer-without-considering-deployment">choosing a huge buffer without considering deployment</h3>
+            <p>A buffer should mimic the real information gap rather than maximize difficulty.</p>
+            <h3 id="computing-spatial-features-before-splitting">computing spatial features before splitting</h3>
+            <p>This can leak held-out information into training.</p>
+            <h3 id="fitting-a-variogram-once-on-the-full-dataset-during-cv">fitting a variogram once on the full dataset during CV</h3>
+            <p>The test fold influences covariance estimation.</p>
+            <h3 id="reporting-only-mean-rmse-across-spatial-folds">reporting only mean RMSE across spatial folds</h3>
+            <p>Regional variation may be large.</p>
+            <h3 id="treating-folds-as-independent-experimental-replicates">treating folds as independent experimental replicates</h3>
+            <p>Spatial folds often share broad processes.</p>
+            <h3 id="assuming-blocked-cv-solves-extrapolation">assuming blocked CV solves extrapolation</h3>
+            <p>It does not create evidence for predictor conditions absent from the dataset.</p>
+            <h3 id="tuning-and-evaluating-on-the-same-spatial-folds">tuning and evaluating on the same spatial folds</h3>
+            <p>Model selection can make reported performance optimistic.</p>
+            <h2 id="compact-worked-comparison">Compact worked comparison</h2>
+            <p>Suppose a spatial model is evaluated three ways.</p>
+            <h4 id="random-cv">Random CV</h4>
+            <p>Median test-to-training distance:</p>
+            <p>$$
+                0.3\text{ km}.
+                $$</p>
+            <p>RMSE:</p>
+            <p>$$
+                0.8.
+                $$</p>
+            <h4 id="blocked-cv">Blocked CV</h4>
+            <p>Median distance:</p>
+            <p>$$
+                2.5\text{ km}.
+                $$</p>
+            <p>RMSE:</p>
+            <p>$$
+                1.6.
+                $$</p>
+            <h4 id="buffered-blocked-cv">Buffered blocked CV</h4>
+            <p>Median distance:</p>
+            <p>$$
+                4.2\text{ km}.
+                $$</p>
+            <p>RMSE:</p>
+            <p>$$
+                2.1.
+                $$</p>
+            <p>A useful interpretation is:</p>
+            <blockquote>
+                <p>Predictive error increases as nearby training information is removed. The random-CV result describes local interpolation, while the buffered result is more representative of prediction several kilometers from sampled sites.</p>
+            </blockquote>
+            <p>A poor interpretation is:</p>
+            <blockquote>
+                <p>Buffered CV proves the model is bad.</p>
+            </blockquote>
+            <p>The model may perform very well for interpolation but poorly for transfer.</p>
+            <h2 id="concept-map">Concept map</h2>
+            <p>The logic of spatial validation is</p>
+            <p>$$
+                \text{deployment question}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{expected geographic separation}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{choose random / block / buffer / region holdout}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{fit all preprocessing using training only}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{predict held-out geography}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{calculate performance + train-test distance}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{inspect fold-level geographic variation}
+                $$</p>
+            <p>$$
+                \downarrow
+                $$</p>
+            <p>$$
+                \text{compare validation geometry with real deployment}.
+                $$</p>
+            <p>The central lesson is:</p>
+            <blockquote>
+                <p>A spatial validation score is meaningful only when the train-test geometry resembles the prediction problem we actually care about.</p>
+            </blockquote>
+            <h2 id="questions-students-should-be-able-to-answer">Questions students should be able to answer</h2>
+            <ol>
+                <li>Why can random cross-validation be optimistic for spatial prediction?</li>
+                <li>What is the difference between interpolation and spatial transfer?</li>
+                <li>Why can no resampling design validate unsupported extrapolation?</li>
+                <li>What does nearest train-to-test distance tell us?</li>
+                <li>Why does block size matter?</li>
+                <li>What does a buffer accomplish?</li>
+                <li>Why can a larger buffer increase RMSE?</li>
+                <li>Why should preprocessing occur inside each fold?</li>
+                <li>Why can a neighborhood feature leak test information?</li>
+                <li>Why should a variogram sometimes be re-estimated inside each training fold?</li>
+                <li>Why are five spatial folds not equivalent to five independent experiments?</li>
+                <li>Why should fold-level metrics be reported?</li>
+                <li>What is the purpose of a final geographic test region?</li>
+                <li>Why can block orientation matter?</li>
+                <li>When is leave-region-out validation more interpretable than square blocks?</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

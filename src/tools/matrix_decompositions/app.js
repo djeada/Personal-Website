@@ -21,8 +21,12 @@
     const canvasContainer = document.getElementById("canvas-container");
     const ctx = canvas.getContext("2d");
     const plotColors = {
-        base: "#60a5fa", transformed: "#fb7185", column1: "#c084fc",
-        column2: "#22d3ee", direction1: "#4ade80", direction2: "#fbbf24"
+        base: "#60a5fa",
+        transformed: "#fb7185",
+        column1: "#c084fc",
+        column2: "#22d3ee",
+        direction1: "#4ade80",
+        direction2: "#fbbf24"
     };
     const storyInput = document.getElementById("story-input");
     const storyAction = document.getElementById("story-action");
@@ -464,9 +468,12 @@
         drawVector(result.V[0], plotColors.direction1, width, height, scale, "v₁");
         drawVector(result.U[0].map(value => value * result.singularValues[0]), plotColors.direction2, width, height, scale, "σ₁u₁");
         setLegend([
-            [plotColors.base, "unit circle"], [plotColors.transformed, "A applied"],
-            [plotColors.column1, "A e₁ (column 1)"], [plotColors.column2, "A e₂ (column 2)"],
-            [plotColors.direction1, "input direction"], [plotColors.direction2, "output axis"]
+            [plotColors.base, "unit circle"],
+            [plotColors.transformed, "A applied"],
+            [plotColors.column1, "A e₁ (column 1)"],
+            [plotColors.column2, "A e₂ (column 2)"],
+            [plotColors.direction1, "input direction"],
+            [plotColors.direction2, "output axis"]
         ]);
     }
 
@@ -495,7 +502,9 @@
         drawVector(result.vectors[0].map(value => value * Math.sqrt(result.values[0]) * 2), plotColors.transformed, width, height, scale, "PC1");
         drawVector(result.vectors[1].map(value => value * Math.sqrt(result.values[1]) * 2), plotColors.direction1, width, height, scale, "PC2");
         setLegend([
-            [plotColors.base, "centered data"], [plotColors.transformed, "PC1"], [plotColors.direction1, "PC2"]
+            [plotColors.base, "centered data"],
+            [plotColors.transformed, "PC1"],
+            [plotColors.direction1, "PC2"]
         ]);
     }
 
@@ -504,7 +513,12 @@
             width,
             height
         } = clearCanvas();
-        const transformedCorners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(point => matVec(A, point));
+        const transformedCorners = [
+            [-1, -1],
+            [1, -1],
+            [1, 1],
+            [-1, 1]
+        ].map(point => matVec(A, point));
         const extent = Math.max(1.4, ...transformedCorners.flat().map(Math.abs), ...result.values.map(Math.abs));
         const scale = Math.min(width, height) / (extent * 2.35);
         drawGrid(width, height, scale);
@@ -542,9 +556,12 @@
             });
         }
         setLegend([
-            [plotColors.base, "unit square"], [plotColors.transformed, "A applied"],
-            [plotColors.column1, "A e₁ (column 1)"], [plotColors.column2, "A e₂ (column 2)"],
-            [plotColors.direction2, "eigen direction 1"], [plotColors.direction1, "eigen direction 2"]
+            [plotColors.base, "unit square"],
+            [plotColors.transformed, "A applied"],
+            [plotColors.column1, "A e₁ (column 1)"],
+            [plotColors.column2, "A e₂ (column 2)"],
+            [plotColors.direction2, "eigen direction 1"],
+            [plotColors.direction1, "eigen direction 2"]
         ]);
     }
 
@@ -640,7 +657,7 @@
             svd: ["Unit circle", "Your matrix A", "Ellipse + stretch axes"],
             pca: ["Your dataset points", "Center + measure spread", "Principal directions"],
             evd: ["Unit square", "Your matrix A", "Transformed square"]
-        }[mode];
+        } [mode];
         [storyInput.textContent, storyAction.textContent, storyOutput.textContent] = story;
         const formula = document.getElementById("decomposition-formula");
         formula.textContent = {

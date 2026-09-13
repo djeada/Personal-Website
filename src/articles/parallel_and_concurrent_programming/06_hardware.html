@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Hardware in Parallel Computing</title>
-    <meta content="Parallel computing is the process of breaking a task into smaller parts that can be processed simultaneously by multiple processors." name="description" />
+    <meta content="Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware"
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware",
-            "description": "Parallel computing is the process of breaking a task into smaller parts that can be processed simultaneously by multiple processors.",
-            "dateModified": "2024-02-19"
+            "description": "Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -80,13 +80,23 @@
                 <ol><a href="#hardware-in-parallel-computing">Hardware in Parallel Computing</a>
                     <ol>
                         <li><a href="#ways-of-achieving-parallelism">Ways of Achieving Parallelism</a></li>
-                        <li><a href="#single-core-cpu">Single-Core CPU</a></li>
-                        <li><a href="#multi-core-cpu">Multi-Core CPU</a></li>
+                        <li><a href="#single-core-cpu">Single-Core CPU</a>
+                            <ol>
+                                <li><a href="#instruction-level-parallelism-inside-one-core">Instruction-Level Parallelism Inside One Core</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#multi-core-cpu">Multi-Core CPU</a>
+                            <ol>
+                                <li><a href="#cache-hierarchy-and-cache-coherence">Cache Hierarchy and Cache Coherence</a></li>
+                                <li><a href="#memory-bandwidth-and-interconnects">Memory Bandwidth and Interconnects</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#graphics-processing-unit-gpu-">Graphics Processing Unit (GPU)</a></li>
                         <li><a href="#comparison-cpu-vs-gpu">Comparison: CPU vs GPU</a></li>
                         <li><a href="#reducing-latency-vs-increasing-throughput">Reducing Latency vs Increasing Throughput</a>
                             <ol>
                                 <li><a href="#throughput-oriented-design">Throughput-Oriented Design</a></li>
+                                <li><a href="#hardware-factors-that-limit-scaling">Hardware Factors That Limit Scaling</a></li>
                             </ol>
                         </li>
                         <li><a href="#parallel-computing-architectures">Parallel Computing Architectures</a>
@@ -124,7 +134,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: February 19, 2024</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -144,83 +154,125 @@
                     </button></div>
             </div>
             <h2 id="hardware-in-parallel-computing">Hardware in Parallel Computing</h2>
-            <p>Parallel computing is the process of breaking a task into smaller parts that can be processed simultaneously by multiple processors. These notes explore the different ways of achieving parallelism in hardware and their impact on parallel computing performance.</p>
+            <p>Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time. Those resources may exist inside one CPU core, across several cores or processor sockets, on a GPU, or across multiple networked machines. The useful performance gain depends not only on how much work can run in parallel, but also on memory bandwidth, communication cost, synchronization, and how well the workload matches the hardware.</p>
             <h3 id="ways-of-achieving-parallelism">Ways of Achieving Parallelism</h3>
-            <p>Parallelism refers to the simultaneous execution of multiple tasks or processes to improve performance and efficiency. There are several ways to achieve parallelism:</p>
+            <p>Hardware and software expose parallelism at several levels:</p>
             <ul>
-                <li>Modern CPUs achieve Instruction-Level Parallelism (ILP) through techniques like pipelining, which breaks down the execution of instructions into several overlapping stages—fetch, decode, execute, and write-back. This means that while one instruction is being decoded, another can be fetched, and a third can be executed simultaneously, significantly increasing throughput and minimizing idle CPU time. </li>
-                <li>By integrating multiple independent cores into a single processor, multicore processing enables each core to execute its own thread or process. This design allows multiple tasks to run concurrently on the same chip, making it ideal for both multitasking and parallel execution in multi-threaded applications, thereby enhancing overall performance and energy efficiency. </li>
-                <li>Multiprocessing involves the use of two or more processors within a single computer system, where each processor can handle different tasks or threads simultaneously. This approach distributes the computational load, reduces bottlenecks, and results in substantial performance improvements, especially for complex, multi-threaded applications that require concurrent processing. </li>
-                <li>The setup of multiprocessing is commonly found in servers and high-performance workstations because these systems are designed to handle high volumes of data and numerous simultaneous operations. The use of multiple processors in these environments ensures that they can manage intensive workloads, provide high availability, and support rapid response times for demanding applications. </li>
-                <li>In distributed computing, multiple computers are connected over a network to work on a common task. Each machine processes a portion of the overall problem independently, which not only speeds up computation but also enhances fault tolerance and scalability by distributing the workload across various nodes. </li>
-                <li>The combined effort of multiple machines in distributed computing leads to faster computation and greater resilience. This approach is widely employed in cluster computing, grid computing, and cloud computing environments, where resources from many computers are pooled together to solve complex problems, analyze large datasets, and provide high-performance solutions for both scientific research and enterprise applications.</li>
+                <li><strong>Instruction-level parallelism (ILP)</strong> allows one CPU core to overlap or execute multiple independent instructions. Pipelining, superscalar issue, out-of-order execution, branch prediction, and speculative execution are common techniques.</li>
+                <li><strong>Vector or SIMD parallelism</strong> applies one instruction to multiple data elements at once. CPU instruction sets such as AVX and NEON use this approach for vectorized workloads.</li>
+                <li><strong>Thread-level parallelism (TLP)</strong> uses multiple hardware threads or CPU cores so independent instruction streams can make progress concurrently.</li>
+                <li><strong>Multicore processing</strong> places several CPU cores on one processor package. Each core has its own execution resources, while some cache levels, memory controllers, and interconnects may be shared.</li>
+                <li><strong>Multiprocessor systems</strong> contain multiple processor packages or sockets. They provide more cores and memory capacity, but communication and memory access may become non-uniform across sockets.</li>
+                <li><strong>GPU parallelism</strong> uses many hardware execution lanes to provide very high throughput for regular, data-parallel workloads.</li>
+                <li><strong>Distributed parallelism</strong> spreads work across separate computers connected by a network. This provides scalability beyond one machine, at the cost of higher communication latency and explicit coordination.</li>
             </ul>
+            <p>These forms of parallelism are often combined. A cluster node, for example, may contain several CPU sockets, each CPU may contain many cores with SIMD units, and the node may also include one or more GPUs.</p>
             <h3 id="single-core-cpu">Single-Core CPU</h3>
-            <p>A single-core CPU can only perform one task at a time, limiting its parallel computing capabilities. Here's a detailed breakdown of how a single-core CPU processes tasks:</p>
+            <p>A single-core CPU has one physical processing core, but that does <strong>not</strong> mean it performs only one operation at a time. Modern cores exploit substantial parallelism internally through pipelining, multiple execution units, out-of-order execution, and vector instructions. The operating system can also time-slice several software threads on one core, giving them concurrent progress even though only one hardware context may be issuing instructions at a given instant.</p>
+            <p>A simplified instruction path is:</p>
+            <ol>
+                <li><strong>Fetch</strong> instructions from the instruction cache or memory hierarchy.</li>
+                <li><strong>Decode</strong> them into operations understood by the processor.</li>
+                <li><strong>Rename and schedule</strong> operations when the architecture supports out-of-order execution.</li>
+                <li><strong>Execute</strong> independent operations on units such as integer ALUs, floating-point units, vector units, and load/store units.</li>
+                <li><strong>Retire</strong> completed instructions in architectural program order.</li>
+            </ol>
+            <p>Several instructions can occupy different pipeline stages at the same time. A superscalar core may also begin multiple independent instructions in one cycle.</p>
+            <h4 id="instruction-level-parallelism-inside-one-core">Instruction-Level Parallelism Inside One Core</h4>
+            <p>The amount of useful ILP depends on the instruction stream.</p>
             <ul>
-                <li>The program's steps are converted into binary instructions specific to the CPU architecture during instruction fetching, and these instructions are stored in the system's memory (RAM).</li>
-                <li>The program is loaded into system memory and sent to the CPU via a bus during instruction loading, with the CPU fetching these instructions one by one from the memory.</li>
-                <li>The CPU processes each instruction using its components like the Arithmetic Logic Unit (ALU) during instruction execution, where the ALU performs arithmetic and logical operations.</li>
-                <li>The clock speed of the CPU determines how quickly these instructions are processed, with higher clock speeds resulting in faster performance during instruction execution.</li>
-                <li>Because it is a single-core CPU, it processes instructions sequentially, one at a time, which limits its ability to handle multiple tasks simultaneously during sequential processing.</li>
+                <li>Independent arithmetic operations can often overlap.</li>
+                <li>Data dependencies force some instructions to wait for earlier results.</li>
+                <li>Branch mispredictions can discard speculative work and refill the pipeline.</li>
+                <li>Cache misses may stall dependent instructions for many cycles.</li>
+                <li>SIMD instructions increase data-level parallelism by processing several values per instruction.</li>
             </ul>
+            <p>Clock frequency matters, but performance cannot be predicted from clock speed alone. Instructions per cycle (IPC), cache behavior, branch prediction, vector width, memory latency, and the workload itself are equally important.</p>
             <h3 id="multi-core-cpu">Multi-Core CPU</h3>
-            <p>Multi-core CPUs contain multiple cores within a single processor chip, each capable of executing its own thread or process. This architecture significantly improves parallel computing performance. Here's how it works:</p>
+            <p>A multi-core CPU contains several physical cores on one processor package. Different cores can execute different software threads at the same time, so applications with independent work can achieve true parallel execution.</p>
             <ul>
-                <li>With multiple cores each core has its own pipeline and execution engine, which allows multiple threads or processes to be handled simultaneously in a multi-core processor. This is particularly beneficial for multi-threaded applications that can distribute their workload across several cores.</li>
-                <li>Hyper-threading is an early form of multithreading where a single physical core appears as two logical cores to the operating system, allowing it to run multiple threads simultaneously. While this improves efficiency, it is not as effective as having true physical cores, as it still relies on shared resources within the core.</li>
+                <li>Each core normally has its own execution pipeline and private architectural state.</li>
+                <li>L1 caches are usually private to a core, while lower cache levels may be private, shared by a subset of cores, or shared across the package depending on the design.</li>
+                <li>Cores communicate through an on-chip interconnect and ultimately share access to system memory.</li>
+                <li>Performance scales well only when the application exposes enough parallel work and does not spend too much time synchronizing or contending for shared resources.</li>
             </ul>
+            <p><strong>Simultaneous multithreading (SMT)</strong> allows one physical core to maintain multiple hardware thread contexts and issue instructions from more than one thread. Intel commonly calls its implementation Hyper-Threading. SMT can improve utilization when one thread is stalled, but the hardware threads share execution units, caches, and bandwidth, so two SMT threads do not provide the same throughput as two independent physical cores.</p>
+            <h4 id="cache-hierarchy-and-cache-coherence">Cache Hierarchy and Cache Coherence</h4>
+            <p>Caches reduce the latency of accessing frequently used data, but multiple cores introduce a consistency problem: several cores may cache copies of the same memory location.</p>
+            <p>A <strong>cache-coherence protocol</strong> coordinates those copies so cores agree on the value of each cache line. Common protocols are based on states such as Modified, Exclusive, Shared, and Invalid (MESI and related protocols).</p>
+            <p>Coherence has a performance cost:</p>
+            <ul>
+                <li>Frequent writes to shared cache lines generate coherence traffic.</li>
+                <li>A cache line may move repeatedly between cores when different cores write it.</li>
+                <li><strong>False sharing</strong> occurs when cores update different variables that happen to occupy the same cache line.</li>
+                <li>Read-mostly data is generally easier to scale than heavily shared writable data.</li>
+            </ul>
+            <p>Cache coherence is not the same as a programming-language memory model. Correct concurrent programs still need appropriate synchronization such as atomics, locks, barriers, or message passing.</p>
+            <h4 id="memory-bandwidth-and-interconnects">Memory Bandwidth and Interconnects</h4>
+            <p>Adding cores increases potential compute throughput, but all cores still depend on finite memory and interconnect bandwidth. A program can therefore stop scaling long before all cores are computationally saturated.</p>
+            <p>Important hardware limits include:</p>
+            <ul>
+                <li>DRAM bandwidth and latency.</li>
+                <li>Last-level-cache capacity and bandwidth.</li>
+                <li>On-chip interconnect contention.</li>
+                <li>Memory-controller capacity.</li>
+                <li>NUMA effects in multi-socket systems.</li>
+                <li>Synchronization and cache-coherence traffic.</li>
+            </ul>
+            <p>For memory-bound workloads, adding more cores may provide little improvement once memory bandwidth is saturated.</p>
             <h3 id="graphics-processing-unit-gpu-">Graphics Processing Unit (GPU)</h3>
-            <p>GPUs are specialized processors designed for parallel computing, particularly data parallelism, where many small processing cores work on different parts of the same problem simultaneously. Here's a deeper look into GPUs:</p>
-            <p>I. GPUs consist of thousands of smaller, efficient cores, making them ideal for tasks that can be divided into smaller, independent operations, such as rendering graphics and running complex simulations. This ability to handle multiple tasks simultaneously is due to their <strong>parallel architecture</strong>.</p>
-            <p>II. To leverage GPU parallel processing power, developers use <strong>specialized programming</strong> languages and libraries like CUDA, OpenCL, and OpenGL. These tools allow developers to write programs that can distribute work across the many cores of a GPU, optimizing performance.</p>
-            <p>III. Beyond graphics rendering, GPUs are utilized in various <strong>high-performance computing applications</strong> such as scientific simulations, data analysis, and machine learning. The parallel nature of these tasks makes GPUs a perfect fit, resulting in significant performance improvements over traditional CPU-based systems.</p>
-            <p>IV. Due to graphics <strong>frame buffer</strong> requirements, a GPU must be capable of moving extremely large amounts of data in and out of its main DRAM. The frame buffer is a dedicated block of memory that holds the image data currently being displayed or about to be displayed on the screen, which includes several types of data:</p>
+            <p>GPUs are throughput-oriented processors designed to execute large numbers of similar operations across many data elements. They are especially effective when a workload exposes substantial data parallelism and relatively regular control flow.</p>
+            <p>I. A GPU contains many execution lanes grouped into larger compute units. Rather than optimizing a small number of threads for minimum latency, the design keeps many threads in flight so that ready work can execute while other threads wait for memory.</p>
+            <p>II. General-purpose GPU computing commonly uses programming models such as <strong>CUDA</strong>, <strong>HIP</strong>, <strong>OpenCL</strong>, and <strong>SYCL</strong>. Graphics APIs such as OpenGL, Vulkan, and Direct3D are primarily designed for rendering, although modern graphics pipelines can also expose programmable compute stages.</p>
+            <p>III. GPUs are widely used for graphics, scientific simulation, numerical linear algebra, machine learning, image and signal processing, and other workloads with high parallelism.</p>
+            <p>IV. GPUs also require very high memory bandwidth. Graphics workloads continuously read geometry, textures, depth information, intermediate render targets, and final image data. Modern GPUs therefore use high-bandwidth memory systems such as GDDR or HBM and rely heavily on caches and locality.</p>
+            <p>A <strong>framebuffer</strong> is memory that stores image data associated with rendering or display. Depending on the rendering pipeline, related buffers can include:</p>
             <ul>
-                <li>The <strong>color data</strong> for each pixel, which contains color information.</li>
-                <li><strong>Depth data</strong>, which provides information about the distance of each pixel from the viewer, essential for 3D rendering.</li>
-                <li><strong>Stencil data</strong>, used for masking certain parts of the rendering process.</li>
-                <li><strong>Accumulation data</strong>, used for special effects like motion blur.</li>
+                <li><strong>Color buffers</strong> containing rendered pixel values.</li>
+                <li><strong>Depth buffers</strong> used for depth testing in 3D scenes.</li>
+                <li><strong>Stencil buffers</strong> used for masking and other rendering operations.</li>
+                <li>Additional render targets or intermediate buffers used by effects such as deferred shading, antialiasing, or post-processing.</li>
             </ul>
-            <p>The frame buffer must be large enough to store this data for the entire display resolution and needs to be updated rapidly to maintain smooth video playback and responsive graphics rendering.</p>
-            <p>Imagine you're watching a high-definition video or playing a video game. The GPU has to keep track of every tiny dot (pixel) on your screen, including its color and depth in a 3D space. All this data is stored in the frame buffer, a special part of the GPU's memory. To ensure that what you see is smooth and realistic, the GPU must quickly move this large amount of data in and out of its memory.</p>
-            <p>V. What is Floating-Point Calculations per video frame?</p>
+            <p>The exact memory layout is implementation-dependent; modern GPUs do not simply move every rendered value directly between compute units and DRAM for each operation. Caches, compression, tiling, and on-chip storage reduce unnecessary traffic.</p>
+            <p>V. <strong>Floating-point operations per frame</strong></p>
+            <p>The computational cost of rendering a frame can be estimated in part by the number of arithmetic operations required for geometry processing, shading, lighting, image effects, and other stages. However, floating-point operation count alone does not determine performance. A frame can also be limited by:</p>
             <ul>
-                <li>The term <strong>floating-point calculations per video frame</strong> refers to the number of mathematical operations involving floating-point numbers (numbers with decimals) that the GPU must perform to render a single frame of video.</li>
-                <li>These calculations encompass tasks such as lighting, shading, physics simulations, and texture mapping.</li>
-                <li>The complexity and quality of these calculations are dependent on the GPU's processing power and architecture.</li>
-                <li>Due to the extensive computational requirements of rendering each frame, GPUs must balance two critical performance metrics: latency and throughput.</li>
+                <li>Memory bandwidth.</li>
+                <li>Texture sampling.</li>
+                <li>Rasterization and pixel fill rate.</li>
+                <li>Branch divergence.</li>
+                <li>Synchronization.</li>
+                <li>Cache behavior.</li>
+                <li>CPU submission overhead.</li>
             </ul>
+            <p>GPUs are therefore designed to balance compute throughput with memory bandwidth and specialized graphics or matrix-processing hardware.</p>
             <h3 id="comparison-cpu-vs-gpu">Comparison: CPU vs GPU</h3>
             <p>I. CPU Architecture Diagram</p>
             <div>
-                <pre><code class="language-shell">+---------+---------+---------+
+                <pre><code class="language-text">+---------+---------+---------+
 | Control |   ALU   |   ALU   |
 |  CPU    +---------+---------+
-|         |   ALU   |   ALU   |
+|         |   ALU   | Vector  |
 +---------+---------+---------+
-|                Cache        |
+|          Cache Hierarchy    |
 +-----------------------------+
 |              DRAM           |
 +-----------------------------+</code></pre>
             </div>
             <p>II. GPU Architecture Diagram</p>
             <div>
-                <pre><code class="language-shell">+-----------------------------+
-|  |  |  |  | GPU |  |  |  |  |
-+-----------------------------+
-|  |  |  |  |  |  |  |  |  |  |
-+-----------------------------+
-|  |  |  |  |  |  |  |  |  |  |
-+-----------------------------+
-|  |  |  |  |  |  |  |  |  |  |
-+-----------------------------+
-|  |  |  |  |  |  |  |  |  |  |
-+-----------------------------+
-|              DRAM           |
-+-----------------------------+</code></pre>
+                <pre><code class="language-text">+------------------------------------------------+
+|       Many Compute Units / Execution Lanes     |
+|  [CU] [CU] [CU] [CU] [CU] [CU] [CU] [CU]     |
++------------------------------------------------+
+|      Registers / Shared Memory / GPU Caches    |
++------------------------------------------------+
+|                 L2 Cache                       |
++------------------------------------------------+
+|          High-Bandwidth Device Memory          |
++------------------------------------------------+</code></pre>
             </div>
-            <p>Below is a table comparing CPUs and GPUs, emphasizing their unique features and common use cases:</p>
+            <p>The diagrams are intentionally simplified. Both CPUs and GPUs contain multiple cache levels, schedulers, execution units, and specialized hardware.</p>
             <p>
             <table>
                 <tr>
@@ -229,162 +281,165 @@
                     <td><strong>GPU (Graphics Processing Unit)</strong></td>
                 </tr>
                 <tr>
-                    <td><strong>Core Architecture</strong></td>
-                    <td>Few powerful cores designed for executing complex tasks and instructions.</td>
-                    <td>Hundreds to thousands of simpler cores optimized for handling highly parallel tasks.</td>
+                    <td><strong>Core architecture</strong></td>
+                    <td>Fewer, complex cores optimized for strong single-thread performance and general-purpose control flow.</td>
+                    <td>Many execution lanes organized for high-throughput parallel work.</td>
                 </tr>
                 <tr>
-                    <td><strong>Control Unit</strong></td>
-                    <td>Sophisticated control units with features like branch prediction, out-of-order execution, and advanced instruction pipelining.</td>
-                    <td>Simpler control units optimized for parallel processing rather than complex decision-making.</td>
+                    <td><strong>Control logic</strong></td>
+                    <td>Aggressive branch prediction, speculation, and out-of-order execution are common.</td>
+                    <td>More throughput-oriented scheduling; groups of threads often execute in SIMD/SIMT fashion.</td>
                 </tr>
                 <tr>
-                    <td><strong>Cache System</strong></td>
-                    <td>Large multi-level caches (L1, L2, and sometimes L3) to minimize memory access latency.</td>
-                    <td>Smaller, specialized caches designed to manage large data throughput efficiently.</td>
+                    <td><strong>Cache system</strong></td>
+                    <td>Large cache hierarchy designed to reduce latency for diverse workloads.</td>
+                    <td>Cache and explicitly managed on-chip memories are tuned for high bandwidth and data reuse.</td>
                 </tr>
                 <tr>
-                    <td><strong>Execution Model</strong></td>
-                    <td>Optimized for low-latency execution, handling fewer tasks very quickly.</td>
-                    <td>Optimized for high throughput, capable of executing many tasks concurrently.</td>
+                    <td><strong>Execution model</strong></td>
+                    <td>Strong at latency-sensitive, branch-heavy, irregular, and sequential work.</td>
+                    <td>Strong at regular, massively parallel workloads with many independent elements.</td>
                 </tr>
                 <tr>
-                    <td><strong>Memory Access</strong></td>
-                    <td>Complex memory hierarchy to ensure fast access to data.</td>
-                    <td>High-bandwidth memory systems designed to handle large volumes of data efficiently (e.g., GDDR6).</td>
+                    <td><strong>Memory system</strong></td>
+                    <td>Optimized for low latency and general-purpose access patterns.</td>
+                    <td>Optimized for high bandwidth; discrete GPUs often have separate device memory.</td>
                 </tr>
                 <tr>
-                    <td><strong>Power Efficiency</strong></td>
-                    <td>Generally optimized for lower power consumption in typical computing tasks.</td>
-                    <td>Often optimized for performance, resulting in higher power consumption.</td>
+                    <td><strong>Parallelism</strong></td>
+                    <td>ILP, SIMD/vector operations, SMT, and multiple CPU cores.</td>
+                    <td>Large-scale thread/data parallelism, usually executed in SIMD/SIMT groups.</td>
                 </tr>
                 <tr>
-                    <td><strong>Application Focus</strong></td>
-                    <td>Suited for general-purpose computing tasks, such as running operating systems and applications.</td>
-                    <td>Specialized for tasks requiring massive parallelism, such as rendering graphics and computations in AI.</td>
+                    <td><strong>Programming model</strong></td>
+                    <td>General-purpose languages plus threading, vectorization, and process libraries.</td>
+                    <td>CUDA, HIP, OpenCL, SYCL, shader languages, and higher-level accelerator libraries.</td>
                 </tr>
                 <tr>
-                    <td><strong>Programming Model</strong></td>
-                    <td>Uses conventional programming models and languages like C, C++, and Python.</td>
-                    <td>Uses specialized programming models and languages like CUDA and OpenCL for parallel processing.</td>
+                    <td><strong>Energy use</strong></td>
+                    <td>Varies from low-power mobile CPUs to high-power server processors.</td>
+                    <td>Varies widely; high-end accelerators can consume substantial power but offer high throughput per watt for suitable workloads.</td>
                 </tr>
                 <tr>
-                    <td><strong>Cooling Requirements</strong></td>
-                    <td>Typically requires less aggressive cooling solutions.</td>
-                    <td>Often requires more advanced cooling solutions due to higher power consumption and heat generation.</td>
-                </tr>
-                <tr>
-                    <td><strong>Market</strong></td>
-                    <td>Commonly found in personal computers, servers, and mobile devices.</td>
-                    <td>Commonly found in gaming consoles, workstations, and data centers for tasks like machine learning.</td>
+                    <td><strong>Best fit</strong></td>
+                    <td>Operating systems, control-heavy applications, databases, compilers, interactive workloads, and mixed computation.</td>
+                    <td>Graphics, machine learning, simulation, dense numerical work, image processing, and other highly parallel workloads.</td>
                 </tr>
             </table>
             </p>
+            <p>A GPU is not automatically faster than a CPU. Data-transfer cost, problem size, branch behavior, synchronization, arithmetic intensity, and available parallelism determine whether acceleration is worthwhile.</p>
             <h3 id="reducing-latency-vs-increasing-throughput">Reducing Latency vs Increasing Throughput</h3>
             <ul>
-                <li>In computing, <strong>latency</strong> is the time taken to complete a single task from start to finish.</li>
-                <li><strong>Throughput</strong> measures the number of tasks that can be completed in a given amount of time.</li>
-                <li>Reducing latency is advantageous for tasks needing quick response times, such as interactive applications.</li>
-                <li>Increasing throughput benefits tasks that involve handling many operations simultaneously, like data processing.</li>
-                <li>Reducing latency often necessitates high-speed, specialized hardware, which can consume more power and require more chip area.</li>
-                <li>Increasing throughput can be achieved by parallel processing, which tends to be more power-efficient and make better use of chip area.</li>
-                <li>An analogy is that <strong>latency</strong> is like the time it takes to get a single pizza delivered to your house using a fast, expensive car.</li>
-                <li><strong>Throughput</strong>, on the other hand, is like the total number of pizzas that can be delivered in an hour using several regular cars more efficiently.</li>
-                <li>For GPUs, focusing on throughput is generally more beneficial because they handle many tasks at once without needing extremely fast individual components, thereby saving power and space on the chip.</li>
+                <li><strong>Latency</strong> is the time required for one operation or request to complete.</li>
+                <li><strong>Throughput</strong> is the amount of work completed per unit time.</li>
+                <li>Low latency matters for interactive or dependency-heavy work where later computation cannot begin until an earlier result is available.</li>
+                <li>High throughput matters when many independent items can be processed concurrently.</li>
+                <li>Hardware optimized for latency often spends more chip area and power on large caches, branch prediction, speculative execution, and sophisticated scheduling.</li>
+                <li>Throughput-oriented hardware spends more resources on parallel execution lanes and memory bandwidth.</li>
+                <li>A useful analogy is transportation: latency is the travel time of one passenger, while throughput is the number of passengers moved per hour.</li>
             </ul>
+            <p>CPUs and GPUs occupy different points on this design spectrum. CPUs generally invest more hardware in reducing the latency of a small number of instruction streams; GPUs generally invest more hardware in sustaining many concurrent operations.</p>
             <h4 id="throughput-oriented-design">Throughput-Oriented Design</h4>
+            <p>A throughput-oriented design tries to maximize completed work across many threads rather than minimize the execution time of one individual thread.</p>
             <ul>
-                <li>The aim of <strong>throughput-oriented design</strong> is to maximize the total execution throughput of many threads, even if individual threads take longer to execute.</li>
-                <li>GPUs are designed with this approach to effectively manage the parallel nature of graphics and data processing tasks.</li>
-                <li><strong>CPU design</strong> is typically optimized for low latency to execute a single thread as quickly as possible.</li>
-                <li>In contrast, <strong>GPU design</strong> is optimized for high throughput to execute many threads concurrently, even if each thread runs slower compared to a CPU.</li>
-                <li>The power of GPUs with more threads lies in their design to handle many parallel tasks, optimizing their architecture.</li>
-                <li>CPUs, on the other hand, perform better with fewer threads, as they are optimized for quick, sequential task execution with minimal latency.</li>
-                <li>For GPUs, having more threads to work on simultaneously is beneficial, akin to having many assembly lines in a factory to produce multiple products at once.</li>
-                <li>For CPUs, fewer threads are better because they function like a master craftsman focusing on one project at a time, ensuring it's completed as quickly and efficiently as possible.</li>
+                <li>GPUs keep many warps or wavefronts ready so the scheduler can issue from another group when one stalls.</li>
+                <li>Large register files and high-bandwidth memory systems support many active threads.</li>
+                <li>Simpler per-thread control allows more execution resources to fit on the chip.</li>
+                <li>Occupancy alone is not a performance goal; enough active work is needed to hide latency, but excessive resource pressure can reduce efficiency.</li>
             </ul>
+            <p>CPUs also benefit from parallel threads, but their cores devote more area to features that improve the latency of general-purpose code. GPU threads are typically much lighter-weight and are most useful in large numbers.</p>
+            <h4 id="hardware-factors-that-limit-scaling">Hardware Factors That Limit Scaling</h4>
+            <p>More execution units do not guarantee proportional speedup. Common limits include:</p>
+            <ul>
+                <li><strong>Serial work:</strong> parts of the program that cannot be parallelized.</li>
+                <li><strong>Synchronization:</strong> barriers, locks, and communication can leave hardware idle.</li>
+                <li><strong>Memory bandwidth:</strong> additional cores may compete for the same DRAM channels.</li>
+                <li><strong>Cache capacity and coherence:</strong> working sets may stop fitting in cache, or writable sharing may generate coherence traffic.</li>
+                <li><strong>Load imbalance:</strong> some workers finish earlier than others.</li>
+                <li><strong>Communication latency:</strong> especially important across sockets, accelerators, or networked nodes.</li>
+                <li><strong>Power and thermal limits:</strong> processors may reduce clock frequency when many units are active.</li>
+            </ul>
+            <p>This is why parallel speedup usually becomes sublinear as more hardware is added.</p>
             <h3 id="parallel-computing-architectures">Parallel Computing Architectures</h3>
             <ul>
-                <li>Mike Flynn, <em>“Very High-Speed Computing Systems,”</em> Proc. of IEEE, 1966</li>
-                <li>Flynn’s taxonomy classifies computer architectures based on how many instruction streams and data streams can be processed in parallel. The four main categories are SISD, SIMD, MISD, and MIMD.</li>
+                <li>Mike Flynn, <em>“Very High-Speed Computing Systems,”</em> Proc. of IEEE, 1966.</li>
+                <li>Flynn’s taxonomy classifies architectures by the number of instruction streams and data streams they can process concurrently. The four categories are SISD, SIMD, MISD, and MIMD.</li>
             </ul>
-            <p><strong>SISD (Single Instruction, Single Data)</strong><br />
-                A single instruction stream operates on a single data element at a time. This is the classic, straightforward model where a uniprocessor fetches instructions and data from memory and executes them in sequence.</p>
-            <p><strong>SIMD (Single Instruction, Multiple Data)</strong><br />
-                A single instruction stream operates on multiple data elements simultaneously. This category includes array processors and vector processors, where one instruction can be applied to an entire set (or array) of data elements in parallel.</p>
-            <p><strong>MISD (Multiple Instructions, Single Data)</strong><br />
-                Multiple instructions operate on a single data element. True MISD systems are rare, but systolic array processors are sometimes considered a loose example, as they involve multiple processing elements each performing different operations on data as it flows through.</p>
-            <p><strong>MIMD (Multiple Instructions, Multiple Data)</strong><br />
-                Multiple instruction streams operate on multiple data elements concurrently. This category includes multiprocessor and multithreaded systems, where each processor or thread can execute its own sequence of instructions on its own set of data.</p>
+            <p><strong>SISD (Single Instruction, Single Data)</strong>
+                A single instruction stream operates on one data stream. A simple scalar processor is the classic example, although modern scalar CPUs may still exploit internal ILP.</p>
+            <p><strong>SIMD (Single Instruction, Multiple Data)</strong>
+                One instruction stream operates on multiple data elements. Vector processors and CPU SIMD/vector instructions are common examples. GPUs also use SIMD-like hardware execution internally, although their programming model is usually described as SIMT.</p>
+            <p><strong>MISD (Multiple Instructions, Single Data)</strong>
+                Multiple instruction streams operate on the same data stream. Pure MISD machines are rare, and real systems are seldom classified this way. Fault-tolerant redundant computation and some specialized pipelines are sometimes used as illustrative examples, but the category has no widely used general-purpose counterpart.</p>
+            <p><strong>MIMD (Multiple Instructions, Multiple Data)</strong>
+                Multiple instruction streams operate on multiple data streams. Multicore CPUs, multiprocessor servers, and distributed-memory clusters are common MIMD systems.</p>
             <div>
-                <pre><code class="language-shell">#
-                            Parallel Computer Architectures
-                                        |
-      --------------------------------------------------------------------------------------------------
-      |                                 |                              |                               |
-    SISD                               SIMD                           MISD                            MIMD
-    (Von Neumann)                       |                              ?                               |
-                                        |                                                              |
-                           ---------------------------                              -----------------------------
-                          |                          |                              |                           |
-                       Vector                     Array                    Multiprocessors            Multicomputers
-                      Processor               Processor                          |                           |
-                                                                 ------------------------                 ------------------
-                                                                 |            |          |                |                |
-                                                                UMA         COMA        NUMA             MPP              COW
-                                                                 |                       |                |                
-                                                           ------------              -----------          ----------
-                                                           |          |              |         |          |        |
-                                                          Bus      Switched       CC-NUMA    NC-NUMA    Grid    Hypercube</code></pre>
+                <pre><code class="language-text">                            Parallel Computer Architectures
+                                       |
+       --------------------------------------------------------------------
+       |                    |                    |                         |
+     SISD                 SIMD                 MISD                     MIMD
+       |                    |                    |                         |
+ scalar processors   vector / array      rare / specialized      ----------------
+                         processors                              |              |
+                                                        shared-memory    distributed-memory
+                                                           systems          systems
+                                                        /        \        /        \
+                                                      UMA       NUMA   clusters     MPP</code></pre>
             </div>
+            <p>Flynn’s taxonomy is useful as a high-level classification, but modern systems often combine categories. A multicore CPU is MIMD across cores while each core may also execute SIMD instructions. A GPU runs many thread groups independently, while each group is executed on SIMD-like hardware.</p>
             <h4 id="programming-model-vs-hardware-execution-model">Programming model vs hardware execution model</h4>
             <ul>
-                <li>The programming model refers to how the programmer expresses the code, and examples include sequential, data parallel, dataflow, and multi-threaded approaches. </li>
-                <li>The execution model refers to how the hardware runs the code, and examples include out-of-order, vector, array, dataflow, and multithreaded processors. </li>
-                <li>A von Neumann programming model can be implemented on an out-of-order processor, which illustrates a difference between programming and execution models. </li>
-                <li>An SPMD programming model can be realized by a GPU that internally uses SIMD execution, which shows another difference between software and hardware layers. </li>
-                <li>Keeping these differences in mind can be helpful when choosing or designing systems that align software abstractions with hardware capabilities. </li>
+                <li>A <strong>programming model</strong> describes how programmers express parallel work: threads, tasks, vector operations, message passing, SPMD kernels, dataflow, and so on.</li>
+                <li>A <strong>hardware execution model</strong> describes how the processor actually issues and executes that work: superscalar out-of-order execution, SIMD lanes, SIMT warps, hardware threads, or multiple independent cores.</li>
+                <li>These layers do not have to match one-to-one. Sequential source code may execute on a deeply out-of-order CPU, and an SPMD GPU kernel may execute on SIMD hardware.</li>
+                <li>Libraries and runtimes often hide additional layers. A high-level task runtime, for example, may schedule tasks onto an MIMD multicore CPU whose cores each use SIMD internally.</li>
             </ul>
+            <p>Keeping the distinction clear helps explain why source-level concurrency does not automatically imply hardware parallelism, and why hardware can exploit some parallelism even when the source code appears sequential.</p>
             <h4 id="types-of-parallelism-data-parallelism-vs-task-parallelism">Types of Parallelism: Data Parallelism vs Task Parallelism</h4>
-            <p>Parallelism can be broadly classified into two types, based on how tasks are divided and executed:</p>
-            <p>I. <strong>Data Parallelism / SIMD (Single Instruction, Multiple Data)</strong></p>
+            <p>Parallelism is often described in terms of how work is divided.</p>
+            <p>I. <strong>Data Parallelism</strong></p>
+            <p>In data parallelism, the same or similar operation is applied to many data elements.</p>
             <ul>
-                <li>In <em>data parallelism</em>, the same operation is performed simultaneously on multiple data sets. This approach leverages the fact that many computations—such as arithmetic operations, comparisons, or logical operations—can be performed concurrently when applied to large arrays or matrices. It minimizes the overhead of instruction control and maximizes the throughput by applying one instruction across a range of data elements.</li>
-                <li>Characteristics include efficiency for tasks that involve repetitive computations on large data sets, commonly used in applications such as image processing, numerical simulations, and machine learning. The uniformity in processing makes it ideal for applications where the same computation is repeated over extensive data, reducing redundancy and enabling high-speed processing of tasks like pixel manipulations in images or batch computations in scientific models.</li>
-                <li><em>GPUs</em> feature thousands of small cores that perform the same operation on different pieces of data, making them highly efficient for parallel processing tasks. This architecture is particularly effective for workloads that require simultaneous processing of numerous data points. Each core executes the same instruction independently, thus dramatically speeding up tasks such as rendering graphics or performing deep learning inference.</li>
-                <li><em>SIMD Extensions</em> like SSE (Streaming SIMD Extensions) and AltiVec in CPUs enable the processors to perform vectorized operations, enhancing computational performance. These specialized instruction sets allow a single CPU instruction to process multiple data elements simultaneously, reducing the number of required instructions and lowering the cycle count. This improves performance in applications that perform repetitive mathematical operations across arrays or vectors.</li>
-                <li><em>Time-space duality</em> is the concept that a computational task can be distributed in two different ways: across <em>multiple processors</em> simultaneously (space) or over <em>multiple time steps</em> using the same processor repeatedly (time).</li>
-                <li><em>Array Processors</em> use <em>multiple processing elements</em> at once to handle different pieces of data simultaneously. This approach is ideal when the task can be broken down into independent operations that can run in parallel.</li>
-                <li>In contrast, <em>vector processors</em> apply the same operation sequentially over time using <em>one processing element</em>. They are designed to handle vector operations efficiently, providing significant speed advantages in tasks involving large datasets. Optimized for executing operations on entire data arrays rather than single elements, vector processors can accelerate workloads like linear algebra computations and other high-volume data operations, leading to substantial performance gains in scientific and engineering applications.</li>
-                <li>An example use case is applying a filter to an image, where the same operation is applied to each pixel in parallel. When filtering an image, each pixel undergoes the same transformation (such as blurring or edge detection) simultaneously. This parallel execution significantly reduces processing time compared to sequentially applying the filter to each pixel, especially in high-resolution images.*</li>
+                <li>Examples include image filters, matrix operations, vector arithmetic, particle updates, and neural-network tensor operations.</li>
+                <li>CPU SIMD/vector instructions are one hardware mechanism for implementing data parallelism.</li>
+                <li>GPUs expose data parallelism through many lightweight threads that are usually executed in SIMT groups.</li>
+                <li>Array processors replicate processing elements so multiple elements can be processed spatially at once.</li>
+                <li>Vector processors use pipelined vector functional units to operate on streams of elements. They may process multiple elements per cycle and should not be thought of simply as one scalar processor repeating an operation sequentially.</li>
+                <li>Regular memory access and independent elements usually make data-parallel workloads easier to accelerate.</li>
             </ul>
-            <p>II. <strong>Task Parallelism / MIMD (Multiple Instruction, Multiple Data)</strong></p>
+            <p>Data parallelism and SIMD are related but not identical: <strong>data parallelism is a software/workload property</strong>, while SIMD is one possible hardware execution mechanism.</p>
+            <p>II. <strong>Task Parallelism</strong></p>
+            <p>In task parallelism, different tasks or functions execute concurrently, often on different data.</p>
             <ul>
-                <li>In <em>task parallelism</em>, different operations are performed simultaneously on different data sets. This approach allows each processor or core to execute distinct instructions on separate pieces of data, making it ideal for workloads where tasks are heterogeneous and can run independently, thus optimizing resource usage.</li>
-                <li>Characteristics include suitability for applications where tasks can be divided into independent or semi-independent sub-tasks, allowing for more complex and flexible parallel execution. By breaking down a larger problem into smaller, distinct tasks, systems can process these sub-tasks concurrently. This increases flexibility, as each task can be optimized and executed according to its own computational requirements, leading to overall efficiency improvements in complex applications.</li>
-                <li><em>Many-Core/SMP Systems</em> consist of multiple processors that each execute different tasks on different data, optimizing overall system performance. In these systems, each core or processor handles its own thread or process, which allows for simultaneous execution of diverse operations. This architecture is well-suited for multi-threaded applications, reducing the likelihood of bottlenecks and improving the system's ability to handle parallel workloads.</li>
-                <li><em>Processor Arrays and Systolic Arrays</em> are types of specialized hardware designed specifically for the parallel processing of tasks, improving computational efficiency. These arrays consist of multiple processing elements arranged in a grid or pipeline structure. They facilitate rapid data movement and coordinated processing, making them highly efficient for repetitive and structured computations such as matrix multiplications or signal processing tasks.</li>
-                <li><em>Distributed Systems</em> such as Hadoop, cluster systems, and MPP (Massively Parallel Processing) systems distribute tasks across multiple machines, enabling the handling of large-scale data processing. By partitioning tasks among many interconnected computers, distributed systems can tackle massive datasets that would overwhelm a single machine. This method enhances scalability and fault tolerance, ensuring that large computational tasks are managed efficiently across a network.</li>
-                <li>An example use case is a web server handling multiple client requests simultaneously, where each request is an independent task. In this scenario, a web server can assign each incoming client request to a different processor or thread. This allows the server to process requests concurrently, ensuring fast response times and efficient handling of multiple users without any single request delaying others.</li>
+                <li>Different CPU cores may execute unrelated threads or processes at the same time.</li>
+                <li>Pipeline stages may perform distinct operations concurrently.</li>
+                <li>Servers can process independent requests as separate tasks.</li>
+                <li>Task runtimes can dynamically schedule heterogeneous work across a multicore system.</li>
+                <li>Distributed systems can assign different tasks to different machines.</li>
             </ul>
+            <p>Task and data parallelism are often combined. A scientific application may run different simulation tasks across nodes while using SIMD instructions or GPUs inside each task.</p>
             <h4 id="shared-memory-architectures">Shared Memory Architectures</h4>
-            <p>Shared memory architectures enable multiple processors to access a common global address space, facilitating communication and data sharing among processors. This means that any changes made to a memory location by one processor are immediately visible to all other processors. There are two primary types of shared memory architectures:</p>
-            <p>I. Uniform Memory Access (UMA)</p>
+            <p>Shared-memory systems give multiple processors or cores access to one shared address space. Communication can therefore occur through loads and stores rather than explicit network messages.</p>
+            <p>A shared address space does <strong>not</strong> mean that every write becomes instantaneously visible everywhere. Modern processors use private caches, store buffers, speculative execution, and relaxed memory ordering. Hardware cache coherence keeps cached copies of memory consistent, while the programming model still requires synchronization to establish safe ordering between threads.</p>
+            <p>There are two common organizations:</p>
+            <p>I. <strong>Uniform Memory Access (UMA)</strong></p>
             <ul>
-                <li>In <strong>UMA</strong>, all processors have equal access time to all memory locations.</li>
-                <li><strong>Characteristics</strong> include uniform memory access latency, regardless of which processor accesses which memory module.</li>
-                <li>This architecture is typically used in Symmetric Multiprocessing (SMP) systems, where multiple processors share a single, uniform memory.</li>
-                <li>An <strong>example</strong> of UMA is traditional SMP systems, where processors are connected to a single memory controller, ensuring equal memory access times.</li>
+                <li>In an ideal UMA system, processors observe approximately uniform latency to main memory.</li>
+                <li>Small and medium symmetric multiprocessing systems often approximate this model.</li>
+                <li>Even in UMA systems, cache hits and misses still produce different access times, so “uniform” mainly describes the relationship between processors and main-memory regions.</li>
             </ul>
-            <p>II. Non-Uniform Memory Access (NUMA)</p>
+            <p>II. <strong>Non-Uniform Memory Access (NUMA)</strong></p>
             <ul>
-                <li>In <strong>NUMA</strong>, the memory access time varies depending on the memory location relative to a processor.</li>
-                <li><strong>Characteristics</strong> include memory being physically divided into regions, with each region being closer to some processors than others. Processors have faster access to their local memory compared to remote memory, leading to non-uniform memory access times. This architecture is typically implemented using a processor interconnection network and local memories.</li>
-                <li><strong>Cache-Coherent NUMA (CC-NUMA)</strong> ensures consistency between the caches of different processors, so that all processors have a coherent view of memory. This is fully implemented in hardware and is commonly found in recent x86 chips.</li>
-                <li>An <strong>example</strong> of NUMA is modern server architectures and high-performance computing systems, where memory is divided across multiple processors, each with its local memory.</li>
+                <li>In NUMA systems, memory is physically attached to different processor sockets or nodes.</li>
+                <li>Access to local memory is faster and often provides more bandwidth than access to remote memory.</li>
+                <li><strong>Cache-coherent NUMA (CC-NUMA)</strong> maintains a coherent shared address space while preserving non-uniform physical memory placement.</li>
+                <li>Operating systems and runtimes may try to keep threads and their data on the same NUMA node.</li>
+                <li>First-touch allocation, CPU affinity, and NUMA-aware data partitioning can have a large effect on performance.</li>
             </ul>
+            <p>Modern multi-socket x86 servers are common examples of CC-NUMA systems.</p>
             <h4 id="comparison-of-uma-numa-simd-and-mimd">Comparison of UMA, NUMA, SIMD, and MIMD</h4>
-            <p>Below is a table that outlines the relevance of Shared Memory, UMA, NUMA, SIMD, and MIMD for both CPUs and GPUs:</p>
+            <p>These terms describe different dimensions of a system, so they should not be treated as mutually exclusive categories.</p>
             <p>
             <table>
                 <tr>
@@ -393,83 +448,92 @@
                     <td>GPUs</td>
                 </tr>
                 <tr>
-                    <td><strong>SIMD (Single Instruction, Multiple Data)</strong></td>
-                    <td>Use SIMD instructions (e.g., SSE, AVX, or NEON) to process multiple data elements in parallel within each core.</td>
-                    <td>Inherently rely on SIMD- or SIMT-based execution, where a single instruction is applied to multiple data elements across many threads.</td>
+                    <td><strong>SIMD / vector execution</strong></td>
+                    <td>CPU cores use vector instruction sets such as SSE, AVX, SVE, or NEON.</td>
+                    <td>Execution lanes typically operate in SIMD/SIMT groups such as warps or wavefronts.</td>
                 </tr>
                 <tr>
-                    <td><strong>MIMD (Multiple Instruction, Multiple Data)</strong></td>
-                    <td>Modern multi-core CPUs exhibit MIMD by running different instruction streams on separate cores simultaneously.</td>
-                    <td>Mostly use SIMD at the hardware level, but can show MIMD-like behavior across different thread blocks or warps that may execute divergent instructions.</td>
+                    <td><strong>MIMD</strong></td>
+                    <td>Multiple CPU cores can execute independent instruction streams.</td>
+                    <td>Different compute units or thread groups can make progress independently, even though execution within a warp/wave is SIMD-like.</td>
                 </tr>
                 <tr>
-                    <td><strong>Shared Memory</strong></td>
-                    <td>All cores share a common physical memory space accessible to each processor, coordinated by caches and interconnects.</td>
-                    <td>Provide on-chip shared memory (e.g., per-block or per-wavefront) that allows fast data exchange among threads within the same block.</td>
+                    <td><strong>Shared address space</strong></td>
+                    <td>Threads in a process normally share virtual memory; cache coherence coordinates copies across cores.</td>
+                    <td>Threads can access device-global memory, while faster explicitly shared on-chip memory often has block/workgroup scope. Integrated or unified-memory systems may provide broader shared-address-space mechanisms.</td>
                 </tr>
                 <tr>
-                    <td><strong>UMA (Uniform Memory Access)</strong></td>
-                    <td>In a UMA system, all processors access the shared memory with uniform latency, simplifying memory management.</td>
-                    <td>In integrated CPU-GPU systems with a unified memory architecture, GPUs share the same memory pool with uniform access (though performance can vary).</td>
+                    <td><strong>UMA</strong></td>
+                    <td>Common as an abstraction on smaller shared-memory systems.</td>
+                    <td>Not a defining GPU property. Some integrated systems share physical memory, but access cost can still vary by location, cache state, or processor.</td>
                 </tr>
                 <tr>
-                    <td><strong>NUMA (Non-Uniform Memory Access)</strong></td>
-                    <td>Memory access times depend on physical proximity to specific memory regions (NUMA nodes), improving scalability for large systems.</td>
-                    <td>Less common in typical GPU deployments, but can appear in high-end or multi-GPU systems for large-scale parallel processing with distributed memory.</td>
+                    <td><strong>NUMA</strong></td>
+                    <td>Common in multi-socket servers and some many-core systems.</td>
+                    <td>Multi-GPU and chiplet-based accelerator systems can have non-uniform access to local versus remote memory, even when software exposes a unified address space.</td>
                 </tr>
             </table>
             </p>
+            <p>A single platform can therefore be MIMD across processors, SIMD within each processor, and NUMA in its memory organization at the same time.</p>
             <h3 id="distributed-computing-and-cluster-computing-architectures">Distributed Computing and Cluster Computing Architectures</h3>
-            <p>Distributed computing and cluster computing are approaches to parallelism that leverage multiple machines to work on a common task. They offer significant benefits in terms of scalability, fault tolerance, and performance.</p>
+            <p>Distributed and cluster computing both use multiple computers, but they emphasize different operating assumptions. A cluster is a type of distributed system whose machines are usually managed together and connected by a relatively fast network.</p>
             <h4 id="distributed-computing">Distributed Computing</h4>
-            <p>Distributed computing involves a network of independent computers that work together to perform a task. These computers communicate and coordinate their actions by passing messages to one another.</p>
+            <p>Distributed computing uses independent computers that coordinate over a network to provide a service or solve a problem.</p>
             <p>I. Architecture</p>
             <ul>
-                <li><strong>Nodes</strong> in a distributed system are independent computers, often referred to as nodes or hosts, connected via a network.</li>
-                <li><strong>Network Communication</strong> between nodes is achieved through network protocols such as TCP/IP, making communication overhead an important consideration in these systems.</li>
-                <li><strong>Decentralized Control</strong> means there is no single point of control, with each node operating independently and cooperatively to complete the task.</li>
+                <li><strong>Nodes</strong> are independent computers with their own processors, memory, and operating-system state.</li>
+                <li><strong>Network communication</strong> may use TCP/IP, RDMA-capable transports, message queues, RPC, or specialized interconnects.</li>
+                <li><strong>Control can be centralized or decentralized.</strong> Some systems use a coordinator or leader; others distribute decision-making across many nodes.</li>
+                <li>Nodes do not share ordinary memory, so communication normally requires explicit messages or distributed storage abstractions.</li>
             </ul>
             <p>II. Characteristics</p>
             <ul>
-                <li><strong>Scalability</strong> allows for easily adding more nodes to handle larger tasks, enhancing the system's capacity.</li>
-                <li><strong>Fault Tolerance</strong> is achieved through redundancy and replication of data across nodes, improving system reliability.</li>
-                <li><strong>Resource Sharing</strong> utilizes the combined resources (CPU, memory, storage) of all nodes, maximizing efficiency.</li>
+                <li><strong>Scalability</strong> comes from adding machines, although coordination and communication overhead usually grow as well.</li>
+                <li><strong>Fault tolerance</strong> may use replication, retry, checkpointing, consensus, or redundant tasks, depending on the system.</li>
+                <li><strong>Resource aggregation</strong> combines CPU, accelerator, memory, and storage capacity across machines.</li>
+                <li><strong>Partial failure</strong> is fundamental: one node or network link can fail while the rest of the system remains operational.</li>
             </ul>
             <p>III. Examples</p>
             <ul>
-                <li><strong>SETI@home</strong> is a project that uses internet-connected computers to analyze radio signals for signs of extraterrestrial intelligence.</li>
-                <li><strong>Blockchain</strong> technology, such as that used in cryptocurrencies like Bitcoin, involves each node maintaining a copy of the ledger and validating transactions.</li>
+                <li>Volunteer-computing projects such as <strong>SETI@home</strong> divide independent work across internet-connected machines.</li>
+                <li><strong>Blockchain</strong> networks are distributed systems in which nodes exchange and validate replicated ledger state.</li>
+                <li>Large cloud services, distributed databases, and content-delivery systems are other common examples.</li>
             </ul>
             <p>IV. Challenges</p>
             <ul>
-                <li><strong>Communication Latency</strong> can affect performance due to delays in data transfer between nodes.</li>
-                <li><strong>Synchronization</strong> ensures that all nodes work cohesively and data remains consistent across the system.</li>
-                <li><strong>Security</strong> involves protecting data as it travels across potentially insecure networks, ensuring the integrity and confidentiality of information.</li>
+                <li><strong>Communication latency and bandwidth</strong> can dominate fine-grained workloads.</li>
+                <li><strong>Synchronization and consistency</strong> become more expensive when state is replicated across machines.</li>
+                <li><strong>Fault handling</strong> must account for node crashes, lost messages, retries, and network partitions.</li>
+                <li><strong>Security</strong> must protect communication and authenticate participating machines.</li>
             </ul>
             <h4 id="cluster-computing">Cluster Computing</h4>
-            <p>Cluster computing involves a group of closely connected computers that work together as a single system. Clusters are typically used for high-performance computing tasks.</p>
+            <p>Cluster computing uses a group of machines that are usually colocated, administratively coordinated, and connected by a fast network. HPC clusters are designed to run tightly coupled parallel jobs, while data-processing clusters may emphasize storage and throughput.</p>
             <p>I. Architecture</p>
             <ul>
-                <li><strong>Nodes</strong> in a cluster computing system consist of multiple computers, usually identical or similar, connected via a high-speed local network.</li>
-                <li>The <strong>Head Node</strong> is a special node that manages the cluster, distributing tasks among the worker nodes.</li>
-                <li><strong>Worker Nodes</strong> perform the actual computation, receiving tasks from the head node and returning results upon completion.</li>
+                <li><strong>Compute nodes</strong> provide CPU and/or GPU resources.</li>
+                <li>A cluster often has <strong>login, management, or controller nodes</strong>, but not every cluster architecture depends on one permanent “head node” for all computation.</li>
+                <li><strong>High-speed interconnects</strong> such as Ethernet, InfiniBand, or other HPC fabrics connect nodes.</li>
+                <li><strong>Schedulers and resource managers</strong> such as Slurm or Kubernetes assign work according to the cluster’s purpose.</li>
             </ul>
             <p>II. Characteristics</p>
             <ul>
-                <li><strong>High Performance</strong> clusters are designed for intensive computational tasks requiring significant processing power.</li>
-                <li>A <strong>Homogeneous Environment</strong> ensures uniform performance as nodes are often identical in hardware and software.</li>
-                <li><strong>Resource Management</strong> is handled by cluster management software that takes care of task scheduling, resource allocation, and load balancing.</li>
+                <li><strong>High aggregate performance</strong> comes from combining many nodes.</li>
+                <li>Nodes are often similar for operational simplicity, but heterogeneous clusters with different CPUs, GPUs, memory capacities, or accelerator types are common.</li>
+                <li><strong>Resource management</strong> schedules jobs, allocates processors and memory, and may enforce priorities or quotas.</li>
+                <li>Tight coupling is practical when the network offers low latency and high bandwidth.</li>
             </ul>
             <p>III. Examples</p>
             <ul>
-                <li>A <strong>Hadoop Cluster</strong> is used for big data processing, splitting large datasets into smaller chunks and processing them in parallel across the nodes.</li>
-                <li>The <strong>Beowulf Cluster</strong> is a type of cluster architecture used for scientific computations, built from standard, off-the-shelf hardware.</li>
+                <li><strong>Beowulf-style clusters</strong> use commodity machines for scientific and technical computing.</li>
+                <li><strong>HPC clusters</strong> run applications based on MPI, distributed solvers, and accelerator-aware libraries.</li>
+                <li><strong>Hadoop or Spark clusters</strong> distribute data-processing tasks across machines, although their execution model differs from tightly coupled HPC workloads.</li>
             </ul>
             <p>IV. Challenges</p>
             <ul>
-                <li><strong>Scalability</strong> can be complex, often requiring reconfiguration of the cluster when adding more nodes.</li>
-                <li><strong>Cost</strong> is a consideration, as high-speed networks and homogeneous hardware can be expensive.</li>
-                <li>Regular <strong>Maintenance</strong> is required to ensure optimal performance and reliability of the cluster system.</li>
+                <li><strong>Scalability</strong> requires attention to network topology, storage, schedulers, and application communication patterns.</li>
+                <li><strong>Cost and power</strong> grow with node count, networking, cooling, and storage.</li>
+                <li><strong>Reliability and maintenance</strong> require monitoring, replacement, software deployment, and failure recovery.</li>
+                <li><strong>Load imbalance</strong> can leave expensive nodes idle while other nodes remain busy.</li>
             </ul>
             <h4 id="comparison-of-distributed-and-cluster-computing">Comparison of Distributed and Cluster Computing</h4>
             <p>
@@ -480,19 +544,34 @@
                     <td><strong>Cluster Computing</strong></td>
                 </tr>
                 <tr>
-                    <td><strong>Infrastructure</strong></td>
-                    <td>Nodes can be geographically dispersed and connected over the internet.</td>
-                    <td>Nodes are usually in close physical proximity, connected via a high-speed local network.</td>
+                    <td><strong>Scope</strong></td>
+                    <td>Broad category covering independent networked machines that cooperate.</td>
+                    <td>A more tightly managed form of distributed computing, usually within one organization or facility.</td>
+                </tr>
+                <tr>
+                    <td><strong>Network</strong></td>
+                    <td>May span datacenters or the public internet; latency can be high or variable.</td>
+                    <td>Usually uses a local, relatively high-speed network.</td>
                 </tr>
                 <tr>
                     <td><strong>Management</strong></td>
-                    <td>Decentralized management with no single point of control.</td>
-                    <td>Centralized management with a head node overseeing the cluster operations.</td>
+                    <td>Can be centralized, decentralized, or hierarchical.</td>
+                    <td>Usually coordinated by shared management and scheduling infrastructure.</td>
                 </tr>
                 <tr>
-                    <td><strong>Use Cases</strong></td>
-                    <td>Suitable for tasks that require diverse resources and can tolerate higher latency (e.g., collaborative research projects, global computing networks).</td>
-                    <td>Ideal for tasks needing intensive computation and low-latency communication (e.g., scientific simulations, data analysis).</td>
+                    <td><strong>Hardware</strong></td>
+                    <td>Often heterogeneous and geographically dispersed.</td>
+                    <td>Often more uniform, though heterogeneous CPU/GPU clusters are common.</td>
+                </tr>
+                <tr>
+                    <td><strong>Failure model</strong></td>
+                    <td>Partial failures and network partitions are normal design concerns.</td>
+                    <td>Node failures still occur, but networking and administration are usually more controlled.</td>
+                </tr>
+                <tr>
+                    <td><strong>Typical use cases</strong></td>
+                    <td>Cloud services, distributed databases, global systems, volunteer computing.</td>
+                    <td>HPC simulations, batch analytics, AI training, and tightly coupled parallel jobs.</td>
                 </tr>
             </table>
             </p>

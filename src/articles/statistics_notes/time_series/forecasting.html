@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: a forecast and its uncertainty</title>
+    <meta content="A time-series forecast is a conditional statement about a future observation given the information available at a specific forecast origin." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: a forecast and its uncertainty",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting",
+            "description": "A time-series forecast is a conditional statement about a future observation given the information available at a specific forecast origin.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-a-forecast-and-its-uncertainty">Worked calculation: a forecast and its uncertainty</a>
+                        <ol>
+                            <li><a href="#components-of-a-time-series">Components of a Time Series</a></li>
+                            <li><a href="#forecasting-methods">Forecasting Methods</a>
+                                <ol>
+                                    <li><a href="#naive-forecast">Naive Forecast</a></li>
+                                    <li><a href="#simple-exponential-smoothing-ses-">Simple Exponential Smoothing (SES)</a></li>
+                                    <li><a href="#holt-s-linear-trend-method-double-exponential-smoothing-">Holt’s Linear Trend Method (Double Exponential Smoothing)</a></li>
+                                    <li><a href="#holt-winters-seasonal-method-triple-exponential-smoothing-">Holt-Winters Seasonal Method (Triple Exponential Smoothing)</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#linear-prediction-for-stationary-series">Linear Prediction for Stationary Series</a></li>
+                            <li><a href="#arar-algorithm">ARAR Algorithm</a></li>
+                            <li><a href="#machine-learning-for-time-series-forecasting">Machine Learning for Time Series Forecasting</a>
+                                <ol>
+                                    <li><a href="#key-challenges-in-time-series-forecasting">Key Challenges in Time Series Forecasting</a></li>
+                                    <li><a href="#supervised-learning-approach-for-time-series">Supervised Learning Approach for Time Series</a></li>
+                                    <li><a href="#machine-learning-models-for-time-series-forecasting">Machine Learning Models for Time Series Forecasting</a></li>
+                                    <li><a href="#advanced-neural-network-models-for-time-series">Advanced Neural Network Models for Time Series</a></li>
+                                    <li><a href="#hybrid-models">Hybrid Models</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#comparison-of-various-models">Comparison of Various Models</a></li>
+                            <li><a href="#model-evaluation">Model Evaluation</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-construct-communicate-and-test-a-forecast">Student guide: construct, communicate, and test a forecast</a>
+                        <ol>
+                            <li><a href="#baselines-first">Baselines first</a></li>
+                            <li><a href="#simple-exponential-smoothing">Simple exponential smoothing</a></li>
+                            <li><a href="#holt-trend-and-seasonal-extensions">Holt trend and seasonal extensions</a></li>
+                            <li><a href="#ar-forecast-example">AR forecast example</a></li>
+                            <li><a href="#forecast-transformations">Forecast transformations</a></li>
+                            <li><a href="#forecast-combination">Forecast combination</a></li>
+                            <li><a href="#forecast-uncertainty">Forecast uncertainty</a></li>
+                            <li><a href="#communication">Communication</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Forecasting with Time Series</header>
+            <p>A time-series forecast is a conditional statement about a future observation given the information available at a specific forecast origin. The horizon, target functional, and information set are part of the forecast itself, so a point prediction without its timing and uncertainty is an incomplete description.</p>
+            <p>Forecasting methods differ in the assumptions they make about persistence, trend, seasonality, nonlinear structure, and future predictors. Useful methods are therefore compared chronologically against simple baselines and judged not only by point accuracy but also by uncertainty calibration, stability across horizons, and whether the required information would actually be available in deployment.</p>
+            <h2 id="worked-calculation-a-forecast-and-its-uncertainty">Worked calculation: a forecast and its uncertainty</h2>
+            <p>For a centered AR(1),</p>
+            <p>$$
+                X_t=0.8X_{t-1}+\varepsilon_t,
+                \qquad
+                \mathrm{Var}(\varepsilon_t)=1,
+                $$</p>
+            <p>if the latest observation is $X_T=5$, then</p>
+            <p>$$
+                \hat X_{T+1|T}=0.8(5)=4,
+                \qquad
+                \hat X_{T+5|T}=0.8^5(5)=1.6384.
+                $$</p>
+            <p>The $h$-step forecast-error variance is</p>
+            <p>$$
+                \mathrm{Var}(X_{T+h}-\hat X_{T+h|T})
+                =\sum_{j=0}^{h-1}0.8^{2j}.
+                $$</p>
+            <p>At $h=2$,</p>
+            <p>$$
+                \mathrm{Var}(e_{T+2})=1+0.8^2=1.64,
+                $$</p>
+            <p>so an approximate Gaussian 95% prediction interval around the two-step forecast uses</p>
+            <p>$$
+                3.2\pm1.96\sqrt{1.64}.
+                $$</p>
+            <p>The point forecast moves toward the long-run mean, while the uncertainty increases with horizon.</p>
+            <p><img alt="Forecast paths and expanding prediction intervals" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/14_forecasting_intervals.png" /></p>
+            <p>The figure shows both parts of a forecast. The central path gives the conditional mean, while the widening interval reflects uncertainty from future shocks that have not yet been observed.</p>
+            <p>Time-series forecasting predicts future observations using information available at a specified forecast origin. A forecast is therefore not only a model output; it is a conditional statement tied to a horizon, an information set, and an uncertainty estimate.</p>
+            <h3 id="components-of-a-time-series">Components of a Time Series</h3>
+            <p>Forecasting methods differ in how they represent trend, seasonality, cycles, and irregular variation. Identifying these structures first helps determine which model class and baseline are appropriate.</p>
+            <p><strong>Trend</strong> is a persistent long-run movement in level or slope.</p>
+            <p><img alt="output(3)" src="https://github.com/user-attachments/assets/e13025a4-6bef-42ed-965e-4ddb3c2145b0" /></p>
+            <p>The trend figure shows a systematic change in the level. A level-only forecasting method will lag behind such movement unless a trend component or transformation is included.</p>
+            <p><strong>Seasonality</strong> is a pattern that repeats at a fixed period such as day of week, month of year, or quarter.</p>
+            <p><img alt="output(4)" src="https://github.com/user-attachments/assets/13340698-294d-41a9-ab0f-95e7e1b9bb82" /></p>
+            <p>The repeated spacing of peaks and troughs suggests a seasonal model or seasonal baseline rather than an ordinary non-seasonal trend model.</p>
+            <p><strong>Cycles</strong> are oscillations whose duration is not tied to one fixed seasonal period.</p>
+            <p><img alt="output(7)" src="https://github.com/user-attachments/assets/92f432e5-92af-42fa-bf1e-4bf8c39bd8fc" /></p>
+            <p>Because cycle length can vary, long-range cyclic behavior is usually harder to extrapolate reliably than fixed calendar seasonality.</p>
+            <p>The <strong>irregular component</strong> is the variation not explained by the chosen systematic structure.</p>
+            <p><img alt="output(6)" src="https://github.com/user-attachments/assets/a96bd328-82b5-4e39-9cba-f008dbaf57dc" /></p>
+            <p>A remainder should be checked rather than assumed to be random. Residual autocorrelation, changing variance, or heavy tails indicate structure that the forecasting model has not yet captured.</p>
+            <h3 id="forecasting-methods">Forecasting Methods</h3>
+            <p>Forecasting methods encode different assumptions about persistence, level, trend, seasonality, and nonlinear dependence. Start with a simple baseline, then add complexity only when it improves future-like predictions or provides necessary probabilistic structure.</p>
+            <h4 id="naive-forecast">Naive Forecast</h4>
+            <p>The naive forecast assumes that the latest observed level persists:</p>
+            <p>$$
+                \hat y_{t+h|t}=y_t.
+                $$</p>
+            <p>For one step ahead this is simply</p>
+            <p>$$
+                \hat y_{t+1|t}=y_t.
+                $$</p>
+            <p>It is a strong baseline for persistent non-seasonal series and is the optimal conditional-mean forecast for a zero-drift random walk.</p>
+            <p><img alt="Baseline forecasts" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/01_baseline_forecasts.png" /></p>
+            <p>The figure compares several simple rules. Naive, seasonal-naive, mean, and drift forecasts correspond to different assumptions about what persists into the future, so the benchmark should match the basic structure of the series.</p>
+            <h4 id="simple-exponential-smoothing-ses-">Simple Exponential Smoothing (SES)</h4>
+            <p><strong>Simple Exponential Smoothing (SES)</strong> is designed for a series with an evolving level but no explicit trend or seasonal component. The level update can be written as</p>
+            <p>$$
+                \ell_t=\alpha x_t+(1-\alpha)\ell_{t-1},
+                \qquad 0&lt;\alpha\le1,
+                $$</p>
+            <p>and the level-only forecast is</p>
+            <p>$$
+                \hat x_{t+h|t}=\ell_t.
+                $$</p>
+            <p>A larger $\alpha$ reacts more strongly to the newest observation, while a smaller $\alpha$ produces a smoother level estimate with longer memory.</p>
+            <p>Repeated substitution gives</p>
+            <p>$$
+                \ell_t
+                =\alpha x_t
+                +\alpha(1-\alpha)x_{t-1}
+                +\alpha(1-\alpha)^2x_{t-2}
+                +\cdots,
+                $$</p>
+            <p>up to the contribution from the initial state. The observation weights decay geometrically.</p>
+            <p><img alt="Exponential smoothing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/06_exponential_smoothing.png" /></p>
+            <p>The figure shows how the smoothed level reacts to new observations. Higher responsiveness follows recent movements more closely but can also chase short-lived noise.</p>
+            <h5>Initial Condition</h5>
+            <p>A simple initialization is</p>
+            <p>$$
+                \ell_1=x_1.
+                $$</p>
+            <p>Another option is to estimate the initial level jointly with $\alpha$ or use an average of early observations. Initialization matters most in short series and when $\alpha$ is small.</p>
+            <h5>Forecast Error</h5>
+            <p>The one-step forecast error is</p>
+            <p>$$
+                e_t=x_t-\hat x_{t|t-1}.
+                $$</p>
+            <p>These errors can be used to choose the smoothing parameter and to diagnose whether a level-only model is adequate.</p>
+            <h5>Sum of Squared Errors (SSE)</h5>
+            <p>One fitting criterion is</p>
+            <p>$$
+                \mathrm{SSE}(\alpha)=\sum_t(x_t-\hat x_{t|t-1})^2.
+                $$</p>
+            <p>A value of $\alpha$ can be selected by minimizing this criterion, although state-space formulations often estimate smoothing parameters and initial states jointly by likelihood.</p>
+            <h5>Choosing the Optimal Smoothing Parameter</h5>
+            <p>A value of $\alpha$ close to 1 gives most weight to recent data and adapts quickly. A value close to 0 changes slowly and averages information over a longer effective history.</p>
+            <p>Choose $\alpha$ from a fitting criterion or temporal validation rather than from visual smoothness alone. A smoother-looking fitted line is not necessarily a better forecast.</p>
+            <h5>Recursive Form of SES</h5>
+            <p>The recursive update</p>
+            <p>$$
+                \ell_t=\alpha x_t+(1-\alpha)\ell_{t-1}
+                $$</p>
+            <p>requires only the previous state and the newest observation. This makes SES computationally efficient and naturally suited to sequential updating.</p>
+            <h4 id="holt-s-linear-trend-method-double-exponential-smoothing-">Holt’s Linear Trend Method (Double Exponential Smoothing)</h4>
+            <p>Holt's method adds a trend state to the evolving level. One common additive formulation is</p>
+            <p>$$
+                \ell_t=\alpha x_t+(1-\alpha)(\ell_{t-1}+b_{t-1}),
+                $$</p>
+            <p>$$
+                b_t=\beta(\ell_t-\ell_{t-1})+(1-\beta)b_{t-1},
+                $$</p>
+            <p>with forecast</p>
+            <p>$$
+                \hat x_{t+h|t}=\ell_t+hb_t.
+                $$</p>
+            <p>The level state estimates the current baseline, while $b_t$ estimates the local slope. Initial values can be set from the first observations or estimated jointly with the smoothing parameters.</p>
+            <p>A damped-trend variant can be useful when indefinitely extrapolating the current slope is unrealistic.</p>
+            <h4 id="holt-winters-seasonal-method-triple-exponential-smoothing-">Holt-Winters Seasonal Method (Triple Exponential Smoothing)</h4>
+            <p>Holt-Winters extends the level and trend states with a seasonal state of period $L$. Additive seasonality is appropriate when seasonal swings are roughly constant in absolute size; multiplicative seasonality is appropriate when they scale with the level.</p>
+            <h5>Additive Model</h5>
+            <p>A common additive formulation is</p>
+            <p>$$
+                \ell_t
+                =\alpha(x_t-s_{t-L})
+                +(1-\alpha)(\ell_{t-1}+b_{t-1}),
+                $$</p>
+            <p>$$
+                b_t
+                =\beta(\ell_t-\ell_{t-1})
+                +(1-\beta)b_{t-1},
+                $$</p>
+            <p>$$
+                s_t
+                =\gamma(x_t-\ell_t)
+                +(1-\gamma)s_{t-L}.
+                $$</p>
+            <p>The $h$-step forecast is</p>
+            <p>$$
+                \hat x_{t+h|t}
+                =\ell_t+hb_t+s_{t+h-L\lceil h/L\rceil}.
+                $$</p>
+            <p>The seasonal index selects the most recent state for the corresponding future season.</p>
+            <h5>Multiplicative Model</h5>
+            <p>A common multiplicative formulation is</p>
+            <p>$$
+                \ell_t
+                =\alpha\frac{x_t}{s_{t-L}}
+                +(1-\alpha)(\ell_{t-1}+b_{t-1}),
+                $$</p>
+            <p>$$
+                b_t
+                =\beta(\ell_t-\ell_{t-1})
+                +(1-\beta)b_{t-1},
+                $$</p>
+            <p>$$
+                s_t
+                =\gamma\frac{x_t}{\ell_t}
+                +(1-\gamma)s_{t-L},
+                $$</p>
+            <p>with forecast</p>
+            <p>$$
+                \hat x_{t+h|t}
+                =(\ell_t+hb_t)s_{t+h-L\lceil h/L\rceil}.
+                $$</p>
+            <p>For additive seasonality, initial seasonal states are commonly centered to sum to zero. For multiplicative seasonality, they are commonly scaled to average 1. The exact initialization and state equations vary across software and ETS formulations, so reproduce the parameterization when comparing results.</p>
+            <h3 id="linear-prediction-for-stationary-series">Linear Prediction for Stationary Series</h3>
+            <p>For a weakly stationary series with mean $\mu$, a linear predictor of $X_{n+h}$ based on $X_n,\ldots,X_1$ can be written as</p>
+            <p>$$
+                \hat X_{n+h}
+                =\mu+\sum_{i=1}^{n}a_i(X_{n+1-i}-\mu).
+                $$</p>
+            <p>The coefficient vector solves the covariance system</p>
+            <p>$$
+                \Gamma_na=\gamma_n(h),
+                $$</p>
+            <p>where $\Gamma_n$ is the Toeplitz covariance matrix of the predictors and $\gamma_n(h)$ is the covariance vector between the target and those predictors.</p>
+            <p>The corresponding linear-prediction mean squared error is</p>
+            <p>$$
+                \mathrm{MSE}
+                =\gamma(0)-a^\top\gamma_n(h).
+                $$</p>
+            <p>For a stationary Gaussian series and one predictor $X_n$,</p>
+            <p>$$
+                E(X_{n+h}\mid X_n)
+                =\mu+\rho(h)(X_n-\mu).
+                $$</p>
+            <p>For a centered AR(1), this reduces to</p>
+            <p>$$
+                \hat X_{n+h|n}=\phi^hX_n.
+                $$</p>
+            <p>Algorithms such as Durbin-Levinson and the innovations algorithm exploit Toeplitz and innovations structure to compute predictors efficiently.</p>
+            <h3 id="arar-algorithm">ARAR Algorithm</h3>
+            <p>The <strong>ARAR algorithm</strong> uses an autoregressive prefilter to shorten strong persistence before fitting a lower-order dynamic model. A typical sequence is to filter the persistent series, fit an AR-type or ARMA-type model on the filtered representation, forecast there, and then invert the filter.</p>
+            <p>The method is useful as a historical forecasting approach for strongly persistent series. As with any transformation, the inverse step and forecast uncertainty must be carried back to the original scale consistently.</p>
+            <h3 id="machine-learning-for-time-series-forecasting">Machine Learning for Time Series Forecasting</h3>
+            <p>Machine-learning methods can be useful when nonlinear interactions, many predictors, or large collections of related series are available. They are not inherently more accurate than statistical time-series models; performance depends on data volume, signal structure, feature availability, horizon, and the validation design.</p>
+            <p>The most important adaptation is to preserve the time information. Lag features, rolling summaries, calendar variables, and exogenous predictors must be constructed using only information that would have been available at each forecast origin.</p>
+            <h4 id="key-challenges-in-time-series-forecasting">Key Challenges in Time Series Forecasting</h4>
+            <p>Machine-learning forecasting must handle temporal dependence, evolving distributions, seasonality and trend, multi-step prediction, and the possibility of leakage through feature construction or preprocessing.</p>
+            <p>Many generic ML algorithms do not contain a built-in concept of time. The time-series structure enters through the feature design, target construction, recursive/direct forecasting strategy, and chronological evaluation.</p>
+            <h4 id="supervised-learning-approach-for-time-series">Supervised Learning Approach for Time Series</h4>
+            <p>A forecasting problem can be converted into supervised rows. To predict $y_t$, features might include</p>
+            <p>$$
+                y_{t-1},y_{t-2},\ldots,
+                $$</p>
+            <p>along with lagged external variables, calendar indicators, and trailing-window summaries.</p>
+            <h5>Data Preparation (Feature Engineering for Time Series)</h5>
+            <p>Useful features include lagged values, trailing-window means or variances, calendar variables, known future events, and external predictors. All rolling features should be trailing or otherwise explicitly past-only in a real-time forecast.</p>
+            <p>The target horizon must also be explicit. A feature table for one-step forecasting is not automatically valid for forecasting 12 steps ahead.</p>
+            <h4 id="machine-learning-models-for-time-series-forecasting">Machine Learning Models for Time Series Forecasting</h4>
+            <p>Tree ensembles, boosting models, support-vector regression, and feed-forward neural networks can all be applied after the forecasting problem has been transformed into a supervised dataset.</p>
+            <p>A random forest, for example, can learn nonlinear interactions among lagged values and external predictors. It does not natively propagate its own predictions through future time steps, so multi-step forecasts require a direct, recursive, or multi-output strategy.</p>
+            <div>
+                <pre><code class="language-python">from sklearn.ensemble import RandomForestRegressor
+
+# 'data' contains a time-ordered target column named 'value'.
+data['lag1'] = data['value'].shift(1)
+data['lag2'] = data['value'].shift(2)
+data = data.dropna()
+
+# Chronological split.
+train_size = int(len(data) * 0.8)
+train = data.iloc[:train_size]
+test = data.iloc[train_size:]
+
+X_train = train[['lag1', 'lag2']]
+y_train = train['value']
+X_test = test[['lag1', 'lag2']]
+
+rf_model = RandomForestRegressor(n_estimators=100)
+rf_model.fit(X_train, y_train)
+predictions = rf_model.predict(X_test)</code></pre>
+            </div>
+            <p>The chronological split avoids shuffling future rows into training, but a robust evaluation should usually repeat the experiment over several forecast origins rather than rely on one split.</p>
+            <h5>Gradient Boosting Machines (GBM, XGBoost, LightGBM, CatBoost)</h5>
+            <p>Gradient boosting builds trees sequentially so that later trees reduce errors left by earlier ones. It can model nonlinear interactions in structured lag-feature datasets and often performs well when there are many informative covariates.</p>
+            <p>The flexibility requires tuning and regularization. Tree-based boosting models also extrapolate poorly beyond feature-response patterns represented in the training data, so strong unmodeled trend can be a problem.</p>
+            <div>
+                <pre><code class="language-python">import xgboost as xgb
+
+xgb_model = xgb.XGBRegressor(
+    n_estimators=100,
+    max_depth=3,
+    learning_rate=0.1,
+)
+xgb_model.fit(X_train, y_train)
+predictions = xgb_model.predict(X_test)</code></pre>
+            </div>
+            <h5>Support Vector Machines (SVM)</h5>
+            <p>Support Vector Regression (SVR) can learn nonlinear relationships through kernels such as the radial basis function. It is sensitive to feature scaling and can become computationally expensive as the training sample grows.</p>
+            <div>
+                <pre><code class="language-python">from sklearn.svm import SVR
+
+svr_model = SVR(kernel='rbf', C=100, gamma=0.1)
+svr_model.fit(X_train, y_train)
+predictions = svr_model.predict(X_test)</code></pre>
+            </div>
+            <h5>Artificial Neural Networks (ANN)</h5>
+            <p>A feed-forward neural network can map lagged and external features to future targets. Its flexibility can capture nonlinear relationships, but it also increases data requirements and overfitting risk.</p>
+            <div>
+                <pre><code class="language-python">from sklearn.neural_network import MLPRegressor
+
+mlp_model = MLPRegressor(
+    hidden_layer_sizes=(100,),
+    activation='relu',
+    solver='adam',
+    max_iter=1000,
+)
+mlp_model.fit(X_train, y_train)
+predictions = mlp_model.predict(X_test)</code></pre>
+            </div>
+            <h4 id="advanced-neural-network-models-for-time-series">Advanced Neural Network Models for Time Series</h4>
+            <p>Recurrent architectures process sequences directly and maintain an evolving hidden state. They can represent temporal patterns without manually flattening every lag into a separate feature, although sequence length, training stability, and data volume still matter.</p>
+            <h5>Recurrent Neural Networks (RNNs)</h5>
+            <p>A simple RNN passes a hidden state from one time step to the next. Standard RNNs can struggle with long dependencies because gradients may vanish or explode.</p>
+            <div>
+                <pre><code class="language-python">import tensorflow as tf
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.SimpleRNN(
+        50,
+        activation='relu',
+        input_shape=(n_timesteps, n_features),
+    ),
+    tf.keras.layers.Dense(1),
+])
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, y_train, epochs=50, batch_size=32)</code></pre>
+            </div>
+            <h5>Long Short-Term Memory (LSTM)</h5>
+            <p>LSTMs introduce gated memory cells that improve gradient flow over longer sequences. They can model nonlinear temporal patterns, but they require careful regularization, scaling, architecture selection, and chronological evaluation.</p>
+            <div>
+                <pre><code class="language-python">import tensorflow as tf
+
+X_train_reshaped = X_train.values.reshape(
+    (X_train.shape[0], X_train.shape[1], 1)
+)
+X_test_reshaped = X_test.values.reshape(
+    (X_test.shape[0], X_test.shape[1], 1)
+)
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.LSTM(
+        50,
+        activation='relu',
+        input_shape=(X_train_reshaped.shape[1], X_train_reshaped.shape[2]),
+    ),
+    tf.keras.layers.Dense(1),
+])
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train_reshaped, y_train, epochs=100, batch_size=32)
+predictions = model.predict(X_test_reshaped)</code></pre>
+            </div>
+            <h5>Gated Recurrent Units (GRU)</h5>
+            <p>GRUs use a simpler gating structure than LSTMs and can provide similar performance with fewer parameters in some problems. Neither architecture is universally preferable; the comparison should be made on chronological validation data.</p>
+            <div>
+                <pre><code class="language-python">import tensorflow as tf
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.GRU(
+        50,
+        activation='relu',
+        input_shape=(n_timesteps, n_features),
+    ),
+    tf.keras.layers.Dense(1),
+])
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, y_train, epochs=50, batch_size=32)</code></pre>
+            </div>
+            <h4 id="hybrid-models">Hybrid Models</h4>
+            <p>Hybrid approaches combine models that capture different structures. For example, an ARIMA model can describe linear short-memory dynamics while a nonlinear model is fit to residual structure. Boosting and recurrent models can also be combined, but extra stages increase the risk of leakage and overfitting.</p>
+            <p>Each stage should be trained inside the same historical information boundary, and the hybrid should be compared with its simpler components on identical forecast origins.</p>
+            <h3 id="comparison-of-various-models">Comparison of Various Models</h3>
+            <p>The table below summarizes common forecasting families. The descriptions are broad; implementations within each family differ substantially.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Algorithm Name</td>
+                    <td>Description</td>
+                    <td>Strengths</td>
+                    <td>Limitations</td>
+                    <td>Local vs. global use</td>
+                </tr>
+                <tr>
+                    <td><strong>ARIMA</strong></td>
+                    <td>Models a differenced univariate series with AR and MA terms.</td>
+                    <td>Interpretable linear dynamics; strong baseline for many short-memory series.</td>
+                    <td>Requires careful transformation/order selection; structural breaks and nonlinearities can reduce performance.</td>
+                    <td>Usually fit locally to one series, though parameters can be shared in larger frameworks.</td>
+                </tr>
+                <tr>
+                    <td><strong>Prophet</strong></td>
+                    <td>Additive regression-style model with trend, seasonal Fourier terms, and optional events/holidays.</td>
+                    <td>Convenient handling of calendar effects and changing trend; interpretable components.</td>
+                    <td>Assumptions may be too rigid for strongly autoregressive or irregular dynamics; still requires validation and tuning.</td>
+                    <td>Commonly local, though repeated fitting across many series is possible.</td>
+                </tr>
+                <tr>
+                    <td><strong>LSTM</strong></td>
+                    <td>Gated recurrent neural network for sequential inputs.</td>
+                    <td>Flexible nonlinear sequence representation.</td>
+                    <td>Data- and compute-intensive; many tuning choices; can overfit small datasets.</td>
+                    <td>Can be local or global.</td>
+                </tr>
+                <tr>
+                    <td><strong>Holt-Winters Method</strong></td>
+                    <td>Exponential smoothing with level, trend, and seasonal states.</td>
+                    <td>Simple recursive updates; effective for stable trend and seasonal patterns.</td>
+                    <td>Fixed seasonal structure and trend extrapolation can fail after regime changes.</td>
+                    <td>Usually local.</td>
+                </tr>
+                <tr>
+                    <td><strong>SARIMA</strong></td>
+                    <td>ARIMA with seasonal AR, MA, and differencing terms.</td>
+                    <td>Explicit seasonal lag structure; interpretable linear model.</td>
+                    <td>Order selection can be difficult; multiple seasonalities require extensions.</td>
+                    <td>Usually local.</td>
+                </tr>
+                <tr>
+                    <td><strong>Exponential Smoothing / ETS</strong></td>
+                    <td>State-space family with level, trend, seasonal, and error choices.</td>
+                    <td>Fast, interpretable, and strong for many structured univariate series.</td>
+                    <td>Limited when important nonlinear/exogenous relationships are omitted.</td>
+                    <td>Usually local.</td>
+                </tr>
+                <tr>
+                    <td><strong>Random Forest</strong></td>
+                    <td>Ensemble of decision trees applied to lag and external features.</td>
+                    <td>Nonlinear interactions; little distributional structure required.</td>
+                    <td>Poor extrapolation; multi-step forecasting requires an explicit strategy; feature construction can leak future information.</td>
+                    <td>Can be local or global.</td>
+                </tr>
+                <tr>
+                    <td><strong>XGBoost / GBM</strong></td>
+                    <td>Sequential boosted trees applied to engineered features.</td>
+                    <td>Strong predictive performance on structured covariate-rich data; regularization available.</td>
+                    <td>Tuning and feature engineering matter; poor extrapolation beyond learned tree partitions.</td>
+                    <td>Can be local or global.</td>
+                </tr>
+            </table>
+            </p>
+            <p>No row is universally best. The relevant comparison is performance, calibration, complexity, and interpretability on the deployment-like forecast experiment.</p>
+            <h3 id="model-evaluation">Model Evaluation</h3>
+            <p>Forecast accuracy must be evaluated out of sample with temporal order preserved. Point-forecast metrics summarize different loss functions:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Metric</td>
+                    <td>Formula</td>
+                    <td>Interpretation</td>
+                </tr>
+                <tr>
+                    <td><strong>MAE</strong></td>
+                    <td>$\mathrm{MAE}=\frac{1}{n}\sum_{t=1}^{n}</td>
+                    <td>y_t-\hat y_t</td>
+                    <td>$</td>
+                    <td>Average absolute error in the response units.</td>
+                </tr>
+                <tr>
+                    <td><strong>MSE</strong></td>
+                    <td>$\mathrm{MSE}=\frac{1}{n}\sum_{t=1}^{n}(y_t-\hat y_t)^2$</td>
+                    <td>Squared-error loss; gives large misses more influence.</td>
+                </tr>
+                <tr>
+                    <td><strong>RMSE</strong></td>
+                    <td>$\mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{t=1}^{n}(y_t-\hat y_t)^2}$</td>
+                    <td>Square-root of MSE, returned to response units.</td>
+                </tr>
+                <tr>
+                    <td><strong>MAPE</strong></td>
+                    <td>$\mathrm{MAPE}=\frac{100}{n}\sum_{t=1}^{n}\left</td>
+                    <td>\frac{y_t-\hat y_t}{y_t}\right</td>
+                    <td>$</td>
+                    <td>Percentage error; undefined at zero and unstable near zero.</td>
+                </tr>
+                <tr>
+                    <td><strong>sMAPE</strong></td>
+                    <td>$\mathrm{sMAPE}=\frac{100}{n}\sum_{t=1}^{n}\frac{</td>
+                    <td>y_t-\hat y_t</td>
+                    <td>}{(</td>
+                    <td>y_t</td>
+                    <td>+</td>
+                    <td>\hat y_t</td>
+                    <td>)/2}$</td>
+                    <td>Symmetric scaling, but still problematic when both actual and forecast are near zero.</td>
+                </tr>
+            </table>
+            </p>
+            <p>AIC and BIC are not forecast-error metrics. They compare likelihood-based candidate models fitted to the same response data:</p>
+            <p>$$
+                \mathrm{AIC}=2k-2\log L,
+                $$</p>
+            <p>$$
+                \mathrm{BIC}=k\log n-2\log L.
+                $$</p>
+            <p>Residual tests such as Ljung-Box are diagnostics rather than accuracy scores. They assess whether a fitted model has left linear autocorrelation unexplained.</p>
+            <p><img alt="Forecast errors by horizon" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/forecasting/05_error_by_horizon.png" /></p>
+            <p>The horizon plot shows why a single average metric can be misleading. A method that is strongest one step ahead may lose its advantage at longer horizons, so evaluation should match the operational forecast horizon.</p>
+            <h2 id="student-guide-construct-communicate-and-test-a-forecast">Student guide: construct, communicate, and test a forecast</h2>
+            <p>A forecast is a conditional statement. Under squared-error loss,</p>
+            <p>$$
+                \hat y_{T+h|T}=E(y_{T+h}\mid\mathcal F_T).
+                $$</p>
+            <p>The conditioning set $\mathcal F_T$ is as important as the model family. A forecast that uses a realized future predictor answers a different question from one that uses only information available in deployment.</p>
+            <h3 id="baselines-first">Baselines first</h3>
+            <p>For a level series, the naive forecast is</p>
+            <p>$$
+                \hat y_{T+h|T}=y_T.
+                $$</p>
+            <p>For seasonal period $s$, the seasonal-naive rule reuses the latest observation from the same season. A drift forecast extrapolates the historical average change. Report at least one appropriate baseline before presenting ARIMA, state-space, or machine-learning results.</p>
+            <h3 id="simple-exponential-smoothing">Simple exponential smoothing</h3>
+            <p>For a roughly level series,</p>
+            <p>$$
+                \ell_t=\alpha y_t+(1-\alpha)\ell_{t-1},
+                \qquad
+                \hat y_{t+h|t}=\ell_t.
+                $$</p>
+            <p>If $\ell_{t-1}=100$, $y_t=110$, and $\alpha=0.3$,</p>
+            <p>$$
+                \ell_t=0.3(110)+0.7(100)=103.
+                $$</p>
+            <p>Under the level-only model, the forecast is 103 for every future horizon. Increasing $\alpha$ makes the level respond faster to recent observations but can also make it more sensitive to noise.</p>
+            <h3 id="holt-trend-and-seasonal-extensions">Holt trend and seasonal extensions</h3>
+            <p>Holt's linear trend keeps a level and slope:</p>
+            <p>$$
+                \ell_t=\alpha y_t+(1-\alpha)(\ell_{t-1}+b_{t-1}),
+                $$</p>
+            <p>$$
+                b_t=\beta(\ell_t-\ell_{t-1})+(1-\beta)b_{t-1},
+                $$</p>
+            <p>with</p>
+            <p>$$
+                \hat y_{t+h|t}=\ell_t+hb_t.
+                $$</p>
+            <p>Holt-Winters adds a seasonal state. The additive version keeps seasonal amplitude in the response units; the multiplicative version lets it scale with the level.</p>
+            <h3 id="ar-forecast-example">AR forecast example</h3>
+            <p>For</p>
+            <p>$$
+                y_t=0.8y_{t-1}+\varepsilon_t,
+                \qquad y_T=5,
+                $$</p>
+            <p>the one-step and five-step forecasts are</p>
+            <p>$$
+                \hat y_{T+1|T}=4,
+                \qquad
+                \hat y_{T+5|T}=0.8^5(5)=1.6384.
+                $$</p>
+            <p>With innovation variance 1, the two-step forecast-error variance is</p>
+            <p>$$
+                1+0.8^2=1.64.
+                $$</p>
+            <p>An approximate 95% Gaussian interval around the two-step mean $3.2$ is</p>
+            <p>$$
+                3.2\pm1.96\sqrt{1.64}.
+                $$</p>
+            <p>The point forecast shrinks toward the mean while uncertainty increases.</p>
+            <h3 id="forecast-transformations">Forecast transformations</h3>
+            <p>If a model forecasts $\log y_t$, then</p>
+            <p>$$
+                \exp(E[\log y_t\mid\mathcal F_T])
+                $$</p>
+            <p>is generally not the conditional mean of $y_t$. Jensen's inequality gives</p>
+            <p>$$
+                E[\exp(Z)]\ne\exp(E[Z]).
+                $$</p>
+            <p>Under a lognormal assumption, exponentiating the log-scale conditional mean gives the median on the original scale. A mean forecast requires an appropriate bias adjustment. State whether reported point forecasts and intervals target the mean, median, or another functional.</p>
+            <h3 id="forecast-combination">Forecast combination</h3>
+            <p>Two forecasts can be combined as</p>
+            <p>$$
+                \hat y=w\hat y^{(1)}+(1-w)\hat y^{(2)}.
+                $$</p>
+            <p>A combination can improve accuracy when the component errors contain complementary information. Choose the weight using training or validation origins, not the final test period.</p>
+            <h3 id="forecast-uncertainty">Forecast uncertainty</h3>
+            <p>Forecast uncertainty can come from future shocks, parameter estimation, future predictor values, transformation bias, model uncertainty, and regime changes. Classical model intervals may include only a subset of these sources.</p>
+            <p><img alt="Forecast paths and expanding prediction intervals" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/14_forecasting_intervals.png" /></p>
+            <p>The widening intervals reinforce the distinction between point prediction and uncertainty. Evaluate empirical coverage and width on temporal backtests, and state which uncertainty sources the interval construction includes.</p>
+            <h3 id="communication">Communication</h3>
+            <p>A useful forecast report includes:</p>
+            <ol>
+                <li>forecast origin and timestamp;</li>
+                <li>horizon and units;</li>
+                <li>point forecast and target functional;</li>
+                <li>interval level and construction;</li>
+                <li>baseline comparison;</li>
+                <li>recent error history;</li>
+                <li>known future events or predictor assumptions;</li>
+                <li>limitations and update schedule.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

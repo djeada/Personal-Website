@@ -217,14 +217,14 @@ class HtmlEnhancer:
     @staticmethod
     def handle_code_blocks(html: str) -> str:
 
-        regex = r"<code>((?:(?!<code>|</code>).)+\n(?:(?!<code>|</code>).)+)</code>"
-        matches = re.finditer(regex, html, re.DOTALL)
-        for match in matches:
-
-            content = match.group().replace("<code>", "").replace("</code>", "")
-
-            html = html.replace(match.group(), f"```{content}```")
-        return html
+        soup = BeautifulSoup(html, "html.parser")
+        for code in soup.find_all("code"):
+            if code.find_parent("pre") is not None:
+                code.attrs.setdefault("class", ["language-none"])
+            elif "\n" in code.get_text():
+                code.wrap(soup.new_tag("pre"))
+                code.attrs.setdefault("class", ["language-none"])
+        return str(soup)
 
     @classmethod
     def correct_math_blocks(cls, html: str) -> str:
@@ -248,10 +248,6 @@ class HtmlEnhancer:
     @classmethod
     def apply_prism_for_code_samples(cls, html: str) -> str:
         pattern = re.compile(
-            # Fence metadata is confined to the opening fence's line.  Using
-            # ``\s`` here used to cross the newline after a bare fence, so a
-            # first code line such as ``+------+`` was mistaken for a Prism
-            # language and disappeared from the rendered block.
             r"(?:<p>)?```[ \t]*(?:(?P<lang>[\w+-]+)[ \t]*)?\r?\n(?P<code>.*?)```(?:</p>)?",
             re.DOTALL,
         )
@@ -263,9 +259,6 @@ class HtmlEnhancer:
             if language in {"c++", "cpp", "c"}:
                 language = "clike"
 
-            # The opening-fence newline is excluded by the pattern. Remove only
-            # the matching newline before the closing fence; ``strip()`` also
-            # removed meaningful indentation from the first and last lines.
             code_sample = re.sub(r"\r?\n\Z", "", match.group("code"))
             code_sample = re.sub(r"<", "&lt;", code_sample)
             code_sample = re.sub(r">", "&gt;", code_sample)
@@ -355,7 +348,13 @@ class HtmlEnhancer:
     @staticmethod
     def clean_whitespace(html: str) -> str:
         """Cleans unnecessary whitespace, especially after code tags."""
-        return re.sub(r"<code>\s+", "<code>", html)
+        soup = BeautifulSoup(html, "html.parser")
+        for code in soup.find_all("code"):
+            if code.find_parent("pre") is None and code.contents:
+                first = code.contents[0]
+                if isinstance(first, str):
+                    first.replace_with(first.lstrip())
+        return str(soup)
 
     @classmethod
     def add_language_info(cls, html: str, language: str = "en") -> str:

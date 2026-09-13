@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: the stationary AR(1) mean and variance</title>
+    <meta content="Stationarity describes which probabilistic features of a time series remain stable when the time origin is shifted." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: the stationary AR(1) mean and variance",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity",
+            "description": "Stationarity describes which probabilistic features of a time series remain stable when the time origin is shifted.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-the-stationary-ar-1-mean-and-variance">Worked calculation: the stationary AR(1) mean and variance</a>
+                        <ol>
+                            <li><a href="#why-do-we-care-about-stationarity-">Why Do We Care About Stationarity?</a></li>
+                            <li><a href="#intuition-for-stationary-time-series">Intuition for Stationary Time Series</a></li>
+                            <li><a href="#strict-stationarity">Strict Stationarity</a></li>
+                            <li><a href="#weak-second-order-stationarity">Weak (Second-Order) Stationarity</a></li>
+                            <li><a href="#properties-of-stationary-processes">Properties of Stationary Processes</a>
+                                <ol>
+                                    <li><a href="#mean-variance-and-autocovariance-functions">Mean, Variance, and Autocovariance Functions</a></li>
+                                    <li><a href="#autocorrelation-and-bounds">Autocorrelation and Bounds</a></li>
+                                    <li><a href="#q-dependence-and-q-correlation">q-Dependence and q-Correlation</a></li>
+                                    <li><a href="#linear-processes-and-linear-filters">Linear Processes and Linear Filters</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#examples-of-stationary-processes">Examples of Stationary Processes</a>
+                                <ol>
+                                    <li><a href="#iid-noise-vs-white-noise">IID Noise vs. White Noise</a></li>
+                                    <li><a href="#white-noise">White Noise</a></li>
+                                    <li><a href="#moving-average-ma-process">Moving Average (MA) Process</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#non-stationary-processes">Non-Stationary Processes</a>
+                                <ol>
+                                    <li><a href="#trend-stationary-processes">Trend-Stationary Processes</a></li>
+                                    <li><a href="#difference-stationary-processes">Difference-Stationary Processes</a></li>
+                                    <li><a href="#transformations-to-achieve-stationarity">Transformations to Achieve Stationarity</a></li>
+                                    <li><a href="#the-random-walk-model">The Random Walk Model</a></li>
+                                    <li><a href="#definition">Definition</a></li>
+                                    <li><a href="#properties-of-a-random-walk">Properties of a Random Walk</a></li>
+                                    <li><a href="#transforming-a-random-walk-into-a-stationary-series">Transforming a Random Walk into a Stationary Series</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#formal-tests-for-stationarity">Formal Tests for Stationarity</a>
+                                <ol>
+                                    <li><a href="#augmented-dickey-fuller-adf-test">Augmented Dickey–Fuller (ADF) Test</a></li>
+                                    <li><a href="#kpss-test">KPSS Test</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-stationarity-is-a-modeling-condition">Student guide: stationarity is a modeling condition</a>
+                        <ol>
+                            <li><a href="#strict-and-weak-stationarity">Strict and weak stationarity</a></li>
+                            <li><a href="#numerical-ar-1-example">Numerical AR(1) example</a></li>
+                            <li><a href="#deterministic-trend-versus-stochastic-trend">Deterministic trend versus stochastic trend</a></li>
+                            <li><a href="#adf-and-kpss-are-complementary">ADF and KPSS are complementary</a></li>
+                            <li><a href="#transformations">Transformations</a></li>
+                            <li><a href="#local-stationarity">Local stationarity</a></li>
+                            <li><a href="#stationarity-workflow">Stationarity workflow</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Stationarity in Time Series</header>
+            <p>Stationarity describes which probabilistic features of a time series remain stable when the time origin is shifted. Weak stationarity focuses on a constant mean and variance together with an autocovariance that depends only on lag, while strict stationarity requires the full joint distribution to be invariant to time shifts.</p>
+            <p>Many classical ARMA calculations rely on this stability because it lets dependence learned in one part of the series remain meaningful elsewhere. Trends, unit roots, seasonality, structural breaks, and changing variance violate stationarity in different ways, so the appropriate response may be detrending, differencing, seasonal modeling, variance transformation, or a model that explicitly allows change.</p>
+            <h2 id="worked-calculation-the-stationary-ar-1-mean-and-variance">Worked calculation: the stationary AR(1) mean and variance</h2>
+            <p>Consider</p>
+            <p>$$
+                X_t=1+0.8X_{t-1}+\varepsilon_t,
+                \qquad \mathrm{Var}(\varepsilon_t)=1.
+                $$</p>
+            <p>The stationary mean solves</p>
+            <p>$$
+                \mu=1+0.8\mu
+                \quad\Longrightarrow\quad
+                \mu=5.
+                $$</p>
+            <p>After centering around 5, the stationary variance is</p>
+            <p>$$
+                \mathrm{Var}(X_t)
+                =\frac{1}{1-0.8^2}
+                =\frac{1}{0.36}
+                \approx2.778.
+                $$</p>
+            <p>The calculation requires $|0.8|&lt;1$. At $\phi=1$, the process is on the unit-root boundary and its variance does not settle to a finite constant. For $|\phi|&gt;1$, deviations grow rather than decay.</p>
+            <p>The figure below contrasts these cases. A stationary AR(1) fluctuates around a stable level, a unit-root process wanders as shocks accumulate, and an explosive process moves increasingly far from its starting region.</p>
+            <p><img alt="Stationary, unit-root, and explosive AR(1) behavior" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/10_stationarity_cases.png" /></p>
+            <p><img alt="Stationarity cases" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/06_stationarity_cases.png" /></p>
+            <p>Stationarity describes which probabilistic features of a time series remain stable as time shifts. For weak stationarity, the mean and variance are constant and autocovariance depends only on lag. This condition matters because ARMA models are formulated for stationary series, while ARIMA models handle certain non-stationary series by differencing them before applying an ARMA structure.</p>
+            <p>Two common definitions are used:</p>
+            <ol>
+                <li>Strict stationarity requires the entire joint distribution to be unchanged by a shift in time.</li>
+                <li>Weak, or second-order, stationarity requires a constant mean and variance and an autocovariance that depends only on lag.</li>
+            </ol>
+            <h3 id="why-do-we-care-about-stationarity-">Why Do We Care About Stationarity?</h3>
+            <p>Suppose synthetic stock prices contain an upward deterministic trend together with shorter-term fluctuations, and the goal is to study recurring seasonal variation. The changing level can obscure that seasonal structure, so the mean pattern should be addressed before interpreting the remaining dependence.</p>
+            <p><strong>Addressing non-stationarity by detrending</strong></p>
+            <p>If a linear trend is a reasonable description of the changing mean, it can be estimated by least squares:</p>
+            <p>$$
+                \text{Stock Price} = z + b \times \text{Time}.
+                $$</p>
+            <p>Here, $z$ is the intercept and $b$ is the slope. Subtracting the fitted trend gives residuals that fluctuate around the estimated mean structure. If the trend specification is appropriate, those residuals are better suited to studying seasonality and short-run dependence.</p>
+            <p>The next figure shows this progression: the upper panel contains the original series and fitted trend, while the lower panel shows the detrended residuals. The key point is that detrending changes the mean structure; it does not automatically guarantee stationarity.</p>
+            <p><img alt="Synthetic Stock Prices Analysis" src="https://github.com/user-attachments/assets/db1f2c1c-f1ce-4aa8-b3e0-34d821a4a001" /></p>
+            <p>The following examples provide two additional views of detrending and its effect on the series.</p>
+            <p><img alt="detrending example" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/detrending_example.png" /></p>
+            <p><img alt="Detrending" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/01_detrending.png" /></p>
+            <h3 id="intuition-for-stationary-time-series">Intuition for Stationary Time Series</h3>
+            <p>A stationary series has a stable probabilistic structure over time. For weak stationarity:</p>
+            <ul>
+                <li>the mean does not systematically change with time;</li>
+                <li>the variance remains constant; and</li>
+                <li>dependence between observations is determined by their lag, not by their absolute position in time.</li>
+            </ul>
+            <p>Deterministic trends or seasonal means violate these conditions. A stationary process can still show persistent or oscillating dependence through its autocovariance function, so stationarity does not mean that the series must look like featureless noise. Stability allows relationships estimated from one part of the series to remain relevant in another part.</p>
+            <h3 id="strict-stationarity">Strict Stationarity</h3>
+            <p>A process is said to be <strong>strictly stationary</strong> if the joint distribution of any subset of observations $X_{t_1}, X_{t_2}, \dots, X_{t_k}$ is the same as the distribution of $X_{t_1 + \tau}, X_{t_2 + \tau}, \dots, X_{t_k + \tau}$ for all $\tau$.</p>
+            <p>In simple terms, the process has the same probabilistic behavior after any common shift in time. Therefore the marginal distribution of $X_t$ does not change with $t$, and any moments that exist—such as the mean, variance, or higher moments—are also time-invariant.</p>
+            <h3 id="weak-second-order-stationarity">Weak (Second-Order) Stationarity</h3>
+            <p>Weak stationarity, also known as <strong>second-order stationarity</strong>, requires only that the <strong>first two moments</strong> (mean and variance) and the <strong>autocovariance</strong> depend solely on the lag between observations, not on time itself.</p>
+            <p>A time series ${X_t}$ is weakly stationary if:</p>
+            <ol>
+                <li>The <strong>mean</strong> of the series is constant: $E[X_t] = \mu$ for all $t$.</li>
+                <li>The <strong>variance</strong> is constant: $\mathrm{Var}(X_t) = \sigma^2$ for all $t$.</li>
+                <li>The <strong>autocovariance</strong> between $X_t$ and $X_{t+k}$ depends only on the lag $k$, not on $t$:</li>
+            </ol>
+            <p>$$
+                \mathrm{Cov}(X_t, X_{t+k}) = \gamma(k)
+                $$</p>
+            <p>Weak stationarity is the condition used in many classical time-series calculations because it makes means, variances, autocovariances, and correlations comparable across time.</p>
+            <h3 id="properties-of-stationary-processes">Properties of Stationary Processes</h3>
+            <h4 id="mean-variance-and-autocovariance-functions">Mean, Variance, and Autocovariance Functions</h4>
+            <p>To analyze a stationary process, we focus on three key functions:</p>
+            <ul>
+                <li>The <strong>mean function</strong> $\mu(t) = E[X_t]$ represents the expected value of the process at time $t$, and for a stationary process, this should remain constant.</li>
+                <li>The <strong>variance function</strong> $\sigma^2(t) = \mathrm{Var}(X_t)$ gives the variance at time $t$, which must also be constant for stationarity.</li>
+                <li>The <strong>autocovariance function</strong> $\gamma(k) = \mathrm{Cov}(X_t, X_{t+k})$ measures how the process correlates with itself at different time lags $k$, and for a stationary process, it depends only on the lag $k$, not on time $t$.</li>
+            </ul>
+            <p>More generally, the covariance function can be written as:</p>
+            <p>$$
+                \gamma(r, s) = \mathrm{Cov}(X_r, X_s)
+                $$</p>
+            <p>Weak stationarity implies $\mu(t) = \mu$ and $\gamma(r, s)$ depends only on the lag $h = s - r$.</p>
+            <p>The figure below illustrates the contrast between stable moments and moments that change over time. Changes in the local mean or variance are visual evidence against global weak stationarity.</p>
+            <p><img alt="Moments changing over time" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/04_moments_change_over_time.png" /></p>
+            <h4 id="autocorrelation-and-bounds">Autocorrelation and Bounds</h4>
+            <p>For a weakly stationary process, the <strong>autocorrelation function</strong> $\rho(k)$, which measures the correlation between two points in the series separated by lag $k$, is bounded by -1 and 1:</p>
+            <p>$$
+                -1 \leq \rho(k) \leq 1
+                $$</p>
+            <p>This bound can be derived from basic linear algebra principles that apply to correlations between random variables.</p>
+            <h4 id="q-dependence-and-q-correlation">q-Dependence and q-Correlation</h4>
+            <p>A stationary series is <strong>q-dependent</strong> if observations separated by more than $q$ time units are independent. IID noise is therefore 0-dependent. An MA($q$) process driven by independent innovations is q-dependent, but general short-memory models such as AR and ARMA processes need not become independent after any finite lag.</p>
+            <p>A weaker property is <strong>q-correlation</strong>: the autocovariance is zero beyond lag $q$:</p>
+            <p>$$
+                \gamma(h) = 0 \quad \text{for} \quad |h| &gt; q.
+                $$</p>
+            <p>White noise is 0-correlated, and an MA($q$) process is q-correlated. Zero autocovariance does not by itself imply independence unless additional assumptions apply. Under standard second-order conditions, a stationary process with an autocovariance that cuts off after lag $q$ admits an MA($q$)-type second-order representation.</p>
+            <h4 id="linear-processes-and-linear-filters">Linear Processes and Linear Filters</h4>
+            <p>If ${Y_t}$ is a stationary series with mean 0 and autocovariance $\gamma_Y$, then a linear filter:</p>
+            <p>$$
+                X_t = \sum_{j=-\infty}^{\infty} \psi_j Y_{t-j} = \psi(B) Y_t
+                $$</p>
+            <p>is also stationary when $\sum_{j=-\infty}^{\infty} |\psi_j| &lt; \infty$. Many ARMA models can be viewed as linear filters applied to white noise.</p>
+            <p>The autocovariance of the filtered process is:</p>
+            <p>$$
+                \gamma_X(h) = \sum_{j=-\infty}^{\infty} \sum_{k=-\infty}^{\infty} \psi_j \psi_k\, \gamma_Y(h - k + j)
+                $$</p>
+            <h3 id="examples-of-stationary-processes">Examples of Stationary Processes</h3>
+            <h4 id="iid-noise-vs-white-noise">IID Noise vs. White Noise</h4>
+            <p>IID noise with mean 0 and variance $\sigma^2$ is the simplest stationary building block. White noise is slightly weaker: it only requires zero mean and zero autocovariance for nonzero lags (uncorrelated), not full independence.</p>
+            <h4 id="white-noise">White Noise</h4>
+            <p>White noise is a basic stationary building block. In the weak white-noise definition, the process has mean zero, constant finite variance, and zero autocovariance at every nonzero lag. Independence and Gaussianity are stronger assumptions, not part of the basic second-order definition. A common special case is Gaussian white noise, for which</p>
+            <p>$$
+                X_t \sim \mathcal{N}(0, \sigma^2).
+                $$</p>
+            <p>Its second-order properties are:</p>
+            <ul>
+                <li>the mean is $E[X_t]=0$;</li>
+                <li>the variance is $\mathrm{Var}(X_t)=\sigma^2$;</li>
+                <li>the autocovariance function is:</li>
+            </ul>
+            <p>$$
+                \gamma(k) =
+                \begin{cases}
+                \sigma^2 &amp; \text{if } k = 0 \\
+                0 &amp; \text{if } k \neq 0
+                \end{cases}
+                $$</p>
+            <ul>
+                <li>the autocorrelation function is:</li>
+            </ul>
+            <p>$$
+                \rho(k) =
+                \begin{cases}
+                1 &amp; \text{if } k = 0 \\
+                0 &amp; \text{if } k \neq 0
+                \end{cases}
+                $$</p>
+            <p>Below is a plot of synthetically generated white noise:</p>
+            <p><img alt="white_noise" src="https://github.com/user-attachments/assets/a24cc561-f34a-431e-bac0-2f9cd5e62a49" /></p>
+            <p>These properties make weak white noise weakly stationary. Gaussian white noise is also strictly stationary because its joint Gaussian distribution is determined by the constant mean and lag-based covariance structure.</p>
+            <h4 id="moving-average-ma-process">Moving Average (MA) Process</h4>
+            <p>A moving average process of order $q$, denoted MA($q$), is another weakly stationary model. It is defined as:</p>
+            <p>$$
+                X_t = \beta_0 Z_t + \beta_1 Z_{t-1} + \dots + \beta_q Z_{t-q}
+                $$</p>
+            <p>where $Z_t$ is independent white noise with variance $\sigma_Z^2$; Gaussian innovations are a common special case.</p>
+            <p>For an MA(q) process:</p>
+            <ul>
+                <li>The <strong>mean</strong> is zero: $E[X_t] = 0$.</li>
+                <li>The <strong>variance</strong> is constant:</li>
+            </ul>
+            <p>$$
+                \mathrm{Var}(X_t) = \sigma_Z^2 \sum_{i=0}^{q} \beta_i^2
+                $$</p>
+            <ul>
+                <li>The <strong>autocovariance</strong> function $\gamma(k)$ depends on the lag $k$:</li>
+            </ul>
+            <p>$$
+                \gamma(k) =
+                \begin{cases}
+                \sigma_Z^2 \sum_{i=0}^{q-|k|} \beta_i \beta_{i+|k|}, &amp; |k| \leq q, \\
+                0, &amp; |k| &gt; q.
+                \end{cases}
+                $$</p>
+            <p>The autocorrelation function $\rho(k)$ is obtained by normalizing the autocovariance by the variance:</p>
+            <p>$$
+                \rho(k) = \frac{\gamma(k)}{\gamma(0)}
+                $$</p>
+            <p>The following plot shows an MA(2) realization. Its values can look locally dependent even though the theoretical autocovariance is exactly zero beyond lag 2:</p>
+            <p><img alt="moving_average" src="https://github.com/user-attachments/assets/28e1d7fa-243b-4841-afba-afd2188ac400" /></p>
+            <p>The MA(q) process is weakly stationary because its mean and variance are constant, and the autocovariance depends only on the lag.</p>
+            <h3 id="non-stationary-processes">Non-Stationary Processes</h3>
+            <p>A non-stationary process does not satisfy the relevant stationarity conditions. Its mean, variance, dependence structure, or broader distribution may change over time. Deterministic trends, stochastic trends, seasonal means, structural breaks, and time-varying volatility are common sources.</p>
+            <p>Two important forms of non-stationarity are:</p>
+            <ol>
+                <li>trend-stationary processes;</li>
+                <li>difference-stationary processes.</li>
+            </ol>
+            <h4 id="trend-stationary-processes">Trend-Stationary Processes</h4>
+            <p>A <strong>trend-stationary</strong> series has a stable long-term trend around which the data fluctuates. If a time series follows a trend-stationary process, it tends to revert to its trend line after experiencing a disturbance.</p>
+            <p><strong>Detrending.</strong></p>
+            <p>To achieve stationarity in such series, one can remove the trend component. This is typically done by fitting a trend line (e.g., linear or polynomial) to the data and subtracting it from the original series. The resulting series, with the trend removed, should exhibit stationary behavior.</p>
+            <h4 id="difference-stationary-processes">Difference-Stationary Processes</h4>
+            <p>A difference-stationary series contains a stochastic trend, typically associated with a unit root. Subtracting a deterministic trend does not remove this accumulated effect of past shocks; differencing is used instead.</p>
+            <p><strong>Differencing.</strong></p>
+            <p>Taking differences between consecutive observations, or seasonal differences between observations one cycle apart, can remove an appropriate stochastic trend. The resulting series describes changes rather than levels and should be checked again for stationarity.</p>
+            <h4 id="transformations-to-achieve-stationarity">Transformations to Achieve Stationarity</h4>
+            <p>To prepare a non-stationary time series for modeling with techniques that require stationarity (like ARIMA), various <strong>transformations</strong> can be applied:</p>
+            <p><strong>Differencing</strong></p>
+            <ul>
+                <li>Differencing can remove a stochastic trend and stabilize the mean when the integration structure justifies it.</li>
+                <li>It involves computing the difference between consecutive observations in the series.</li>
+                <li>The first difference of a series $Y_t$ is defined as $\Delta Y_t = Y_t - Y_{t-1}$.</li>
+                <li>Higher-order differencing can be applied if trends persist, such as the second difference $\Delta^2 Y_t = \Delta Y_t - \Delta Y_{t-1}$.</li>
+                <li>Use the smallest differencing order that produces an adequately stationary series; unnecessary differencing can create additional dependence.</li>
+            </ul>
+            <p><strong>Logarithmic Transformations</strong></p>
+            <ul>
+                <li>Logarithmic transformations stabilize variance when variability increases with the magnitude of the data.</li>
+                <li>The natural logarithm (or another logarithm base) is applied to each data point in the series.</li>
+                <li>For a series $Y_t$, the transformed series becomes $\log(Y_t)$.</li>
+                <li>This method is particularly effective for data exhibiting exponential growth or multiplicative seasonality.</li>
+                <li>It also compresses large values, which can make proportional changes easier to compare.</li>
+            </ul>
+            <p><strong>Box-Cox Transformations</strong></p>
+            <p>The Box-Cox transform generalizes the log transform for positive series:</p>
+            <p>$$
+                Y_t^{(\lambda)} =
+                \begin{cases}
+                \frac{Y_t^{\lambda} - 1}{\lambda}, &amp; \lambda \neq 0 \\
+                \log(Y_t), &amp; \lambda = 0
+                \end{cases}
+                $$</p>
+            <p>Choosing $\lambda$ can stabilize variance and improve linearity before modeling.</p>
+            <p><strong>Detrending</strong></p>
+            <ul>
+                <li>Detrending removes long-term trends from data to highlight short-term fluctuations.</li>
+                <li>A trend line is fitted to the data and then subtracted from the original series.</li>
+                <li>For a linear trend $Y_t = \alpha + \beta t + \epsilon_t$, the detrended series is computed as $Y_t - (\alpha + \beta t)$.</li>
+                <li>Non-linear trends can be removed by fitting polynomial or exponential functions.</li>
+                <li>Detrending helps in isolating cyclical or seasonal patterns from broader trends.</li>
+            </ul>
+            <h4 id="the-random-walk-model">The Random Walk Model</h4>
+            <p>A random walk is a classic difference-stationary process. Each value equals the previous value plus a new innovation, so shocks accumulate permanently in the level of the series.</p>
+            <h4 id="definition">Definition</h4>
+            <p>A random walk can be mathematically expressed as:</p>
+            <p>$$
+                X_t = X_{t-1} + Z_t
+                $$</p>
+            <p>where $Z_t$ is white noise with mean $\mu_Z$ and variance $\sigma_Z^2$. For a fixed starting value $X_0$, repeated substitution gives $X_t=X_0+\sum_{j=1}^t Z_j$.</p>
+            <h4 id="properties-of-a-random-walk">Properties of a Random Walk</h4>
+            <p><strong>Mean.</strong> With fixed $X_0$,</p>
+            <p>$$
+                E[X_t] = X_0 + t\mu_Z.
+                $$</p>
+            <p>For the common zero-drift random walk, $\mu_Z=0$, so the mean remains at $X_0$.</p>
+            <p><strong>Variance.</strong> If the innovations are uncorrelated,</p>
+            <p>$$
+                \mathrm{Var}(X_t) = t\sigma_Z^2.
+                $$</p>
+            <p>Thus even a zero-drift random walk is non-stationary: its variance increases with time, and shocks have permanent effects on the level.</p>
+            <h4 id="transforming-a-random-walk-into-a-stationary-series">Transforming a Random Walk into a Stationary Series</h4>
+            <p>To utilize statistical models that require stationarity, it's necessary to transform a random walk into a stationary series. This is achieved through <strong>differencing</strong>.</p>
+            <h5>Differencing Operator</h5>
+            <p>For a random walk, the difference operator $\Delta$ removes the accumulated stochastic trend by recovering the innovation:</p>
+            <p>$$
+                \Delta X_t = X_t - X_{t-1} = Z_t.
+                $$</p>
+            <p>If $Z_t$ is stationary white noise, the differenced series $\Delta X_t$ is stationary.</p>
+            <p>The resulting series has the properties of the innovations:</p>
+            <ul>
+                <li>The differenced series has constant mean $\mu_Z$ (zero in the usual zero-drift example).</li>
+                <li>The variance is constant over time.</li>
+                <li>There is no autocorrelation in the differenced series if $Z_t$ is truly white noise.</li>
+            </ul>
+            <p>Thus, first differencing a random walk recovers $Z_t$. If $Z_t$ is stationary white noise, the differenced series is stationary.</p>
+            <h5>Example of Differencing</h5>
+            <p>The following example simulates a zero-drift random walk and computes its first difference:</p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+# Simulate a random walk
+np.random.seed(42)
+N = 1000
+Z = np.random.normal(0, 1, N)
+X = np.cumsum(Z)  # Random walk as cumulative sum of white noise
+
+# Apply differencing to make it stationary
+diff_X = np.diff(X)
+
+# Plot the original random walk and the differenced series
+plt.figure(figsize=(10, 6))
+plt.subplot(2, 1, 1)
+plt.plot(X, label='Random Walk')
+plt.title('Random Walk (Non-Stationary)')
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(diff_X, label='Differenced Series')
+plt.title('Differenced Series (Stationary)')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()</code></pre>
+            </div>
+            <p><strong>Simulating the random walk.</strong></p>
+            <ul>
+                <li>A random walk is generated by taking the cumulative sum of normally distributed random numbers. This produces a series where each value depends on the previous one plus some random noise.</li>
+                <li>The random walk is non-stationary because it lacks a constant mean and variance over time—it drifts unpredictably.</li>
+            </ul>
+            <p><strong>Differencing.</strong></p>
+            <ul>
+                <li>For this random walk, subtracting the previous observation from the current one recovers the simulated innovations. This removes the accumulated stochastic trend in the level series.</li>
+                <li>The <code>np.diff()</code> call computes these consecutive differences directly.</li>
+            </ul>
+            <p>The result plot would look like the following:</p>
+            <p><img alt="differenced_random_walk" src="https://github.com/user-attachments/assets/2cebba56-7d3b-470c-9511-56d617be7159" /></p>
+            <p>The upper panel shows the wandering random-walk level, while the lower panel shows the much more stable differenced series. The visual demonstrates why a difference-stationary process is modeled through its changes rather than by treating the original levels as stationary.</p>
+            <h3 id="formal-tests-for-stationarity">Formal Tests for Stationarity</h3>
+            <p>Visual inspection can reveal trends, changing variance, or structural breaks, but formal tests provide additional evidence. The ADF and KPSS tests are useful together because their null hypotheses point in opposite directions.</p>
+            <h4 id="augmented-dickey-fuller-adf-test">Augmented Dickey–Fuller (ADF) Test</h4>
+            <p>The ADF test evaluates a unit-root null using a regression of the form:</p>
+            <p>$$
+                \Delta X_t = \alpha + \beta t + \gamma X_{t-1} + \sum_{i=1}^{p} \delta_i \Delta X_{t-i} + \epsilon_t
+                $$</p>
+            <p>where $\Delta X_t = X_t - X_{t-1}$ and $p$ lagged differences absorb serial correlation. The hypotheses are:</p>
+            <ul>
+                <li>$H_0$: $\gamma=0$, corresponding to a unit root under the chosen deterministic specification.</li>
+                <li>$H_1$: $\gamma&lt;0$, corresponding to stationarity around the included deterministic terms.</li>
+            </ul>
+            <p>A sufficiently negative test statistic, or a small p-value, provides evidence against the unit-root null. The conclusion depends on whether the regression includes an intercept, a trend, or other deterministic terms.</p>
+            <h4 id="kpss-test">KPSS Test</h4>
+            <p>The Kwiatkowski–Phillips–Schmidt–Shin (KPSS) test reverses the direction of evidence:</p>
+            <ul>
+                <li>$H_0$: the series is level-stationary or trend-stationary, depending on the test specification;</li>
+                <li>$H_1$: the stationarity assumption is violated.</li>
+            </ul>
+            <p>Using both tests helps organize the evidence:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>ADF result</td>
+                    <td>KPSS result</td>
+                    <td>Interpretation</td>
+                </tr>
+                <tr>
+                    <td>Reject unit-root null</td>
+                    <td>Fail to reject stationarity</td>
+                    <td>Evidence supports stationarity</td>
+                </tr>
+                <tr>
+                    <td>Fail to reject unit-root null</td>
+                    <td>Reject stationarity</td>
+                    <td>Evidence supports non-stationarity</td>
+                </tr>
+                <tr>
+                    <td>Reject</td>
+                    <td>Reject</td>
+                    <td>Possible break, deterministic misspecification, or other model mismatch; inspect the series</td>
+                </tr>
+                <tr>
+                    <td>Fail to reject</td>
+                    <td>Fail to reject</td>
+                    <td>Evidence is inconclusive; power may be limited</td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="student-guide-stationarity-is-a-modeling-condition">Student guide: stationarity is a modeling condition</h2>
+            <p>Stationarity is not a synonym for “the plot looks flat.” It describes which features of the joint distribution remain unchanged when the time index is shifted. The version needed depends on the model and question.</p>
+            <h3 id="strict-and-weak-stationarity">Strict and weak stationarity</h3>
+            <p>A process is strictly stationary if, for every collection of times and every shift $h$,</p>
+            <p>$$
+                (X_{t_1},\ldots,X_{t_k})
+                \overset{d}{=}
+                (X_{t_1+h},\ldots,X_{t_k+h}).
+                $$</p>
+            <p>Weak stationarity requires only:</p>
+            <p>$$
+                E(X_t)=\mu,
+                \qquad
+                \mathrm{Var}(X_t)=\gamma(0),
+                \qquad
+                \mathrm{Cov}(X_t,X_{t-h})=\gamma(h),
+                $$</p>
+            <p>with no dependence on $t$. Many ARMA calculations use weak stationarity. Gaussian processes with constant mean and covariance are strictly stationary as well, but non-Gaussian weakly stationary processes need not be strictly stationary.</p>
+            <h3 id="numerical-ar-1-example">Numerical AR(1) example</h3>
+            <p>Consider</p>
+            <p>$$
+                X_t=1+0.8X_{t-1}+\varepsilon_t,
+                \qquad
+                \mathrm{Var}(\varepsilon_t)=1.
+                $$</p>
+            <p>The stationary mean is</p>
+            <p>$$
+                \mu=\frac{1}{1-0.8}=5,
+                $$</p>
+            <p>and the stationary variance is</p>
+            <p>$$
+                \gamma(0)=\frac{1}{1-0.8^2}=2.7778.
+                $$</p>
+            <p>The lag-1 covariance is</p>
+            <p>$$
+                \gamma(1)=0.8\gamma(0)=2.2222,
+                $$</p>
+            <p>and the lag-1 correlation is $0.8$. The process can move substantially from one observation to the next while its distribution remains stable over time.</p>
+            <p>If $\phi=1$, the mean formula divides by zero and the variance does not settle. This is the unit-root boundary. If $|\phi|&gt;1$, deviations grow and the process is explosive.</p>
+            <h3 id="deterministic-trend-versus-stochastic-trend">Deterministic trend versus stochastic trend</h3>
+            <p>For</p>
+            <p>$$
+                y_t=10+0.2t+\varepsilon_t,
+                $$</p>
+            <p>subtracting the deterministic trend can produce a stationary remainder. For a random walk,</p>
+            <p>$$
+                y_t=y_{t-1}+\varepsilon_t,
+                $$</p>
+            <p>the uncertainty accumulates permanently. Both can look like an upward trend in one realization, but their forecasts and variance behavior differ.</p>
+            <p>Use domain knowledge, differencing behavior, plots, and diagnostics together. A stationarity test can assess a statistical specification, but it cannot identify the scientific mechanism by itself.</p>
+            <h3 id="adf-and-kpss-are-complementary">ADF and KPSS are complementary</h3>
+            <p>The Augmented Dickey-Fuller test has a unit-root null. The KPSS test usually has a stationarity null. Their p-values are not interchangeable:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>ADF</td>
+                    <td>KPSS</td>
+                    <td>reading</td>
+                </tr>
+                <tr>
+                    <td>reject unit root</td>
+                    <td>fail to reject stationarity</td>
+                    <td>evidence for stationarity</td>
+                </tr>
+                <tr>
+                    <td>fail to reject unit root</td>
+                    <td>reject stationarity</td>
+                    <td>evidence against stationarity</td>
+                </tr>
+                <tr>
+                    <td>both reject</td>
+                    <td>possible trend stationarity, break, or misspecification</td>
+                    <td>inspect plots and specifications</td>
+                </tr>
+                <tr>
+                    <td>neither reject</td>
+                    <td>low power or insufficient information</td>
+                    <td>gather more evidence</td>
+                </tr>
+            </table>
+            </p>
+            <p>The outcome depends on whether a constant or trend is included, lag selection, sample length, and structural breaks. Tests should support a modeling decision rather than replace it.</p>
+            <h3 id="transformations">Transformations</h3>
+            <p>Common transformations have different meanings:</p>
+            <ul>
+                <li>log or Box-Cox: stabilize a variance that grows with level;</li>
+                <li>detrending: remove a specified deterministic mean structure;</li>
+                <li>first difference: model changes from one period to the next;</li>
+                <li>seasonal difference: compare observations one seasonal cycle apart;</li>
+                <li>seasonal adjustment: remove a repeating component before modeling residual dynamics.</li>
+            </ul>
+            <p>After transforming, inspect the transformed series. The goal is not to erase every pattern; it is to create a series whose remaining structure is appropriate for the proposed model.</p>
+            <h3 id="local-stationarity">Local stationarity</h3>
+            <p>Real data can be approximately stationary over a moving window and non-stationary globally. Examine rolling:</p>
+            <p>$$
+                \hat\mu_t=\frac1w\sum_{j=0}^{w-1}y_{t-j},
+                \qquad
+                \hat\sigma_t^2=\frac1{w-1}\sum_{j=0}^{w-1}(y_{t-j}-\hat\mu_t)^2.
+                $$</p>
+            <p>The window size $w$ is a resolution choice. A short window reacts quickly but is noisy; a long window smooths changes and can conceal a break.</p>
+            <h3 id="stationarity-workflow">Stationarity workflow</h3>
+            <ol>
+                <li>Plot the level and relevant transforms.</li>
+                <li>Inspect rolling moments and missingness.</li>
+                <li>Check ACF behavior and seasonal lags.</li>
+                <li>State the deterministic terms used in any test.</li>
+                <li>Use ADF/KPSS or other tests as evidence, not as a single decision rule.</li>
+                <li>Fit a simple candidate after transformation.</li>
+                <li>Diagnose residuals and forecast behavior.</li>
+                <li>Reassess whether the transformation matches the deployment question.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

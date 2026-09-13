@@ -148,3 +148,27 @@ test("article actions align with the metadata header on desktop", async ({ page 
   expect(positions.actionsLeft).toBeGreaterThanOrEqual(positions.metadataRight);
   expect(positions.headerRight - positions.headerLeft).toBeGreaterThan(500);
 });
+
+
+test("diagram rows preserve indentation and scroll without wrapping", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto(articles[0], { waitUntil: "domcontentloaded" });
+  const layout = await page.locator("#article-body").evaluate((article) => {
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = "      +" + "-".repeat(100) + "+\n      | diagram";
+    pre.append(code);
+    article.append(pre);
+    return {
+      whiteSpace: getComputedStyle(code).whiteSpace,
+      overflow: getComputedStyle(pre).overflowX,
+      scrollWidth: pre.scrollWidth,
+      clientWidth: pre.clientWidth,
+      text: code.textContent,
+    };
+  });
+  expect(layout.whiteSpace).toBe("pre");
+  expect(layout.overflow).toBe("auto");
+  expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
+  expect(layout.text.startsWith("      +")).toBe(true);
+});

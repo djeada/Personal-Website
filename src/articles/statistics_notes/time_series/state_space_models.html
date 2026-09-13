@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: one local-level Kalman update</title>
+    <meta content="State-space models separate a time series into an unobserved state that evolves through time and an observation process that measures that state with noise." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: one local-level Kalman update",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models",
+            "description": "State-space models separate a time series into an unobserved state that evolves through time and an observation process that measures that state with noise.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-one-local-level-kalman-update">Worked calculation: one local-level Kalman update</a></li>
+                    <li><a href="#local-level-model">Local-Level Model</a></li>
+                    <li><a href="#kalman-filter">Kalman Filter</a></li>
+                    <li><a href="#student-guide-prediction-update-and-uncertainty">Student guide: prediction, update, and uncertainty</a>
+                        <ol>
+                            <li><a href="#general-linear-gaussian-form">General linear Gaussian form</a></li>
+                            <li><a href="#the-scalar-local-level-update">The scalar local-level update</a></li>
+                            <li><a href="#how-the-variance-ratio-changes-the-gain">How the variance ratio changes the gain</a></li>
+                            <li><a href="#filtering-smoothing-and-forecasting">Filtering, smoothing, and forecasting</a></li>
+                            <li><a href="#missing-observations">Missing observations</a></li>
+                            <li><a href="#innovations-and-likelihood">Innovations and likelihood</a></li>
+                            <li><a href="#relation-to-familiar-models">Relation to familiar models</a></li>
+                            <li><a href="#diagnostics-and-limitations">Diagnostics and limitations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>State-Space Models and the Kalman Filter</header>
+            <p>State-space models separate a time series into an unobserved state that evolves through time and an observation process that measures that state with noise. This framework is flexible enough to represent latent levels, trends, seasonal components, regression effects, missing observations, and many familiar ARIMA or smoothing models.</p>
+            <p>The Kalman filter is the recursive algorithm that makes linear Gaussian state-space models practical. At each step it predicts the next state, compares that prediction with the new observation, and updates the estimate according to their relative uncertainty, creating a clean distinction among filtering, forecasting, and retrospective smoothing.</p>
+            <h2 id="worked-calculation-one-local-level-kalman-update">Worked calculation: one local-level Kalman update</h2>
+            <p>Suppose the predicted level is $a_{t|t-1}=10$, its predicted variance is $P_{t|t-1}=1.25$, and the observation is $y_t=12$ with measurement variance $R=1$. The innovation is</p>
+            <p>$$
+                v_t=12-10=2,
+                \qquad
+                F_t=1.25+1=2.25.
+                $$</p>
+            <p>The Kalman gain is</p>
+            <p>$$
+                K_t=\frac{1.25}{2.25}=0.5556.
+                $$</p>
+            <p>The updated estimate and variance are</p>
+            <p>$$
+                a_{t|t}=10+0.5556(2)=11.1112,
+                \qquad
+                P_{t|t}=(1-0.5556)(1.25)\approx0.5555.
+                $$</p>
+            <p>The estimate moves partway toward the observation because both the prior state estimate and the measurement are uncertain. A larger measurement variance would reduce the gain and make the filter rely more heavily on the prior prediction.</p>
+            <p><img alt="Filtering a noisy local level" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/18_state_space_filter.png" /></p>
+            <p>The figure shows the role of the latent state: the observed series is noisy, while the filter updates an estimate of the underlying level as each new observation arrives.</p>
+            <p>State-space models distinguish an unobserved <strong>state</strong> from noisy observations. They provide a common framework for latent trends, seasonal components, regression effects, missing observations, and other dynamic structures.</p>
+            <p>A linear Gaussian state-space model can be written as</p>
+            <p>$$
+                \alpha_t=T_t\alpha_{t-1}+R_t\eta_t,
+                $$</p>
+            <p>$$
+                y_t=Z_t\alpha_t+d_t+\varepsilon_t.
+                $$</p>
+            <p>The first equation describes how the latent state evolves. The second describes how that state produces the observation. The matrices can vary with time, although many familiar models use constant matrices.</p>
+            <h2 id="local-level-model">Local-Level Model</h2>
+            <p>A simple state-space model is</p>
+            <p>$$
+                \mu_t=\mu_{t-1}+\eta_t,
+                \qquad
+                y_t=\mu_t+\varepsilon_t.
+                $$</p>
+            <p>The latent level $\mu_t$ follows a random walk, while the observed value contains additional measurement noise. Separating these two sources of variation lets the model distinguish movement in the underlying signal from noise in the observation.</p>
+            <p><img alt="Local-level filter" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/01_local_level_filter.png" /></p>
+            <p>The local-level figure shows the observed series together with the filtered latent level. The filter follows sustained changes in the signal while avoiding a full reaction to every noisy observation.</p>
+            <h2 id="kalman-filter">Kalman Filter</h2>
+            <p>For the scalar local-level model, the prediction step is</p>
+            <p>$$
+                a_{t|t-1}=a_{t-1|t-1},
+                \qquad
+                P_{t|t-1}=P_{t-1|t-1}+Q,
+                $$</p>
+            <p>where $Q$ is the state-innovation variance.</p>
+            <p>The observation produces the innovation</p>
+            <p>$$
+                v_t=y_t-a_{t|t-1},
+                $$</p>
+            <p>with innovation variance</p>
+            <p>$$
+                F_t=P_{t|t-1}+R,
+                $$</p>
+            <p>where $R$ is the measurement-error variance in this scalar notation. The Kalman gain is</p>
+            <p>$$
+                K_t=\frac{P_{t|t-1}}{F_t},
+                $$</p>
+            <p>and the update is</p>
+            <p>$$
+                a_{t|t}=a_{t|t-1}+K_tv_t,
+                \qquad
+                P_{t|t}=(1-K_t)P_{t|t-1}.
+                $$</p>
+            <p><img alt="Kalman gain" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/02_kalman_gain.png" /></p>
+            <p>The gain figure makes the weighting rule explicit: precise measurements receive more weight, while noisy measurements move the state estimate less.</p>
+            <p><strong>Filtering</strong> estimates the current state using observations available through the current time. <strong>Forecasting</strong> propagates that filtered state into the future. <strong>Smoothing</strong> revises historical states using later observations as well, so a smoothed state is a retrospective estimate rather than a real-time forecast.</p>
+            <p><img alt="Filtering and smoothing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/04_filtering_vs_smoothing.png" /></p>
+            <p>The figure shows why the distinction matters. The smoothed path can use future observations to revise a past state and will often appear cleaner than the real-time filtered path. Using it to evaluate a real-time procedure would leak future information.</p>
+            <p>When an observation is missing, the state can still be propagated through the transition equation without a measurement update. Many ARIMA and exponential-smoothing models also admit state-space representations, allowing likelihood estimation, missing-data handling, filtering, smoothing, and forecasting to be treated within one framework.</p>
+            <h2 id="student-guide-prediction-update-and-uncertainty">Student guide: prediction, update, and uncertainty</h2>
+            <p>State-space notation separates the quantities that are observed from the dynamic process being inferred. This is especially useful when the signal is noisy, data are missing, or the dynamics are more naturally expressed through latent levels, slopes, seasonal states, or time-varying coefficients.</p>
+            <h3 id="general-linear-gaussian-form">General linear Gaussian form</h3>
+            <p>Write</p>
+            <p>$$
+                \alpha_t=T_t\alpha_{t-1}+R_t\eta_t,
+                \qquad
+                y_t=Z_t\alpha_t+d_t+\varepsilon_t,
+                $$</p>
+            <p>with</p>
+            <p>$$
+                \eta_t\sim N(0,Q_t),
+                \qquad
+                \varepsilon_t\sim N(0,H_t).
+                $$</p>
+            <p>Here $R_t$ is a loading matrix for state disturbances, while $H_t$ is the observation-noise covariance. This general notation should not be confused with the scalar symbol $R$ used above for a measurement variance.</p>
+            <p>The state $\alpha_t$ can contain several quantities. For a local linear trend, for example,</p>
+            <p>$$
+                \alpha_t=
+                \begin{bmatrix}
+                \ell_t\\
+                b_t
+                \end{bmatrix}
+                $$</p>
+            <p>can store level and slope. A seasonal model can store a vector of seasonal states, and a dynamic regression can include time-varying coefficients or an ARMA error state.</p>
+            <h3 id="the-scalar-local-level-update">The scalar local-level update</h3>
+            <p>For</p>
+            <p>$$
+                \mu_t=\mu_{t-1}+\eta_t,
+                \qquad
+                y_t=\mu_t+\varepsilon_t,
+                $$</p>
+            <p>suppose $a_{t|t-1}=10$, $P_{t|t-1}=1.25$, $y_t=12$, and $R=1$. Then</p>
+            <p>$$
+                v_t=y_t-a_{t|t-1}=2,
+                $$</p>
+            <p>$$
+                F_t=P_{t|t-1}+R=2.25,
+                $$</p>
+            <p>and</p>
+            <p>$$
+                K_t=\frac{1.25}{2.25}=0.5556.
+                $$</p>
+            <p>The state update is</p>
+            <p>$$
+                a_{t|t}=10+0.5556(2)=11.1112,
+                $$</p>
+            <p>while the posterior variance is</p>
+            <p>$$
+                P_{t|t}=(1-0.5556)(1.25)\approx0.5555.
+                $$</p>
+            <p>The innovation is the part of the observation that was not predicted. The gain determines how strongly that new information changes the state estimate.</p>
+            <h3 id="how-the-variance-ratio-changes-the-gain">How the variance ratio changes the gain</h3>
+            <p>For the scalar local-level update,</p>
+            <p>$$
+                K_t=\frac{P_{t|t-1}}{P_{t|t-1}+R}.
+                $$</p>
+            <p>If $R$ is small, the measurement is precise and $K_t$ approaches 1. If $R$ is large, the measurement is noisy and $K_t$ approaches 0. A larger process variance $Q$ increases future prediction uncertainty $P_{t|t-1}$ and therefore tends to make the filter react more strongly to new observations.</p>
+            <p>For a prior level of 10 and an observation of 12:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>$P_{t</td>
+                    <td>t-1}$</td>
+                    <td>$R$</td>
+                    <td>gain</td>
+                    <td>updated level</td>
+                </tr>
+                <tr>
+                    <td>1.25</td>
+                    <td>1</td>
+                    <td>0.556</td>
+                    <td>11.111</td>
+                </tr>
+                <tr>
+                    <td>1.25</td>
+                    <td>4</td>
+                    <td>0.238</td>
+                    <td>10.476</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>1</td>
+                    <td>0.800</td>
+                    <td>11.600</td>
+                </tr>
+            </table>
+            </p>
+            <p>The update is therefore a variance-weighted compromise between the model prediction and the new measurement.</p>
+            <h3 id="filtering-smoothing-and-forecasting">Filtering, smoothing, and forecasting</h3>
+            <p>Filtering targets</p>
+            <p>$$
+                p(\alpha_t\mid y_1,\ldots,y_t).
+                $$</p>
+            <p>It is a real-time estimate because it uses only information available through time $t$.</p>
+            <p>Smoothing targets</p>
+            <p>$$
+                p(\alpha_t\mid y_1,\ldots,y_T),
+                \qquad T&gt;t.
+                $$</p>
+            <p>It uses later observations to revise a past state. This is useful for historical decomposition and signal extraction, but it is not available in real time.</p>
+            <p>Forecasting propagates the filtered state forward. In a time-varying system,</p>
+            <p>$$
+                a_{t+h|t}=T_{t+h}\cdots T_{t+1}a_{t|t}.
+                $$</p>
+            <p>Forecast uncertainty accumulates state disturbances and, for future observations, measurement uncertainty. A performance evaluation that uses smoothed states at past forecast origins has used future information unless that retrospective procedure is explicitly the target.</p>
+            <h3 id="missing-observations">Missing observations</h3>
+            <p>If $y_t$ is missing, there is no measurement innovation to use, so the update is skipped:</p>
+            <p>$$
+                a_{t|t}=a_{t|t-1},
+                \qquad
+                P_{t|t}=P_{t|t-1}.
+                $$</p>
+            <p>The next transition still proceeds:</p>
+            <p>$$
+                a_{t+1|t}=T_{t+1}a_{t|t},
+                $$</p>
+            <p>$$
+                P_{t+1|t}=T_{t+1}P_{t|t}T_{t+1}^{\top}
+                +R_{t+1}Q_{t+1}R_{t+1}^{\top}.
+                $$</p>
+            <p><img alt="Missing observations" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/03_missing_observations.png" /></p>
+            <p>The figure shows that the filter does not fabricate missing measurements. It propagates the state using the transition model, while uncertainty grows until new observations provide another update.</p>
+            <h3 id="innovations-and-likelihood">Innovations and likelihood</h3>
+            <p>Under Gaussian disturbances, the one-step innovation $v_t$ has variance $F_t$. In the scalar case, its log-likelihood contribution is</p>
+            <p>$$
+                \ell_t
+                =-\frac12\left[
+                \log(2\pi)+\log(F_t)+\frac{v_t^2}{F_t}
+                \right].
+                $$</p>
+            <p>Summing these contributions over time gives a likelihood that can be optimized over unknown variances, transition parameters, and regression coefficients.</p>
+            <p>Standardized innovations</p>
+            <p>$$
+                \tilde v_t=\frac{v_t}{\sqrt{F_t}}
+                $$</p>
+            <p>provide a natural diagnostic. Under an adequate model, they should have approximately constant variance and little serial dependence.</p>
+            <h3 id="relation-to-familiar-models">Relation to familiar models</h3>
+            <p>Many familiar time-series models have state-space forms:</p>
+            <ul>
+                <li>a local level is closely related to simple exponential smoothing;</li>
+                <li>a local level plus slope is related to Holt-style trend smoothing;</li>
+                <li>ARIMA models can be represented with a finite-dimensional state;</li>
+                <li>seasonal behavior can be encoded through seasonal states;</li>
+                <li>missing observations can be handled without discarding the surrounding series.</li>
+            </ul>
+            <p>Equivalent model labels do not guarantee numerically identical results. Initialization, parameter estimation, deterministic terms, and likelihood conventions can all affect fitted states and forecasts.</p>
+            <h3 id="diagnostics-and-limitations">Diagnostics and limitations</h3>
+            <p>After fitting, inspect standardized innovations, their ACF, squared innovations, outliers, missingness patterns, parameter stability, and temporal forecast errors.</p>
+            <p>A Gaussian state-space model can produce a smooth-looking latent path even when the data contain heavy tails, nonlinear dynamics, or structural breaks. A smoother improves the estimate under the assumed model; it does not repair a misspecified model.</p>
+            <p>The related frequency-domain material is covered in the <a href="frequency_domain_analysis.md">frequency-domain chapter</a>, and the <a href="../../notebooks/time_series/state_space_and_frequency.ipynb">state-space/frequency notebook</a> provides an additional worked environment.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>What we'll cover</title>
-    <meta content="Imagine you've been playing a campaign for two hours." name="description" />
+    <title>Main components</title>
+    <meta content="Standard of Iron stores match saves in a versioned SQLite database." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "What we'll cover",
+            "headline": "Main components",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/save_load_system"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/save_load_system",
-            "description": "Imagine you've been playing a campaign for two hours.",
-            "dateModified": "2026-04-27"
+            "description": "Standard of Iron stores match saves in a versioned SQLite database.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -78,59 +78,104 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#what-we-ll-cover">What we'll cover</a></li>
-                    <li><a href="#the-three-layer-architecture">The three-layer architecture</a></li>
-                    <li><a href="#the-save-flow">The save flow</a></li>
-                    <li><a href="#the-load-flow">The load flow</a></li>
-                    <li><a href="#entity-serialization">Entity serialization</a>
+                    <li><a href="#main-components">Main components</a></li>
+                    <li><a href="#save-state-model">Save-state model</a>
                         <ol>
-                            <li><a href="#supported-components">Supported components</a></li>
+                            <li><a href="#authoritative-serialized-state">Authoritative serialized state</a></li>
+                            <li><a href="#derived-state">Derived state</a></li>
+                            <li><a href="#presentation-only-state">Presentation-only state</a></li>
+                            <li><a href="#campaign-level-metadata">Campaign-level metadata</a></li>
                         </ol>
                     </li>
-                    <li><a href="#the-sqlite-database">The SQLite database</a>
+                    <li><a href="#save-capture-boundary">Save capture boundary</a></li>
+                    <li><a href="#save-job-lifecycle">Save job lifecycle</a>
                         <ol>
-                            <li><a href="#database-schema">Database schema</a></li>
-                            <li><a href="#example-data">Example data</a></li>
+                            <li><a href="#queue-management">Queue management</a></li>
+                            <li><a href="#screenshot-attachment">Screenshot attachment</a></li>
                         </ol>
                     </li>
-                    <li><a href="#schema-versioning-and-migrations">Schema versioning and migrations</a>
+                    <li><a href="#packed-payload-format">Packed payload format</a>
                         <ol>
-                            <li><a href="#migration-history">Migration history</a></li>
+                            <li><a href="#why-there-are-two-checksums">Why there are two checksums</a></li>
                         </ol>
                     </li>
-                    <li><a href="#transaction-handling">Transaction handling</a></li>
-                    <li><a href="#the-service-layer-api">The service layer API</a>
+                    <li><a href="#sqlite-database">SQLite database</a></li>
+                    <li><a href="#storage-tables">Storage tables</a></li>
+                    <li><a href="#versioning-database-vs-snapshot">Versioning: database vs snapshot</a>
                         <ol>
-                            <li><a href="#usage-example">Usage example</a></li>
+                            <li><a href="#database-schema-version">Database schema version</a></li>
+                            <li><a href="#snapshot-version">Snapshot version</a></li>
                         </ol>
                     </li>
-                    <li><a href="#file-locations">File locations</a></li>
-                    <li><a href="#debugging">Debugging</a>
+                    <li><a href="#schema-migration">Schema migration</a></li>
+                    <li><a href="#database-initialization-and-recovery">Database initialization and recovery</a></li>
+                    <li><a href="#load-flow">Load flow</a>
                         <ol>
-                            <li><a href="#common-issues">Common issues</a></li>
-                            <li><a href="#logging">Logging</a></li>
-                            <li><a href="#database-inspection">Database inspection</a></li>
+                            <li><a href="#failure-semantics-before-live-replacement">Failure semantics before live replacement</a></li>
+                            <li><a href="#failure-semantics-after-live-replacement-begins">Failure semantics after live replacement begins</a></li>
                         </ol>
                     </li>
-                    <li><a href="#performance-characteristics">Performance characteristics</a></li>
-                    <li><a href="#finding-your-way-around">Finding your way around</a></li>
-                    <li><a href="#future-improvements">Future improvements</a></li>
-                    <li><a href="#api-reference">API Reference</a></li>
+                    <li><a href="#session-restoration-after-world-load">Session restoration after world load</a></li>
+                    <li><a href="#first-simulation-tick-after-load">First simulation tick after load</a></li>
+                    <li><a href="#render-snapshot-invalidation">Render-snapshot invalidation</a></li>
+                    <li><a href="#visibility-and-explored-fog">Visibility and explored fog</a></li>
+                    <li><a href="#deterministic-state">Deterministic state</a></li>
+                    <li><a href="#autosaves">Autosaves</a></li>
+                    <li><a href="#manual-saves-quick-saves-and-autosaves">Manual saves, quick-saves, and autosaves</a></li>
+                    <li><a href="#campaign-persistence">Campaign persistence</a></li>
+                    <li><a href="#concurrency-and-shutdown">Concurrency and shutdown</a></li>
+                    <li><a href="#what-is-intentionally-not-serialized">What is intentionally not serialized</a></li>
+                    <li><a href="#practical-failure-diagnosis">Practical failure diagnosis</a>
+                        <ol>
+                            <li><a href="#slot-cannot-be-read">Slot cannot be read</a></li>
+                            <li><a href="#slot-reads-but-verification-fails">Slot reads but verification fails</a></li>
+                            <li><a href="#payload-parses-but-staging-fails">Payload parses but staging fails</a></li>
+                            <li><a href="#staging-succeeds-but-live-restore-is-wrong">Staging succeeds but live restore is wrong</a></li>
+                            <li><a href="#world-restores-but-visuals-are-stale">World restores but visuals are stale</a></li>
+                            <li><a href="#fog-knowledge-is-wrong">Fog knowledge is wrong</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#tests">Tests</a></li>
+                    <li><a href="#architectural-invariants">Architectural invariants</a></li>
+                    <li><a href="#source-map">Source map</a></li>
                 </ol>
             </div>
             <div id="related-articles">
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
-                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
@@ -138,7 +183,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -157,750 +202,392 @@
                         </svg>
                     </button></div>
             </div>
-            <header>How the Save/Load System Actually Works</header>
-            <p>Imagine you've been playing a campaign for two hours. You've built up an army of 500 soldiers, captured strategic positions, and you're about to launch your final assault. Then life happens—dinner's ready, or you need to close your laptop. You need to save your progress and come back later with everything exactly as you left it.</p>
-            <p>This is the story of how Standard of Iron captures your entire game state, stores it in a database, and brings it back to life when you load. We'll walk through the journey from clicking "Save Game" to seeing your army restored on the battlefield.</p>
-            <h2 id="what-we-ll-cover">What we'll cover</h2>
-            <p>We'll start with the high-level architecture: how the three layers work together to persist game state. Then we'll dig into each component: the serialization layer that converts game objects to JSON, the storage layer that manages the SQLite database, and the service layer that coordinates everything. We'll look at the database schema with concrete examples, understand how campaigns track progress, and cover debugging and common issues.</p>
-            <h2 id="the-three-layer-architecture">The three-layer architecture</h2>
-            <p>The save/load system is built in three layers, each with a specific responsibility:</p>
-            <div>
-                <pre><code class="language-shell">┌──────────────────────────────────────────────────────────────────────────────┐
-│                           APPLICATION LAYER                                  │
-│                                                                              │
-│   ┌────────────────┐     ┌────────────────────────────────────────────────┐  │
-│   │  GameEngine    │────▶│              SaveLoadService                   │  │
-│   │  ::save_game() │     │                                                │  │
-│   │  ::load_game() │     │  • Coordinates save/load operations            │  │
-│   └────────────────┘     │  • Manages save directory                      │  │
-│                          │  • Caches metadata after operations            │  │
-│                          │  • Provides error tracking                     │  │
-│                          └───────────────────────┬────────────────────────┘  │
-│                                                  │                           │
-└──────────────────────────────────────────────────┼───────────────────────────┘
-                                                   │
-┌──────────────────────────────────────────────────┼───────────────────────────┐
-│                          SERIALIZATION LAYER     │                           │
-│                                                  ▼                           │
-│   ┌────────────────────────────────────────────────────────────────────────┐ │
-│   │                          Serialization                                 │ │
-│   │                                                                        │ │
-│   │  World ◀─────▶ QJsonDocument                                           │ │
-│   │    │                                                                   │ │
-│   │    ├── Entities ◀─────▶ QJsonObject                                    │ │
-│   │    │     └── Components (Transform, Unit, Attack, Movement, etc.)      │ │
-│   │    │                                                                   │ │
-│   │    └── Terrain ◀─────▶ QJsonObject                                     │ │
-│   │          ├── Height map data                                           │ │
-│   │          ├── Biome settings                                            │ │
-│   │          └── Roads, rivers, bridges                                    │ │
-│   └────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-└──────────────────────────────────────────────────┬───────────────────────────┘
-                                                   │
-┌──────────────────────────────────────────────────┼───────────────────────────┐
-│                           STORAGE LAYER          │                           │
-│                                                  ▼                           │
-│   ┌────────────────────────────────────────────────────────────────────────┐ │
-│   │                          SaveStorage                                   │ │
-│   │                                                                        │ │
-│   │  SQLite Database (saves.sqlite)                                        │ │
-│   │    │                                                                   │ │
-│   │    ├── saves              # Game save slots                            │ │
-│   │    ├── campaigns          # Campaign definitions                       │ │
-│   │    ├── campaign_progress  # Campaign completion status                 │ │
-│   │    ├── campaign_missions  # Mission unlock/completion                  │ │
-│   │    └── mission_progress   # Individual mission results                 │ │
-│   │                                                                        │ │
-│   │  Features:                                                             │ │
-│   │    • ACID transactions                                                 │ │
-│   │    • Schema versioning and migrations                                  │ │
-│   │    • BLOB storage for large data                                       │ │
-│   └────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘</code></pre>
-            </div>
-            <p>The key insight is separation of concerns. The serialization layer knows how to convert game objects but doesn't care where they're stored. The storage layer knows how to persist data but doesn't understand game objects. The service layer coordinates between them and handles the plumbing.</p>
-            <h2 id="the-save-flow">The save flow</h2>
-            <p>When you click "Save Game," here's what happens:</p>
-            <div>
-                <pre><code class="language-shell">┌───────────────┐     ┌────────────────────┐     ┌──────────────────┐
-│  User clicks  │────▶│  GameEngine::      │────▶│ SaveLoadService::│
-│  "Save Game"  │     │  save_game()       │     │ save_game_to_slot│
-└───────────────┘     └────────────────────┘     └────────┬─────────┘
-                                                          │
-                                                          ▼
-                      ┌────────────────────────────────────────────────────┐
-                      │  1. Serialize world to JSON                        │
-                      │     Serialization::serialize_world(&amp;world)         │
-                      │                                                    │
-                      │  2. Build metadata                                 │
-                      │     { slotName, title, timestamp, map_name, ... }  │
-                      │                                                    │
-                      │  3. Convert JSON to compact bytes                  │
-                      │     world_doc.toJson(QJsonDocument::Compact)       │
-                      │                                                    │
-                      │  4. Persist to SQLite                              │
-                      │     SaveStorage::save_slot(...)                    │
-                      │                                                    │
-                      │  5. Update cached metadata                         │
-                      │     m_last_metadata = combined_metadata            │
-                      └────────────────────────────────────────────────────┘</code></pre>
-            </div>
-            <p>The serialization happens entirely in memory. We walk through every entity in the world, serialize each component to JSON, then combine it all into a QJsonDocument. This gets converted to compact JSON bytes and handed to the storage layer.</p>
-            <p>From <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/save_load_service.cpp">save_load_service.cpp</a>:</p>
-            <div>
-                <pre><code class="language-clike">auto SaveLoadService::save_game_to_slot(Engine::Core::World &amp;world,
-                                        const QString &amp;slot_name,
-                                        const QString &amp;title,
-                                        const QString &amp;map_name,
-                                        const QJsonObject &amp;metadata,
-                                        const QByteArray &amp;screenshot) -&gt; bool {
-  // Serialize entire world to JSON
-  QJsonDocument const world_doc =
-      Engine::Core::Serialization::serialize_world(&amp;world);
-  const QByteArray world_bytes = world_doc.toJson(QJsonDocument::Compact);
-
-  // Build combined metadata
-  QJsonObject combined_metadata = metadata;
-  combined_metadata["slotName"] = slot_name;
-  combined_metadata["title"] = title;
-  combined_metadata["timestamp"] =
-      QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-  
-  // Persist to database
-  if (!m_storage-&gt;save_slot(slot_name, title, combined_metadata, 
-                            world_bytes, screenshot, &amp;storage_error)) {
-    m_last_error = storage_error;
-    return false;
-  }
-  
-  return true;
-}</code></pre>
-            </div>
-            <h2 id="the-load-flow">The load flow</h2>
-            <p>Loading reverses the process:</p>
-            <div>
-                <pre><code class="language-shell">┌───────────────┐     ┌────────────────────┐     ┌──────────────────┐
-│  User clicks  │────▶│  GameEngine::      │────▶│ SaveLoadService::│
-│  saved slot   │     │  load_game()       │     │ load_game_from_  │
-└───────────────┘     └────────────────────┘     │ slot             │
-                                                 └────────┬─────────┘
-                                                          │
-                                                          ▼
-                      ┌────────────────────────────────────────────────────┐
-                      │  1. Load from SQLite                               │
-                      │     SaveStorage::load_slot(slot_name, ...)         │
-                      │                                                    │
-                      │  2. Parse JSON                                     │
-                      │     QJsonDocument::fromJson(world_bytes)           │
-                      │                                                    │
-                      │  3. Clear existing world                           │
-                      │     world.clear()                                  │
-                      │                                                    │
-                      │  4. Deserialize world from JSON                    │
-                      │     Serialization::deserialize_world(&amp;world, doc)  │
-                      │                                                    │
-                      │  5. Cache metadata for restoration                 │
-                      │     m_last_metadata = metadata                     │
-                      └────────────────────────────────────────────────────┘</code></pre>
-            </div>
-            <p>The crucial step is clearing the world before deserializing. This ensures no stale entities remain. The deserialization then recreates every entity with its components exactly as they were when saved.</p>
-            <h2 id="entity-serialization">Entity serialization</h2>
-            <p>Each entity is serialized as a JSON object containing all its components. Here's what a serialized soldier looks like:</p>
-            <div>
-                <pre><code class="language-json">{
-  "id": 42,
-  "transform": {
-    "pos_x": 150.5,
-    "pos_y": 0.0,
-    "pos_z": 200.3,
-    "rot_x": 0.0,
-    "rot_y": 1.57,
-    "rot_z": 0.0,
-    "scale_x": 1.0,
-    "scale_y": 1.0,
-    "scale_z": 1.0,
-    "has_desired_yaw": false,
-    "desired_yaw": 0.0
-  },
-  "unit": {
-    "health": 85,
-    "max_health": 100,
-    "speed": 3.5,
-    "vision_range": 12.0,
-    "unit_type": "spearman",
-    "owner_id": 1,
-    "nation_id": "roman_republic"
-  },
-  "movement": {
-    "has_target": true,
-    "target_x": 180.0,
-    "target_y": 210.0,
-    "goal_x": 180.0,
-    "goal_y": 210.0,
-    "vx": 2.5,
-    "vz": 1.8,
-    "path_pending": false,
-    "path": [
-      {"x": 160.0, "y": 205.0},
-      {"x": 170.0, "y": 208.0},
-      {"x": 180.0, "y": 210.0}
-    ]
-  },
-  "attack": {
-    "range": 2.0,
-    "damage": 15,
-    "cooldown": 1.2,
-    "time_since_last": 0.8,
-    "melee_range": 1.5,
-    "melee_damage": 15,
-    "preferred_mode": "auto",
-    "current_mode": "melee",
-    "can_melee": true,
-    "can_ranged": false
-  },
-  "stamina": {
-    "stamina": 75.0,
-    "max_stamina": 100.0,
-    "regen_rate": 10.0,
-    "depletion_rate": 20.0,
-    "is_running": false,
-    "run_requested": false
-  }
-}</code></pre>
-            </div>
-            <p>The serialization code in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/core/serialization.cpp">serialization.cpp</a> handles each component type:</p>
-            <div>
-                <pre><code class="language-clike">auto Serialization::serialize_entity(const Entity *entity) -&gt; QJsonObject {
-  QJsonObject entity_obj;
-  entity_obj["id"] = static_cast&lt;qint64&gt;(entity-&gt;get_id());
-
-  if (const auto *transform = entity-&gt;get_component&lt;TransformComponent&gt;()) {
-    QJsonObject transform_obj;
-    transform_obj["pos_x"] = transform-&gt;position.x;
-    transform_obj["pos_y"] = transform-&gt;position.y;
-    transform_obj["pos_z"] = transform-&gt;position.z;
-    // ... rotation and scale
-    entity_obj["transform"] = transform_obj;
-  }
-
-  if (const auto *unit = entity-&gt;get_component&lt;UnitComponent&gt;()) {
-    QJsonObject unit_obj;
-    unit_obj["health"] = unit-&gt;health;
-    unit_obj["max_health"] = unit-&gt;max_health;
-    unit_obj["speed"] = unit-&gt;speed;
-    // ... other fields
-    entity_obj["unit"] = unit_obj;
-  }
-  
-  // ... 20+ more component types
-  
-  return entity_obj;
-}</code></pre>
-            </div>
-            <h3 id="supported-components">Supported components</h3>
-            <p>The serialization system supports all game components:</p>
+            <header>Save and Load System</header>
+            <p>Standard of Iron stores match saves in a versioned SQLite database. A save is more than a serialized entity list: it combines the authoritative battlefield, non-entity session state, campaign/mission metadata, and a preview image, then stores that snapshot with compression, checksums, transactional database writes, schema versioning, migration, integrity checking, recovery, and autosave retention.</p>
+            <p>The save system is designed around a clear ownership rule: persist state that changes the meaning of the match, rebuild state that is derived, and keep renderer/UI-only state outside simulation authority.</p>
+            <h2 id="main-components">Main components</h2>
+            <p>The implementation is split by responsibility:</p>
             <p>
             <table>
                 <tr>
-                    <td>Component</td>
-                    <td>Key Fields</td>
-                    <td>Purpose</td>
+                    <td>Area</td>
+                    <td>Source</td>
+                    <td>Responsibility</td>
                 </tr>
                 <tr>
-                    <td>TransformComponent</td>
-                    <td>position, rotation, scale</td>
-                    <td>Entity location and orientation</td>
+                    <td>World serialization</td>
+                    <td><code>game/save/serialization.*</code></td>
+                    <td>entity/component world document</td>
                 </tr>
                 <tr>
-                    <td>RenderableComponent</td>
-                    <td>mesh_path, texture_path, visible</td>
-                    <td>Visual representation</td>
+                    <td>Session snapshot</td>
+                    <td><code>game/session/session_snapshot.*</code></td>
+                    <td>authoritative non-entity match state</td>
                 </tr>
                 <tr>
-                    <td>UnitComponent</td>
-                    <td>health, speed, nation_id</td>
-                    <td>Unit stats and ownership</td>
+                    <td>Snapshot contract</td>
+                    <td><code>game/save/snapshot_contract.*</code></td>
+                    <td>field classification and version contract</td>
                 </tr>
                 <tr>
-                    <td>MovementComponent</td>
-                    <td>target, path, velocity</td>
-                    <td>Movement state</td>
+                    <td>Application coordination</td>
+                    <td><code>app/persistence/save_load_coordinator.*</code></td>
+                    <td>capture/restore orchestration around the live game</td>
                 </tr>
                 <tr>
-                    <td>AttackComponent</td>
-                    <td>damage, range, cooldown</td>
-                    <td>Combat capabilities</td>
+                    <td>Async save service</td>
+                    <td><code>game/systems/save_load_service.*</code></td>
+                    <td>queued jobs, slots, progress, cancellation, verification</td>
                 </tr>
                 <tr>
-                    <td>PatrolComponent</td>
-                    <td>waypoints, current_waypoint</td>
-                    <td>Patrol behavior</td>
+                    <td>SQLite storage</td>
+                    <td><code>game/systems/save_storage.*</code></td>
+                    <td>schema, transactions, migration, recovery, campaign tables</td>
                 </tr>
                 <tr>
-                    <td>ProductionComponent</td>
-                    <td>queue, build_time, rally_point</td>
-                    <td>Building production</td>
-                </tr>
-                <tr>
-                    <td>CaptureComponent</td>
-                    <td>progress, capturing_player</td>
-                    <td>Capture state</td>
-                </tr>
-                <tr>
-                    <td>StaminaComponent</td>
-                    <td>stamina, regen_rate, is_running</td>
-                    <td>Stamina system</td>
-                </tr>
-                <tr>
-                    <td>HealerComponent</td>
-                    <td>healing_range, healing_amount</td>
-                    <td>Healer units</td>
-                </tr>
-                <tr>
-                    <td>ElephantComponent</td>
-                    <td>charge_state, trample_damage</td>
-                    <td>War elephants</td>
-                </tr>
-                <tr>
-                    <td>CombatStateComponent</td>
-                    <td>animation_state, hit_pause</td>
-                    <td>Combat animation states and hit pause</td>
-                </tr>
-                <tr>
-                    <td>FormationModeComponent</td>
-                    <td>active, formation_center</td>
-                    <td>Unit formations</td>
-                </tr>
-                <tr>
-                    <td>BuilderProductionComponent</td>
-                    <td>construction_site, progress</td>
-                    <td>Builder units</td>
-                </tr>
-                <tr>
-                    <td>HomeComponent</td>
-                    <td>population_contribution</td>
-                    <td>Population buildings</td>
-                </tr>
-                <tr>
-                    <td>TerrainContextComponent</td>
-                    <td>is_on_bridge, is_at_hill</td>
-                    <td>Terrain awareness</td>
+                    <td>Payload format</td>
+                    <td><code>game/systems/save_format.*</code></td>
+                    <td>compression, checksums, packed world payload</td>
                 </tr>
             </table>
             </p>
-            <h2 id="the-sqlite-database">The SQLite database</h2>
-            <p>All persistent data lives in a SQLite database at <code>~/.local/share/StandardOfIron/saves/saves.sqlite</code> (on Linux) or the equivalent AppData location on other platforms.</p>
-            <h3 id="database-schema">Database schema</h3>
-            <p>The current schema (version 3) has five tables:</p>
-            <div>
-                <pre><code class="language-sql">-- Game save slots
-CREATE TABLE saves (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slot_name TEXT UNIQUE NOT NULL,
-    title TEXT NOT NULL,
-    map_name TEXT,
-    timestamp TEXT NOT NULL,
-    metadata BLOB NOT NULL,        -- JSON with game metadata
-    world_state BLOB NOT NULL,     -- Serialized world JSON
-    screenshot BLOB,               -- PNG screenshot for UI
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-CREATE INDEX idx_saves_updated_at ON saves (updated_at DESC);
-
--- Campaign definitions  
-CREATE TABLE campaigns (
-    id TEXT PRIMARY KEY NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    map_path TEXT NOT NULL,
-    order_index INTEGER NOT NULL DEFAULT 0
-);
-
--- Campaign completion status
-CREATE TABLE campaign_progress (
-    campaign_id TEXT PRIMARY KEY NOT NULL,
-    completed INTEGER NOT NULL DEFAULT 0,
-    unlocked INTEGER NOT NULL DEFAULT 0,
-    completed_at TEXT,
-    FOREIGN KEY(campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
-);
-
--- Individual mission progress within campaigns
-CREATE TABLE campaign_missions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    campaign_id TEXT NOT NULL,
-    mission_id TEXT NOT NULL,
-    order_index INTEGER NOT NULL,
-    unlocked INTEGER NOT NULL DEFAULT 0,
-    completed INTEGER NOT NULL DEFAULT 0,
-    completed_at TEXT,
-    UNIQUE(campaign_id, mission_id)
-);
-CREATE INDEX idx_campaign_missions_campaign_id ON campaign_missions (campaign_id);
-
--- Mission results (any mode)
-CREATE TABLE mission_progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mission_id TEXT NOT NULL,
-    mode TEXT NOT NULL,            -- 'campaign' or 'skirmish'
-    campaign_id TEXT,
-    completed INTEGER NOT NULL DEFAULT 0,
-    completion_time REAL,
-    difficulty TEXT,
-    result TEXT,                   -- 'victory' or 'defeat'
-    completed_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(mission_id, mode, campaign_id)
-);
-CREATE INDEX idx_mission_progress_mission_id ON mission_progress (mission_id);</code></pre>
-            </div>
-            <h3 id="example-data">Example data</h3>
-            <p>Here's what real data looks like in each table:</p>
-            <p><strong>saves table:</strong></p>
-            <div>
-                <pre><code class="language-shell">┌────┬─────────────┬──────────────────────┬─────────────┬──────────────────────────┐
-│ id │ slot_name   │ title                │ map_name    │ timestamp                │
-├────┼─────────────┼──────────────────────┼─────────────┼──────────────────────────┤
-│ 1  │ autosave    │ Autosave             │ Forest Map  │ 2024-01-15T14:30:00.000Z │
-│ 2  │ slot_1      │ Before Final Battle  │ Rivers Map  │ 2024-01-15T13:45:22.500Z │
-│ 3  │ slot_2      │ Early Game           │ Mountain    │ 2024-01-14T20:15:00.000Z │
-└────┴─────────────┴──────────────────────┴─────────────┴──────────────────────────┘
-
-metadata (JSON blob for slot_1):
-{
-  "slotName": "slot_1",
-  "title": "Before Final Battle", 
-  "timestamp": "2024-01-15T13:45:22.500Z",
-  "map_name": "Rivers Map",
-  "version": "1.0",
-  "playTime": "01:45:22",
-  "camera": {
-    "position": {"x": 150, "y": 50, "z": 200},
-    "rotation": {"yaw": 45, "pitch": -30}
-  }
-}</code></pre>
-            </div>
-            <p><strong>campaigns table:</strong></p>
-            <div>
-                <pre><code class="language-shell">┌────────────────────┬────────────────────┬─────────────────────────────────┬─────────────────────────────┐
-│ id                 │ title              │ description                     │ map_path                    │
-├────────────────────┼────────────────────┼─────────────────────────────────┼─────────────────────────────┤
-│ second_punic_war   │ Second Punic War   │ Campaign across Mediterranean   │ :/assets/campaigns/spw.json │
-│ carthage_vs_rome   │ Carthage vs Rome   │ Historic battle...              │ :/assets/maps/rivers.json   │
-└────────────────────┴────────────────────┴─────────────────────────────────┴─────────────────────────────┘</code></pre>
-            </div>
-            <p><strong>campaign_missions table:</strong></p>
-            <div>
-                <pre><code class="language-shell">┌────┬────────────────────┬─────────────────┬─────────────┬──────────┬───────────┐
-│ id │ campaign_id        │ mission_id      │ order_index │ unlocked │ completed │
-├────┼────────────────────┼─────────────────┼─────────────┼──────────┼───────────┤
-│ 1  │ second_punic_war   │ forest_ambush   │ 0           │ 1        │ 1         │
-│ 2  │ second_punic_war   │ river_crossing  │ 1           │ 1        │ 1         │
-│ 3  │ second_punic_war   │ siege_warfare   │ 2           │ 1        │ 0         │
-│ 4  │ second_punic_war   │ final_battle    │ 3           │ 0        │ 0         │
-└────┴────────────────────┴─────────────────┴─────────────┴──────────┴───────────┘</code></pre>
-            </div>
-            <h2 id="schema-versioning-and-migrations">Schema versioning and migrations</h2>
-            <p>The database uses SQLite's <code>PRAGMA user_version</code> to track schema version. When SaveStorage initializes, it checks the version and runs migrations if needed:</p>
-            <div>
-                <pre><code class="language-clike">auto SaveStorage::ensure_schema(QString *out_error) const -&gt; bool {
-  int version = schema_version(out_error);
-  if (version &lt; 0) {
-    return false;
-  }
-  
-  if (version &lt; k_current_schema_version) {
-    if (!migrate_schema(version, out_error)) {
-      return false;
-    }
-    if (!set_schema_version(k_current_schema_version, out_error)) {
-      return false;
-    }
-  }
-  
-  return true;
-}</code></pre>
-            </div>
-            <h3 id="migration-history">Migration history</h3>
-            <p>
-            <table>
-                <tr>
-                    <td>Version</td>
-                    <td>Changes</td>
-                </tr>
-                <tr>
-                    <td>0 → 1</td>
-                    <td>Initial schema: saves table</td>
-                </tr>
-                <tr>
-                    <td>1 → 2</td>
-                    <td>Added campaigns, campaign_progress tables</td>
-                </tr>
-                <tr>
-                    <td>2 → 3</td>
-                    <td>Added mission_progress, campaign_missions tables</td>
-                </tr>
-            </table>
-            </p>
-            <p>Migrations run in order. If a player has a version 1 database, they'll run migrate_to_2, then migrate_to_3.</p>
-            <h2 id="transaction-handling">Transaction handling</h2>
-            <p>All database writes use transactions to ensure data integrity. The TransactionGuard class provides RAII-style transaction management:</p>
-            <div>
-                <pre><code class="language-clike">class TransactionGuard {
-public:
-  explicit TransactionGuard(QSqlDatabase &amp;database) : m_database(database) {}
-
-  auto begin(QString *out_error) -&gt; bool {
-    if (!m_database.transaction()) {
-      // Handle error
-      return false;
-    }
-    m_active = true;
-    return true;
-  }
-
-  auto commit(QString *out_error) -&gt; bool {
-    if (!m_active) return true;
-    if (!m_database.commit()) {
-      rollback();
-      return false;
-    }
-    m_active = false;
-    return true;
-  }
-
-  ~TransactionGuard() { 
-    if (m_active) rollback();  // Auto-rollback if not committed
-  }
-};</code></pre>
-            </div>
-            <p>This ensures that if anything goes wrong during a save, the database rolls back to a consistent state.</p>
-            <h2 id="the-service-layer-api">The service layer API</h2>
-            <p>SaveLoadService provides the high-level API that game code interacts with:</p>
-            <div>
-                <pre><code class="language-clike">class SaveLoadService {
-public:
-  // Save/load operations
-  auto save_game_to_slot(World &amp;world, const QString &amp;slot_name,
-                         const QString &amp;title, const QString &amp;map_name,
-                         const QJsonObject &amp;metadata = {},
-                         const QByteArray &amp;screenshot = {}) -&gt; bool;
-                         
-  auto load_game_from_slot(World &amp;world, const QString &amp;slot_name) -&gt; bool;
-  
-  auto get_save_slots() const -&gt; QVariantList;
-  auto delete_save_slot(const QString &amp;slot_name) -&gt; bool;
-  
-  // Error handling
-  auto get_last_error() const -&gt; QString;
-  void clear_error();
-  
-  // Metadata from last operation
-  auto get_last_metadata() const -&gt; QJsonObject;
-  auto get_last_title() const -&gt; QString;
-  auto get_last_screenshot() const -&gt; QByteArray;
-  
-  // Campaign management
-  auto list_campaigns(QString *out_error = nullptr) -&gt; QVariantList;
-  auto get_campaign_progress(const QString &amp;campaign_id) const -&gt; QVariantMap;
-  auto mark_campaign_completed(const QString &amp;campaign_id) -&gt; bool;
-  
-  // Mission tracking
-  auto save_mission_result(const QString &amp;mission_id, const QString &amp;mode,
-                           const QString &amp;campaign_id, bool completed,
-                           const QString &amp;result, const QString &amp;difficulty,
-                           float completion_time) -&gt; bool;
-  auto unlock_next_campaign_mission(const QString &amp;campaign_id,
-                                    const QString &amp;completed_mission_id) -&gt; bool;
-  
-  // Singleton access
-  static SaveLoadService *instance();
-};</code></pre>
-            </div>
-            <h3 id="usage-example">Usage example</h3>
-            <div>
-                <pre><code class="language-clike">// Save current game
-auto *service = SaveLoadService::instance();
-if (!service-&gt;save_game_to_slot(world, "quicksave", "Quick Save", 
-                                 current_map_name)) {
-  qWarning() &lt;&lt; "Save failed:" &lt;&lt; service-&gt;get_last_error();
-}
-
-// Load saved game
-if (!service-&gt;load_game_from_slot(world, "quicksave")) {
-  qWarning() &lt;&lt; "Load failed:" &lt;&lt; service-&gt;get_last_error();
-}
-
-// Get list of saves for UI
-QVariantList saves = service-&gt;get_save_slots();
-for (const QVariant &amp;save : saves) {
-  QVariantMap slot = save.toMap();
-  qInfo() &lt;&lt; slot["title"].toString() 
-          &lt;&lt; "saved at" &lt;&lt; slot["timestamp"].toString();
-}</code></pre>
-            </div>
-            <h2 id="file-locations">File locations</h2>
-            <p>The save system stores data in platform-appropriate locations:</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Platform</td>
-                    <td>Location</td>
-                </tr>
-                <tr>
-                    <td>Linux</td>
-                    <td><code>~/.local/share/StandardOfIron/saves/saves.sqlite</code></td>
-                </tr>
-                <tr>
-                    <td>macOS</td>
-                    <td><code>~/Library/Application Support/StandardOfIron/saves/saves.sqlite</code></td>
-                </tr>
-                <tr>
-                    <td>Windows</td>
-                    <td><code>%APPDATA%/StandardOfIron/saves/saves.sqlite</code></td>
-                </tr>
-            </table>
-            </p>
-            <p>The directory is created automatically on first save.</p>
-            <h2 id="debugging">Debugging</h2>
-            <h3 id="common-issues">Common issues</h3>
-            <p><strong>"Save storage unavailable"</strong>
-                - Database file might be locked by another process
-                - Check file permissions on saves directory
-                - Delete corrupted database file to reset</p>
-            <p><strong>"Corrupted save data"</strong>
-                - JSON parsing failed—save file may be truncated
-                - Check disk space during save
-                - Look for <code>QJsonParseError</code> in logs</p>
-            <p><strong>"Save slot not found"</strong>
-                - Slot name doesn't exist in database
-                - Case-sensitive matching—check exact name</p>
-            <p><strong>"Failed to begin transaction"</strong>
-                - SQLite is locked
-                - Check for other processes accessing the database</p>
-            <h3 id="logging">Logging</h3>
-            <p>Enable debug logging to trace save/load operations:</p>
-            <div>
-                <pre><code class="language-bash">QT_LOGGING_RULES="*.debug=true" ./standard_of_iron</code></pre>
-            </div>
-            <p>Key log messages to look for:</p>
-            <div>
-                <pre><code class="language-shell">Saving game to slot: quicksave
-Loading game from slot: quicksave
-SaveLoadService: failed to persist slot &lt;error&gt;
-SaveLoadService: failed to load slot &lt;error&gt;</code></pre>
-            </div>
-            <h3 id="database-inspection">Database inspection</h3>
-            <p>You can inspect the database directly with the <code>sqlite3</code> command:</p>
-            <div>
-                <pre><code class="language-bash">sqlite3 ~/.local/share/StandardOfIron/saves/saves.sqlite
-
--- List all saves
-SELECT slot_name, title, timestamp FROM saves ORDER BY timestamp DESC;
-
--- Check schema version
-PRAGMA user_version;
-
--- View campaign progress
-SELECT * FROM campaign_missions WHERE campaign_id = 'second_punic_war';</code></pre>
-            </div>
-            <h2 id="performance-characteristics">Performance characteristics</h2>
-            <p>
-            <table>
-                <tr>
-                    <td>Operation</td>
-                    <td>Typical Time</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td>Save (small map)</td>
-                    <td>50-100ms</td>
-                    <td>~1000 entities</td>
-                </tr>
-                <tr>
-                    <td>Save (large map)</td>
-                    <td>200-500ms</td>
-                    <td>~5000 entities</td>
-                </tr>
-                <tr>
-                    <td>Load (small map)</td>
-                    <td>100-200ms</td>
-                    <td>Includes entity creation</td>
-                </tr>
-                <tr>
-                    <td>Load (large map)</td>
-                    <td>500-1000ms</td>
-                    <td>Entity creation is the bottleneck</td>
-                </tr>
-                <tr>
-                    <td>List slots</td>
-                    <td>&lt;10ms</td>
-                    <td>Metadata only, no world_state</td>
-                </tr>
-            </table>
-            </p>
-            <p>The main bottleneck is JSON parsing/generation. For very large maps, consider:
-                - Reducing entity count through LOD systems
-                - Compressing world_state with zlib before storage
-                - Async save/load with progress UI</p>
-            <h2 id="finding-your-way-around">Finding your way around</h2>
-            <p>
-            <table>
-                <tr>
-                    <td>What you want to do</td>
-                    <td>Where to look</td>
-                </tr>
-                <tr>
-                    <td>Modify save/load flow</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/save_load_service.cpp">save_load_service.cpp</a></td>
-                </tr>
-                <tr>
-                    <td>Add new component serialization</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/core/serialization.cpp">serialization.cpp</a></td>
-                </tr>
-                <tr>
-                    <td>Change database schema</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/save_storage.cpp">save_storage.cpp</a> - add migration</td>
-                </tr>
-                <tr>
-                    <td>Modify metadata fields</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/save_load_service.cpp">save_load_service.cpp</a> - combined_metadata</td>
-                </tr>
-                <tr>
-                    <td>Add new campaign table</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/save_storage.cpp">save_storage.cpp</a> - migrate_to_N</td>
-                </tr>
-                <tr>
-                    <td>Test save/load</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/tests/db/save_storage_test.cpp">tests/db/save_storage_test.cpp</a></td>
-                </tr>
-                <tr>
-                    <td>Test serialization</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/tests/core/serialization_test.cpp">tests/core/serialization_test.cpp</a></td>
-                </tr>
-            </table>
-            </p>
-            <h2 id="future-improvements">Future improvements</h2>
-            <p>Planned enhancements to the save system:</p>
+            <p>These layers deliberately separate “what constitutes the match” from “how bytes are stored.”</p>
+            <h2 id="save-state-model">Save-state model</h2>
+            <p><code>game/save/snapshot_contract.cpp</code> classifies runtime state into four categories.</p>
+            <h3 id="authoritative-serialized-state">Authoritative serialized state</h3>
+            <p>State that affects the meaning or future evolution of the match is persisted explicitly.</p>
+            <p>Examples include:</p>
             <ul>
-                <li>[ ] Compressed world_state using zlib/gzip</li>
-                <li>[ ] Async save/load with progress callbacks</li>
-                <li>[ ] Save file validation and checksums</li>
-                <li>[ ] Cloud save synchronization</li>
-                <li>[ ] Save file export/import for sharing</li>
-                <li>[ ] Replay system integration</li>
-                <li>[ ] Differential saves for faster autosave</li>
+                <li>world entities and authoritative components;</li>
+                <li>terrain and authored world props;</li>
+                <li>owner, team, colour, and nation assignment;</li>
+                <li>player resources and harvested-resource totals;</li>
+                <li>match statistics;</li>
+                <li>simulation clock state;</li>
+                <li>deterministic RNG state;</li>
+                <li>explored visibility/fog knowledge; and</li>
+                <li>subsystem state contributed through <code>Game::Session::SessionSnapshot</code>, including AI and mission/victory state where registered.</li>
             </ul>
-            <h2 id="api-reference">API Reference</h2>
-            <p>See also:
-                - <code>game/systems/save_storage.h</code> - Database layer API
-                - <code>game/systems/save_load_service.h</code> - Service layer API
-                - <code>game/core/serialization.h</code> - Serialization API
-                - <code>game/core/component.h</code> - Component definitions</p>
+            <p>If losing a value would change what happens after load, that value belongs in the authoritative contract or must be derivable from other authoritative state.</p>
+            <h3 id="derived-state">Derived state</h3>
+            <p>Derived runtime data is rebuilt after restoration instead of being serialized as a second authority.</p>
+            <p>Examples include:</p>
+            <ul>
+                <li>troop-count registries;</li>
+                <li>building-collision indexes;</li>
+                <li>movement facts;</li>
+                <li>engagement assignments;</li>
+                <li>one-tick lookup caches; and</li>
+                <li>other runtime indexes that can be reconstructed from the restored world/session.</li>
+            </ul>
+            <p>The command queue is also rebuilt empty. Commands that have not executed when the save is captured are not replayed after loading.</p>
+            <p>That is an important semantic boundary: the save captures the authoritative state at the save point, not a speculative set of queued future mutations.</p>
+            <h3 id="presentation-only-state">Presentation-only state</h3>
+            <p>Renderer and UI presentation are not part of simulation authority.</p>
+            <p>Transient examples include:</p>
+            <ul>
+                <li>animation interpolation state;</li>
+                <li>short-lived hit effects;</li>
+                <li>placement ghosts;</li>
+                <li>renderer resource caches; and</li>
+                <li>other visual effects that normal runtime systems can regenerate.</li>
+            </ul>
+            <p>Some player-facing presentation state, such as camera state, can be restored separately for continuity without making it authoritative gameplay state.</p>
+            <h3 id="campaign-level-metadata">Campaign-level metadata</h3>
+            <p>The database also stores information that describes the save slot rather than entity simulation state, including:</p>
+            <ul>
+                <li>campaign ID;</li>
+                <li>mission ID;</li>
+                <li>difficulty;</li>
+                <li>play time;</li>
+                <li>slot title;</li>
+                <li>timestamps;</li>
+                <li>save kind; and</li>
+                <li>screenshot/preview data.</li>
+            </ul>
+            <p>Campaign completion and mission result tables live in the same storage layer but have their own schema and lifecycle.</p>
+            <h2 id="save-capture-boundary">Save capture boundary</h2>
+            <p><code>SaveLoadCoordinator</code> is the application-facing capture boundary.</p>
+            <p>It captures the world/session state on the owning thread, prepares the metadata needed for the slot, and submits a <code>SaveLoadService::SaveRequest</code> to the background save service.</p>
+            <p>The expensive storage work can then happen off the live gameplay path because the worker operates on the captured save document rather than continuing to read the mutable world.</p>
+            <p>This boundary is what makes asynchronous save writes safe: the worker is writing a snapshot, not sharing authority over live entities.</p>
+            <h2 id="save-job-lifecycle">Save job lifecycle</h2>
+            <p><code>SaveLoadService</code> queues save work on its worker thread and reports progress through <code>save_progress</code>.</p>
+            <p>The current stages are:</p>
+            <ol>
+                <li><strong>Queued</strong> — the request is waiting for the save worker.</li>
+                <li><strong>Serializing world</strong> — the captured world document is converted to compact JSON bytes.</li>
+                <li><strong>Compressing</strong> — <code>Save::pack()</code> creates the stored payload and integrity metadata.</li>
+                <li><strong>Writing</strong> — <code>SaveStorage</code> writes the slot transactionally.</li>
+                <li><strong>Done</strong> — the slot commit has completed and <code>save_finished</code> is emitted.</li>
+            </ol>
+            <p>These stages describe the current worker pipeline rather than a UI-only progress animation.</p>
+            <h3 id="queue-management">Queue management</h3>
+            <p>The service also exposes:</p>
+            <ul>
+                <li>cancellation by save job ID;</li>
+                <li><code>pending_save_count()</code>; and</li>
+                <li><code>wait_for_pending_saves()</code> for shutdown or other synchronization points.</li>
+            </ul>
+            <p>A caller can therefore distinguish “save requested” from “save durably completed” and can prevent application shutdown from abandoning queued work.</p>
+            <h3 id="screenshot-attachment">Screenshot attachment</h3>
+            <p>A screenshot/preview can be attached as a separate queued job after the slot row exists. The preview is metadata for browsing saves; it is not part of the authoritative world payload.</p>
+            <h2 id="packed-payload-format">Packed payload format</h2>
+            <p><code>game/systems/save_format.cpp</code> owns packing and unpacking of the world payload.</p>
+            <p>The stored save row records enough information to validate both the compressed representation and the reconstructed world bytes:</p>
+            <ul>
+                <li>compression mode;</li>
+                <li>uncompressed world size;</li>
+                <li>SHA-256 checksum of the uncompressed world;</li>
+                <li>SHA-256 checksum of the stored blob; and</li>
+                <li>the packed world payload.</li>
+            </ul>
+            <p>The current format supports zlib compression.</p>
+            <h3 id="why-there-are-two-checksums">Why there are two checksums</h3>
+            <p>The stored-blob checksum catches corruption of the representation that was written to SQLite. The uncompressed-world checksum verifies the bytes obtained after unpacking.</p>
+            <p>That distinction makes corruption detectable on both sides of decompression instead of assuming that a successful decompression implies a valid save document.</p>
+            <p><code>Save::unpack()</code> verifies the stored data before JSON deserialization proceeds.</p>
+            <p><code>SaveLoadService::verify_save_slot()</code> exposes slot verification through the storage layer without requiring a full live-game replacement.</p>
+            <h2 id="sqlite-database">SQLite database</h2>
+            <p>The save database is named:</p>
+            <div>
+                <pre><code class="language-text">saves.sqlite</code></pre>
+            </div>
+            <p>and lives under the application's save directory.</p>
+            <p><code>SaveStorage</code> configures SQLite with:</p>
+            <ul>
+                <li>WAL mode;</li>
+                <li><code>synchronous=FULL</code>; and</li>
+                <li>foreign-key enforcement.</li>
+            </ul>
+            <p>The database is used for both match saves and campaign/mission persistence.</p>
+            <h2 id="storage-tables">Storage tables</h2>
+            <p>The current schema includes:</p>
+            <ul>
+                <li><code>saves</code> — match snapshots, slot metadata, packed payload, and preview;</li>
+                <li><code>campaign_progress</code> — campaign-level completion/progression state;</li>
+                <li><code>campaign_missions</code> — per-mission unlock/completion state; and</li>
+                <li><code>mission_results</code> — recorded mission outcomes.</li>
+            </ul>
+            <p><code>SaveStorage::schema_shape_is_current()</code> checks the expected table/column shape rather than trusting only the numeric schema version.</p>
+            <h2 id="versioning-database-vs-snapshot">Versioning: database vs snapshot</h2>
+            <p>Two different version numbers describe two different contracts.</p>
+            <h3 id="database-schema-version">Database schema version</h3>
+            <p>SQLite <code>PRAGMA user_version</code> describes the database schema.</p>
+            <p><code>game/systems/save_format.h</code> defines <code>k_database_schema_version</code>, currently:</p>
+            <div>
+                <pre><code class="language-text">3</code></pre>
+            </div>
+            <p>This version controls whether the SQLite tables/columns need migration.</p>
+            <h3 id="snapshot-version">Snapshot version</h3>
+            <p>Each save row also carries a <code>snapshot_version</code> describing the world/session snapshot format stored in that row.</p>
+            <p>A database can therefore have the current table schema while still containing snapshot rows written under an older snapshot contract.</p>
+            <p>Keeping these versions separate avoids conflating “the table layout changed” with “the serialized gameplay document changed.”</p>
+            <h2 id="schema-migration">Schema migration</h2>
+            <p>When <code>SaveStorage</code> opens an older supported database schema, it performs a guarded migration instead of simply discarding the file.</p>
+            <p>The migration flow is:</p>
+            <ol>
+                <li>copy the database to <code>&lt;path&gt;.v&lt;version&gt;-backup</code>;</li>
+                <li>run <code>migrate_schema()</code> inside a transaction; and</li>
+                <li>update <code>PRAGMA user_version</code> to the current schema.</li>
+            </ol>
+            <p>The backup is created before migration so the pre-migration file remains available if the upgrade cannot be completed.</p>
+            <p>A schema mismatch is therefore not automatically destructive. Current storage code has a real migration path for supported older versions.</p>
+            <h2 id="database-initialization-and-recovery">Database initialization and recovery</h2>
+            <p>Opening a save database is also a validation step.</p>
+            <p><code>SaveStorage::initialize()</code> checks that the file can be opened, runs an integrity check, and validates the schema/version shape.</p>
+            <p>A database can be rejected when it is:</p>
+            <ul>
+                <li>unreadable;</li>
+                <li>structurally corrupt;</li>
+                <li>on an unsupported/future schema version; or</li>
+                <li>unable to complete a required migration.</li>
+            </ul>
+            <p>In those cases the original file is moved aside rather than silently deleted.</p>
+            <p>The quarantine name uses a timestamped form containing:</p>
+            <div>
+                <pre><code class="language-text">.unreadable-...</code></pre>
+            </div>
+            <p>and a fresh database is created for continued operation.</p>
+            <p><code>SaveLoadService::quarantined_database_path()</code> exposes the moved-aside path so the application can report where the original data was preserved.</p>
+            <p>This recovery behavior is different from claiming that the old database was successfully migrated. Quarantine means the current runtime refused to trust it as the active save database and preserved it for inspection/recovery.</p>
+            <h2 id="load-flow">Load flow</h2>
+            <p>Loading is deliberately staged so a bad save does not immediately destroy the currently running match.</p>
+            <p><code>SaveLoadService::load_game_from_slot()</code> performs the storage/document validation path:</p>
+            <ol>
+                <li>read the requested slot from SQLite;</li>
+                <li>validate and unpack the stored payload;</li>
+                <li>parse the world JSON;</li>
+                <li>reject a document without an entity array;</li>
+                <li>deserialize into a temporary <code>SessionContext</code>;</li>
+                <li>validate that the staged world contains units; and only then</li>
+                <li>clear the live world and deserialize the verified document into it.</li>
+            </ol>
+            <p>The temporary session is a safety boundary. A malformed or semantically unusable document can fail before the live battlefield is replaced.</p>
+            <h3 id="failure-semantics-before-live-replacement">Failure semantics before live replacement</h3>
+            <p>If staging fails, the current battle remains intact.</p>
+            <p>That includes failures such as:</p>
+            <ul>
+                <li>checksum/decompression failure;</li>
+                <li>invalid JSON;</li>
+                <li>missing expected entity data; or</li>
+                <li>staged-world validation failure.</li>
+            </ul>
+            <h3 id="failure-semantics-after-live-replacement-begins">Failure semantics after live replacement begins</h3>
+            <p>Once the live world is cleared, a failure during final deserialization is reported and the world remains cleared rather than pretending that the old battle is still present.</p>
+            <p>This distinction is important: the staging pass protects against known-invalid saves, but the final restore is still an authoritative replacement boundary.</p>
+            <h2 id="session-restoration-after-world-load">Session restoration after world load</h2>
+            <p>After the entity world is restored, <code>SaveLoadCoordinator</code> restores the remaining session snapshot against the loaded map and rebuilds the derived runtime services required by the new world.</p>
+            <p>The loaded match therefore consists of both:</p>
+            <ul>
+                <li>entity/component state; and</li>
+                <li>authoritative session-level state.</li>
+            </ul>
+            <p>Restoring one without the other would leave deterministic RNG, AI/victory state, visibility knowledge, or other registered session facts inconsistent with the world.</p>
+            <h2 id="first-simulation-tick-after-load">First simulation tick after load</h2>
+            <p>The renderer consumes published render snapshots rather than the mutable world.</p>
+            <p>After loading, the restored entities exist in simulation, but the renderer still needs a new published snapshot representing that world. The runtime resumes in an unpaused state so the first simulation tick can publish fresh presentation data and rebuild transient systems.</p>
+            <p>This is a real part of load correctness: a successfully deserialized world that never publishes a new render snapshot would still present stale or empty visual state.</p>
+            <h2 id="render-snapshot-invalidation">Render-snapshot invalidation</h2>
+            <p>World clearing advances the world's content epoch.</p>
+            <p>Saved entity IDs can reuse the same index/generation values as entities that existed before the load. Without an additional world-content boundary, renderer-side slot caches could mistake a restored entity for the old entity that occupied the same handle.</p>
+            <p>Advancing the content epoch invalidates those stale render-snapshot associations.</p>
+            <p><code>tests/core/save_load_render_snapshot_test.cpp</code> and <code>tests/core/save_runtime_restore_test.cpp</code> exercise the post-load publication/restoration path.</p>
+            <h2 id="visibility-and-explored-fog">Visibility and explored fog</h2>
+            <p>Explored fog is player knowledge, not merely a function of the units that are currently alive.</p>
+            <p><code>GameStateSerializer</code> stores the exploration mask in save metadata using run-length encoding plus base64.</p>
+            <p><code>GameStateSerializer::restore_visibility_from_metadata()</code> applies the mask after the world and visibility grid exist.</p>
+            <p>The restoration is additive:</p>
+            <ul>
+                <li>saved exploration can change <code>Unseen</code> cells into <code>Explored</code>;</li>
+                <li>currently visible cells remain visible according to the restored units; and</li>
+                <li>loading does not erase legitimate current vision merely because the stored mask says only “explored.”</li>
+            </ul>
+            <p>If the saved mask dimensions do not match the restored map, the mask is ignored with a warning rather than making the entire save unloadable.</p>
+            <h2 id="deterministic-state">Deterministic state</h2>
+            <p>The save snapshot preserves deterministic simulation state required for the match to continue consistently, including the simulation clock and deterministic RNG state.</p>
+            <p>The command queue is not persisted, which means determinism after load begins from the committed state represented by the save rather than from commands that were waiting to execute at the instant capture occurred.</p>
+            <p>This is also why replay and save contracts overlap conceptually but are not the same artifact: a replay stores an accepted command stream and digests, while a save stores a complete restorable state snapshot.</p>
+            <h2 id="autosaves">Autosaves</h2>
+            <p>Autosaves use the same packed world format and storage pipeline as manual saves.</p>
+            <p>The differences are slot policy and retention rather than serialization semantics.</p>
+            <p>After a successful autosave, the service prunes old autosave slots according to the supported retention range. Manual and quick-save slots are not transformed into a different world format simply because they belong to another save kind.</p>
+            <h2 id="manual-saves-quick-saves-and-autosaves">Manual saves, quick-saves, and autosaves</h2>
+            <p>All save kinds share:</p>
+            <ul>
+                <li>world/session capture;</li>
+                <li>payload packing;</li>
+                <li>integrity metadata;</li>
+                <li>SQLite storage; and</li>
+                <li>load verification.</li>
+            </ul>
+            <p>They differ primarily in naming/selection behavior, UI flow, and retention rules.</p>
+            <p>Keeping one payload path prevents a “quick save format” from drifting away from a “manual save format.”</p>
+            <h2 id="campaign-persistence">Campaign persistence</h2>
+            <p>Campaign progression is stored in the database alongside match saves but is not embedded into every entity snapshot.</p>
+            <p>The storage layer maintains campaign progression, mission completion/unlock state, and mission result records in dedicated tables.</p>
+            <p>That keeps campaign-level facts separate from battlefield ECS state while still giving the application one persistence service for the player's local progress.</p>
+            <h2 id="concurrency-and-shutdown">Concurrency and shutdown</h2>
+            <p>Because save writes are queued, application shutdown and destructive transitions need to account for outstanding work.</p>
+            <p><code>pending_save_count()</code> exposes whether jobs remain. <code>wait_for_pending_saves()</code> provides the explicit synchronization point used when the process must not exit while a requested save is still being written.</p>
+            <p>Cancellation is job-based rather than a global “throw away all persistence” switch.</p>
+            <p>The worker owns storage work; it does not become another thread mutating the live world.</p>
+            <h2 id="what-is-intentionally-not-serialized">What is intentionally not serialized</h2>
+            <p>The snapshot contract is as important for what it excludes as for what it stores.</p>
+            <p>Examples of intentionally rebuilt or omitted state include:</p>
+            <ul>
+                <li>transient spatial/collision indexes;</li>
+                <li>one-frame movement facts;</li>
+                <li>renderer caches;</li>
+                <li>temporary combat presentation;</li>
+                <li>pending UI interactions; and</li>
+                <li>queued-but-unexecuted commands.</li>
+            </ul>
+            <p>Serializing these would make restoration harder to reason about because the loaded game would need to decide whether the persisted cache or the authoritative components were correct.</p>
+            <h2 id="practical-failure-diagnosis">Practical failure diagnosis</h2>
+            <p>A save/load problem can usually be localized to one layer.</p>
+            <h3 id="slot-cannot-be-read">Slot cannot be read</h3>
+            <p>Inspect database initialization, schema shape, migration, quarantine state, and the slot row.</p>
+            <h3 id="slot-reads-but-verification-fails">Slot reads but verification fails</h3>
+            <p>Inspect packed-payload checksum, compression mode, uncompressed size, and unpacking.</p>
+            <h3 id="payload-parses-but-staging-fails">Payload parses but staging fails</h3>
+            <p>Inspect the serialized world shape, entity list, component decoding, and staged-world validation.</p>
+            <h3 id="staging-succeeds-but-live-restore-is-wrong">Staging succeeds but live restore is wrong</h3>
+            <p>Inspect final deserialization, session snapshot restoration, map-dependent services, and derived-state rebuild.</p>
+            <h3 id="world-restores-but-visuals-are-stale">World restores but visuals are stale</h3>
+            <p>Inspect content epoch/render-snapshot publication and the first post-load simulation tick.</p>
+            <h3 id="fog-knowledge-is-wrong">Fog knowledge is wrong</h3>
+            <p>Inspect visibility metadata dimensions and <code>restore_visibility_from_metadata()</code>.</p>
+            <p>This layered diagnosis mirrors the actual architecture and avoids treating every load failure as a generic database problem.</p>
+            <h2 id="tests">Tests</h2>
+            <p>The save contract is exercised at several levels:</p>
+            <ul>
+                <li><code>tests/db/save_storage_test.cpp</code> — schema, migration, quarantine/recovery, slot storage, and database behavior;</li>
+                <li><code>tests/save/snapshot_contract_test.cpp</code> — snapshot classification/versioning;</li>
+                <li><code>tests/core/serialization_test.cpp</code> — entity/component world serialization;</li>
+                <li><code>tests/core/save_load_render_snapshot_test.cpp</code> — render publication after load; and</li>
+                <li><code>tests/core/save_runtime_restore_test.cpp</code> — runtime/session restoration behavior.</li>
+            </ul>
+            <p>Background save jobs, progress stages, compression, integrity checks, database migration, and quarantine are current implemented behavior and should be documented as such.</p>
+            <h2 id="architectural-invariants">Architectural invariants</h2>
+            <p>The current save/load design depends on these invariants:</p>
+            <ul>
+                <li>only authoritative gameplay state is persisted as authority;</li>
+                <li>derived caches are rebuilt;</li>
+                <li>queued-but-unexecuted commands do not survive load;</li>
+                <li>save workers operate on captured data, not the mutable live world;</li>
+                <li>packed payloads are integrity-checked;</li>
+                <li>a candidate world is staged before live replacement;</li>
+                <li>database migration is backed up and transactional;</li>
+                <li>unreadable/corrupt/future storage is quarantined rather than silently destroyed; and</li>
+                <li>render/presentation state is republished after restoration rather than trusted from the previous world.</li>
+            </ul>
+            <h2 id="source-map">Source map</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Concern</td>
+                    <td>Source</td>
+                </tr>
+                <tr>
+                    <td>Entity/world serialization</td>
+                    <td><code>game/save/serialization.*</code></td>
+                </tr>
+                <tr>
+                    <td>Authoritative non-entity snapshot</td>
+                    <td><code>game/session/session_snapshot.*</code></td>
+                </tr>
+                <tr>
+                    <td>Snapshot classification</td>
+                    <td><code>game/save/snapshot_contract.*</code></td>
+                </tr>
+                <tr>
+                    <td>Save job queue</td>
+                    <td><code>game/systems/save_load_service.*</code></td>
+                </tr>
+                <tr>
+                    <td>SQLite storage/migration</td>
+                    <td><code>game/systems/save_storage.*</code></td>
+                </tr>
+                <tr>
+                    <td>Compression/checksums</td>
+                    <td><code>game/systems/save_format.*</code></td>
+                </tr>
+                <tr>
+                    <td>Application restore orchestration</td>
+                    <td><code>app/persistence/save_load_coordinator.*</code></td>
+                </tr>
+                <tr>
+                    <td>Storage tests</td>
+                    <td><code>tests/db/save_storage_test.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Restore/render tests</td>
+                    <td><code>tests/core/save_*</code></td>
+                </tr>
+            </table>
+            </p>
+            <p>The storage, migration, compression, asynchronous write, integrity, and recovery paths described here are present in the current repository. They are not proposed enhancements.</p>
         </article-section>
     </div>
     <footer>

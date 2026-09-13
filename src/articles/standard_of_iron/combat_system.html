@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Overview</title>
-    <meta content="This document describes the RTS combat system in Standard of Iron, including:" name="description" />
+    <title>Combat update order</title>
+    <meta content="Combat in Standard of Iron is coordinated by Game::Systems::CombatSystem." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Overview",
+            "headline": "Combat update order",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/combat_system"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/combat_system",
-            "description": "This document describes the RTS combat system in Standard of Iron, including:",
-            "dateModified": "2026-06-06"
+            "description": "Combat in Standard of Iron is coordinated by Game::Systems::CombatSystem.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -78,57 +78,89 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#overview">Overview</a></li>
-                    <li><a href="#per-frame-update-pipeline">Per-Frame Update Pipeline</a></li>
-                    <li><a href="#shared-combat-query-context">Shared Combat Query Context</a>
+                    <li><a href="#combat-update-order">Combat update order</a></li>
+                    <li><a href="#end-to-end-attack-flow">End-to-end attack flow</a></li>
+                    <li><a href="#shared-combat-query-context">Shared combat query context</a></li>
+                    <li><a href="#target-rules">Target rules</a></li>
+                    <li><a href="#ordered-vs-automatic-engagement">Ordered vs automatic engagement</a></li>
+                    <li><a href="#ownership-and-hostility">Ownership and hostility</a></li>
+                    <li><a href="#attack-capability">Attack capability</a></li>
+                    <li><a href="#range-model">Range model</a>
                         <ol>
-                            <li><a href="#contents">Contents</a></li>
-                            <li><a href="#why-it-matters">Why It Matters</a></li>
+                            <li><a href="#melee-range">Melee range</a></li>
+                            <li><a href="#ranged-dead-zones">Ranged dead zones</a></li>
                         </ol>
                     </li>
-                    <li><a href="#target-validation">Target Validation</a></li>
-                    <li><a href="#normal-attacks">Normal Attacks</a>
+                    <li><a href="#obstructions-between-combatants">Obstructions between combatants</a>
                         <ol>
-                            <li><a href="#applying-damage">Applying Damage</a></li>
+                            <li><a href="#ordered-melee-bypass">Ordered melee bypass</a></li>
+                            <li><a href="#automatic-engagement-near-walls">Automatic engagement near walls</a></li>
+                            <li><a href="#ranged-attacks">Ranged attacks</a></li>
                         </ol>
                     </li>
-                    <li><a href="#siege-weapons-and-defense-towers">Siege Weapons and Defense Towers</a>
+                    <li><a href="#combat-state-processing">Combat state processing</a></li>
+                    <li><a href="#normal-attack-processor">Normal attack processor</a></li>
+                    <li><a href="#damage-application">Damage application</a>
                         <ol>
-                            <li><a href="#siege-loading-state">Siege Loading State</a></li>
-                            <li><a href="#defense-tower-targeting">Defense Tower Targeting</a></li>
+                            <li><a href="#formation-and-defensive-layout-multipliers">Formation and defensive-layout multipliers</a></li>
                         </ol>
                     </li>
-                    <li><a href="#elephant-combat-behavior">Elephant Combat Behavior</a>
-                        <ol>
-                            <li><a href="#panic-state">Panic State</a></li>
-                            <li><a href="#trample-damage">Trample Damage</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#auto-engagement">Auto-Engagement</a></li>
-                    <li><a href="#combat-state-and-visual-feedback">Combat State and Visual Feedback</a></li>
-                    <li><a href="#deterministic-visual-variation">Deterministic Visual Variation</a></li>
-                    <li><a href="#adding-new-combat-behavior">Adding New Combat Behavior</a></li>
-                    <li><a href="#known-boundaries">Known Boundaries</a>
-                        <ol>
-                            <li><a href="#rpg-commander-combat">RPG Commander Combat</a></li>
-                            <li><a href="#projectile-and-arrow-systems">Projectile and Arrow Systems</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#deterministic-melee-exchange">Deterministic melee exchange</a></li>
+                    <li><a href="#melee-locks">Melee locks</a></li>
+                    <li><a href="#formation-contact">Formation contact</a></li>
+                    <li><a href="#hit-feedback">Hit feedback</a></li>
+                    <li><a href="#siege-specials">Siege specials</a></li>
+                    <li><a href="#elephant-specials">Elephant specials</a></li>
+                    <li><a href="#mounted-charge-interaction">Mounted charge interaction</a></li>
+                    <li><a href="#auto-engagement">Auto engagement</a></li>
+                    <li><a href="#target-commitment">Target commitment</a></li>
+                    <li><a href="#threat-alerts">Threat alerts</a></li>
+                    <li><a href="#hold-and-guard-interactions">Hold and guard interactions</a></li>
+                    <li><a href="#projectile-and-ranged-presentation">Projectile and ranged presentation</a></li>
+                    <li><a href="#player-feedback-and-inspection">Player feedback and inspection</a></li>
+                    <li><a href="#command-integration">Command integration</a></li>
+                    <li><a href="#balance-integration">Balance integration</a></li>
+                    <li><a href="#common-invariants">Common invariants</a></li>
+                    <li><a href="#testing">Testing</a></li>
+                    <li><a href="#source-map">Source map</a></li>
                 </ol>
             </div>
             <div id="related-articles">
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
-                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
@@ -136,7 +168,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -156,252 +188,375 @@
                     </button></div>
             </div>
             <header>Combat System</header>
-            <p>This document describes the RTS combat system in <strong>Standard of Iron</strong>, including:</p>
-            <ul>
-                <li>the per-frame update pipeline;</li>
-                <li>shared target lookup and validation;</li>
-                <li>normal, siege, tower, and elephant attacks;</li>
-                <li>combat animation and visual feedback;</li>
-                <li>the recommended approach for adding new combat behavior.</li>
-            </ul>
-            <h2 id="overview">Overview</h2>
-            <p>RTS combat is coordinated by <code>Game::Systems::CombatSystem</code>, implemented in:</p>
+            <p>Combat in Standard of Iron is coordinated by <code>Game::Systems::CombatSystem</code>. It owns the shared combat query context and advances normal attacks, combat state, formation contacts, siege behavior, elephant behavior, automatic engagement, target commitment, hit feedback, and threat alerts in a fixed order.</p>
+            <p>The combat system is not a single damage function. It is a pipeline that decides who may fight, whether two subjects can physically engage, which combat mode applies, when an attack is ready, how damage is modified, what special processor owns the exchange, and what feedback or target state must survive into the next tick.</p>
+            <p>The orchestration entry point is <code>game/systems/combat_system.cpp</code>. Most implementation lives below <code>game/systems/combat_system/</code>.</p>
+            <h2 id="combat-update-order">Combat update order</h2>
+            <p><code>CombatSystem::update(world, delta_time)</code> currently runs:</p>
             <div>
-                <pre><code class="language-text">game/systems/combat_system.cpp</code></pre>
+                <pre><code class="language-text">rebuild_combat_query_context
+TargetCommitment::update
+process_hit_feedback
+process_combat_state
+process_attacks
+update_formation_contacts
+process_siege_specials
+process_elephant_specials
+AutoEngagement::process
+tick_threat_alerts
+TargetCommitment::update(world, 0)</code></pre>
             </div>
-            <p>Combat-related side effects should flow through this system whenever possible. Normal unit attacks, siege and tower attacks, elephant trample damage, target selection, and auto-engagement all rely on the same combat query context and enemy-validation rules.</p>
-            <p>This shared path helps keep combat behavior consistent and prevents individual processors from implementing conflicting targeting or damage logic.</p>
-            <h2 id="per-frame-update-pipeline">Per-Frame Update Pipeline</h2>
-            <p>Each frame, <code>CombatSystem::update()</code> runs the following pipeline:</p>
+            <p>The order is part of the current combat contract.</p>
+            <p>It means, for example, that normal attack processing runs before siege and elephant specials, automatic target acquisition happens after explicit attacks and specials, and target commitment is refreshed again at the end after the processors have had a chance to change targets.</p>
+            <p>A change to this sequence can alter gameplay even if no individual processor changes, because later stages observe the state published by earlier ones.</p>
+            <h2 id="end-to-end-attack-flow">End-to-end attack flow</h2>
+            <p>A typical explicit attack travels through several layers:</p>
             <div>
-                <pre><code class="language-text">CombatSystem::update
-  |
-  |-- rebuild_combat_query_context
-  |-- process_hit_feedback
-  |-- process_combat_state
-  |-- process_attacks
-  |-- process_siege_specials
-  |-- process_elephant_specials
-  |-- AutoEngagement::process</code></pre>
+                <pre><code class="language-text">player / AI / replay / mission command
+        │
+        ▼
+command validation
+        │
+        ├─ subject can attack?
+        ├─ target exists/alive?
+        ├─ ownership/hostility valid?
+        └─ ordered target rule valid?
+        ▼
+attack target/state assigned
+        │
+        ▼
+CombatSystem tick
+        │
+        ├─ query context
+        ├─ target commitment
+        ├─ combat-state transition
+        ├─ range / obstruction / cooldown
+        ├─ normal or special processor
+        ├─ damage pipeline
+        └─ feedback / alerts / target refresh</code></pre>
             </div>
-            <p>The order matters:</p>
+            <p>The command layer decides whether the order may enter the simulation. The combat layer decides whether and how the exchange can resolve on the current tick.</p>
+            <h2 id="shared-combat-query-context">Shared combat query context</h2>
+            <p><code>CombatQueryContext</code> is rebuilt once at the start of the combat update.</p>
+            <p>It carries shared entity/spatial lookup information used by normal attacks, special attacks, target acquisition, and related combat queries. Reusing one context has two purposes:</p>
             <ol>
-                <li>The shared query context is rebuilt.</li>
-                <li>Temporary hit feedback and combat animation state are updated.</li>
-                <li>Normal attacks are resolved.</li>
-                <li>Special siege and elephant behaviors are processed.</li>
-                <li>Eligible idle units may automatically acquire nearby enemies.</li>
+                <li>avoid rebuilding equivalent world/spatial views in every processor; and</li>
+                <li>keep target and hostility decisions consistent across processors within one combat update.</li>
             </ol>
-            <h2 id="shared-combat-query-context">Shared Combat Query Context</h2>
-            <p><code>CombatQueryContext</code> is defined in:</p>
+            <p>Code that already receives <code>CombatQueryContext</code> should use it rather than performing a second world-wide combat scan.</p>
+            <p>This is especially important in massed battles, where repeated “find nearby enemy” work can become much more expensive than the actual per-contact combat calculation.</p>
+            <h2 id="target-rules">Target rules</h2>
+            <p>The common targeting API is defined in <code>game/systems/combat_system/target_rules.h</code>.</p>
+            <p>A target check has the shape:</p>
             <div>
-                <pre><code class="language-text">combat_utils.h</code></pre>
+                <pre><code class="language-clike">Combat::evaluate_target(
+    owners,
+    attacker_owner_id,
+    target,
+    {.intent = ..., .allow_buildings = ...});</code></pre>
             </div>
-            <p>It is rebuilt once at the beginning of each combat update and provides shared lookup data for combat processors.</p>
-            <h3 id="contents">Contents</h3>
-            <p>The context contains:</p>
+            <p>The result is a <code>TargetRefusal</code> value.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Result</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>None</code></td>
+                    <td>the target is allowed</td>
+                </tr>
+                <tr>
+                    <td><code>NoTarget</code></td>
+                    <td>null, dead, pending removal, or not a combat target</td>
+                </tr>
+                <tr>
+                    <td><code>SelfOrAllied</code></td>
+                    <td>target belongs to the attacker or an allied team</td>
+                </tr>
+                <tr>
+                    <td><code>Passive</code></td>
+                    <td>passive wildlife is protected from automatic acquisition</td>
+                </tr>
+                <tr>
+                    <td><code>Structure</code></td>
+                    <td>the target is a building while the query disallows buildings</td>
+                </tr>
+            </table>
+            </p>
+            <p><code>may_attack()</code> exposes the same rule as a boolean when the caller does not need the refusal reason.</p>
+            <p>The important design point is that target legality is shared. UI target classification, command validation, AI hostile-contact collection, and combat processors should not each invent their own owner/team/wildlife rule.</p>
+            <h2 id="ordered-vs-automatic-engagement">Ordered vs automatic engagement</h2>
+            <p><code>EngagementIntent</code> separates deliberate orders from opportunistic acquisition:</p>
             <ul>
-                <li><code>units</code>: alive unit entities that are not pending removal;</li>
-                <li><code>entities_by_id</code>: fast lookup of entities by target ID;</li>
-                <li><code>unit_grid</code>: spatial lookup for nearby non-building units;</li>
-                <li><code>nearby_unit_ids</code>: reusable scratch storage for range queries.</li>
+                <li><code>Ordered</code> — a player, AI command, script, or other command producer intentionally selected the target;</li>
+                <li><code>AutoAcquired</code> — combat logic selected the target because it was nearby and valid.</li>
             </ul>
-            <h3 id="why-it-matters">Why It Matters</h3>
-            <p>Combat processors should receive and reuse this context instead of repeatedly calling:</p>
-            <div>
-                <pre><code class="language-clike">World::get_entities_with&lt;UnitComponent&gt;()</code></pre>
-            </div>
-            <p>Using the shared context:</p>
+            <p>Passive wildlife is the clearest behavioral difference. A deliberate ordered attack may target passive wildlife; automatic combat acquisition does not turn nearby passive animals into ordinary hostiles.</p>
+            <p>This distinction keeps “can the player explicitly attack it?” separate from “should an idle soldier spontaneously attack it?”</p>
+            <h2 id="ownership-and-hostility">Ownership and hostility</h2>
+            <p>Ownership is not tested with a simple <code>owner_id != attacker_owner_id</code> comparison.</p>
+            <p>Team/alliance hostility is resolved through <code>OwnerRegistry</code> and <code>Combat::owners_are_hostile()</code>. Neutral ownership, allied teams, mission ownership, and wildlife state therefore pass through the shared combat rule instead of being inferred from raw IDs.</p>
+            <p>This rule matters in mission content where several AI owners can belong to one team, and in scenes where neutral entities exist without being automatic combat targets.</p>
+            <h2 id="attack-capability">Attack capability</h2>
+            <p>Target validity is only half of an attack command. Subjects must also be able to attack.</p>
+            <p>Command validation filters entities that do not support attack mode. Healers, builders, structures, or other non-attacking subjects therefore do not silently become ordinary attackers just because they were part of a mixed selection.</p>
+            <p>The command path can accept the attacking subset while rejecting or ignoring subjects that do not satisfy the attack capability contract according to the command implementation.</p>
+            <h2 id="range-model">Range model</h2>
+            <p><code>AttackComponent::range</code> is the outer attack range. <code>AttackComponent::min_range</code> provides an optional inner dead zone for ranged attacks.</p>
+            <p>The effective range used by gameplay is not always identical to the raw component value. <code>Combat::is_in_range()</code> and <code>Game::Systems::resolve_attack_range()</code> apply the relevant combat state and stance rules.</p>
+            <p>UI and targeting code that needs to explain the range the unit will actually use should query the resolved value instead of duplicating the base component number.</p>
+            <h3 id="melee-range">Melee range</h3>
+            <p>Melee reach also interacts with formation/contact geometry and obstruction. A raw center-to-center distance alone is not sufficient when two large formations are facing each other or a blocking structure lies between them.</p>
+            <h3 id="ranged-dead-zones">Ranged dead zones</h3>
+            <p>A ranged unit with <code>min_range</code> can have a valid hostile target inside its outer range but still be too close to fire through the ordinary ranged path. That inner limit is part of the attack component rather than an ad-hoc UI rule.</p>
+            <h2 id="obstructions-between-combatants">Obstructions between combatants</h2>
+            <p>Melee combat checks whether a blocking building footprint or closed gate separates attacker and target.</p>
+            <p><code>Combat::structure_separates_combatants()</code> and the related wall/gate helpers prevent melee damage and formation contact from passing through blocking structures.</p>
+            <p>This physical-separation rule is important for three different systems:</p>
             <ul>
-                <li>keeps target selection consistent across combat behaviors;</li>
-                <li>avoids rebuilding the same view of the world in multiple processors;</li>
-                <li>reduces unnecessary entity queries during each frame.</li>
+                <li>direct melee damage;</li>
+                <li>formation-contact geometry; and</li>
+                <li>pursuit/path selection when a deliberate melee target is behind an obstacle.</li>
             </ul>
-            <h2 id="target-validation">Target Validation</h2>
-            <p>All combat behaviors that select or damage targets should use the shared validation helper:</p>
-            <div>
-                <pre><code class="language-clike">Combat::is_valid_enemy_unit(attacker_unit, target, allow_buildings)</code></pre>
-            </div>
-            <p>This helper rejects targets that are:</p>
+            <h3 id="ordered-melee-bypass">Ordered melee bypass</h3>
+            <p>An explicit ordered melee chase can request a bypass/contact destination around a separating structure. The helper finds a candidate walkable contact position near the target; pathfinding remains responsible for proving an actual route to it.</p>
+            <p>The combat system therefore does not make every visible enemy “melee reachable” merely because a point exists somewhere on the far side of a wall.</p>
+            <h3 id="automatic-engagement-near-walls">Automatic engagement near walls</h3>
+            <p>Automatic engagement is intentionally more conservative. An idle unit does not turn every hostile visible through or around a fortification into a long pathfinding detour.</p>
+            <p>Retaliation and local-threat behavior have their own reachability path when reacting to an aggressor.</p>
+            <h3 id="ranged-attacks">Ranged attacks</h3>
+            <p>Ranged attacks use ranged line/range rules rather than the melee structure-separation rule. A wall that blocks two swordsmen from contacting each other does not automatically imply that a projectile cannot pass over or around it.</p>
+            <h2 id="combat-state-processing">Combat state processing</h2>
+            <p><code>process_combat_state()</code> maintains the state that determines whether units are entering, holding, or leaving a combat interaction.</p>
+            <p>This state is separate from simply “has an attack target.” A unit can know its target while still moving into range, be locked into melee contact, or be leaving combat after the target disappears.</p>
+            <p>Keeping combat state explicit allows movement, animation, formation presentation, and targeting to agree on whether a unit is currently engaged.</p>
+            <h2 id="normal-attack-processor">Normal attack processor</h2>
+            <p><code>combat_system/attack_processor.cpp</code> owns the ordinary attack path.</p>
+            <p>Its responsibilities include:</p>
             <ul>
-                <li>null;</li>
-                <li>pending removal;</li>
-                <li>dead or missing a <code>UnitComponent</code>;</li>
-                <li>owned by the attacker;</li>
-                <li>owned by an allied player according to <code>OwnerRegistry</code>;</li>
-                <li>buildings when <code>allow_buildings == false</code>.</li>
-            </ul>
-            <p>Avoid implementing direct owner checks in individual combat processors. Team and alliance rules are easy to handle incorrectly when duplicated.</p>
-            <h2 id="normal-attacks">Normal Attacks</h2>
-            <p>Normal attacks are processed by:</p>
-            <div>
-                <pre><code class="language-text">combat_system/attack_processor.cpp</code></pre>
-            </div>
-            <p>The <code>process_attacks()</code> processor handles:</p>
-            <ul>
-                <li>target resolution;</li>
-                <li>melee and ranged attack behavior;</li>
-                <li>attack cooldowns;</li>
+                <li>resolving the current target;</li>
+                <li>rejecting targets that became invalid;</li>
+                <li>cooldown progression;</li>
+                <li>melee/ranged range checks;</li>
                 <li>melee lock behavior;</li>
-                <li>tactical damage multipliers;</li>
-                <li>ranged arrow visuals;</li>
-                <li>projectile-based attacks configured through <code>SpecialAttackComponent</code>;</li>
-                <li>combat animation triggers.</li>
+                <li>stance/terrain/counter modifiers;</li>
+                <li>projectile/visual submission hooks for ranged combat;</li>
+                <li>attack animation state; and</li>
+                <li>damage application.</li>
             </ul>
-            <h3 id="applying-damage">Applying Damage</h3>
-            <p>Resolved attacks should apply damage through:</p>
-            <div>
-                <pre><code class="language-clike">Combat::deal_damage(world, target, damage, attacker_id)</code></pre>
-            </div>
-            <p>This is the preferred damage entry point because it centralizes:</p>
+            <p>Specialized combat processors run in the same <code>CombatSystem</code> update but do not create a second world-level combat authority.</p>
+            <h2 id="damage-application">Damage application</h2>
+            <p>Authoritative health changes go through the combat damage path rather than being inferred from animation or visual contact.</p>
+            <p>Damage can be modified by several independent systems, including:</p>
             <ul>
-                <li>health reduction and death handling;</li>
-                <li>retaliation behavior;</li>
-                <li>hit feedback;</li>
-                <li>blood and fire status side effects;</li>
-                <li>combat event publication.</li>
+                <li>unit/counter relationships;</li>
+                <li>high-ground or terrain state;</li>
+                <li>defensive unit-layout effects;</li>
+                <li>army-formation cohesion state; and</li>
+                <li>special attack context.</li>
             </ul>
-            <p>New attack behaviors should avoid modifying health directly unless there is a strong architectural reason to bypass the standard combat flow.</p>
-            <h2 id="siege-weapons-and-defense-towers">Siege Weapons and Defense Towers</h2>
-            <p>Siege weapons and defensive-building combat are handled by:</p>
-            <div>
-                <pre><code class="language-text">combat_system/siege_special_processor.cpp</code></pre>
-            </div>
-            <p>This processor owns:</p>
+            <p>The exact current counter constants live in <code>game/systems/combat_system/combat_types.h</code> and current troop data. <a href="UNIT_BALANCE.md">UNIT_BALANCE.md</a> documents the active relationships and deterministic balance fixtures.</p>
+            <h3 id="formation-and-defensive-layout-multipliers">Formation and defensive-layout multipliers</h3>
+            <p>Defensive unit layouts and army formations are separate systems, and their combat modifiers compose in the damage path.</p>
+            <p>For example, the defensive-layout service can apply its context-sensitive protection while <code>ArmyFormationRuntime::damage_taken_multiplier()</code> applies the group cohesion modifier. One does not replace the other.</p>
+            <p>This matches the architecture described in <a href="FORMATION_ARCHITECTURE.md">FORMATION_ARCHITECTURE.md</a>: internal soldier layout and army-scale grouping are independent layers.</p>
+            <h2 id="deterministic-melee-exchange">Deterministic melee exchange</h2>
+            <p>RTS melee bodies that participate in the defensive exchange model use <code>combat_system/melee_exchange.*</code>.</p>
+            <p>A swing can resolve as:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Outcome</td>
+                    <td>Damage behavior</td>
+                    <td>Presentation</td>
+                </tr>
+                <tr>
+                    <td><code>Clean</code></td>
+                    <td>clean boosted contact</td>
+                    <td>normal hit/flinch</td>
+                </tr>
+                <tr>
+                    <td><code>Heavy</code></td>
+                    <td>stronger contact</td>
+                    <td>heavier stagger</td>
+                </tr>
+                <tr>
+                    <td><code>Blocked</code></td>
+                    <td>reduced damage</td>
+                    <td>guard/block response</td>
+                </tr>
+                <tr>
+                    <td><code>Evaded</code></td>
+                    <td>no contact damage</td>
+                    <td>evade/whiff response</td>
+                </tr>
+            </table>
+            </p>
+            <p>The exchange sequence is deterministic rather than random. Attacker/target identity selects the phase of the exchange sequence, preserving replay stability while still producing varied-looking contact outcomes.</p>
+            <p>The sequence constants are constructed so the repeated exchange preserves the intended long-run combat rate instead of quietly adding an uncontrolled random DPS bonus or penalty.</p>
+            <p>Targets that do not participate in this defensive model use the ordinary clean-contact path.</p>
+            <h2 id="melee-locks">Melee locks</h2>
+            <p>Melee locks prevent ordinary navigation and combat contact from simultaneously trying to own the same close-quarters motion.</p>
+            <p>Once units are engaged, the lock expresses that they are fighting rather than still freely pathing through one another.</p>
+            <p>Single-body one-on-one combat can use duel footwork around the lock. Formation members remain constrained by their formation/contact presentation instead of turning every army engagement into independent per-soldier circling.</p>
+            <h2 id="formation-contact">Formation contact</h2>
+            <p><code>update_formation_contacts()</code> publishes contact/front information used by formation combat and presentation.</p>
+            <p>Formation contact is not just “bounding boxes overlap.” It must respect whether combatants can physically engage. Blocking structures, slot geometry, formation frontage, and the current combat state all influence what the simulation can treat as a valid contact front.</p>
+            <p>The result helps keep several views of the fight aligned:</p>
             <ul>
-                <li>catapult loading, firing, and stone projectile spawning;</li>
-                <li>ballista loading, firing, bolt visuals, and delayed hit checks;</li>
-                <li>defense tower target selection, arrow volleys, and damage application.</li>
+                <li>the authoritative combat interaction;</li>
+                <li>soldier-level formation presentation;</li>
+                <li>hit/weapon origin placement; and</li>
+                <li>visual front lines between formations.</li>
             </ul>
-            <h3 id="siege-loading-state">Siege Loading State</h3>
-            <p>Catapults and ballistas share <code>CatapultLoadingComponent</code> for their loading state.</p>
-            <p>Their state machine is:</p>
-            <div>
-                <pre><code class="language-text">Idle -&gt; Loading -&gt; ReadyToFire -&gt; Firing -&gt; Idle</code></pre>
-            </div>
-            <p>If a siege unit begins moving while loading or firing, its loading state is reset. This prevents the unit from firing at a previously locked target after changing position.</p>
-            <h3 id="defense-tower-targeting">Defense Tower Targeting</h3>
-            <p>Defense towers select the nearest valid enemy within range.</p>
-            <p>They may attack:</p>
+            <p>See <a href="FORMATION_ARCHITECTURE.md">FORMATION_ARCHITECTURE.md</a> for soldier anchors, stable slots, traversal layouts, and army-group state.</p>
+            <h2 id="hit-feedback">Hit feedback</h2>
+            <p><code>process_hit_feedback()</code> advances short-lived combat reaction state.</p>
+            <p>Damage results can publish:</p>
             <ul>
-                <li>enemy units;</li>
-                <li>enemy defense towers.</li>
+                <li>reaction type;</li>
+                <li>stagger/block/evade presentation;</li>
+                <li>knock-step or local reaction data; and</li>
+                <li>formation-slot hit presentation.</li>
             </ul>
-            <p>They ignore ordinary buildings.</p>
-            <p>Tower arrow spread is generated deterministically from entity IDs, ensuring that repeated runs produce stable visual results.</p>
-            <h2 id="elephant-combat-behavior">Elephant Combat Behavior</h2>
-            <p>Elephant-specific combat behavior is handled by:</p>
-            <div>
-                <pre><code class="language-text">combat_system/elephant_special_processor.cpp</code></pre>
-            </div>
-            <p>This processor owns:</p>
+            <p>The reaction layer does not become health authority. A visible stagger can move presentation locally without changing which formation slot the soldier owns or creating a second positional simulation.</p>
+            <h2 id="siege-specials">Siege specials</h2>
+            <p><code>process_siege_specials()</code> runs after ordinary attacks and formation contacts.</p>
+            <p>Siege behavior uses the same ownership/target/damage infrastructure as the rest of combat but adds siege-specific attack behavior for units and structures that require it.</p>
+            <p>Counter relationships involving siege units are defined in the same combat constants and current troop data used by the balance suite.</p>
+            <h2 id="elephant-specials">Elephant specials</h2>
+            <p><code>process_elephant_specials()</code> handles elephant-specific contact and special behavior, including the dedicated elephant combat components and trample/contact path.</p>
+            <p>Elephants still pass through ordinary target ownership/hostility rules. Their special processor changes how an eligible contact resolves; it does not grant permission to attack otherwise invalid subjects.</p>
+            <h2 id="mounted-charge-interaction">Mounted charge interaction</h2>
+            <p>Mounted charge state has its own processor path under combat. Defensive-layout state can block charge initiation where the current defensive service says the unit cannot charge.</p>
+            <p>This is another example of combat composing subsystem state rather than encoding every stance rule directly inside the attack processor.</p>
+            <h2 id="auto-engagement">Auto engagement</h2>
+            <p><code>AutoEngagement::process()</code> lets eligible units acquire nearby hostile targets after explicit attack processing and special processors.</p>
+            <p>It uses <code>EngagementIntent::AutoAcquired</code>, which means:</p>
             <ul>
-                <li>low-health panic checks;</li>
-                <li>charge state transitions;</li>
-                <li>trample damage;</li>
-                <li>stomp-impact records used by visual effects.</li>
+                <li>allied/self targets remain invalid;</li>
+                <li>passive wildlife is ignored;</li>
+                <li>structure eligibility follows the query context; and</li>
+                <li>target commitment can preserve a sensible existing choice.</li>
             </ul>
-            <h3 id="panic-state">Panic State</h3>
-            <p>Panic state is stored in:</p>
-            <div>
-                <pre><code class="language-clike">ElephantPanicComponent</code></pre>
-            </div>
-            <p><code>ElephantComponent</code> remains focused on combat statistics and charge/trample state.</p>
-            <p>Panic behavior does not create hidden movement targets. Instead, it influences the elephant's combat decisions directly.</p>
-            <h3 id="trample-damage">Trample Damage</h3>
-            <p>Trample damage applies only to valid enemies.</p>
-            <p>Friendly and allied troops are rejected through:</p>
-            <div>
-                <pre><code class="language-clike">Combat::is_valid_enemy_unit()</code></pre>
-            </div>
-            <p>As a result, even a panicked elephant cannot damage units on its own side.</p>
-            <h2 id="auto-engagement">Auto-Engagement</h2>
-            <p><code>AutoEngagement</code> runs after explicit attacks and special combat processors.</p>
-            <p>Its purpose is to allow eligible idle units to acquire nearby enemies without requiring a direct attack command.</p>
-            <p>Auto-engagement uses:</p>
+            <p>Auto engagement is therefore an opportunistic targeting layer, not a separate attack implementation.</p>
+            <h2 id="target-commitment">Target commitment</h2>
+            <p>Target commitment reduces target churn.</p>
+            <p>Without commitment, repeated proximity queries can cause units to bounce between equally plausible enemies every update. <code>TargetCommitment::update()</code> maintains the current commitment state and is run both before attack processing and again at the end of the combat update.</p>
+            <p>The final zero-delta update lets the commitment system observe target changes made by the processors in the same combat tick.</p>
+            <h2 id="threat-alerts">Threat alerts</h2>
+            <p><code>tick_threat_alerts()</code> updates combat-threat notification state after attack and auto-engagement processing.</p>
+            <p>Threat alerts can feed higher-level systems such as AI local response and player presentation, but they are not another source of damage or targeting authority.</p>
+            <p>Keeping alerts downstream of actual combat processing means they describe combat that the runtime recognized rather than speculative proximity alone.</p>
+            <h2 id="hold-and-guard-interactions">Hold and guard interactions</h2>
+            <p>Combat behavior composes with order/stance systems.</p>
+            <p>Hold/guard state can change effective attack behavior, movement response, or range without inventing a parallel combat system. For example, effective range exposed to UI uses the same resolved range path that combat uses.</p>
+            <p>Defensive unit layouts can additionally hold position or alter movement/turn/damage behavior through <code>DefensiveUnitLayoutService</code>, as described in the formation documentation.</p>
+            <h2 id="projectile-and-ranged-presentation">Projectile and ranged presentation</h2>
+            <p>Ranged attacks submit projectile/visual state through the attack path while authoritative hit/damage remains simulation-owned.</p>
+            <p>The visual projectile exists to represent the attack, not to become a second source of truth for whether a target lost health. This separation is important for replay and headless simulation, where combat must remain valid without relying on renderer timing.</p>
+            <h2 id="player-feedback-and-inspection">Player feedback and inspection</h2>
+            <p>The UI can show target highlights, attack-state markers, refusal text, damage numbers, and current command target because application/read-model code consumes the same target and combat state produced by the simulation.</p>
+            <p>Presentation is allowed to aggregate or animate that information, but target legality and health changes remain in simulation.</p>
+            <p>This avoids cases where an attack cursor says “valid” using one rule while the command path rejects the same target using another.</p>
+            <h2 id="command-integration">Command integration</h2>
+            <p>Player, AI, mission, Arena, and replay attack commands enter through the typed command pipeline.</p>
+            <p>Command validation uses shared combat target/capability rules before attack state reaches the combat system. Replay playback then reuses the same combat execution path from the recorded command stream.</p>
+            <p>The result is one set of target semantics for all issuers.</p>
+            <h2 id="balance-integration">Balance integration</h2>
+            <p>Combat tuning is checked with production simulation rather than a standalone paper formula.</p>
+            <p><code>balance_sim</code> loads current troop/combat data and executes deterministic fixtures that encode important matchup relationships. The fixtures cover mirrors and current counter relationships such as spear/cavalry, infantry/siege, archer/elephant, spear/sword, faction line matchups, commander/line interactions, and other maintained cases.</p>
+            <p>See <a href="UNIT_BALANCE.md">UNIT_BALANCE.md</a> for the current fixture catalogue and combat constants.</p>
+            <h2 id="common-invariants">Common invariants</h2>
+            <p>The current combat architecture depends on these invariants:</p>
             <ul>
-                <li>the shared <code>CombatQueryContext</code>;</li>
-                <li>the common enemy-validation helpers.</li>
+                <li>one shared target rule decides ownership/intent legality;</li>
+                <li>shared query context is built once per combat update;</li>
+                <li>explicit orders and auto-acquisition remain distinct intents;</li>
+                <li>melee cannot deal/contact through blocking structures;</li>
+                <li>authoritative damage is separate from hit presentation;</li>
+                <li>special processors still use the shared ownership/damage model;</li>
+                <li>target commitment prevents needless retarget churn;</li>
+                <li>combat commands enter through the typed command boundary; and</li>
+                <li>deterministic exchange/command timing does not depend on renderer frame timing.</li>
             </ul>
-            <p>A unit is not considered freely idle when it has:</p>
+            <p>These invariants are more durable than a particular damage constant and are the first things to preserve when changing combat behavior.</p>
+            <h2 id="testing">Testing</h2>
+            <p>Combat is covered across simulation, command, formation, balance, replay, and scenario tests.</p>
+            <p>Important contracts include:</p>
             <ul>
-                <li>suppressing player intent;</li>
-                <li>hold or guard constraints;</li>
-                <li>an active patrol;</li>
-                <li>an active attack target.</li>
+                <li><code>TargetRefusal</code> behavior and hostility rules;</li>
+                <li>ordered vs automatic wildlife targeting;</li>
+                <li>attack-subject capability validation;</li>
+                <li>effective attack range and hold-mode agreement;</li>
+                <li>wall/gate melee separation;</li>
+                <li>explicit bypass behavior;</li>
+                <li>deterministic melee exchange;</li>
+                <li>defensive-layout and formation damage composition;</li>
+                <li>formation contact;</li>
+                <li>siege and elephant special behavior;</li>
+                <li>auto engagement;</li>
+                <li>target commitment; and</li>
+                <li>replay/deterministic combat behavior.</li>
             </ul>
-            <h2 id="combat-state-and-visual-feedback">Combat State and Visual Feedback</h2>
-            <p>Combat animation state is stored in:</p>
-            <div>
-                <pre><code class="language-clike">CombatStateComponent</code></pre>
-            </div>
-            <p>It is advanced by:</p>
-            <div>
-                <pre><code class="language-clike">process_combat_state()</code></pre>
-            </div>
-            <p>Transient hit feedback, such as hit flashes, is handled by:</p>
-            <div>
-                <pre><code class="language-clike">process_hit_feedback()</code></pre>
-            </div>
-            <p>Combat processors may spawn projectile, arrow, or impact visuals. However, final damage resolution should still go through:</p>
-            <div>
-                <pre><code class="language-clike">Combat::deal_damage()</code></pre>
-            </div>
-            <p>when the attack connects.</p>
-            <h2 id="deterministic-visual-variation">Deterministic Visual Variation</h2>
-            <p>Combat visuals may appear random, but their variation should remain deterministic.</p>
-            <p>The current combat code uses hash-based values derived from entity IDs and target IDs for effects such as:</p>
-            <ul>
-                <li>attack animation offsets;</li>
-                <li>arrow counts;</li>
-                <li>arrow spread.</li>
-            </ul>
-            <p>Avoid introducing:</p>
-            <div>
-                <pre><code class="language-clike">std::random_device</code></pre>
-            </div>
-            <p>or global:</p>
-            <div>
-                <pre><code class="language-clike">std::rand()</code></pre>
-            </div>
-            <p>into combat code. Non-deterministic randomness makes combat tests, debugging, and replay behavior harder to reason about.</p>
-            <h2 id="adding-new-combat-behavior">Adding New Combat Behavior</h2>
-            <p>Use the following approach when introducing new combat functionality:</p>
-            <p>I. Add a dedicated component when the behavior requires persistent state.</p>
-            <p>II. Add a processor under:</p>
-            <div>
-                <pre><code class="language-text">game/systems/combat_system/</code></pre>
-            </div>
-            <p>III. Call the processor from <code>CombatSystem::update()</code>:</p>
-            <ul>
-                <li>after normal attacks when it applies special damage;</li>
-                <li>before normal attacks when it changes attack eligibility.</li>
-            </ul>
-            <p>IV. Use <code>CombatQueryContext</code> for entity lookup and range scanning.</p>
-            <p>V. Use <code>Combat::is_valid_enemy_unit()</code> for target validation.</p>
-            <p>VI. Use <code>Combat::deal_damage()</code> for damage application.</p>
-            <p>VII. Add focused tests under:</p>
-            <div>
-                <pre><code class="language-text">tests/systems/</code></pre>
-            </div>
-            <p>Avoid creating a new top-level <code>System</code> for combat damage unless the behavior is genuinely outside the combat simulation. Separate damage systems tend to develop inconsistent targeting, validation, and damage rules.</p>
-            <h2 id="known-boundaries">Known Boundaries</h2>
-            <h3 id="rpg-commander-combat">RPG Commander Combat</h3>
-            <p>The RPG commander combat resolver has its own implementation under:</p>
-            <div>
-                <pre><code class="language-text">game/systems/rpg_combat_system/</code></pre>
-            </div>
-            <p>Although it is related to combat, it represents a different abstraction from RTS unit combat and does not share the same processing path.</p>
-            <h3 id="projectile-and-arrow-systems">Projectile and Arrow Systems</h3>
-            <p>Projectile movement remains the responsibility of:</p>
-            <div>
-                <pre><code class="language-text">ProjectileSystem</code></pre>
-            </div>
-            <p>Arrow trail visuals remain the responsibility of:</p>
-            <div>
-                <pre><code class="language-text">ArrowSystem</code></pre>
-            </div>
-            <p>The combat system decides when these effects are created. The projectile and arrow systems own their subsequent simulation and rendering-facing data.</p>
+            <p>When debugging a combat failure, it is useful to identify the first broken layer:</p>
+            <ol>
+                <li>command/subject validation;</li>
+                <li>target legality;</li>
+                <li>path/range/obstruction;</li>
+                <li>combat state/lock;</li>
+                <li>normal vs special processor;</li>
+                <li>damage modifiers/application; or</li>
+                <li>presentation/feedback.</li>
+            </ol>
+            <p>That prevents a visual symptom from being mistaken for an authoritative damage bug.</p>
+            <h2 id="source-map">Source map</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Concern</td>
+                    <td>Source</td>
+                </tr>
+                <tr>
+                    <td>Combat orchestration</td>
+                    <td><code>game/systems/combat_system.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Shared target rules</td>
+                    <td><code>game/systems/combat_system/target_rules.*</code></td>
+                </tr>
+                <tr>
+                    <td>Normal attacks</td>
+                    <td><code>game/systems/combat_system/attack_processor.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Damage application</td>
+                    <td><code>game/systems/combat_system/damage_application.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Melee exchange</td>
+                    <td><code>game/systems/combat_system/melee_exchange.*</code></td>
+                </tr>
+                <tr>
+                    <td>Threat/engagement/commitment</td>
+                    <td><code>game/systems/combat_system/</code></td>
+                </tr>
+                <tr>
+                    <td>Counter constants</td>
+                    <td><code>game/systems/combat_system/combat_types.h</code></td>
+                </tr>
+                <tr>
+                    <td>Troop combat data</td>
+                    <td><code>assets/data/troops/</code> and nation data</td>
+                </tr>
+                <tr>
+                    <td>Balance fixtures</td>
+                    <td><code>assets/balance/</code>, <code>tools/balance_sim/</code></td>
+                </tr>
+            </table>
+            </p>
+            <p>The processor order in <code>CombatSystem::update()</code> and the shared target rules are the authoritative current contract. Historical bug narratives are not required to explain how the combat system works now.</p>
         </article-section>
     </div>
     <footer>

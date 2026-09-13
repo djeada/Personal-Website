@@ -132,9 +132,14 @@ function calculateFresnelCoefficients(theta1) {
     if (theta2 === null) {
 
         return {
-            rs: 1, rp: 1, ts: 0, tp: 0,
-            rSAmplitude: -1, rPAmplitude: 1,
-            tSAmplitude: 0, tPAmplitude: 0,
+            rs: 1,
+            rp: 1,
+            ts: 0,
+            tp: 0,
+            rSAmplitude: -1,
+            rPAmplitude: 1,
+            tSAmplitude: 0,
+            tPAmplitude: 0,
             tir: true
         };
     }
@@ -156,8 +161,8 @@ function calculateFresnelCoefficients(theta1) {
     const Rp = rp * rp;
 
 
-    // Electric-field transmission amplitudes. Power transmission also includes
-    // the normal optical-admittance ratio n₂ cosθ₂ / (n₁ cosθ₁).
+
+
     const tSAmplitude = (2 * n1 * cosTheta1) / rs_den;
     const tPAmplitude = (2 * n1 * cosTheta1) / rp_den;
     const fluxRatio = (n2 * cosTheta2) / (n1 * cosTheta1);
@@ -169,8 +174,11 @@ function calculateFresnelCoefficients(theta1) {
         rp: Rp,
         ts: Ts,
         tp: Tp,
-        rSAmplitude: rs, rPAmplitude: rp,
-        tSAmplitude, tPAmplitude, tir: false,
+        rSAmplitude: rs,
+        rPAmplitude: rp,
+        tSAmplitude,
+        tPAmplitude,
+        tir: false,
         theta2: theta2
     };
 }
@@ -411,7 +419,7 @@ function drawRays() {
     }
 
 
-    // Canvas angles are measured clockwise because y grows downward.
+
     drawAngleArc(originX, originY, 42, -Math.PI / 2 - theta1, -Math.PI / 2, "θᵢ", colors.incident);
     drawAngleArc(originX, originY, 52, -Math.PI / 2, -Math.PI / 2 + theta1, "θᵣ", colors.reflected);
 

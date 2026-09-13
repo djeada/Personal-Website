@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Prerequisites</title>
-    <meta content="The macOS build workflow includes automatic code signing and notarization to ensure the application can be opened on macOS without Gatekeeper warnings." name="description" />
+    <title>Packaging order</title>
+    <meta content="macOS packaging is implemented in .github/workflows/build-macos.yml." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Prerequisites",
+            "headline": "Packaging order",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/macos_signing"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/macos_signing",
-            "description": "The macOS build workflow includes automatic code signing and notarization to ensure the application can be opened on macOS without Gatekeeper warnings.",
-            "dateModified": "2026-05-03"
+            "description": "macOS packaging is implemented in .github/workflows/build-macos.yml.",
+            "dateModified": "2026-09-13"
         }
     </script>
 </head>
@@ -78,61 +78,58 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#prerequisites">Prerequisites</a></li>
-                    <li><a href="#setup-instructions">Setup Instructions</a>
+                    <li><a href="#packaging-order">Packaging order</a></li>
+                    <li><a href="#ad-hoc-signing">Ad-hoc signing</a></li>
+                    <li><a href="#optional-developer-id-signing">Optional Developer ID signing</a>
                         <ol>
-                            <li><a href="#step-1-create-developer-id-application-certificate">Step 1: Create Developer ID Application Certificate</a></li>
-                            <li><a href="#step-2-export-certificate-as-p12">Step 2: Export Certificate as .p12</a></li>
-                            <li><a href="#step-3-create-app-specific-password">Step 3: Create App-Specific Password</a></li>
-                            <li><a href="#step-4-find-your-team-id">Step 4: Find Your Team ID</a></li>
-                            <li><a href="#step-5-configure-github-secrets">Step 5: Configure GitHub Secrets</a></li>
-                            <li><a href="#example-encoding-certificate">Example: Encoding Certificate</a></li>
+                            <li><a href="#signing-credentials">Signing credentials</a></li>
                         </ol>
                     </li>
-                    <li><a href="#behavior">Behavior</a>
-                        <ol>
-                            <li><a href="#with-secrets-configured">With Secrets Configured</a></li>
-                            <li><a href="#without-secrets">Without Secrets</a></li>
-                            <li><a href="#partial-configuration">Partial Configuration</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#troubleshooting">Troubleshooting</a>
-                        <ol>
-                            <li><a href="#notarization-failed">Notarization Failed</a></li>
-                            <li><a href="#certificate-not-found">Certificate Not Found</a></li>
-                            <li><a href="#keychain-access-denied">Keychain Access Denied</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#security-considerations">Security Considerations</a>
-                        <ol>
-                            <li><a href="#secret-protection">Secret Protection</a></li>
-                            <li><a href="#certificate-expiration">Certificate Expiration</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#testing">Testing</a>
-                        <ol>
-                            <li><a href="#local-testing">Local Testing</a></li>
-                            <li><a href="#verify-signed-app">Verify Signed App</a></li>
-                            <li><a href="#test-without-secrets">Test Without Secrets</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#references">References</a></li>
-                    <li><a href="#support">Support</a></li>
+                    <li><a href="#optional-notarization">Optional notarization</a></li>
+                    <li><a href="#current-dmg-ordering-constraint">Current DMG ordering constraint</a></li>
+                    <li><a href="#encoding-the-certificate">Encoding the certificate</a></li>
+                    <li><a href="#verification-commands">Verification commands</a></li>
+                    <li><a href="#temporary-credential-handling">Temporary credential handling</a></li>
+                    <li><a href="#when-this-workflow-runs">When this workflow runs</a></li>
+                    <li><a href="#source-of-truth">Source of truth</a></li>
                 </ol>
             </div>
             <div id="related-articles">
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
-                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
@@ -140,7 +137,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -159,223 +156,133 @@
                         </svg>
                     </button></div>
             </div>
-            <header>macOS Code Signing and Notarization Guide</header>
-            <p>The macOS build workflow includes automatic code signing and notarization to ensure the application can be opened on macOS without Gatekeeper warnings. This process:</p>
+            <header>macOS Code Signing and Notarization</header>
+            <p>macOS packaging is implemented in <code>.github/workflows/build-macos.yml</code>. The workflow is reusable and is called by both the weekly packaging job and the release workflow.</p>
+            <p>The packaging path uses two different kinds of signing:</p>
             <ol>
-                <li><strong>Signs</strong> the <code>.app</code> bundle with a Developer ID Application certificate</li>
-                <li><strong>Notarizes</strong> the app with Apple's notary service</li>
-                <li><strong>Staples</strong> the notarization ticket to the DMG for offline verification</li>
+                <li>an <strong>ad-hoc signature</strong> that is always applied after <code>macdeployqt</code> and asset copying so the modified application bundle can run on macOS; and</li>
+                <li>an optional <strong>Developer ID</strong> signing and notarization script when release credentials are available.</li>
             </ol>
-            <h2 id="prerequisites">Prerequisites</h2>
-            <p>To enable signing and notarization, you need:</p>
+            <p>These are separate stages with different purposes.</p>
+            <h2 id="packaging-order">Packaging order</h2>
+            <p>The current workflow performs the relevant steps in this order:</p>
             <ol>
-                <li><strong>Apple Developer Account</strong> (paid membership, $99/year)</li>
-                <li><strong>Developer ID Application Certificate</strong> from Apple</li>
-                <li><strong>App-specific password</strong> for notarization</li>
+                <li>build <code>standard_of_iron.app</code>;</li>
+                <li>run <code>macdeployqt</code>;</li>
+                <li>copy assets and licences into the bundle;</li>
+                <li>ad-hoc sign the complete bundle with <code>codesign --sign -</code>;</li>
+                <li>run packaged renderer and OpenGL self-tests;</li>
+                <li>create the DMG with <code>hdiutil create</code>;</li>
+                <li>run <code>scripts/sign-and-notarize-macos.sh</code> with the app path and the already-created DMG;</li>
+                <li>verify the DMG and write its SHA-256 checksum.</li>
             </ol>
-            <h2 id="setup-instructions">Setup Instructions</h2>
-            <h3 id="step-1-create-developer-id-application-certificate">Step 1: Create Developer ID Application Certificate</h3>
-            <ol>
-                <li>Log in to <a href="https://developer.apple.com/account">Apple Developer Portal</a></li>
-                <li>Navigate to <strong>Certificates, Identifiers &amp; Profiles</strong></li>
-                <li>Click <strong>+</strong> to create a new certificate</li>
-                <li>Select <strong>Developer ID Application</strong> (for distribution outside Mac App Store)</li>
-                <li>Follow the instructions to create a Certificate Signing Request (CSR)</li>
-                <li>Download the certificate and install it in Keychain Access</li>
-            </ol>
-            <h3 id="step-2-export-certificate-as-p12">Step 2: Export Certificate as .p12</h3>
-            <ol>
-                <li>Open <strong>Keychain Access</strong> on your Mac</li>
-                <li>Find your <strong>Developer ID Application</strong> certificate</li>
-                <li>Right-click and select <strong>Export</strong></li>
-                <li>Choose <code>.p12</code> format</li>
-                <li>Set a strong password (you'll need this for GitHub Secrets)</li>
-                <li>Save the file</li>
-            </ol>
-            <h3 id="step-3-create-app-specific-password">Step 3: Create App-Specific Password</h3>
-            <ol>
-                <li>Go to <a href="https://appleid.apple.com">appleid.apple.com</a></li>
-                <li>Sign in with your Apple ID</li>
-                <li>Navigate to <strong>Security</strong> → <strong>App-Specific Passwords</strong></li>
-                <li>Click <strong>Generate an app-specific password</strong></li>
-                <li>Label it (e.g., "Standard of Iron Notarization")</li>
-                <li>Copy the generated password (format: <code>xxxx-xxxx-xxxx-xxxx</code>)</li>
-            </ol>
-            <h3 id="step-4-find-your-team-id">Step 4: Find Your Team ID</h3>
-            <ol>
-                <li>Go to <a href="https://developer.apple.com/account">Apple Developer Portal</a></li>
-                <li>Click on your account name in the top right</li>
-                <li>Your <strong>Team ID</strong> is a 10-character alphanumeric code (e.g., <code>A1B2C3D4E5</code>)</li>
-            </ol>
-            <h3 id="step-5-configure-github-secrets">Step 5: Configure GitHub Secrets</h3>
-            <p>Add the following secrets to your GitHub repository:</p>
-            <ol>
-                <li>Go to repository <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong></li>
-                <li>Click <strong>New repository secret</strong> and add each of these:</li>
-            </ol>
+            <p>The ad-hoc signature is therefore part of every package produced by <code>build-macos.yml</code>, regardless of whether Developer ID credentials are configured.</p>
+            <h2 id="ad-hoc-signing">Ad-hoc signing</h2>
+            <p>After deployment and asset copying, the workflow runs:</p>
+            <div>
+                <pre><code class="language-sh">codesign --force --deep --sign - "${APP_DIR}/${APP_NAME}.app"
+codesign --verify --deep --strict --verbose=2 "${APP_DIR}/${APP_NAME}.app"</code></pre>
+            </div>
+            <p>This reseals the bundle after <code>macdeployqt</code> and the asset-copy steps have changed its contents. The packaged self-tests run against that ad-hoc-signed bundle.</p>
+            <p>An ad-hoc signature is not a Developer ID signature and does not provide notarization or a verified external publisher identity.</p>
+            <h2 id="optional-developer-id-signing">Optional Developer ID signing</h2>
+            <p>The workflow calls:</p>
+            <div>
+                <pre><code class="language-sh">./scripts/sign-and-notarize-macos.sh \
+  "${APP_DIR}/${APP_NAME}.app" \
+  "${DMG_NAME}"</code></pre>
+            </div>
+            <p>The script exits successfully without Developer ID signing when either of these values is missing:</p>
+            <ul>
+                <li><code>MACOS_CERTIFICATE</code>; or</li>
+                <li><code>MACOS_CERTIFICATE_PASSWORD</code>.</li>
+            </ul>
+            <p>If they are present, the script decodes the <code>.p12</code>, imports it into a temporary keychain, locates a <strong>Developer ID Application</strong> identity, signs nested frameworks and plugins, signs the main executable, signs the <code>.app</code> bundle, and verifies the resulting application signature.</p>
+            <h3 id="signing-credentials">Signing credentials</h3>
             <p>
             <table>
                 <tr>
-                    <td>Secret Name</td>
-                    <td>Description</td>
-                    <td>How to Get Value</td>
+                    <td>Secret</td>
+                    <td>Used for</td>
                 </tr>
                 <tr>
                     <td><code>MACOS_CERTIFICATE</code></td>
-                    <td>Base64-encoded .p12 certificate</td>
-                    <td>Run: <code>base64 -i certificate.p12 | pbcopy</code> (copies to clipboard)</td>
+                    <td>Base64-encoded <code>.p12</code> containing the Developer ID certificate and private key</td>
                 </tr>
                 <tr>
                     <td><code>MACOS_CERTIFICATE_PASSWORD</code></td>
-                    <td>Password for the .p12 file</td>
-                    <td>The password you set when exporting the certificate</td>
+                    <td>Password for the <code>.p12</code> export</td>
                 </tr>
                 <tr>
                     <td><code>MACOS_KEYCHAIN_PASSWORD</code></td>
-                    <td>Password for temporary keychain</td>
-                    <td>Any strong random password (e.g., <code>openssl rand -base64 32</code>)</td>
-                </tr>
-                <tr>
-                    <td><code>APPLE_ID</code></td>
-                    <td>Your Apple ID email</td>
-                    <td>Your Apple Developer account email</td>
-                </tr>
-                <tr>
-                    <td><code>APPLE_ID_PASSWORD</code></td>
-                    <td>App-specific password</td>
-                    <td>The password from Step 3 (with dashes)</td>
-                </tr>
-                <tr>
-                    <td><code>APPLE_TEAM_ID</code></td>
-                    <td>Your Apple Developer Team ID</td>
-                    <td>The 10-character code from Step 4</td>
+                    <td>Password for the temporary CI keychain; the script generates one with <code>uuidgen</code> when this value is empty</td>
                 </tr>
             </table>
             </p>
-            <h3 id="example-encoding-certificate">Example: Encoding Certificate</h3>
-            <div>
-                <pre><code class="language-bash"># On macOS, encode and copy to clipboard
-base64 -i /path/to/certificate.p12 | pbcopy
-
-# On Linux
-base64 -w 0 /path/to/certificate.p12</code></pre>
-            </div>
-            <h2 id="behavior">Behavior</h2>
-            <h3 id="with-secrets-configured">With Secrets Configured</h3>
-            <p>When all required secrets are present:</p>
-            <ol>
-                <li>✅ The <code>.app</code> is signed with your Developer ID</li>
-                <li>✅ The app is submitted to Apple for notarization</li>
-                <li>✅ The notarization ticket is stapled to the DMG</li>
-                <li>✅ Gatekeeper opens the app without warnings</li>
-            </ol>
-            <h3 id="without-secrets">Without Secrets</h3>
-            <p>If secrets are not configured:</p>
-            <ol>
-                <li>ℹ️ The workflow prints an informational message</li>
-                <li>ℹ️ Signing and notarization are skipped</li>
-                <li>✅ The build completes successfully</li>
-                <li>⚠️ Users will see "unidentified developer" warning</li>
-            </ol>
-            <p>This graceful fallback allows:
-                - Testing builds without certificates
-                - Community contributors to build without Apple Developer accounts
-                - Quick iterations during development</p>
-            <h3 id="partial-configuration">Partial Configuration</h3>
-            <p>If only signing credentials are present (no notarization credentials):</p>
-            <ol>
-                <li>✅ The app is signed</li>
-                <li>⚠️ Notarization is skipped with a warning</li>
-                <li>⚠️ Users may still see Gatekeeper warnings</li>
-            </ol>
-            <h2 id="troubleshooting">Troubleshooting</h2>
-            <h3 id="notarization-failed">Notarization Failed</h3>
-            <p>If notarization fails, the script will:
-                1. Show the error message from Apple
-                2. Attempt to retrieve detailed logs
-                3. Exit with an error code</p>
-            <p>Common issues:
-                - <strong>Invalid code signature</strong>: Ensure frameworks are signed before the main app
-                - <strong>Hardened runtime violations</strong>: Add appropriate entitlements if needed
-                - <strong>Invalid credentials</strong>: Verify Apple ID, password, and Team ID</p>
-            <h3 id="certificate-not-found">Certificate Not Found</h3>
-            <p>Error: "Developer ID Application certificate not found in keychain"</p>
-            <p>Solutions:
-                - Verify the certificate is a <strong>Developer ID Application</strong> certificate
-                - Ensure the certificate is not expired
-                - Check that the .p12 file contains the certificate and private key</p>
-            <h3 id="keychain-access-denied">Keychain Access Denied</h3>
-            <p>Error: "User interaction is not allowed"</p>
-            <p>Solutions:
-                - Ensure <code>MACOS_KEYCHAIN_PASSWORD</code> secret is set
-                - Check that the keychain is properly unlocked in the script</p>
-            <h2 id="security-considerations">Security Considerations</h2>
-            <h3 id="secret-protection">Secret Protection</h3>
-            <p>GitHub Secrets are:
-                - ✅ Encrypted at rest
-                - ✅ Only exposed to GitHub Actions runners
-                - ✅ Never logged or exposed in outputs
-                - ✅ Redacted in build logs</p>
-            <p>The signing script:
-                - Creates a temporary keychain for signing
-                - Immediately deletes certificates after use
-                - Cleans up keychains on completion or failure</p>
-            <h3 id="certificate-expiration">Certificate Expiration</h3>
-            <p>Developer ID Application certificates:
-                - Valid for 5 years
-                - Must be renewed before expiration
-                - Apple will email reminders before expiration</p>
-            <p>Remember to:
-                - Update the certificate in GitHub Secrets before expiration
-                - Test the new certificate before the old one expires</p>
-            <h2 id="testing">Testing</h2>
-            <h3 id="local-testing">Local Testing</h3>
-            <p>You can test the signing script locally:</p>
-            <div>
-                <pre><code class="language-bash"># Set environment variables
-export MACOS_CERTIFICATE="$(base64 -i certificate.p12)"
-export MACOS_CERTIFICATE_PASSWORD="your-password"
-export MACOS_KEYCHAIN_PASSWORD="temp-password"
-export APPLE_ID="your@email.com"
-export APPLE_ID_PASSWORD="xxxx-xxxx-xxxx-xxxx"
-export APPLE_TEAM_ID="A1B2C3D4E5"
-
-# Run the script
-./scripts/sign-and-notarize-macos.sh build/bin/standard_of_iron.app standard_of_iron-macos.dmg</code></pre>
-            </div>
-            <h3 id="verify-signed-app">Verify Signed App</h3>
-            <div>
-                <pre><code class="language-bash"># Check code signature
-codesign --verify --deep --strict --verbose=2 standard_of_iron.app
-
-# Check Gatekeeper assessment
-spctl --assess --type execute --verbose standard_of_iron.app
-
-# Verify stapled ticket
-stapler validate standard_of_iron-macos.dmg</code></pre>
-            </div>
-            <h3 id="test-without-secrets">Test Without Secrets</h3>
-            <p>To test the fallback behavior:</p>
-            <div>
-                <pre><code class="language-bash"># Run without environment variables
-./scripts/sign-and-notarize-macos.sh build/bin/standard_of_iron.app standard_of_iron-macos.dmg</code></pre>
-            </div>
-            <p>Expected output: "macOS signing credentials not found, skipping signing and notarization"</p>
-            <h2 id="references">References</h2>
+            <p>Only the certificate and certificate password determine whether Developer ID signing runs.</p>
+            <h2 id="optional-notarization">Optional notarization</h2>
+            <p>Notarization requires all three of these values:</p>
             <ul>
-                <li><a href="https://developer.apple.com/support/code-signing/">Apple Code Signing Guide</a></li>
-                <li><a href="https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution">Apple Notarization Guide</a></li>
-                <li><a href="https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow">notarytool Documentation</a></li>
-                <li><a href="https://docs.github.com/en/actions/security-guides/encrypted-secrets">GitHub Actions Secrets</a></li>
+                <li><code>APPLE_ID</code>;</li>
+                <li><code>APPLE_ID_PASSWORD</code>; and</li>
+                <li><code>APPLE_TEAM_ID</code>.</li>
             </ul>
-            <h2 id="support">Support</h2>
-            <p>If you encounter issues:</p>
+            <p>When any of them is absent, <code>sign-and-notarize-macos.sh</code> still performs Developer ID signing if the certificate credentials are present, but sets <code>SKIP_NOTARIZATION=true</code> and skips the notary submission.</p>
+            <p>When all notarization credentials are present, the script:</p>
             <ol>
-                <li>Check the <a href="#troubleshooting">Troubleshooting</a> section above</li>
-                <li>Review the build logs in GitHub Actions</li>
-                <li>Open an issue with the error message and relevant logs</li>
-                <li>For sensitive credential issues, reach out privately to maintainers</li>
+                <li>creates a ZIP of the signed <code>.app</code> with <code>ditto</code>;</li>
+                <li>submits the ZIP through <code>xcrun notarytool submit --wait</code>;</li>
+                <li>fails if Apple does not return <code>status: Accepted</code>;</li>
+                <li>retrieves the notary log on failure when it can recover a submission ID;</li>
+                <li>runs <code>xcrun stapler staple</code> on the DMG path; and</li>
+                <li>validates the stapled target with <code>xcrun stapler validate</code>.</li>
             </ol>
+            <h2 id="current-dmg-ordering-constraint">Current DMG ordering constraint</h2>
+            <p><code>build-macos.yml</code> creates the DMG <strong>before</strong> <code>sign-and-notarize-macos.sh</code> performs Developer ID signing on the <code>.app</code> in the build directory.</p>
+            <p>A DMG created by <code>hdiutil create -srcfolder</code> contains the state of the source bundle at DMG creation time. Later changes to <code>build/bin/standard_of_iron.app</code> do not rewrite the copy already stored in the DMG.</p>
+            <p>The repository therefore establishes these facts:</p>
+            <ul>
+                <li>the app used for packaged self-tests is ad-hoc signed;</li>
+                <li>the build-directory app can receive a Developer ID signature after the DMG exists; and</li>
+                <li>the script attempts to staple and validate the existing DMG after notarizing a ZIP of the subsequently signed app.</li>
+            </ul>
+            <p>The workflow does <strong>not</strong> currently establish that the Developer-ID-signed copy of the app is the copy contained in the already-created DMG. Documentation and release checks should not claim that property unless the packaging order or verification path is changed to prove it.</p>
+            <h2 id="encoding-the-certificate">Encoding the certificate</h2>
+            <p>On macOS:</p>
+            <div>
+                <pre><code class="language-sh">base64 -i /path/to/certificate.p12 | pbcopy</code></pre>
+            </div>
+            <p>On GNU/Linux:</p>
+            <div>
+                <pre><code class="language-sh">base64 -w 0 /path/to/certificate.p12</code></pre>
+            </div>
+            <p>Store the result as <code>MACOS_CERTIFICATE</code> and the export password as <code>MACOS_CERTIFICATE_PASSWORD</code>.</p>
+            <h2 id="verification-commands">Verification commands</h2>
+            <p>For an app bundle:</p>
+            <div>
+                <pre><code class="language-sh">codesign --verify --deep --strict --verbose=2 standard_of_iron.app</code></pre>
+            </div>
+            <p>For Gatekeeper assessment:</p>
+            <div>
+                <pre><code class="language-sh">spctl --assess --type execute --verbose standard_of_iron.app</code></pre>
+            </div>
+            <p>For a stapled target:</p>
+            <div>
+                <pre><code class="language-sh">xcrun stapler validate standard_of_iron-macos.dmg</code></pre>
+            </div>
+            <p>The CI workflow also runs <code>hdiutil verify</code> on the DMG and writes a SHA-256 checksum after the optional signing/notarization step.</p>
+            <h2 id="temporary-credential-handling">Temporary credential handling</h2>
+            <p><code>sign-and-notarize-macos.sh</code> writes the decoded certificate to <code>$RUNNER_TEMP/certificate.p12</code> and imports it into a temporary keychain. The certificate file is removed after application signing, and the temporary keychain is deleted at the end of the successful path or explicitly on notarization failure.</p>
+            <p>The <code>.p12</code>, its password, Apple authentication values, and private key material are release credentials and must not be committed or printed in logs.</p>
+            <h2 id="when-this-workflow-runs">When this workflow runs</h2>
+            <p><code>.github/workflows/build-macos.yml</code> is called by:</p>
+            <ul>
+                <li><code>.github/workflows/weekly.yml</code> for weekly package validation; and</li>
+                <li><code>.github/workflows/release.yml</code> for release candidates.</li>
+            </ul>
+            <p>Both callers use <code>secrets: inherit</code>, so either path can exercise the optional Developer ID and notarization stages when repository credentials are configured.</p>
+            <h2 id="source-of-truth">Source of truth</h2>
+            <p>The package order is defined by <code>.github/workflows/build-macos.yml</code>. Developer ID signing and notarization behavior is defined by <code>scripts/sign-and-notarize-macos.sh</code>.</p>
         </article-section>
     </div>
     <footer>

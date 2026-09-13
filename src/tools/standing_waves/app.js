@@ -36,9 +36,9 @@ const plotLeft = margin;
 const plotRight = cw - margin;
 const plotWidth = plotRight - plotLeft;
 const centerY = ch / 2;
-// Each travelling wave has amplitude A, so their superposition can reach 2A.
-// Scale one physical amplitude to half the available vertical half-range and
-// retain extra headroom for stroke width, markers, and envelope labels.
+
+
+
 const maxStandingAmplitude = 2;
 const verticalHalfRange = (ch - 2 * margin) / 2;
 const pixelsPerAmplitude = verticalHalfRange * 0.88 / maxStandingAmplitude;

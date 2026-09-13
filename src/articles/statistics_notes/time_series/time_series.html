@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked decomposition: identifying the pieces</title>
+    <meta content="A time series is an ordered set of observations together with an information structure: timestamps, sampling rules, and sequence position determine what can depend on what and what information is available for prediction." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked decomposition: identifying the pieces",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/time_series"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/time_series",
+            "description": "A time series is an ordered set of observations together with an information structure: timestamps, sampling rules, and sequence position determine what can depend on what and what information is available for prediction.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-decomposition-identifying-the-pieces">Worked decomposition: identifying the pieces</a>
+                        <ol>
+                            <li><a href="#ordered-index-not-just-time">Ordered Index, Not Just Time</a></li>
+                            <li><a href="#first-look-plotting-the-series">First Look: Plotting the Series</a></li>
+                            <li><a href="#goals-of-time-series-analysis">Goals of Time Series Analysis</a></li>
+                            <li><a href="#modeling-mindset">Modeling Mindset</a></li>
+                            <li><a href="#the-need-for-time-series-models">The need for Time Series Models</a></li>
+                            <li><a href="#diagnostic-gallery-synthetic-examples-">Diagnostic Gallery (Synthetic Examples)</a></li>
+                            <li><a href="#components-of-a-time-series">Components of a Time Series</a></li>
+                            <li><a href="#time-series-analysis-techniques">Time Series Analysis Techniques</a></li>
+                            <li><a href="#a-simple-modeling-workflow">A Simple Modeling Workflow</a>
+                                <ol>
+                                    <li><a href="#time-domain-methods">Time-Domain Methods</a></li>
+                                    <li><a href="#frequency-domain-methods">Frequency-Domain Methods</a></li>
+                                    <li><a href="#parametric-vs-non-parametric-methods">Parametric vs. Non-Parametric Methods</a></li>
+                                    <li><a href="#types-of-timeseries">Types of Timeseries</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#applications-of-time-series-analysis">Applications of Time Series Analysis</a></li>
+                            <li><a href="#example">Example</a></li>
+                            <li><a href="#plotting-the-time-series-data">Plotting the Time Series Data</a>
+                                <ol>
+                                    <li><a href="#applying-moving-average">Applying Moving Average</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-a-time-series-is-data-plus-an-information-structure">Student guide: a time series is data plus an information structure</a>
+                        <ol>
+                            <li><a href="#learning-objectives">Learning objectives</a></li>
+                            <li><a href="#what-is-indexed-by-time-">What is indexed by time?</a></li>
+                            <li><a href="#components-with-a-numerical-example">Components with a numerical example</a></li>
+                            <li><a href="#trend-seasonality-cycle-and-break">Trend, seasonality, cycle, and break</a></li>
+                            <li><a href="#sampling-and-aliasing">Sampling and aliasing</a></li>
+                            <li><a href="#first-pass-exploration">First-pass exploration</a></li>
+                            <li><a href="#smoothing-versus-forecasting">Smoothing versus forecasting</a></li>
+                            <li><a href="#the-information-set">The information set</a></li>
+                            <li><a href="#difference-equations-and-stochastic-dynamics">Difference equations and stochastic dynamics</a></li>
+                            <li><a href="#white-noise-random-walks-and-stationarity">White noise, random walks, and stationarity</a></li>
+                            <li><a href="#recommended-workflow">Recommended workflow</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Time Series Analysis</header>
+            <p>A time series is an ordered set of observations together with an information structure: timestamps, sampling rules, and sequence position determine what can depend on what and what information is available for prediction. Treating the same values as an unordered sample would discard much of the structure that time-series methods are designed to model.</p>
+            <p>A useful analysis starts by identifying trend, seasonality, breaks, changing variance, lag dependence, and the forecast information set before choosing a model. Transformations and dynamic models then represent specific mechanisms, while evaluation must preserve chronology so that future information is never used to explain the past.</p>
+            <h2 id="worked-decomposition-identifying-the-pieces">Worked decomposition: identifying the pieces</h2>
+            <p>Suppose a monthly series is described by</p>
+            <p>$$
+                y_t=100+0.5t+10\sin\left(\frac{2\pi t}{12}\right)+\varepsilon_t,
+                \qquad E(\varepsilon_t)=0,
+                \qquad \mathrm{Var}(\varepsilon_t)=4.
+                $$</p>
+            <p>At $t=6$, the seasonal term is</p>
+            <p>$$
+                10\sin(\pi)=0,
+                $$</p>
+            <p>so the deterministic part is $100+0.5(6)=103$. At $t=3$, the seasonal term is</p>
+            <p>$$
+                10\sin\left(\frac{\pi}{2}\right)=10,
+                $$</p>
+            <p>so the deterministic part is $100+0.5(3)+10=111.5$.</p>
+            <p>The same trend can therefore produce very different observations at different seasonal positions. This example separates three questions: is the level changing, is a pattern repeating at a known period, and how large is the unpredictable remainder? Those questions determine whether trend modeling, seasonal adjustment or differencing, and a stochastic dependence model are appropriate.</p>
+            <p><img alt="Series components" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/03_series_components.png" /></p>
+            <p>The figure shows these components together. Trend describes slow level movement, seasonality describes regular within-cycle variation, and the remainder captures variation not explained by the chosen decomposition.</p>
+            <p>A <strong>time series</strong> is an ordered collection of observations indexed by time or another meaningful ordered variable. In applied work, the observations are often recorded on a regular grid such as hourly, daily, monthly, or quarterly, but irregularly spaced observations are also time series and require methods that respect their sampling pattern.</p>
+            <p>Time-series analysis studies how observations evolve, how their dependence changes with lag, which systematic structures are present, and how uncertainty propagates into future forecasts.</p>
+            <p><strong>Discrete vs. continuous time series</strong></p>
+            <ul>
+                <li>A <strong>discrete-time</strong> series is observed at distinct indexed times, such as daily or monthly observations.</li>
+                <li>A <strong>continuous-time</strong> process is defined over a continuous time interval, even if it may only be sampled at discrete times.</li>
+                <li>Most methods in these notes focus on discrete-time data.</li>
+            </ul>
+            <h3 id="ordered-index-not-just-time">Ordered Index, Not Just Time</h3>
+            <p>The index only needs a meaningful order and direction. Besides clock time, examples include depth, distance along a transect, or sequential position in a production line. What matters is that the order is scientifically meaningful and that lagged relationships can be interpreted consistently.</p>
+            <h3 id="first-look-plotting-the-series">First Look: Plotting the Series</h3>
+            <p>A time plot is one of the most informative first diagnostics. It can reveal trend, repeating seasonality, cycles, changing variance, outliers, missing periods, and structural breaks.</p>
+            <p>The plot should be read together with a description of what each observation represents. A daily total, a monthly average, and an instantaneous measurement have different meanings even if they share the same timestamps.</p>
+            <p>The following synthetic examples isolate common patterns.</p>
+            <p><img alt="synthetic nonlinear trend" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_nonlinear_trend.png" /></p>
+            <p>A smooth nonlinear rise suggests that a constant-level stationary model would be inappropriate without a trend component or transformation.</p>
+            <p><img alt="synthetic seasonal heteroskedastic series" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_seasonal_heteroskedastic.png" /></p>
+            <p>Here the seasonal pattern repeats while its amplitude grows. The increasing spread suggests considering a log or other variance-stabilizing transformation before modeling the seasonal structure.</p>
+            <p><img alt="synthetic structural break" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_structural_break.png" /></p>
+            <p>A structural break changes the data-generating mechanism. Fitting one stable parameter set across both regimes can produce misleading averages.</p>
+            <p><img alt="synthetic seasonal structural break" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_seasonal_structural_break.png" /></p>
+            <p>This example shows that both the level and seasonal amplitude can change after a break, so simply estimating one seasonal index for the full sample may be inadequate.</p>
+            <p><img alt="synthetic periodic but nonseasonal signal" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_periodic_nonseasonal.png" /></p>
+            <p>A series can oscillate without having calendar seasonality. Seasonality refers to a fixed repeating period tied to the sampling structure; other periodic or cyclic behavior may have a different mechanism.</p>
+            <p><img alt="synthetic negative dependence series" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_negative_dependence.png" /></p>
+            <p>Negative short-lag dependence tends to produce alternation around the mean.</p>
+            <p><img alt="synthetic positive dependence series" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_positive_dependence.png" /></p>
+            <p>Positive short-lag dependence tends to produce runs of observations on the same side of the mean.</p>
+            <p><img alt="synthetic white noise" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_white_noise.png" /></p>
+            <p>White noise has a stable mean and variance with no linear autocorrelation at nonzero lags. A finite realization can still show apparent short runs by chance.</p>
+            <p><img alt="synthetic random walk" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/intro_random_walk.png" /></p>
+            <p>A random walk accumulates shocks, so its level wanders and its variance grows with time. The visual contrast with white noise is a first illustration of stationary versus non-stationary behavior.</p>
+            <h3 id="goals-of-time-series-analysis">Goals of Time Series Analysis</h3>
+            <p>Time-series analysis can be used to describe recurring structure, estimate dynamic relationships, detect changes, explain mechanisms, and forecast future values. The appropriate method depends on the goal: a descriptive smoother, a causal analysis, and an operational forecast may use the same dataset but require different assumptions.</p>
+            <h3 id="modeling-mindset">Modeling Mindset</h3>
+            <p>We often treat the observed series as one realization of an underlying stochastic process. The observations are generally not assumed to be IID because their distributions, conditional means, variances, or lag relationships can depend on time and past information.</p>
+            <p>Trend and seasonality are forms of systematic time structure, but they are not themselves the same as stochastic serial dependence. After deterministic or evolving mean structure is modeled, the remaining process may still have autocorrelation that requires an ARMA-type description.</p>
+            <p>A complete probabilistic specification for observations $X_1,\ldots,X_n$ is their joint distribution,</p>
+            <p>$$
+                F(c_1,\ldots,c_n)
+                =P(X_1\le c_1,\ldots,X_n\le c_n).
+                $$</p>
+            <p>In practice, specifying a high-dimensional joint distribution directly is usually impractical. Time-series models instead exploit structure: conditional distributions, state equations, means, variances, autocovariances, or factorized likelihoods.</p>
+            <p><img alt="Changing moments" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/04_moments_change_over_time.png" /></p>
+            <p>The changing-moments figure illustrates why one global mean and variance can be misleading when the process evolves. Stationarity assumptions should be checked against the time variation visible in the data.</p>
+            <h3 id="the-need-for-time-series-models">The need for Time Series Models</h3>
+            <p>Ordinary regression and time-series modeling are not competing domains. Regression can include time, lagged predictors, calendar effects, and serial-error structures. The distinctive challenge in forecasting is that observations are ordered, future information is unavailable, and uncertainty often depends on forecast horizon.</p>
+            <p>For electricity consumption, temperature and household characteristics may explain part of the conditional mean, while recent consumption, day-of-week effects, and seasonal dynamics can explain additional temporal structure. A dynamic regression or state-space model can combine both sources of information.</p>
+            <p>A useful contrast is therefore not "regression versus time series," but <strong>static independent-error modeling versus models that respect temporal information and dependence</strong>.</p>
+            <p>In a forecasting problem:</p>
+            <ul>
+                <li>training and evaluation must preserve chronological order;</li>
+                <li>lagged observations can contain predictive information;</li>
+                <li>future predictor values may need their own forecasts;</li>
+                <li>uncertainty usually changes with horizon;</li>
+                <li>trend, seasonality, breaks, and evolving variance must be handled explicitly.</li>
+            </ul>
+            <p>The following electricity-consumption example compares a simple regression-style projection with a seasonal time-series forecast.</p>
+            <p><img alt="electricity consumption over time" src="https://github.com/user-attachments/assets/89a67e4f-1c56-4ca8-8ff2-66ce2fb663ee" /></p>
+            <p>The historical line establishes the observed pattern. The linear projection extends a simple trend, while the exponential-smoothing forecast also reflects seasonal structure. The comparison demonstrates how different structural assumptions lead to different extrapolations beyond the observed sample.</p>
+            <h3 id="diagnostic-gallery-synthetic-examples-">Diagnostic Gallery (Synthetic Examples)</h3>
+            <p>The synthetic examples above form a diagnostic gallery: each plot isolates a feature that changes the modeling decision. Trend suggests a changing mean, seasonality suggests a repeating component, heteroskedasticity suggests changing variance, breaks suggest parameter instability, and positive or negative lag dependence motivates explicit dynamic structure.</p>
+            <p>The point of the gallery is not to classify a real series from appearance alone. Real data often combine several of these features, so plots should be followed by transformations, lag diagnostics, domain knowledge, and forecast validation.</p>
+            <h3 id="components-of-a-time-series">Components of a Time Series</h3>
+            <p>A time series can often be described in terms of several broad components:</p>
+            <ul>
+                <li><strong>Trend:</strong> a persistent long-run movement in level or slope.</li>
+                <li><strong>Seasonality:</strong> a pattern tied to a fixed, known period.</li>
+                <li><strong>Cycles:</strong> oscillations whose timing is less regular than seasonality.</li>
+                <li><strong>Irregular variation:</strong> variation not explained by the chosen systematic structure.</li>
+                <li><strong>Structural breaks:</strong> changes in the mechanism itself rather than ordinary fluctuations around one stable model.</li>
+            </ul>
+            <p>A decomposition is a modeling choice, not a unique physical partition. Different smoothers or state-space models can assign variation differently between trend, cycle, seasonality, and remainder.</p>
+            <h3 id="time-series-analysis-techniques">Time Series Analysis Techniques</h3>
+            <p>Time-series methods are often grouped into time-domain and frequency-domain approaches. The two views are complementary: one describes relationships by lag, while the other describes variation by frequency.</p>
+            <h3 id="a-simple-modeling-workflow">A Simple Modeling Workflow</h3>
+            <ol>
+                <li><strong>Plot the series</strong> and identify trend, seasonality, breaks, missingness, and variance changes.</li>
+                <li><strong>Define the target and information set</strong> before choosing transformations.</li>
+                <li><strong>Model or transform systematic structure</strong> such as trend and seasonality when justified.</li>
+                <li><strong>Inspect dependence</strong> with residual plots, ACF/PACF, or state-space innovations.</li>
+                <li><strong>Fit parsimonious candidates</strong> that match the remaining structure.</li>
+                <li><strong>Forecast and reconstruct the target scale</strong> when transformations were used.</li>
+                <li><strong>Evaluate chronologically</strong> against suitable baselines.</li>
+            </ol>
+            <h4 id="time-domain-methods">Time-Domain Methods</h4>
+            <p>Time-domain methods work directly with ordered observations and lags. The autocorrelation function summarizes linear dependence within one series, while cross-correlation describes lagged linear association between two series. Cross-correlation does not by itself establish direction or causality because common trends, seasonality, and omitted variables can create apparent lead-lag patterns.</p>
+            <p>Common time-domain model families include autoregressive and moving-average models, ARIMA, exponential smoothing, dynamic regression, state-space models, and multivariate VAR/VECM models.</p>
+            <p>A <strong>rolling moving average</strong> is a descriptive smoother computed from observed values. An <strong>MA($q$) stochastic model</strong> is different: it represents the current value as a finite combination of unobserved innovations. Keeping these terms separate avoids a common source of confusion.</p>
+            <p>Exponential smoothing recursively updates latent level, trend, or seasonal states. ARIMA combines differencing with AR and MA dependence. Neither method is universally preferable; each encodes a different representation of evolving structure.</p>
+            <p><img alt="Linear filter" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/08_linear_filter.png" /></p>
+            <p>The linear-filter figure connects many time-domain operations. Smoothing, differencing, and ARMA representations can all be expressed as weighted combinations of lagged observations or shocks, with different weight patterns serving different purposes.</p>
+            <h4 id="frequency-domain-methods">Frequency-Domain Methods</h4>
+            <p>Frequency-domain methods decompose variation into oscillations at different frequencies. Fourier and spectral methods are especially useful for detecting dominant cycles and comparing frequency-specific relationships between series.</p>
+            <p>Wavelet methods add time localization, making them useful when the frequency content changes over the record. Frequency-domain analysis still depends on the sampling rate and stationarity assumptions; aliasing and spectral leakage can distort interpretation.</p>
+            <h4 id="parametric-vs-non-parametric-methods">Parametric vs. Non-Parametric Methods</h4>
+            <p><strong>Parametric methods</strong> specify a finite-dimensional model such as ARMA, VAR, or a state-space system and estimate its parameters. <strong>Non-parametric or weakly parametric methods</strong> estimate features such as autocovariance or spectral density with fewer assumptions about a complete data-generating equation.</p>
+            <p>Both require assumptions. A non-parametric estimate is not assumption-free; smoothing choices, stationarity, bandwidth, and sampling structure still matter.</p>
+            <h4 id="types-of-timeseries">Types of Timeseries</h4>
+            <p>Models can also be described by the number of series and the form of their relationships:</p>
+            <ul>
+                <li><strong>Linear univariate:</strong> one target with linear dependence on its own history or innovations.</li>
+                <li><strong>Linear multivariate:</strong> several series linked through linear dynamic relationships.</li>
+                <li><strong>Nonlinear univariate:</strong> one target with nonlinear state or lag dependence.</li>
+                <li><strong>Nonlinear multivariate:</strong> several variables with nonlinear interactions.</li>
+            </ul>
+            <p><img alt="types_of_models" src="https://github.com/user-attachments/assets/e49984c5-e6d1-46c1-b7ba-e6aea8a437df" /></p>
+            <p>The figure places representative model classes into these four categories. The classification describes structural flexibility, not forecast quality; a simpler linear model can outperform a nonlinear model when the extra flexibility is unsupported by the data.</p>
+            <h3 id="applications-of-time-series-analysis">Applications of Time Series Analysis</h3>
+            <p>Time-series analysis is used wherever ordered observations support monitoring or forecasting. Financial applications model returns, volatility, and risk; meteorological applications forecast evolving physical variables; and sales or demand forecasting supports inventory, staffing, and production planning.</p>
+            <p>The modeling objective and information set differ across these domains, so the same method should not be transferred without checking sampling, loss functions, and forecast horizons.</p>
+            <h3 id="example">Example</h3>
+            <p>Consider monthly sales:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Month</td>
+                    <td>Sales</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>100</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>120</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>110</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>130</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>140</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>150</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>160</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>180</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>170</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>190</td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>200</td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>210</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="plotting-the-time-series-data">Plotting the Time Series Data</h3>
+            <p>An ASCII plot makes the upward movement visible:</p>
+            <div>
+                <pre><code class="language-text">Sales
+210 |                                   x
+200 |                                x
+190 |                             x
+180 |                         x
+170 |                      x
+160 |                   x
+150 |                x
+140 |             x
+130 |          x
+120 |       x
+110 |    x
+100 | x
+    -------------------------------------
+      1  2  3  4  5  6  7  8  9  10 11 12
+                   Month</code></pre>
+            </div>
+            <p>The plot suggests an increasing level, but twelve observations are not enough to establish a stable long-run trend or a seasonal pattern. Any forecast should therefore be compared with a simple baseline and treated as highly uncertain.</p>
+            <h4 id="applying-moving-average">Applying Moving Average</h4>
+            <p>A trailing three-month moving average smooths short-run fluctuations:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Month</td>
+                    <td>Sales</td>
+                    <td>Moving Average (Window=3)</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>100</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>120</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>110</td>
+                    <td>110</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>130</td>
+                    <td>120</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>140</td>
+                    <td>127</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>150</td>
+                    <td>140</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>160</td>
+                    <td>150</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>180</td>
+                    <td>163</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>170</td>
+                    <td>170</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>190</td>
+                    <td>180</td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>200</td>
+                    <td>187</td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>210</td>
+                    <td>200</td>
+                </tr>
+            </table>
+            </p>
+            <p>The smoother confirms the broad upward movement but is descriptive: it does not by itself define a probabilistic forecast model.</p>
+            <p>The same data can be fit with simple exponential smoothing (SES):</p>
+            <p><img alt="sales_prediction" src="https://github.com/djeada/Statistics-Notes/assets/37275728/85db196f-ac46-438a-8011-a6a3f952bdb8" /></p>
+            <p>The actual sales line provides the target, while the SES line shows a recursively updated level estimate. Because SES has no explicit trend component, its appropriateness should be judged against trend-aware alternatives if the upward movement persists.</p>
+            <h2 id="student-guide-a-time-series-is-data-plus-an-information-structure">Student guide: a time series is data plus an information structure</h2>
+            <p>A time series is not only a vector $y_1,\ldots,y_T$. Timestamps, sampling rules, support, release timing, and order determine which observations can inform a forecast and which dependence patterns are scientifically plausible.</p>
+            <h3 id="learning-objectives">Learning objectives</h3>
+            <p>After working through this chapter, you should be able to:</p>
+            <ol>
+                <li>distinguish a time series from an unordered sample;</li>
+                <li>identify trend, seasonality, cycles, breaks, and irregular variation;</li>
+                <li>write a decomposition and calculate its pieces at a chosen time;</li>
+                <li>explain why sampling frequency limits the patterns that can be identified;</li>
+                <li>choose an initial transformation without losing sight of the original target;</li>
+                <li>define a forecast origin and valid information set;</li>
+                <li>distinguish descriptive smoothing from stochastic model terms.</li>
+            </ol>
+            <h3 id="what-is-indexed-by-time-">What is indexed by time?</h3>
+            <p>At each time $t$, an observation may be a point measurement, interval total, interval average, event count, or vector of measurements recorded together. These supports are not interchangeable.</p>
+            <p>Aggregating hourly demand into daily totals changes variance, seasonality, and lag dependence. A model for a daily total should therefore not be interpreted as a model for an instantaneous hourly value.</p>
+            <h3 id="components-with-a-numerical-example">Components with a numerical example</h3>
+            <p>An additive teaching decomposition is</p>
+            <p>$$
+                y_t=T_t+S_t+R_t.
+                $$</p>
+            <p>For</p>
+            <p>$$
+                y_t=100+0.5t+10\sin\left(\frac{2\pi t}{12}\right)+\varepsilon_t,
+                $$</p>
+            <p>at $t=3$,</p>
+            <p>$$
+                T_3=100+0.5(3)=101.5,
+                \qquad
+                S_3=10\sin\left(\frac{\pi}{2}\right)=10.
+                $$</p>
+            <p>The deterministic part is $111.5$. If $\varepsilon_3=-1.2$, the observed value is $110.3$. At $t=6$, $S_6=0$, so the deterministic part is $103$.</p>
+            <p>A visible difference between the two months therefore need not indicate a change in the long-run trend; it can be entirely due to seasonal phase.</p>
+            <p>For multiplicative behavior,</p>
+            <p>$$
+                y_t=T_tS_tR_t,
+                $$</p>
+            <p>a log transformation gives</p>
+            <p>$$
+                \log y_t=\log T_t+\log S_t+\log R_t,
+                $$</p>
+            <p>when the values are positive and the multiplicative representation is appropriate.</p>
+            <h3 id="trend-seasonality-cycle-and-break">Trend, seasonality, cycle, and break</h3>
+            <ul>
+                <li><strong>Trend:</strong> persistent movement in level or slope.</li>
+                <li><strong>Seasonality:</strong> a pattern tied to a fixed repeating period.</li>
+                <li><strong>Cycle:</strong> a longer or less regular oscillation.</li>
+                <li><strong>Structural break:</strong> a change in the process or parameter regime.</li>
+                <li><strong>Irregular component:</strong> variation not explained by the chosen structure.</li>
+            </ul>
+            <p>A trend is not necessarily a unit root, a seasonal pattern is not necessarily a seasonal AR term, and a structural break is not automatically an outlier to delete.</p>
+            <h3 id="sampling-and-aliasing">Sampling and aliasing</h3>
+            <p>Sampling determines which frequencies can be distinguished. With one observation per interval, the Nyquist frequency is $0.5$ cycles per observation. A higher-frequency signal can appear as a lower-frequency alias when the sampling rate is too low.</p>
+            <p><img alt="Regular and irregular sampling" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/07_regular_and_irregular_sampling.png" /></p>
+            <p>The figure also contrasts regular and irregular timestamps. Standard ACF and Fourier formulas assume a regular grid. Interpolating irregular observations onto such a grid can be useful, but it creates synthetic values and can alter dependence, so it should be treated as a modeling decision.</p>
+            <h3 id="first-pass-exploration">First-pass exploration</h3>
+            <p>Record the following before modeling:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>question</td>
+                    <td>diagnostic</td>
+                </tr>
+                <tr>
+                    <td>Is the index regular?</td>
+                    <td>timestamp differences</td>
+                </tr>
+                <tr>
+                    <td>Are values missing?</td>
+                    <td>missingness by time and season</td>
+                </tr>
+                <tr>
+                    <td>Does spread grow with level?</td>
+                    <td>level plot and log plot</td>
+                </tr>
+                <tr>
+                    <td>Is there a repeating period?</td>
+                    <td>seasonal subplots and lag-$s$ dependence</td>
+                </tr>
+                <tr>
+                    <td>Is there a break?</td>
+                    <td>rolling moments and event history</td>
+                </tr>
+                <tr>
+                    <td>Are observations dependent?</td>
+                    <td>ACF/PACF and domain mechanism</td>
+                </tr>
+                <tr>
+                    <td>What will be forecast?</td>
+                    <td>target definition and horizon</td>
+                </tr>
+            </table>
+            </p>
+            <p>The first plot should always be accompanied by a statement of what one observation represents.</p>
+            <h3 id="smoothing-versus-forecasting">Smoothing versus forecasting</h3>
+            <p>A trailing moving average</p>
+            <p>$$
+                \tilde y_t=\frac{1}{w}\sum_{j=0}^{w-1}y_{t-j}
+                $$</p>
+            <p>is a descriptive filter. A centered moving average uses future observations relative to $t$ and is therefore retrospective rather than a valid real-time feature.</p>
+            <p>Simple exponential smoothing updates a level recursively:</p>
+            <p>$$
+                \ell_t=\alpha y_t+(1-\alpha)\ell_{t-1}.
+                $$</p>
+            <p>The filtered level can also be used as a forecast. The smoothing parameter controls responsiveness; it is not by itself a measure of model quality.</p>
+            <p><img alt="Geometric series" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/01_geometric_series.png" /></p>
+            <p>The geometric-series figure explains why exponential weighting has a long but decaying memory: recursively applied weights shrink geometrically as observations become older.</p>
+            <h3 id="the-information-set">The information set</h3>
+            <p>If a forecast is issued at time $t$, define the available information $\mathcal F_t$. Every transformation, feature, parameter estimate, and model choice used in a historical backtest must be based only on information in that set.</p>
+            <p>This includes scaling, imputation, seasonal adjustment, feature selection, predictor values, and hyperparameter tuning. The same formula can be valid or leaked depending on whether it is recomputed inside each historical training window.</p>
+            <h3 id="difference-equations-and-stochastic-dynamics">Difference equations and stochastic dynamics</h3>
+            <p>Many time-series models are recursions. Their stability depends on whether the effect of an initial condition or shock decays.</p>
+            <p><img alt="Difference-equation stability" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/02_difference_equation_stability.png" /></p>
+            <p>The figure shows stable and unstable recursions. In a stable system, deviations shrink over time; in an unstable system, they grow.</p>
+            <h3 id="white-noise-random-walks-and-stationarity">White noise, random walks, and stationarity</h3>
+            <p><img alt="White noise and random walk" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/05_white_noise_random_walk.png" /></p>
+            <p>White noise has stable second-order properties, while a random walk accumulates shocks and develops increasing level uncertainty.</p>
+            <p><img alt="Stationarity cases" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/foundations/06_stationarity_cases.png" /></p>
+            <p>The stationarity figure places stable, unit-root, and explosive behavior side by side. These cases can look similar in short samples, which is why plots, root conditions, transformations, and formal tests should be interpreted together.</p>
+            <h3 id="recommended-workflow">Recommended workflow</h3>
+            <ol>
+                <li>State the observational unit and time support.</li>
+                <li>Plot levels and relevant transformations.</li>
+                <li>Audit timestamp regularity and missingness.</li>
+                <li>Describe trend, seasonality, breaks, and changing variance.</li>
+                <li>Define the forecast target, horizon, and information set.</li>
+                <li>Choose a simple baseline before fitting a complex model.</li>
+                <li>Transform only for a stated modeling reason.</li>
+                <li>Preserve chronological order in validation.</li>
+                <li>Diagnose residuals and forecast errors.</li>
+                <li>Explain the limitations of the chosen representation.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

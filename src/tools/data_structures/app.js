@@ -814,7 +814,11 @@ async function performOperation(operation) {
             );
             if (added) {
                 added.classList.add("animation-result", "endpoint-result");
-                added.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+                added.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
             }
         }
     }
@@ -1043,8 +1047,8 @@ async function playOperationAnimation(operation) {
         else if (currentKey === "deque" && operation === "special") endpoint = nodes[0];
         if (endpoint) lastAnimationTargets = [endpoint];
     }
-    // Every renderer must produce a visible operation, even when a newly added
-    // value is absent from the pre-commit DOM or a path contains no exact match.
+
+
     if (!lastAnimationTargets.length) {
         const nodes = Array.from(visual.querySelectorAll(".selectable"));
         const touched = Math.max(1, Math.min(nodes.length, lastMetrics.touched || 1));

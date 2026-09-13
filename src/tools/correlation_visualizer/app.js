@@ -274,15 +274,24 @@ function kendallTauB(xs, ys) {
 
 function doubleCenteredDistances(values) {
     const n = values.length;
-    const distances = Array.from({ length: n }, (_, i) =>
-        Array.from({ length: n }, (_, j) => Math.abs(values[i] - values[j]))
+    const distances = Array.from({
+            length: n
+        }, (_, i) =>
+        Array.from({
+            length: n
+        }, (_, j) => Math.abs(values[i] - values[j]))
     );
     const rowMeans = distances.map(row => row.reduce((sum, value) => sum + value, 0) / n);
     const grandMean = rowMeans.reduce((sum, value) => sum + value, 0) / n;
     const centered = distances.map((row, i) =>
         row.map((value, j) => value - rowMeans[i] - rowMeans[j] + grandMean)
     );
-    return { distances, rowMeans, grandMean, centered };
+    return {
+        distances,
+        rowMeans,
+        grandMean,
+        centered
+    };
 }
 
 function distanceCorrelation(xs, ys) {
@@ -307,9 +316,9 @@ function distanceCorrelation(xs, ys) {
     const varianceXSquared = Math.max(0, squareSumX / nSquared);
     const varianceYSquared = Math.max(0, squareSumY / nSquared);
     const denominator = Math.sqrt(varianceXSquared * varianceYSquared);
-    const correlationSquared = denominator === 0
-        ? Number.NaN
-        : Math.max(0, Math.min(1, covarianceSquared / denominator));
+    const correlationSquared = denominator === 0 ?
+        Number.NaN :
+        Math.max(0, Math.min(1, covarianceSquared / denominator));
 
     return {
         value: Number.isFinite(correlationSquared) ? Math.sqrt(correlationSquared) : Number.NaN,
@@ -615,9 +624,9 @@ function configureChart(width, showResiduals, showSpearman) {
     const rankTop = contentBottom + (narrow ? 68 : 82);
     const rankHeight = showSpearman ? (narrow ? 230 : 290) : 0;
     const bottom = narrow ? 28 : 42;
-    const height = showSpearman
-        ? rankTop + rankHeight + bottom
-        : contentBottom + bottom;
+    const height = showSpearman ?
+        rankTop + rankHeight + bottom :
+        contentBottom + bottom;
 
     Object.assign(CHART, {
         left,
@@ -683,9 +692,9 @@ function draw() {
     canvas.dataset.rankPoints = "[]";
     canvas.setAttribute(
         "aria-label",
-        measures.spearman
-            ? "Scatter plot, residual plot, and Spearman rank-versus-rank plot"
-            : "Scatter plot and residual plot"
+        measures.spearman ?
+        "Scatter plot, residual plot, and Spearman rank-versus-rank plot" :
+        "Scatter plot and residual plot"
     );
     renderLegend(measures);
 
@@ -757,9 +766,9 @@ function drawVisualization(ctx, dimensions, summary, measures) {
 }
 
 function scatterDomain(summary) {
-    // A two-sigma covariance ellipse projects to mean ± 2σ on each axis,
-    // regardless of its rotation. Include those projections before padding so
-    // the entire ellipse, points, and mean structure share one plot domain.
+
+
+
     const ellipseMinX = summary.meanX - 2 * summary.stdX;
     const ellipseMaxX = summary.meanX + 2 * summary.stdX;
     const ellipseMinY = summary.meanY - 2 * summary.stdY;
@@ -902,8 +911,8 @@ function drawMeanLines(ctx, dimensions, summary, x, y) {
 }
 
 function drawRegressionLine(ctx, dimensions, summary, x, y) {
-    // Extend through the complete plotted x-domain. The scatter clip trims the
-    // line at the chart boundary when its y-value exits the visible domain.
+
+
     const x1 = x.scaleMin;
     const x2 = x.scaleMax;
     const y1 = summary.slope * x1 + summary.intercept;
@@ -932,7 +941,11 @@ function drawRegressionLine(ctx, dimensions, summary, x, y) {
 }
 
 function drawCovarianceEllipse(ctx, summary, x, y) {
-    const { angle, radius1, radius2 } = summary.ellipse;
+    const {
+        angle,
+        radius1,
+        radius2
+    } = summary.ellipse;
 
     ctx.save();
     ctx.strokeStyle = COLORS.ellipse;
@@ -1065,9 +1078,9 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
     drawDivider(ctx, dimensions, top - 28);
     drawSectionLabel(
         ctx,
-        CHART.narrow
-            ? `Same points as ranks  ρₛ = ${formatNumber(summary.spearman)}`
-            : `Same points after replacing values with ranks — ρₛ = ${formatNumber(summary.spearman)}`,
+        CHART.narrow ?
+        `Same points as ranks  ρₛ = ${formatNumber(summary.spearman)}` :
+        `Same points after replacing values with ranks — ρₛ = ${formatNumber(summary.spearman)}`,
         CHART.left,
         top - 42
     );
@@ -1188,14 +1201,14 @@ function renderSpearmanVisualGuide(summary, measures = selectedCorrelationMeasur
 
     const exampleIndex = 0;
     const examplePoint = summary.points[exampleIndex];
-    const difference = Number.isFinite(summary.r) && Number.isFinite(summary.spearman)
-        ? Math.abs(summary.r - summary.spearman)
-        : Number.NaN;
-    const comparisonMessage = !Number.isFinite(difference)
-        ? "At least one measure is undefined because one of its required axes has no variation."
-        : difference < 0.03
-            ? "They are close for this dataset because its ordering is already almost a straight-line pattern. The methods still use different coordinates. Try the “Monotonic curve (Spearman demo)” preset to make the difference visible."
-            : `They differ by ${formatNumber(difference)} here because the raw gaps and the rank ordering describe the pattern differently.`;
+    const difference = Number.isFinite(summary.r) && Number.isFinite(summary.spearman) ?
+        Math.abs(summary.r - summary.spearman) :
+        Number.NaN;
+    const comparisonMessage = !Number.isFinite(difference) ?
+        "At least one measure is undefined because one of its required axes has no variation." :
+        difference < 0.03 ?
+        "They are close for this dataset because its ordering is already almost a straight-line pattern. The methods still use different coordinates. Try the “Monotonic curve (Spearman demo)” preset to make the difference visible." :
+        `They differ by ${formatNumber(difference)} here because the raw gaps and the rank ordering describe the pattern differently.`;
     const mappingRows = summary.points.map((point, index) => `
         <tr>
             <th scope="row">${index + 1}</th>
@@ -1323,34 +1336,32 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
     }
 
     const nMinusOne = summary.n - 1;
-    const covarianceDirection = summary.cov > 1e-10
-        ? "positive: same-side deviation products outweigh opposite-side products"
-        : summary.cov < -1e-10
-            ? "negative: opposite-side deviation products outweigh same-side products"
-            : "zero: positive and negative deviation products cancel";
-    const regressionFormula = summary.sumSquaresX === 0
-        ? String.raw`\[\sum(x_i-\bar{x})^2=0\quad\Longrightarrow\quad b_1\text{ is undefined}\]
-            \[\text{Displayed fallback: }\widehat{y}=\bar{y}=${latexNumber(summary.meanY)}\]`
-        : String.raw`\[b_1=\frac{${latexNumber(summary.sumCrossProducts)}}{${latexNumber(summary.sumSquaresX)}}=${latexNumber(summary.slope)}\]
+    const covarianceDirection = summary.cov > 1e-10 ?
+        "positive: same-side deviation products outweigh opposite-side products" :
+        summary.cov < -1e-10 ?
+        "negative: opposite-side deviation products outweigh same-side products" :
+        "zero: positive and negative deviation products cancel";
+    const regressionFormula = summary.sumSquaresX === 0 ?
+        String.raw`\[\sum(x_i-\bar{x})^2=0\quad\Longrightarrow\quad b_1\text{ is undefined}\]
+            \[\text{Displayed fallback: }\widehat{y}=\bar{y}=${latexNumber(summary.meanY)}\]` :
+        String.raw`\[b_1=\frac{${latexNumber(summary.sumCrossProducts)}}{${latexNumber(summary.sumSquaresX)}}=${latexNumber(summary.slope)}\]
             \[b_0=${latexNumber(summary.meanY)}-${latexNumber(summary.slope)}(${latexNumber(summary.meanX)})=${latexNumber(summary.intercept)}\]
             \[\widehat{y}=${latexNumber(summary.intercept)}+${latexNumber(summary.slope)}x\]`;
-    const regressionExplanation = summary.sumSquaresX === 0
-        ? "All x values are identical, so there is no x variation from which to estimate a unique slope. The plot uses the mean of y as a clearly identified fallback."
-        : "The slope uses the same cross-product sum divided by x's squared-deviation sum. The intercept makes the line pass through \\(\\bar{x},\\bar{y}\\).";
+    const regressionExplanation = summary.sumSquaresX === 0 ?
+        "All x values are identical, so there is no x variation from which to estimate a unique slope. The plot uses the mean of y as a clearly identified fallback." :
+        "The slope uses the same cross-product sum divided by x's squared-deviation sum. The intercept makes the line pass through \\(\\bar{x},\\bar{y}\\).";
     const rankSumX = measures.spearman ? summary.rankX.reduce((sum, value) => sum + value, 0) : Number.NaN;
     const rankSumY = measures.spearman ? summary.rankY.reduce((sum, value) => sum + value, 0) : Number.NaN;
-    const rankTieBadges = measures.spearman
-        ? [
-            ...summary.rankTiesX.map(group => `<span>x = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`),
-            ...summary.rankTiesY.map(group => `<span>y = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`)
-        ]
-        : [];
-    const rankTieSummary = rankTieBadges.length > 0
-        ? `<div class="measure-counts rank-tie-counts">${rankTieBadges.join("")}</div>`
-        : '<div class="measure-counts rank-tie-counts"><span>No ties: ranks are 1 through n in each variable</span></div>';
-    const spearmanShortcutFormula = rankTieBadges.length > 0
-        ? String.raw`\[\text{Ties are present, so do not use }1-\frac{6\sum d_i^2}{n(n^2-1)}.\]`
-        : String.raw`\[d_i=R_{x,i}-R_{y,i},\qquad \sum_{i=1}^{n}d_i^2=${latexNumber(summary.sumRankDifferencesSquared)}\]
+    const rankTieBadges = measures.spearman ? [
+        ...summary.rankTiesX.map(group => `<span>x = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`),
+        ...summary.rankTiesY.map(group => `<span>y = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`)
+    ] : [];
+    const rankTieSummary = rankTieBadges.length > 0 ?
+        `<div class="measure-counts rank-tie-counts">${rankTieBadges.join("")}</div>` :
+        '<div class="measure-counts rank-tie-counts"><span>No ties: ranks are 1 through n in each variable</span></div>';
+    const spearmanShortcutFormula = rankTieBadges.length > 0 ?
+        String.raw`\[\text{Ties are present, so do not use }1-\frac{6\sum d_i^2}{n(n^2-1)}.\]` :
+        String.raw`\[d_i=R_{x,i}-R_{y,i},\qquad \sum_{i=1}^{n}d_i^2=${latexNumber(summary.sumRankDifferencesSquared)}\]
             \[\rho_s=1-\frac{6\sum_{i=1}^{n}d_i^2}{n(n^2-1)}
             =1-\frac{6(${latexNumber(summary.sumRankDifferencesSquared)})}{${summary.n}(${summary.n}^2-1)}=${latexNumber(summary.spearmanShortcut)}\]`;
     let nextStepNumber = 7;
@@ -1424,12 +1435,12 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
             </article>`);
     }
     const ellipseStepNumber = nextStepNumber;
-    const rankHeaderCells = measures.spearman
-        ? '<th scope="col">Rₓ</th><th scope="col">Rᵧ</th><th scope="col">Rₓ − R̄ₓ</th><th scope="col">Rᵧ − R̄ᵧ</th><th scope="col">Rank product</th><th scope="col">dᵢ²</th>'
-        : "";
-    const rankFooterCells = measures.spearman
-        ? `<td>${formatDetailedNumber(rankSumX)}</td><td>${formatDetailedNumber(rankSumY)}</td><td>0</td><td>0</td><td>${formatDetailedNumber(summary.sumRankCrossProducts)}</td><td>${formatDetailedNumber(summary.sumRankDifferencesSquared)}</td>`
-        : "";
+    const rankHeaderCells = measures.spearman ?
+        '<th scope="col">Rₓ</th><th scope="col">Rᵧ</th><th scope="col">Rₓ − R̄ₓ</th><th scope="col">Rᵧ − R̄ᵧ</th><th scope="col">Rank product</th><th scope="col">dᵢ²</th>' :
+        "";
+    const rankFooterCells = measures.spearman ?
+        `<td>${formatDetailedNumber(rankSumX)}</td><td>${formatDetailedNumber(rankSumY)}</td><td>0</td><td>0</td><td>${formatDetailedNumber(summary.sumRankCrossProducts)}</td><td>${formatDetailedNumber(summary.sumRankDifferencesSquared)}</td>` :
+        "";
     const contributionRows = summary.deviations.map((row, index) => `
         <tr>
             <th scope="row">${index + 1}</th>
@@ -1568,9 +1579,21 @@ function renderStats(summary, measures = selectedCorrelationMeasures()) {
     }
 
     const optionalResults = [
-        measures.spearman ? { name: "Spearman ρₛ", value: summary.spearman, note: "monotonic rank association" } : null,
-        measures.kendall ? { name: "Kendall τᵦ", value: summary.kendall.value, note: "concordant versus discordant pairs" } : null,
-        measures.distance ? { name: "Distance ℛ", value: summary.distance.value, note: "general dependence magnitude" } : null
+        measures.spearman ? {
+            name: "Spearman ρₛ",
+            value: summary.spearman,
+            note: "monotonic rank association"
+        } : null,
+        measures.kendall ? {
+            name: "Kendall τᵦ",
+            value: summary.kendall.value,
+            note: "concordant versus discordant pairs"
+        } : null,
+        measures.distance ? {
+            name: "Distance ℛ",
+            value: summary.distance.value,
+            note: "general dependence magnitude"
+        } : null
     ].filter(Boolean);
     const optionalCard = optionalResults.length === 0 ? "" : `
         <article class="stat-card wide-stat optional-results-card">
@@ -1619,9 +1642,9 @@ function renderStats(summary, measures = selectedCorrelationMeasures()) {
 
 function renderLegend(measures = selectedCorrelationMeasures()) {
     const legend = document.getElementById("plot-legend");
-    const spearmanItem = measures.spearman
-        ? '<span class="legend-item"><span class="legend-line spearman-line"></span>Rank fit (Spearman panel)</span>'
-        : "";
+    const spearmanItem = measures.spearman ?
+        '<span class="legend-item"><span class="legend-line spearman-line"></span>Rank fit (Spearman panel)</span>' :
+        "";
     legend.innerHTML = `
         <span class="legend-item"><span class="legend-swatch point-swatch"></span>Data point</span>
         <span class="legend-item"><span class="legend-line regression-line"></span>Least-squares line</span>

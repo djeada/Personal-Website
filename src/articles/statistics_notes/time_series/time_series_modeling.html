@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: fit, complexity, and diagnostics</title>
+    <meta content="Time-series modeling is an iterative process of specifying structure, estimating parameters, diagnosing what remains unexplained, and testing forecasts on future-like data." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: fit, complexity, and diagnostics",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling",
+            "description": "Time-series modeling is an iterative process of specifying structure, estimating parameters, diagnosing what remains unexplained, and testing forecasts on future-like data.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-fit-complexity-and-diagnostics">Worked calculation: fit, complexity, and diagnostics</a>
+                        <ol>
+                            <li><a href="#model-fitting">Model Fitting</a></li>
+                            <li><a href="#worked-example-fitting-an-ar-2-model">Worked Example: Fitting an AR(2) Model</a></li>
+                            <li><a href="#why-the-previous-toy-dataset-was-problematic">Why the Previous Toy Dataset Was Problematic</a></li>
+                            <li><a href="#fitting-ma-and-arma-models">Fitting MA and ARMA Models</a></li>
+                            <li><a href="#comparison-of-common-models">Comparison of Common Models</a></li>
+                            <li><a href="#a-practical-identification-and-validation-workflow">A Practical Identification and Validation Workflow</a></li>
+                            <li><a href="#arma-identification-and-estimation-checklist">ARMA Identification and Estimation Checklist</a></li>
+                            <li><a href="#order-selection-with-aicc">Order Selection with AICc</a></li>
+                            <li><a href="#parameter-redundancy">Parameter Redundancy</a></li>
+                            <li><a href="#model-selection-is-not-only-about-fit">Model Selection Is Not Only About Fit</a></li>
+                            <li><a href="#connections-to-other-notes">Connections to Other Notes</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#student-guide-an-end-to-end-modeling-record">Student guide: an end-to-end modeling record</a>
+                        <ol>
+                            <li><a href="#start-with-the-target-and-the-index">Start with the target and the index</a></li>
+                            <li><a href="#explore-before-fitting">Explore before fitting</a></li>
+                            <li><a href="#estimation-mechanics">Estimation mechanics</a></li>
+                            <li><a href="#numerical-order-selection">Numerical order selection</a></li>
+                            <li><a href="#residuals-as-a-model-check">Residuals as a model check</a></li>
+                            <li><a href="#residual-variance-and-distribution">Residual variance and distribution</a></li>
+                            <li><a href="#structural-breaks">Structural breaks</a></li>
+                            <li><a href="#a-model-comparison-table">A model comparison table</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Time Series Modeling</header>
+            <p>Time-series modeling is an iterative process of specifying structure, estimating parameters, diagnosing what remains unexplained, and testing forecasts on future-like data. Choosing an equation is only one step; transformations, initial conditions, residual behavior, and the forecast information set are part of the model as well.</p>
+            <p>A useful model is parsimonious enough to estimate reliably, flexible enough to capture the important dependence, and transparent enough to diagnose. Information criteria can narrow a candidate set, but residual checks and chronological forecast evaluation determine whether the selected model is actually adequate for its intended use.</p>
+            <h2 id="worked-calculation-fit-complexity-and-diagnostics">Worked calculation: fit, complexity, and diagnostics</h2>
+            <p>Suppose two likelihood-based candidates have the following summaries:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Model</td>
+                    <td>log-likelihood</td>
+                    <td>number of parameters</td>
+                </tr>
+                <tr>
+                    <td>A</td>
+                    <td>$-100$</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>B</td>
+                    <td>$-96$</td>
+                    <td>6</td>
+                </tr>
+            </table>
+            </p>
+            <p>Using</p>
+            <p>$$
+                \mathrm{AIC}=-2\ell+2k,
+                $$</p>
+            <p>their AIC values are</p>
+            <p>$$
+                \mathrm{AIC}_A=200+6=206,
+                \qquad
+                \mathrm{AIC}_B=192+12=204.
+                $$</p>
+            <p>Model B wins this narrow in-sample comparison, but it should not be accepted automatically. If B leaves a residual lag-12 spike while A has approximately white-noise residuals, A may be the more useful forecasting model. Compare candidates on the same observations, inspect residuals, and use temporal backtesting before treating a small information-criterion difference as meaningful.</p>
+            <p><img alt="Conditional mean and residual diagnostics for an AR model" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/13_modeling_residual_diagnostics.png" /></p>
+            <p>The figure shows the two parts of model assessment together: the fitted conditional mean should capture the systematic structure, and the residuals should no longer contain obvious predictable dependence.</p>
+            <p>Time-series modeling combines specification, parameter estimation, model selection, diagnostics, and forecast evaluation. The aim is not simply to minimize in-sample error, but to find a parsimonious model whose assumptions are reasonable, whose residuals contain little unexplained structure, and whose forecasts generalize to future observations.</p>
+            <h3 id="model-fitting">Model Fitting</h3>
+            <p>Different model classes require different estimation methods. In an autoregressive model, lagged observations are known and can be used as regressors. In MA and ARMA models, lagged innovations are unobserved, so estimation generally relies on likelihood, innovations recursions, or state-space methods.</p>
+            <p>The estimation method is part of the model specification. Initial conditions, treatment of missing values, and whether the likelihood is conditional or exact can affect numerical results in short samples.</p>
+            <h3 id="worked-example-fitting-an-ar-2-model">Worked Example: Fitting an AR(2) Model</h3>
+            <p>Consider</p>
+            <p>$$
+                Y_t=\beta_0+\beta_1Y_{t-1}+\beta_2Y_{t-2}+\varepsilon_t.
+                $$</p>
+            <p>Use the short synthetic series</p>
+            <p>
+            <table>
+                <tr>
+                    <td>$t$</td>
+                    <td>$Y_t$</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1.0</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>2.0</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>1.5</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>3.0</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>2.5</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>4.0</td>
+                </tr>
+            </table>
+            </p>
+            <p>Using observations $t=3,\dots,6$ gives</p>
+            <p>$$
+                \mathbf y=
+                \begin{bmatrix}
+                1.5\\
+                3.0\\
+                2.5\\
+                4.0
+                \end{bmatrix},
+                \qquad
+                \mathbf X=
+                \begin{bmatrix}
+                1&amp;2.0&amp;1.0\\
+                1&amp;1.5&amp;2.0\\
+                1&amp;3.0&amp;1.5\\
+                1&amp;2.5&amp;3.0
+                \end{bmatrix}.
+                $$</p>
+            <p>If $\mathbf X$ has full column rank, the least-squares estimator is</p>
+            <p>$$
+                \hat{\boldsymbol\beta}
+                =(\mathbf X^\top\mathbf X)^{-1}\mathbf X^\top\mathbf y.
+                $$</p>
+            <p>For this dataset,</p>
+            <p>$$
+                \mathbf X^\top\mathbf X
+                =
+                \begin{bmatrix}
+                4&amp;9&amp;7.5\\
+                9&amp;21.5&amp;17\\
+                7.5&amp;17&amp;16.25
+                \end{bmatrix},
+                $$</p>
+            <p>and</p>
+            <p>$$
+                \mathbf X^\top\mathbf y
+                =
+                \begin{bmatrix}
+                11\\
+                25\\
+                23.25
+                \end{bmatrix}.
+                $$</p>
+            <p>Solving the normal equations gives approximately</p>
+            <p>$$
+                \hat\beta_0=0.328,
+                \qquad
+                \hat\beta_1=0.080,
+                \qquad
+                \hat\beta_2=1.195.
+                $$</p>
+            <p>Thus the fitted conditional mean is</p>
+            <p>$$
+                \hat Y_t=0.328+0.080Y_{t-1}+1.195Y_{t-2}.
+                $$</p>
+            <p>This example demonstrates only the mechanics of regression-style AR estimation. The fitted coefficients are not the end of the analysis: check the implied stability, residual dependence, competing orders, and out-of-sample performance before using the model.</p>
+            <h3 id="why-the-previous-toy-dataset-was-problematic">Why the Previous Toy Dataset Was Problematic</h3>
+            <p>If observations increase by a constant amount, adjacent lag columns can become linearly dependent once an intercept is included. Then $\mathbf X^\top\mathbf X$ is singular, the inverse in the ordinary least-squares expression does not exist, and the coefficients are not uniquely identified.</p>
+            <p>This is a general lesson rather than a quirk of one example: inspect the design matrix and data variation before presenting or interpreting an inverse-based estimate.</p>
+            <h3 id="fitting-ma-and-arma-models">Fitting MA and ARMA Models</h3>
+            <p>An MA(2) model is</p>
+            <p>$$
+                Y_t=\mu+\varepsilon_t+\theta_1\varepsilon_{t-1}+\theta_2\varepsilon_{t-2}.
+                $$</p>
+            <p>The lagged innovations are latent. Treating them as ordinary observed regressors is therefore not valid. Practical estimation commonly uses maximum likelihood, innovations algorithms, or state-space methods. Procedures such as Hannan-Rissanen can also provide useful starting estimates for ARMA likelihood optimization.</p>
+            <h3 id="comparison-of-common-models">Comparison of Common Models</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Model</td>
+                    <td>Main idea</td>
+                    <td>Typical use</td>
+                    <td>Important assumptions / cautions</td>
+                </tr>
+                <tr>
+                    <td><strong>AR($p$)</strong></td>
+                    <td>Current value depends on past values</td>
+                    <td>Short-memory stationary dependence</td>
+                    <td>Check stationarity and root location after any required transformation</td>
+                </tr>
+                <tr>
+                    <td><strong>MA($q$)</strong></td>
+                    <td>Current value depends on current and past innovations</td>
+                    <td>Short-lived shock effects</td>
+                    <td>Innovations are latent; invertibility matters for identification</td>
+                </tr>
+                <tr>
+                    <td><strong>ARMA($p,q$)</strong></td>
+                    <td>Combines AR and MA terms</td>
+                    <td>Stationary linear series</td>
+                    <td>Use parsimonious order selection and residual diagnostics</td>
+                </tr>
+                <tr>
+                    <td><strong>ARIMA($p,d,q$)</strong></td>
+                    <td>ARMA structure after differencing</td>
+                    <td>Integrated or stochastic-trend series</td>
+                    <td>Use the smallest justified differencing order</td>
+                </tr>
+                <tr>
+                    <td><strong>SARIMA</strong></td>
+                    <td>ARIMA plus seasonal AR, MA, and differencing terms</td>
+                    <td>Regular seasonal structure</td>
+                    <td>Seasonal period and seasonal differencing must match the data mechanism</td>
+                </tr>
+                <tr>
+                    <td><strong>SES / Holt / Holt-Winters / ETS</strong></td>
+                    <td>Recursive level, trend, and seasonal states</td>
+                    <td>Forecasting evolving level/trend/seasonality</td>
+                    <td>Different structures imply different error and state dynamics</td>
+                </tr>
+                <tr>
+                    <td><strong>VAR</strong></td>
+                    <td>Several variables depend on their joint lags</td>
+                    <td>Multivariate linear dynamics</td>
+                    <td>Lag order, stability, and cointegration matter; predictability is not automatically causal</td>
+                </tr>
+                <tr>
+                    <td><strong>ARCH/GARCH</strong></td>
+                    <td>Conditional variance evolves over time</td>
+                    <td>Volatility clustering</td>
+                    <td>Usually modeled after specifying an adequate conditional mean</td>
+                </tr>
+            </table>
+            </p>
+            <p>The table is a model map, not a ranking. The appropriate class depends on what is being forecast, which structures are present, and which assumptions remain plausible after diagnostics.</p>
+            <h3 id="a-practical-identification-and-validation-workflow">A Practical Identification and Validation Workflow</h3>
+            <ol>
+                <li><strong>Explore the series.</strong> Plot the data and identify trend, seasonality, missingness, outliers, structural breaks, and changing variance.</li>
+                <li><strong>Assess stationarity.</strong> Use plots, ACF behavior, and tests such as ADF/KPSS as supporting evidence.</li>
+                <li><strong>Transform when needed.</strong> Apply variance stabilization, detrending, ordinary differencing, or seasonal differencing only when justified.</li>
+                <li><strong>Propose candidate orders.</strong> Use ACF/PACF patterns and domain knowledge as heuristics rather than mechanical rules.</li>
+                <li><strong>Estimate parameters.</strong> Use a method appropriate to the model class.</li>
+                <li><strong>Compare parsimonious candidates.</strong> Use AIC, AICc, or BIC only among models fitted to comparable data and likelihoods.</li>
+                <li><strong>Diagnose residuals.</strong> Check residual time plots, ACF/PACF, squared residuals, and relevant tests such as Ljung-Box.</li>
+                <li><strong>Evaluate forecasts temporally.</strong> Preserve chronology with holdouts or rolling/expanding origins.</li>
+            </ol>
+            <p><img alt="Temporal validation split" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/08_temporal_validation_split.png" /></p>
+            <p>The figure emphasizes the final step: model selection is incomplete until the complete procedure is tested on future-like observations without information leakage.</p>
+            <h3 id="arma-identification-and-estimation-checklist">ARMA Identification and Estimation Checklist</h3>
+            <p>For a stationary series, a common ARMA workflow is:</p>
+            <ol>
+                <li>propose a small set of $p$ and $q$ values from ACF/PACF behavior and domain knowledge;</li>
+                <li>decide whether a mean or intercept term is appropriate;</li>
+                <li>estimate AR and MA coefficients with a suitable numerical method;</li>
+                <li>estimate the innovation variance;</li>
+                <li>compare candidates using diagnostics and information criteria;</li>
+                <li>verify that residuals no longer contain material serial dependence.</li>
+            </ol>
+            <p>For pure AR models, Yule-Walker or Burg estimators can be useful. Innovations algorithms target MA structure, while Hannan-Rissanen can provide starting values before likelihood optimization.</p>
+            <h3 id="order-selection-with-aicc">Order Selection with AICc</h3>
+            <p>The <strong>corrected Akaike Information Criterion (AICc)</strong> adjusts AIC for finite samples. One common form is</p>
+            <p>$$
+                \mathrm{AICc}
+                =\mathrm{AIC}
+                +\frac{2k(k+1)}{n-k-1},
+                $$</p>
+            <p>where $k$ is the number of estimated parameters counted in the likelihood and $n$ is the effective sample size.</p>
+            <p>Lower values indicate a better fit-complexity tradeoff within a comparable candidate set. Parameter-count and effective-sample conventions vary across implementations, so check the software documentation when reproducing exact values.</p>
+            <h3 id="parameter-redundancy">Parameter Redundancy</h3>
+            <p>An over-parameterized ARMA model can sometimes represent a simpler process if the AR and MA polynomials share common factors. Such cancellations make parameters redundant and can weaken identification.</p>
+            <p>Prefer reduced representations without common factors. If estimated roots nearly cancel, treat the apparent complexity with caution rather than interpreting each coefficient as a separate dynamic mechanism.</p>
+            <h3 id="model-selection-is-not-only-about-fit">Model Selection Is Not Only About Fit</h3>
+            <p>A more complex model can often reduce in-sample error, but that does not guarantee better forecasting. Prefer the simplest model that captures the important dependence, leaves reasonably well-behaved residuals, and performs competitively on future-like observations.</p>
+            <h3 id="connections-to-other-notes">Connections to Other Notes</h3>
+            <ul>
+                <li>See <strong><a href="stationarity.md">stationarity.md</a></strong> before interpreting AR/MA/ARIMA models.</li>
+                <li>See <strong><a href="autocorrelation_function.md">autocorrelation_function.md</a></strong> for ACF/PACF-based identification.</li>
+                <li>See <strong><a href="autoregressive_models.md">autoregressive_models.md</a></strong> and <strong><a href="moving_average_models.md">moving_average_models.md</a></strong> for model-specific properties.</li>
+                <li>See <strong><a href="arima_models.md">arima_models.md</a></strong> for differencing and seasonal ARIMA models.</li>
+                <li>See <strong><a href="randomness_tests.md">randomness_tests.md</a></strong> for residual checks.</li>
+                <li>See <strong><a href="forecasting.md">forecasting.md</a></strong> for forecast construction and uncertainty.</li>
+            </ul>
+            <h2 id="student-guide-an-end-to-end-modeling-record">Student guide: an end-to-end modeling record</h2>
+            <p>A time-series model is a set of assumptions about the conditional mean, temporal dependence, new shocks, variance behavior, and information available for prediction. Record these assumptions explicitly before comparing software summaries.</p>
+            <p>A table of coefficients alone does not tell a reader which observations were used, how missing values were handled, which transformations were applied, or whether the residuals are adequate.</p>
+            <h3 id="start-with-the-target-and-the-index">Start with the target and the index</h3>
+            <p>Record:</p>
+            <ul>
+                <li>the response variable and its units;</li>
+                <li>the timestamp and sampling interval;</li>
+                <li>whether timestamps are regular;</li>
+                <li>the forecast horizon;</li>
+                <li>the difference between observation time and release time;</li>
+                <li>the deployment decision the forecast supports.</li>
+            </ul>
+            <p>For example, a monthly sales forecast issued on the last day of March may use completed March sales, while a forecast issued on March 10 may have only partial March information. The timestamp is therefore part of the model's information set, not just a plotting label.</p>
+            <h3 id="explore-before-fitting">Explore before fitting</h3>
+            <p>Inspect the level series, relevant transformations, first and seasonal differences, rolling mean and variance, missingness and outliers, ACF/PACF, known calendar effects, and possible structural breaks.</p>
+            <p><img alt="Detrending" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/01_detrending.png" /></p>
+            <p>The detrending figure shows why preprocessing should follow the mechanism. Removing a deterministic trend can reveal stationary residual structure, while differencing answers a different question by modeling changes rather than deviations around a fitted trend.</p>
+            <p>An ACF that decays slowly may reflect a unit root, deterministic trend, seasonal pattern, or structural break. It is evidence to investigate, not a diagnosis by itself.</p>
+            <h3 id="estimation-mechanics">Estimation mechanics</h3>
+            <p>For AR($p$), lagged observations are observed:</p>
+            <p>$$
+                y_t=c+\phi_1y_{t-1}+\cdots+\phi_py_{t-p}+\varepsilon_t.
+                $$</p>
+            <p>For MA($q$), lagged innovations are not observed:</p>
+            <p>$$
+                y_t=\mu+\varepsilon_t+\theta_1\varepsilon_{t-1}+\cdots+\theta_q\varepsilon_{t-q}.
+                $$</p>
+            <p>The innovations must be inferred recursively or through an equivalent state-space representation. Treating them as known regressors changes the estimation problem.</p>
+            <p>For a Gaussian state-space or innovations representation, log-likelihood contributions often have the form</p>
+            <p>$$
+                -\frac12\left[\log(2\pi)+\log(F_t)+\frac{v_t^2}{F_t}\right].
+                $$</p>
+            <p>Initial-state treatment can affect exact likelihood values in short samples, so compare candidate models under consistent conventions.</p>
+            <h3 id="numerical-order-selection">Numerical order selection</h3>
+            <p>Suppose one model has $\ell=-100$ and $k=3$:</p>
+            <p>$$
+                \mathrm{AIC}=-2(-100)+2(3)=206.
+                $$</p>
+            <p>A larger model has $\ell=-96$ and $k=6$:</p>
+            <p>$$
+                \mathrm{AIC}=-2(-96)+2(6)=204.
+                $$</p>
+            <p>The larger model is preferred by AIC in this comparison, but the difference is not evidence by itself that forecasts improve. BIC applies a stronger sample-size-dependent penalty:</p>
+            <p>$$
+                \mathrm{BIC}=-2\ell+k\log n.
+                $$</p>
+            <p>Use AICc when the effective sample is not large relative to the parameter count, and compare only models fitted to comparable observations and likelihood definitions.</p>
+            <h3 id="residuals-as-a-model-check">Residuals as a model check</h3>
+            <p>Let</p>
+            <p>$$
+                \hat\varepsilon_t=y_t-\hat y_{t|t-1}
+                $$</p>
+            <p>be one-step residuals. A useful residual sequence should have approximately zero mean, little remaining serial correlation, reasonably stable variance, no unexplained trend or break, and no systematic relation to fitted values or predictors.</p>
+            <p>For residual autocorrelation,</p>
+            <p>$$
+                \hat\rho(h)
+                =\frac{\sum_{t=h+1}^{T}
+                (\hat\varepsilon_t-\bar\varepsilon)
+                (\hat\varepsilon_{t-h}-\bar\varepsilon)}
+                {\sum_{t=1}^{T}(\hat\varepsilon_t-\bar\varepsilon)^2}.
+                $$</p>
+            <p><img alt="Residual ACF" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/02_residual_acf.png" /></p>
+            <p>The residual ACF shows whether linear dependence remains after fitting. A visible spike suggests a missing dynamic term, seasonal feature, predictor, or structural component, but the plot alone does not tell which one.</p>
+            <p>The Ljung-Box statistic through lag $m$ is</p>
+            <p>$$
+                Q(m)=T(T+2)\sum_{h=1}^{m}\frac{\hat\rho(h)^2}{T-h}.
+                $$</p>
+            <p><img alt="Ljung-Box shape" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/06_ljung_box_shape.png" /></p>
+            <p>The figure reinforces that the test aggregates evidence across several lags. A small p-value says the residuals retain linear dependence at one or more tested lags; it does not prescribe the replacement model.</p>
+            <h3 id="residual-variance-and-distribution">Residual variance and distribution</h3>
+            <p>A residual ACF near zero does not establish independent, homoskedastic residuals. Inspect squared residuals and their dependence as well.</p>
+            <p><img alt="Residual variance" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/03_residual_variance.png" /></p>
+            <p>Changing residual spread indicates that the conditional variance may need separate modeling.</p>
+            <p><img alt="Residual nonlinearity" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/04_residual_nonlinearity.png" /></p>
+            <p>A residual plot can also reveal nonlinear patterns that a linear mean model cannot capture even when ordinary autocorrelation is small.</p>
+            <p><img alt="Residual distribution" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/05_residual_distribution.png" /></p>
+            <p>Heavy tails or skewness can make Gaussian prediction intervals poorly calibrated even when the conditional mean is adequate. The relevant distributional assumption should match the forecast objective, especially when tail probabilities matter.</p>
+            <h3 id="structural-breaks">Structural breaks</h3>
+            <p>A single stable parameter set can average over multiple regimes. After a break, residuals may show a level shift, a change in persistence, a variance jump, or a change in seasonal amplitude.</p>
+            <p><img alt="Structural break" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/diagnostics/07_structural_break.png" /></p>
+            <p>The break figure shows why an isolated global fit can be misleading: parameters that describe the pre-break period may no longer represent the post-break process.</p>
+            <p>Possible responses include a break indicator, separate regimes, rolling estimation, time-varying state-space parameters, or a documented model reset. Do not automatically discard unusual observations when the event itself may recur and matter for forecasting.</p>
+            <h3 id="a-model-comparison-table">A model comparison table</h3>
+            <p>Keep an auditable record:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>candidate</td>
+                    <td>transformation</td>
+                    <td>parameters</td>
+                    <td>AIC</td>
+                    <td>residual ACF</td>
+                    <td>backtest MAE</td>
+                    <td>notes</td>
+                </tr>
+                <tr>
+                    <td>naive</td>
+                    <td>none</td>
+                    <td>0</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td></td>
+                    <td>baseline</td>
+                </tr>
+                <tr>
+                    <td>AR(1)</td>
+                    <td>none</td>
+                    <td>2</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>ARIMA</td>
+                    <td>first difference</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>seasonal model</td>
+                    <td>seasonal difference</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+            </p>
+            <p>The chosen model should be the simplest candidate that captures the important structure and performs acceptably on future-like data. A lower in-sample criterion paired with poor residuals is a warning, not a victory.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

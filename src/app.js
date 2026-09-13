@@ -301,7 +301,7 @@ function initializeThreeJS() {
 }
 
 
-// Keep the optional WebGL dependency out of the initial render path.
+
 function initLazyThreeJS() {
     const container = document.getElementById('threejs-container');
     if (!container) return;
@@ -347,7 +347,9 @@ function initLazyThreeJS() {
             observer.disconnect();
             load();
         }
-    }, { rootMargin: '300px' });
+    }, {
+        rootMargin: '300px'
+    });
     observer.observe(container);
 }
 
@@ -746,7 +748,9 @@ function initReadingProgress() {
         pending = true;
         requestAnimationFrame(updateProgress);
     };
-    window.addEventListener('scroll', scheduleProgress, { passive: true });
+    window.addEventListener('scroll', scheduleProgress, {
+        passive: true
+    });
     window.addEventListener('resize', scheduleProgress);
     if ('ResizeObserver' in window) {
         new ResizeObserver(scheduleProgress).observe(document.body);

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Worked calculation: frequency, period, and resolution</title>
+    <meta content="Frequency-domain analysis describes a time series by the cycle lengths that contribute to its variation rather than by relationships at individual lags." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Worked calculation: frequency, period, and resolution",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis"
+            },
+            "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis",
+            "description": "Frequency-domain analysis describes a time series by the cycle lengths that contribute to its variation rather than by relationships at individual lags.",
+            "dateModified": "2026-09-13"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#worked-calculation-frequency-period-and-resolution">Worked calculation: frequency, period, and resolution</a></li>
+                    <li><a href="#fourier-transform-and-periodogram">Fourier Transform and Periodogram</a></li>
+                    <li><a href="#nyquist-frequency-and-aliasing">Nyquist Frequency and Aliasing</a></li>
+                    <li><a href="#spectral-leakage">Spectral Leakage</a></li>
+                    <li><a href="#student-guide-read-a-spectrum-as-a-decomposition-of-variation">Student guide: read a spectrum as a decomposition of variation</a>
+                        <ol>
+                            <li><a href="#from-period-to-frequency">From period to frequency</a></li>
+                            <li><a href="#dft-and-frequency-resolution">DFT and frequency resolution</a></li>
+                            <li><a href="#periodogram-scaling">Periodogram scaling</a></li>
+                            <li><a href="#trend-and-low-frequency-power">Trend and low-frequency power</a></li>
+                            <li><a href="#spectral-leakage-and-windows">Spectral leakage and windows</a></li>
+                            <li><a href="#cross-spectrum-and-coherence">Cross-spectrum and coherence</a></li>
+                            <li><a href="#a-numerical-periodogram-example">A numerical periodogram example</a></li>
+                            <li><a href="#practical-interpretation-checklist">Practical interpretation checklist</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/conventions.html">Conventions</a></li>
+                    <li>Estimation<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/estimation/point_estimation.html">Point Estimation</a></li>
+                        </ol>
+                    </li>
+                    <li>Extensions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/extensions/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        </ol>
+                    </li>
+                    <li>Foundations<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/descriptive_statistics.html">Descriptive Statistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/foundations/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li>Hypothesis Testing and Confidence Intervals<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/analysis_of_categorical_data.html">Analysis of Categorical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/confidence_intervals.html">Confidence Intervals</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/hypothesis_testing.html">Hypothesis Testing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/multiple_comparisons.html">Multiple Comparisons</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/null_hypothesis.html">Null Hypothesis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/hypothesis_testing_and_confidence_intervals/type_i_and_type_ii_errors.html">Type i and Type Ii Errors</a></li>
+                        </ol>
+                    </li>
+                    <li>Joint Distributions and Covariance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/correlation.html">Correlation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/covariance.html">Covariance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/joint_distributions_and_covariance/joint_distributions.html">Joint Distributions</a></li>
+                        </ol>
+                    </li>
+                    <li>Probability<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/axioms_of_probability.html">Axioms of Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/bayes_theorem.html">Bayes Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/conditional_probability.html">Conditional Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/geometric_probability.html">Geometric Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/introduction_to_probability.html">Introduction to Probability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/probability_tree.html">Probability Tree</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability/total_probability.html">Total Probability</a></li>
+                        </ol>
+                    </li>
+                    <li>Random Variables and Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/statistical_moments.html">Statistical Moments</a></li>
+                            <li>Continuous<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/beta_distribution.html">Beta Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/exponential_distribution.html">Exponential Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/gamma_distribution.html">Gamma Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/normal_distribution.html">Normal Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/continuous/uniform_distribution.html">Uniform Distribution</a></li>
+                                </ol>
+                            </li>
+                            <li>Discrete<ol>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/binomial_distribution.html">Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/geometric_distribution.html">Geometric Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/random_variables_and_distributions/discrete/poisson_distribution.html">Poisson Distribution</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li>Regression<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/analysis_of_variance.html">Analysis of Variance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression.html">Logistic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression.html">Multiple Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                        </ol>
+                    </li>
+                    <li>Resampling and Model Assessment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics.html">Metrics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/resampling.html">Resampling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/validation_and_model_selection.html">Validation and Model Selection</a></li>
+                        </ol>
+                    </li>
+                    <li>Sampling and Sampling Distributions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/central_limit_theorem.html">Central Limit Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/f_distribution.html">F Distribution</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/sampling_distributions.html">Sampling Distributions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/sampling_and_sampling_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                        </ol>
+                    </li>
+                    <li>Spatial Statistics<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/geostatistics.html">Geostatistics</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/kriging.html">Kriging</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/point_processes.html">Point Processes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_autocorrelation.html">Spatial Autocorrelation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_data_and_distance.html">Spatial Data and Distance</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_regression.html">Spatial Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_validation.html">Spatial Validation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/spatial_statistics/spatial_weights.html">Spatial Weights</a></li>
+                        </ol>
+                    </li>
+                    <li>Time Series<ol>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/arima_models.html">Arima Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocorrelation_function.html">Autocorrelation Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autocovariance_function.html">Autocovariance Function</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/autoregressive_models.html">Autoregressive Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/backward_shift_operator.html">Backward Shift Operator</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/dynamic_regression.html">Dynamic Regression</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/financial_time_series_models.html">Financial Time Series Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecast_evaluation.html">Forecast Evaluation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/forecasting.html">Forecasting</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/frequency_domain_analysis.html">Frequency Domain Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/invertibility.html">Invertibility</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/moving_average_models.html">Moving Average Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/multivariate_time_series.html">Multivariate Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/series.html">Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/state_space_models.html">State Space Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stationarity.html">Stationarity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise.html">Stochastic Processes and White Noise</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series.html">Time Series</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling.html">Time Series Modeling</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series/yule_walker_equations.html">Yule Walker Equations</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <header>Frequency-Domain Analysis</header>
+            <p>Frequency-domain analysis describes a time series by the cycle lengths that contribute to its variation rather than by relationships at individual lags. The periodogram and spectral density provide a complementary view to the ACF, translating repeated temporal structure into peaks at corresponding frequencies.</p>
+            <p>The interpretation depends critically on how the series was sampled and observed. Nyquist limits, aliasing, finite-record resolution, spectral leakage, trend treatment, and windowing can all create or distort apparent peaks, so frequencies should be translated back into periods and checked against the time-domain behavior before they are given a substantive meaning.</p>
+            <h2 id="worked-calculation-frequency-period-and-resolution">Worked calculation: frequency, period, and resolution</h2>
+            <p>For a seasonal signal that repeats every 12 observations,</p>
+            <p>$$
+                f=\frac{1}{12}\approx0.08333
+                \quad\text{cycles per observation}.
+                $$</p>
+            <p>With $N=240$ observations, the Fourier frequency spacing is</p>
+            <p>$$
+                \Delta f=\frac{1}{N}=0.004167,
+                $$</p>
+            <p>so the period-12 component lies exactly at Fourier bin</p>
+            <p>$$
+                k=Nf=\frac{240}{12}=20.
+                $$</p>
+            <p>The Nyquist frequency is $0.5$ cycles per observation. Frequencies above that limit cannot be distinguished from lower-frequency aliases at this sampling rate.</p>
+            <p>The periodogram peak should therefore be translated back into a period before interpretation. A peak near $0.0833$ means "about 12 observations per cycle," not "frequency 12."</p>
+            <p><img alt="A period-12 signal and its periodogram" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/student/19_frequency_periodogram.png" /></p>
+            <p>The figure connects the repeated pattern in the time domain to a concentrated peak in the frequency domain. The horizontal location of the peak gives the cycle frequency, while its inverse gives the period in observations.</p>
+            <p>Time-domain methods describe dependence through lags. Frequency-domain methods describe how variation is distributed across cycles of different frequencies. These are complementary views of the same second-order structure for a stationary process.</p>
+            <p>A sinusoidal component can be written as</p>
+            <p>$$
+                x_t=A\cos(2\pi ft+\phi),
+                $$</p>
+            <p>with period</p>
+            <p>$$
+                P=\frac{1}{f}.
+                $$</p>
+            <p>A frequency of $1/12$ cycles per month therefore corresponds to a 12-month cycle.</p>
+            <h2 id="fourier-transform-and-periodogram">Fourier Transform and Periodogram</h2>
+            <p>For observations $x_0,\ldots,x_{N-1}$, the discrete Fourier transform is</p>
+            <p>$$
+                X_k=\sum_{t=0}^{N-1}x_te^{-i2\pi kt/N}.
+                $$</p>
+            <p>A <strong>periodogram</strong> summarizes the squared magnitude of these Fourier components across frequency. For a weakly stationary process, the theoretical spectral density is the Fourier transform of the autocovariance function, so the ACF and spectrum encode the same second-order information in different coordinates.</p>
+            <p>One common periodogram scaling is proportional to</p>
+            <p>$$
+                I(f_k)=\frac{1}{N}|X_k|^2.
+                $$</p>
+            <p>Exact normalizations vary across software and depend on whether a one-sided or two-sided spectrum and physical sampling units are used.</p>
+            <p><img alt="Periodogram" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/05_periodogram.png" /></p>
+            <p>The periodogram figure shows how dominant cycle lengths appear as peaks. Because a raw periodogram is noisy, interpretation should focus on stable structure rather than treating every local maximum as a distinct physical cycle.</p>
+            <h2 id="nyquist-frequency-and-aliasing">Nyquist Frequency and Aliasing</h2>
+            <p>With one observation per sampling interval, the highest uniquely distinguishable frequency is the Nyquist frequency,</p>
+            <p>$$
+                f_N=\frac{1}{2}
+                $$</p>
+            <p>cycle per interval. A higher-frequency signal can produce exactly the same sampled values as a lower-frequency signal, a phenomenon called <strong>aliasing</strong>.</p>
+            <p><img alt="Aliasing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/07_aliasing.png" /></p>
+            <p>The figure demonstrates why the sampling rate must be known before assigning a physical interpretation to a spectral peak. Once a frequency has aliased into the observed band, the sampled data alone cannot recover the original higher frequency.</p>
+            <h2 id="spectral-leakage">Spectral Leakage</h2>
+            <p>A finite observation window rarely contains an exact integer number of cycles. Truncating the signal at the sample boundaries then spreads power into neighboring Fourier frequencies. This is <strong>spectral leakage</strong>.</p>
+            <p>Tapering or windowing can reduce leakage by softening the sample edges, but it also broadens peaks. The tradeoff is therefore not simply "windowed is better": lower side lobes come at the cost of reduced frequency resolution.</p>
+            <p><img alt="Spectral leakage and windowing" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/06_spectral_leakage_windowing.png" /></p>
+            <p>The figure shows the same underlying frequency under different window treatments. The narrower peak from a rectangular window can have stronger side lobes, while a taper suppresses those side lobes but spreads energy across a wider main peak.</p>
+            <p>Strong trend also concentrates power near frequency zero. If the goal is to study cycles around a trend, detrending can be appropriate. Differencing may also suppress low-frequency variation, but it changes the frequency response of the series and should be chosen for a modeling reason rather than merely to improve the appearance of a spectrum.</p>
+            <p>For two stationary series, cross-spectral methods examine shared variation by frequency. <strong>Coherence</strong> is a frequency-specific measure of linear association, but high coherence does not establish direction or causality.</p>
+            <p><img alt="Frequency relationship" src="https://raw.githubusercontent.com/djeada/Statistics-Notes/refs/heads/main/assets/time_series/state_space_frequency/08_frequency_relationship.png" /></p>
+            <p>The frequency-relationship figure illustrates how two series can share a strong cycle even when their time-domain relationship is difficult to see directly.</p>
+            <p>A practical workflow is to establish the sampling interval, inspect trend and stationarity, compute a periodogram or smoothed spectrum, translate peaks into periods, and interpret them with aliasing, leakage, and multiple-search concerns in mind.</p>
+            <h2 id="student-guide-read-a-spectrum-as-a-decomposition-of-variation">Student guide: read a spectrum as a decomposition of variation</h2>
+            <p>Frequency analysis answers a different question from lag-based analysis:</p>
+            <blockquote>
+                <p>At which cycle lengths is the series variable, and are those cycle lengths shared by another series?</p>
+            </blockquote>
+            <p>The answer depends on the sampling rate, record length, trend treatment, windowing, and the stationarity assumptions behind the spectrum.</p>
+            <h3 id="from-period-to-frequency">From period to frequency</h3>
+            <p>If a pattern repeats every $P$ sampling intervals, its frequency is</p>
+            <p>$$
+                f=\frac{1}{P}.
+                $$</p>
+            <p>For a 12-month cycle,</p>
+            <p>$$
+                f=\frac{1}{12}=0.08333
+                \quad\text{cycles per month}.
+                $$</p>
+            <p>If observations arrive every 15 minutes, the same numerical frequency is initially expressed in cycles per 15-minute interval. Convert to cycles per hour, day, or another physical unit only after recording the sampling interval.</p>
+            <p>The Nyquist frequency is half the sampling rate. With one observation per unit interval it is $0.5$ cycles per observation. A signal at $0.65$ cycles per observation is therefore observed as a lower-frequency alias.</p>
+            <h3 id="dft-and-frequency-resolution">DFT and frequency resolution</h3>
+            <p>For $N$ observations, the nonnegative Fourier frequencies are</p>
+            <p>$$
+                f_k=\frac{k}{N},
+                \qquad
+                k=0,\ldots,\left\lfloor\frac{N}{2}\right\rfloor.
+                $$</p>
+            <p>The spacing is $1/N$. With $N=240$,</p>
+            <p>$$
+                \Delta f=\frac{1}{240}=0.004167.
+                $$</p>
+            <p>A period-12 component has $f=1/12$ and lies at</p>
+            <p>$$
+                k=Nf=240\left(\frac{1}{12}\right)=20.
+                $$</p>
+            <p>Longer records provide finer Fourier spacing, but a longer sample does not automatically justify a stationary spectrum if the underlying process changes over time.</p>
+            <h3 id="periodogram-scaling">Periodogram scaling</h3>
+            <p>Let $\tilde x_t=x_t-\bar x$. Its DFT is</p>
+            <p>$$
+                X_k=\sum_{t=0}^{N-1}\tilde x_te^{-2\pi i kt/N}.
+                $$</p>
+            <p>A common periodogram form is</p>
+            <p>$$
+                I(f_k)=\frac{1}{N}|X_k|^2.
+                $$</p>
+            <p>The constant factor varies by convention, so check the normalization before comparing absolute spectral values across software or sampling rates.</p>
+            <p>A raw periodogram has high variance. A prominent peak can reflect a genuine cycle, leakage from a nearby strong component, low-frequency trend, a transient event, or repeated searching over many frequencies.</p>
+            <h3 id="trend-and-low-frequency-power">Trend and low-frequency power</h3>
+            <p>A deterministic trend changes slowly and therefore contributes strong low-frequency power. If the scientific question concerns cycles around a trend, write</p>
+            <p>$$
+                x_t=m_t+r_t
+                $$</p>
+            <p>and analyze the remainder $r_t$ after estimating an appropriate trend $m_t$.</p>
+            <p>Differencing is another transformation:</p>
+            <p>$$
+                \nabla x_t=x_t-x_{t-1}.
+                $$</p>
+            <p>It suppresses low frequencies but also changes the spectral shape by weighting frequencies differently. Choose the transformation because it matches the model or question, not simply because it produces a cleaner plot.</p>
+            <h3 id="spectral-leakage-and-windows">Spectral leakage and windows</h3>
+            <p>A finite sample is the product of an underlying process and an observation window. A rectangular window has abrupt boundaries, so a sinusoid that does not complete an integer number of cycles spills power into neighboring Fourier bins.</p>
+            <p>A taper such as a Hann window reduces side lobes but broadens the central peak. Window choice is therefore a resolution-versus-leakage tradeoff. Report the window and detrending settings whenever spectra are compared.</p>
+            <h3 id="cross-spectrum-and-coherence">Cross-spectrum and coherence</h3>
+            <p>For two series $x_t$ and $y_t$, a cross-periodogram is based on</p>
+            <p>$$
+                I_{xy}(f)=X(f)\overline{Y(f)}.
+                $$</p>
+            <p>A smoothed squared coherence has the form</p>
+            <p>$$
+                C_{xy}^2(f)=\frac{|S_{xy}(f)|^2}{S_{xx}(f)S_{yy}(f)}.
+                $$</p>
+            <p>Values near 1 indicate strong linear association at that frequency. They do not establish direction, timing, or causality; a shared seasonal driver can produce high coherence in both series.</p>
+            <h3 id="a-numerical-periodogram-example">A numerical periodogram example</h3>
+            <p>Let</p>
+            <p>$$
+                x_t=1.8\sin\left(\frac{2\pi t}{12}\right)
+                +0.8\sin\left(\frac{2\pi t}{30}\right)
+                +\varepsilon_t.
+                $$</p>
+            <p>The first component has period 12 and the second period 30. With moderate noise, the periodogram should show peaks near</p>
+            <p>$$
+                \frac{1}{12}\approx0.0833
+                \quad\text{and}\quad
+                \frac{1}{30}\approx0.0333.
+                $$</p>
+            <p>The larger sinusoidal amplitude tends to contribute more spectral power, but in a short noisy sample the observed peak ordering can vary. Check whether the main peaks remain stable under reasonable windows, segment choices, or repeated samples.</p>
+            <h3 id="practical-interpretation-checklist">Practical interpretation checklist</h3>
+            <p>Before treating a spectral peak as substantive evidence:</p>
+            <ol>
+                <li>verify the sampling interval and Nyquist frequency;</li>
+                <li>inspect the raw series and any trend or changing variance;</li>
+                <li>record detrending, differencing, and window settings;</li>
+                <li>convert the peak frequency into a period;</li>
+                <li>check whether the peak is near a boundary, alias, or harmonic;</li>
+                <li>compare adjacent time windows if stationarity is doubtful;</li>
+                <li>compare with an appropriate noise or domain baseline;</li>
+                <li>account for the number of frequencies examined;</li>
+                <li>avoid causal claims based on coherence alone.</li>
+            </ol>
+            <p>The related state-space material is covered in the <a href="state_space_models.md">state-space chapter</a>, and the <a href="../../notebooks/time_series/state_space_and_frequency.ipynb">state-space/frequency notebook</a> provides an additional worked environment.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>
