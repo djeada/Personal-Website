@@ -58,10 +58,13 @@
     // Styles are injected once so the script is self-contained.
     const STYLE_ID = 'ring-lab-style';
     const STYLES = `
-.ring-lab{--bg:#101820;--panel:rgba(16,24,32,.78);--line:rgba(125,165,171,.22);--text:#e6eef0;--muted:#8ea3a8;--teal:#7da5ab;--copper:#b7977b;
+.ring-lab{--bg:#101820;--panel:rgba(16,24,32,.78);--line:rgba(125,165,171,.22);--text:#e6eef0;--muted:#8ea3a8;--teal:#3fe0d0;--copper:#ffa64d;
   position:relative;min-height:640px;overflow:hidden;border-radius:14px;
   background:radial-gradient(120% 90% at 50% 100%,#172431 0%,var(--bg) 70%);
   color:var(--text);font:14px/1.45 "Inter","Segoe UI",system-ui,sans-serif}
+.ring-lab *{font-family:inherit;box-sizing:border-box}
+.ring-lab output{font:inherit}
+.ring-lab__equation{font-family:Georgia,"Times New Roman",serif;font-style:italic}
 .ring-lab canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;outline:none;cursor:grab}
 .ring-lab canvas:active{cursor:grabbing}
 .ring-lab canvas:focus-visible{box-shadow:inset 0 0 0 2px var(--teal)}
@@ -69,7 +72,7 @@
 .ring-lab>:not(canvas) button,.ring-lab>:not(canvas) input,.ring-lab>:not(canvas) a,.ring-lab>:not(canvas) summary,.ring-lab details[open]{pointer-events:auto}
 .ring-lab__heading{top:28px;left:28px;max-width:320px}
 .ring-lab__eyebrow{display:block;margin-bottom:10px;font-size:11px;letter-spacing:.06em;color:var(--muted)}
-.ring-lab__heading h3{margin:0 0 6px;font-size:30px;font-weight:500;line-height:1.1;letter-spacing:-.01em}
+.ring-lab__heading h3{margin:0 0 6px;font-size:34px;font-weight:600;line-height:1.1;letter-spacing:-.01em}
 .ring-lab__heading p{margin:0;color:var(--muted)}
 .ring-lab__equation{top:28px;right:28px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums}
 .ring-lab__equation span{display:block;margin-top:6px;font-size:11px;letter-spacing:.04em;color:var(--muted)}
@@ -78,7 +81,7 @@
 .ring-lab__metrics span{display:block;font-size:11px;letter-spacing:.04em;color:var(--muted)}
 .ring-lab__metrics output{display:block;font-size:22px;font-variant-numeric:tabular-nums}
 .ring-lab__readout{left:28px;right:28px;bottom:112px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font-size:12px;color:var(--muted)}
-.ring-lab__readout i{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;vertical-align:-1px;background:linear-gradient(90deg,var(--teal) 50%,var(--copper) 50%)}
+.ring-lab__readout i{display:inline-block;width:10px;height:10px;box-shadow:0 0 8px var(--teal);margin-right:6px;border-radius:50%;vertical-align:-1px;background:linear-gradient(90deg,var(--teal) 50%,var(--copper) 50%)}
 .ring-lab__controls{left:28px;right:28px;bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 18px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .ring-lab__controls label{flex:1 1 260px;display:grid;grid-template-columns:auto auto;justify-content:space-between;align-items:center;gap:6px 12px;font-size:12px;color:var(--muted)}
 .ring-lab__controls label>span{color:var(--text);font-variant-numeric:tabular-nums}
@@ -88,12 +91,12 @@
 .ring-lab__controls button:hover{background:rgba(125,165,171,.12)}
 .ring-lab__controls button[aria-pressed=true]{border-color:var(--teal);background:rgba(125,165,171,.18)}
 .ring-lab__controls button:focus-visible,.ring-lab__controls input:focus-visible,.ring-lab__model summary:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.ring-lab__model{right:28px;bottom:112px;max-width:380px;font-size:12px;color:var(--muted)}
+.ring-lab__model{right:28px;top:96px;max-width:380px;text-align:right;z-index:3;font-size:12px;color:var(--muted)}
 .ring-lab__model summary{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:6px;color:var(--text);cursor:pointer;list-style:none}
 .ring-lab__model summary::-webkit-details-marker{display:none}
 .ring-lab__model[open]{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .ring-lab__model[open] summary{border-color:var(--teal)}
-.ring-lab__model p{margin:10px 0 0;line-height:1.5}
+.ring-lab__model p{margin:10px 0 0;line-height:1.5;text-align:left}
 .ring-lab__model a{color:var(--teal);text-decoration:underline;text-underline-offset:2px}
 @media(max-width:720px){
   .ring-lab{min-height:720px;font-size:13px}
@@ -104,7 +107,7 @@
   .ring-lab__metrics{top:118px;transform:none;grid-template-columns:repeat(3,1fr);gap:10px}
   .ring-lab__metrics output{font-size:17px}
   .ring-lab__readout{bottom:150px}
-  .ring-lab__model{bottom:150px;left:auto}
+  .ring-lab__model{top:auto;bottom:150px;left:auto}
   .ring-lab__controls{bottom:16px;flex-direction:column;align-items:stretch}
 }
 @media(prefers-reduced-motion:reduce){.ring-lab__controls button{transition:none}}`;
@@ -131,7 +134,7 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.outputEncoding = T.sRGBEncoding;
         renderer.toneMapping = T.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.9;
+        renderer.toneMappingExposure = 1.15;
         container.classList.add('ring-lab');
         container.innerHTML = `
           <div class="ring-lab__heading"><span class="ring-lab__eyebrow">Field atlas</span><h3>The toroidal field.</h3><p>Follow the geometry of a magnetic force.</p></div>
@@ -150,25 +153,27 @@
             item.position.set(x, y, z);
             scene.add(item);
         };
-        light(0xe4f3ff, 1.7, -3, 8, 5);
-        light(0x51bacc, 1.2, 4, -2, -4);
-        light(0xffd5a0, 0.8, -6, 1, -2);
+        light(0xe4f3ff, 2.2, -3, 8, 5);
+        light(0x51bacc, 1.6, 4, -2, -4);
+        light(0xffc98a, 1.4, -6, 1, -2);
+        light(0x9fd8ff, 0.9, 0, -6, 3);
         const apparatus = new T.Group();
         scene.add(apparatus);
         const fieldLines = new T.Group();
         scene.add(fieldLines);
         const copper = new T.MeshStandardMaterial({
-            color: 0xa75b2b,
+            color: 0xc9702f,
+            emissive: 0x3a1a08,
             transparent: true,
-            opacity: 0.65,
+            opacity: 0.92,
             depthWrite: false,
-            metalness: 0.2,
-            roughness: 0.8
+            metalness: 0.75,
+            roughness: 0.3
         });
         const fineLine = new T.LineBasicMaterial({
-            color: 0x66868e,
+            color: 0x8fd3dc,
             transparent: true,
-            opacity: 0.12,
+            opacity: 0.32,
             depthWrite: false
         });
 
@@ -183,10 +188,11 @@
         }
         apparatus.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(winding), 2304, 0.032, 8, false), copper));
         const fieldVolume = new T.Mesh(new T.TorusGeometry(3.25, 0.82, 48, 192), new T.MeshPhongMaterial({
-            color: 0x37606a,
+            color: 0x2e8a96,
+            emissive: 0x0d2a30,
             transparent: true,
-            opacity: 0.18,
-            shininess: 12,
+            opacity: 0.28,
+            shininess: 40,
             depthWrite: false,
             side: T.BackSide
         }));
@@ -212,7 +218,7 @@
             if (j % 3 === 0) {
                 const a = j * 2.399;
                 const arrow = new T.ArrowHelper(new T.Vector3(-Math.sin(a), 0, Math.cos(a)),
-                    new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)), 0.24, 0x66868e, 0.12, 0.075);
+                    new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)), 0.3, 0x8fd3dc, 0.16, 0.09);
                 fieldLines.add(arrow);
             }
         }
@@ -227,8 +233,8 @@
         const trailAlpha = new Float32Array(count * history * 2);
         const trailSides = new Float32Array(trailAlpha.length);
         const trailIndices = [];
-        const teal = new T.Color(0x7da5ab);
-        const copperTrail = new T.Color(0xb7977b);
+        const teal = new T.Color(0x3fe0d0);
+        const copperTrail = new T.Color(0xffa64d);
         for (let i = 0; i < count; i++) {
             // Matched initial conditions make the effect of charge sign clear.
             const pair = Math.floor(i / 2);
@@ -296,7 +302,7 @@
                     vec4 next = projectionMatrix * modelViewMatrix * vec4(nextPosition, 1.0);
                     vec2 delta = (next.xy / next.w - current.xy / current.w) * viewport;
                     vec2 normal = vec2(-delta.y, delta.x) / max(length(delta), 0.00001);
-                    current.xy += normal * side * 2.4 / viewport * current.w;
+                    current.xy += normal * side * 3.4 / viewport * current.w;
                     gl_Position = current;
                 }`,
             fragmentShader: `varying float alpha;
@@ -304,11 +310,40 @@
                 varying float edge;
                 void main() {
                     float coverage = 1.0 - smoothstep(0.35, 1.0, abs(edge));
-                    gl_FragColor = vec4(tint, alpha * coverage * 0.8);
+                    gl_FragColor = vec4(tint * (0.85 + 0.45 * alpha), alpha * coverage * 0.95);
                 }`
         }));
         trails.frustumCulled = false;
         scene.add(trails);
+        // Bright head on each trail so the motion reads at a glance.
+        const headPositions = new Float32Array(count * 3);
+        const headColors = new Float32Array(count * 3);
+        particles.forEach((p, i) => (p.charge > 0 ? teal : copperTrail).toArray(headColors, i * 3));
+        const headGeometry = new T.BufferGeometry();
+        headGeometry.setAttribute('position', new T.BufferAttribute(headPositions, 3).setUsage(T.DynamicDrawUsage));
+        headGeometry.setAttribute('color', new T.BufferAttribute(headColors, 3));
+        const heads = new T.Points(headGeometry, new T.PointsMaterial({
+            size: 9, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false
+        }));
+        heads.frustumCulled = false;
+        scene.add(heads);
+        // Soft glow beneath the apparatus.
+        const glowCanvas = document.createElement('canvas');
+        glowCanvas.width = glowCanvas.height = 256;
+        const g = glowCanvas.getContext('2d');
+        const grad = g.createRadialGradient(128, 128, 20, 128, 128, 128);
+        grad.addColorStop(0, 'rgba(63,224,208,0.35)');
+        grad.addColorStop(0.55, 'rgba(63,224,208,0.08)');
+        grad.addColorStop(1, 'rgba(63,224,208,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 256, 256);
+        const glow = new T.Mesh(new T.PlaneGeometry(13, 13), new T.MeshBasicMaterial({
+            map: new T.CanvasTexture(glowCanvas), transparent: true, depthWrite: false
+        }));
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = -1.6;
+        glow.renderOrder = -2;
+        scene.add(glow);
         let field = 1,
             paused = reducedMotion.matches,
             visible = false,
@@ -339,13 +374,19 @@
                     next.toArray(trailNext, offset);
                     next.toArray(trailNext, offset + 3);
                     const alphaIndex = (i * history + j) * 2;
-                    trailAlpha[alphaIndex] = p.opacity * (1 - j / (history - 1)) ** 1.5;
+                    trailAlpha[alphaIndex] = p.opacity * (1 - j / (history - 1)) ** 1.15;
                     trailAlpha[alphaIndex + 1] = trailAlpha[alphaIndex];
                 }
             });
             trailsGeometry.attributes.position.needsUpdate = true;
             trailsGeometry.attributes.nextPosition.needsUpdate = true;
             trailsGeometry.attributes.trailAlpha.needsUpdate = true;
+            particles.forEach((p, i) => {
+                headPositions[i * 3] = p.position.x;
+                headPositions[i * 3 + 1] = p.retiring ? 1e4 : p.position.y;
+                headPositions[i * 3 + 2] = p.position.z;
+            });
+            headGeometry.attributes.position.needsUpdate = true;
             yaw += (targetYaw - yaw) * 0.12;
             pitch += (targetPitch - pitch) * 0.12;
             camera.position.set(distance * Math.cos(pitch) * Math.sin(yaw), distance * Math.sin(pitch), distance * Math.cos(pitch) * Math.cos(yaw));
