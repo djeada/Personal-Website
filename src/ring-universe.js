@@ -1,11 +1,22 @@
 (function() {
     'use strict';
 
-    // Air-core, densely wound ideal toroid: B_phi = B0 R / r.
-    // The visualization uses R = 3.25, B0 = 7 and |q/m| = 1.
+    // ---------------------------------------------------------------------
+    // Physics (pure, shared with tests/ring-physics.spec.js)
+    // ---------------------------------------------------------------------
+
+    // Air-core, densely wound ideal toroid: B_phi = B0 R / r, with |q/m| = 1.
+    const MAJOR_RADIUS = 3.25;
+    const TUBE_RADIUS = 0.82;
+    const REFERENCE_FIELD = 7;
+
     function toroidalField(position, current = 1) {
-        const scale = 7 * current * 3.25 / (position.x ** 2 + position.z ** 2);
-        return { x: -position.z * scale, y: 0, z: position.x * scale };
+        const scale = REFERENCE_FIELD * current * MAJOR_RADIUS / (position.x ** 2 + position.z ** 2);
+        return {
+            x: -position.z * scale,
+            y: 0,
+            z: position.x * scale
+        };
     }
 
     // Boris rotation with leapfrog positions; no electric field or drag.
@@ -13,7 +24,9 @@
     function advanceParticle(particle, magneticField, dt) {
         const v = particle.velocity;
         const half = particle.charge * dt / 2;
-        const tx = magneticField.x * half, ty = magneticField.y * half, tz = magneticField.z * half;
+        const tx = magneticField.x * half,
+            ty = magneticField.y * half,
+            tz = magneticField.z * half;
         const factor = 2 / (1 + tx * tx + ty * ty + tz * tz);
         const px = v.x + v.y * tz - v.z * ty;
         const py = v.y + v.z * tx - v.x * tz;
@@ -40,7 +53,7 @@
             return;
         }
         advanceParticle(p, toroidalField(p.position, current), dt);
-        if ((Math.hypot(p.position.x, p.position.z) - 3.25) ** 2 + p.position.y ** 2 > 0.82 ** 2) {
+        if ((Math.hypot(p.position.x, p.position.z) - MAJOR_RADIUS) ** 2 + p.position.y ** 2 > TUBE_RADIUS ** 2) {
             p.retiring = true;
         }
         p.age += dt;
@@ -51,246 +64,314 @@
     }
 
     if (typeof module !== 'undefined' && module.exports) {
-        module.exports = { toroidalField, advanceParticle, advanceTrail };
+        module.exports = {
+            toroidalField,
+            advanceParticle,
+            advanceTrail
+        };
     }
     if (typeof window === 'undefined') return;
 
-    // Styles are injected once so the script is self-contained.
-    const STYLE_ID = 'ring-lab-style';
-    const STYLES = `
-.ring-lab{--bg:#101820;--panel:rgba(16,24,32,.78);--line:rgba(125,165,171,.22);--text:#e6eef0;--muted:#8ea3a8;--teal:#3fe0d0;--copper:#ffa64d;
-  position:relative;min-height:640px;overflow:hidden;border-radius:14px;
-  background:radial-gradient(120% 90% at 50% 100%,#172431 0%,var(--bg) 70%);
-  color:var(--text);font:14px/1.45 "Inter","Segoe UI",system-ui,sans-serif}
-.ring-lab *{font-family:inherit;box-sizing:border-box}
-.ring-lab output{font:inherit}
-.ring-lab__equation{font-family:Georgia,"Times New Roman",serif;font-style:italic}
-.ring-lab canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;outline:none;cursor:grab}
-.ring-lab canvas:active{cursor:grabbing}
-.ring-lab canvas:focus-visible{box-shadow:inset 0 0 0 2px var(--teal)}
-.ring-lab>:not(canvas){position:absolute;z-index:2;pointer-events:none}
-.ring-lab>:not(canvas) button,.ring-lab>:not(canvas) input,.ring-lab>:not(canvas) a,.ring-lab>:not(canvas) summary,.ring-lab details[open]{pointer-events:auto}
-.ring-lab__heading{top:28px;left:28px;max-width:320px}
-.ring-lab__eyebrow{display:block;margin-bottom:10px;font-size:11px;letter-spacing:.06em;color:var(--muted)}
-.ring-lab__heading h3{margin:0 0 6px;font-size:34px;font-weight:600;line-height:1.1;letter-spacing:-.01em}
-.ring-lab__heading p{margin:0;color:var(--muted)}
-.ring-lab__equation{top:28px;right:28px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums}
-.ring-lab__equation span{display:block;margin-top:6px;font-size:11px;letter-spacing:.04em;color:var(--muted)}
-.ring-lab__metrics{left:28px;top:50%;transform:translateY(-50%);display:grid;gap:14px}
-.ring-lab__metrics div{padding-left:12px;border-left:2px solid var(--line)}
-.ring-lab__metrics span{display:block;font-size:11px;letter-spacing:.04em;color:var(--muted)}
-.ring-lab__metrics output{display:block;font-size:22px;font-variant-numeric:tabular-nums}
-.ring-lab__readout{left:28px;right:28px;bottom:112px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font-size:12px;color:var(--muted)}
-.ring-lab__readout i{display:inline-block;width:10px;height:10px;box-shadow:0 0 8px var(--teal);margin-right:6px;border-radius:50%;vertical-align:-1px;background:linear-gradient(90deg,var(--teal) 50%,var(--copper) 50%)}
-.ring-lab__controls{left:28px;right:28px;bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 18px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.ring-lab__controls label{flex:1 1 260px;display:grid;grid-template-columns:auto auto;justify-content:space-between;align-items:center;gap:6px 12px;font-size:12px;color:var(--muted)}
-.ring-lab__controls label>span{color:var(--text);font-variant-numeric:tabular-nums}
-.ring-lab__controls input[type=range]{grid-column:1/-1;width:100%;margin:0;accent-color:var(--teal)}
-.ring-lab__controls>div{display:flex;gap:8px;flex-wrap:wrap}
-.ring-lab__controls button{padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:13px;cursor:pointer;transition:background-color 120ms,border-color 120ms}
-.ring-lab__controls button:hover{background:rgba(125,165,171,.12)}
-.ring-lab__controls button[aria-pressed=true]{border-color:var(--teal);background:rgba(125,165,171,.18)}
-.ring-lab__controls button:focus-visible,.ring-lab__controls input:focus-visible,.ring-lab__model summary:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.ring-lab__model{right:28px;top:96px;max-width:380px;text-align:right;z-index:3;font-size:12px;color:var(--muted)}
-.ring-lab__model summary{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:6px;color:var(--text);cursor:pointer;list-style:none}
-.ring-lab__model summary::-webkit-details-marker{display:none}
-.ring-lab__model[open]{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.ring-lab__model[open] summary{border-color:var(--teal)}
-.ring-lab__model p{margin:10px 0 0;line-height:1.5;text-align:left}
-.ring-lab__model a{color:var(--teal);text-decoration:underline;text-underline-offset:2px}
-@media(max-width:720px){
-  .ring-lab{min-height:720px;font-size:13px}
-  .ring-lab__heading,.ring-lab__equation,.ring-lab__metrics,.ring-lab__readout,.ring-lab__controls,.ring-lab__model{left:16px;right:16px}
-  .ring-lab__heading{top:16px;max-width:none}
-  .ring-lab__heading h3{font-size:24px}
-  .ring-lab__equation{top:auto;bottom:200px;text-align:left;font-size:18px}
-  .ring-lab__metrics{top:118px;transform:none;grid-template-columns:repeat(3,1fr);gap:10px}
-  .ring-lab__metrics output{font-size:17px}
-  .ring-lab__readout{bottom:150px}
-  .ring-lab__model{top:auto;bottom:150px;left:auto}
-  .ring-lab__controls{bottom:16px;flex-direction:column;align-items:stretch}
-}
-@media(prefers-reduced-motion:reduce){.ring-lab__controls button{transition:none}}`;
+    // ---------------------------------------------------------------------
+    // Scene description. Layout and styling live in 13_intro_page.css.
+    // Every material is a small shader writing display colors directly, so
+    // the scene needs no lights or tone mapping.
+    // ---------------------------------------------------------------------
 
-    function injectStyles() {
-        if (document.getElementById(STYLE_ID)) return;
-        const style = document.createElement('style');
-        style.id = STYLE_ID;
-        style.textContent = STYLES;
-        document.head.appendChild(style);
+    const PARTICLE_COUNT = 18;
+    const TRAIL_LENGTH = 480;
+    const STEP = 1 / 120;
+    const PLAYBACK_RATE = 0.35;
+    const DEFAULT_VIEW = {
+        yaw: 0.45,
+        pitch: 0.5
+    };
+    const WINDING = {
+        turns: 48,
+        radius: 0.88,
+        wire: 0.024,
+        segments: 48 * 48
+    };
+    const EXTENT = {
+        inner: MAJOR_RADIUS - WINDING.radius - WINDING.wire,
+        outer: MAJOR_RADIUS + WINDING.radius + WINDING.wire,
+        height: WINDING.radius + WINDING.wire
+    };
+    const COLORS = {
+        positive: 0x3fe0d0,
+        negative: 0xffa64d
+    };
+
+    const icon = paths => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
+    const ICONS = {
+        field: icon('<ellipse cx="12" cy="12" rx="9.5" ry="5"/><ellipse cx="12" cy="12" rx="5" ry="2.2"/>'),
+        pause: icon('<path d="M9 6v12M15 6v12"/>'),
+        play: icon('<path d="M8 5.5v13l10.5-6.5z"/>'),
+        reset: icon('<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>'),
+        info: icon('<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/>')
+    };
+
+    const MARKUP = `
+      <div class="ring-lab__header">
+        <div class="ring-lab__heading">
+          <div class="ring-lab__title" role="heading" aria-level="3">Toroidal coil</div>
+          <div class="ring-lab__equation" aria-label="Magnetic field equals mu zero N I over two pi r">B(r) = μ₀NI / 2πr</div>
+        </div>
+        <div class="ring-lab__legend"><span><i data-charge="positive"></i>Positive</span><span><i data-charge="negative"></i>Negative</span></div>
+      </div>
+      <div class="ring-lab__stage" data-stage></div>
+      <div class="ring-lab__footer">
+        <div class="ring-lab__bar">
+          <div class="ring-lab__current">
+            <span class="ring-lab__current-label">Current <output data-current></output></span>
+            <span class="ring-lab__metrics" title="Field magnitude across the tube, and the reference gyroradius">B <output data-outer-field></output>–<output data-inner-field></output> · r<sub>L</sub> <output data-radius></output></span>
+            <input aria-label="Coil current" type="range" min="0.4" max="2" step="0.1" value="1">
+          </div>
+          <div class="ring-lab__buttons">
+            <button type="button" data-field aria-pressed="true" aria-label="Field lines" title="Field lines">${ICONS.field}</button>
+            <button type="button" data-pause aria-pressed="false" aria-label="Pause" title="Pause"></button>
+            <button type="button" data-reset aria-label="Reset view" title="Reset view">${ICONS.reset}</button>
+            <details class="ring-lab__model"><summary aria-label="About the model" title="About the model">${ICONS.info}</summary><div class="ring-lab__model-body">
+              <p>Charged particles in the field of an ideal toroidal coil. Opposite charges spiral in opposite directions; more current tightens the spiral. Field-line dashes move along B, faster where the field is stronger. Drag or use the arrow keys to orbit, + and − to zoom. Playback runs at 0.35×.</p>
+              <p>dv/dt = (q/m) v × B. Normalized units: major radius R = 3.25, tube radius a = 0.82, reference field B₀ = 7, equal |q/m| = 1. The readout shows |B| at the outer and inner tube wall, and the gyroradius r<sub>L</sub> = v⊥ / (|q/m| B₀) with v⊥ = 1.</p>
+              <p>A complete winding is modeled; its near side is drawn translucent to expose the field. Current selects a prescribed static field; induction, collisions and particle self-fields are omitted. Test particles drift out of a pure toroidal field, fade, and are reinjected.</p>
+              <p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-6-solenoids-and-toroids">Field model</a> · <a href="https://www.particleincell.com/2011/vxb-rotation/">Particle integration</a></p>
+            </div></details>
+          </div>
+        </div>
+      </div>`;
+
+    const VIEW_VARYINGS_VERTEX = `varying vec3 viewNormal;
+        varying vec3 viewPosition;
+        varying float nearness;
+        void setViewVaryings(float reach) {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            vec4 centre = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+            viewNormal = normalize(normalMatrix * normal);
+            viewPosition = mv.xyz;
+            nearness = (mv.z - centre.z) / reach;
+            gl_Position = projectionMatrix * mv;
+        }`;
+
+    // Copper winding lit by a camera-fixed key light. The side facing the
+    // viewer fades out, so the field region stays visible from every angle.
+    function buildWinding(T) {
+        const curve = new T.Curve();
+        curve.getPoint = (t, target = new T.Vector3()) => {
+            const a = t * Math.PI * 2;
+            const b = a * WINDING.turns;
+            const r = MAJOR_RADIUS + WINDING.radius * Math.cos(b);
+            return target.set(r * Math.cos(a), WINDING.radius * Math.sin(b), r * Math.sin(a));
+        };
+        // The helix has nearly constant speed, so parameter and arc length agree.
+        curve.getPointAt = curve.getPoint;
+        curve.getTangentAt = curve.getTangent;
+        const material = new T.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                reach: {
+                    value: EXTENT.outer
+                }
+            },
+            vertexShader: `uniform float reach;
+                ${VIEW_VARYINGS_VERTEX}
+                void main() { setViewVaryings(reach); }`,
+            fragmentShader: `varying vec3 viewNormal;
+                varying vec3 viewPosition;
+                varying float nearness;
+                void main() {
+                    vec3 n = normalize(viewNormal);
+                    vec3 v = normalize(-viewPosition);
+                    vec3 l = normalize(vec3(-0.45, 0.8, 0.55));
+                    vec3 copper = vec3(0.78, 0.43, 0.2);
+                    float diffuse = 0.3 + 0.7 * max(dot(n, l), 0.0);
+                    float specular = pow(max(dot(n, normalize(l + v)), 0.0), 40.0);
+                    vec3 color = copper * diffuse + vec3(1.0, 0.84, 0.66) * specular * 0.75;
+                    float alpha = mix(0.95, 0.12, smoothstep(-0.3, 0.7, nearness));
+                    gl_FragColor = vec4(color, alpha);
+                }`
+        });
+        const mesh = new T.Mesh(new T.TubeGeometry(curve, WINDING.segments, WINDING.wire, 6, true), material);
+        mesh.renderOrder = 1;
+        return mesh;
     }
 
-    window.createRingUniverseSimulation = function(container) {
-        if (!container || !window.THREE) return null;
-        injectStyles();
-        const T = window.THREE;
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-        const scene = new T.Scene();
-        const camera = new T.PerspectiveCamera(38, 1, 0.1, 100);
-        const renderer = new T.WebGLRenderer({
-            antialias: true,
-            alpha: true
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.outputEncoding = T.sRGBEncoding;
-        renderer.toneMapping = T.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.15;
-        container.classList.add('ring-lab');
-        container.innerHTML = `
-          <div class="ring-lab__heading"><span class="ring-lab__eyebrow">Field atlas</span><h3>The toroidal field.</h3><p>Follow the geometry of a magnetic force.</p></div>
-          <div class="ring-lab__equation" aria-label="Magnetic field equals mu zero N I over two pi r">B(r) = μ₀NI / 2πr<span>Ideal air core, winding shown in cutaway</span></div>
-          <div class="ring-lab__metrics"><div><span>Inner field</span><output data-inner-field></output></div><div><span>Outer field</span><output data-outer-field></output></div><div><span>Reference gyroradius</span><output data-radius></output></div></div>
-          <div class="ring-lab__readout"><span><i></i> Teal is positive charge, copper is negative</span><span>Opposite charges spiral in opposite directions. Stronger fields tighten the spiral.</span></div>
-          <div class="ring-lab__controls"><label>Coil current <span><output data-current>1.0</output> ×</span><input aria-label="Coil current" type="range" min="0.4" max="2" step="0.1" value="1"></label><div><button type="button" data-field aria-pressed="true">Field lines</button><button type="button" data-pause>Pause</button><button type="button" data-reset>Reset view</button></div></div>
-          <details class="ring-lab__model"><summary>Controls &amp; physical model</summary><p>Drag to orbit. Arrow keys rotate, + and − zoom. Playback runs at 0.35×.</p><p>dv/dt = (q/m) v × B. Normalized units: major radius R = 3.25, tube radius a = 0.82, reference field B₀ = 7, equal |q/m| = 1. The reference gyroradius is v⊥ / (|q/m| B₀), with v⊥ = 1.</p><p>A complete winding is modeled; its front half is omitted to expose the field. Current selects a prescribed static field; induction, collisions and particle self-fields are omitted. Test particles drift out of a pure toroidal field, fade, and are reinjected.</p><p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-6-solenoids-and-toroids">Field model</a> · <a href="https://www.particleincell.com/2011/vxb-rotation/">Particle integration</a></p></details>`;
-        renderer.domElement.tabIndex = 0;
-        renderer.domElement.setAttribute('role', 'img');
-        renderer.domElement.setAttribute('aria-label', 'Interactive toroidal magnetic field with charged particle trajectories. Drag or use arrow keys to orbit, plus and minus to zoom.');
-        container.prepend(renderer.domElement);
-        scene.add(new T.HemisphereLight(0xd7efff, 0x182434, 0.7));
-        const light = (color, intensity, x, y, z) => {
-            const item = new T.DirectionalLight(color, intensity);
-            item.position.set(x, y, z);
-            scene.add(item);
-        };
-        light(0xe4f3ff, 2.2, -3, 8, 5);
-        light(0x51bacc, 1.6, 4, -2, -4);
-        light(0xffc98a, 1.4, -6, 1, -2);
-        light(0x9fd8ff, 0.9, 0, -6, 3);
-        const apparatus = new T.Group();
-        scene.add(apparatus);
-        const fieldLines = new T.Group();
-        scene.add(fieldLines);
-        const copper = new T.MeshStandardMaterial({
-            color: 0xc9702f,
-            emissive: 0x3a1a08,
+    // Glass-like outline of the field region: transparent face-on, visible
+    // only where the surface turns away from the viewer.
+    function buildShell(T) {
+        const material = new T.ShaderMaterial({
             transparent: true,
-            opacity: 0.92,
             depthWrite: false,
-            metalness: 0.75,
-            roughness: 0.3
+            side: T.DoubleSide,
+            uniforms: {
+                reach: {
+                    value: EXTENT.outer
+                }
+            },
+            vertexShader: `uniform float reach;
+                ${VIEW_VARYINGS_VERTEX}
+                void main() { setViewVaryings(reach); }`,
+            fragmentShader: `varying vec3 viewNormal;
+                varying vec3 viewPosition;
+                void main() {
+                    float facing = abs(dot(normalize(viewNormal), normalize(-viewPosition)));
+                    float edge = pow(1.0 - facing, 3.0);
+                    gl_FragColor = vec4(0.4, 0.8, 0.82, 0.015 + edge * 0.2);
+                }`
         });
-        const fineLine = new T.LineBasicMaterial({
-            color: 0x8fd3dc,
-            transparent: true,
-            opacity: 0.32,
-            depthWrite: false
-        });
+        const mesh = new T.Mesh(new T.TorusGeometry(MAJOR_RADIUS, TUBE_RADIUS, 48, 192), material);
+        mesh.rotation.x = Math.PI / 2;
+        mesh.renderOrder = 0;
+        return mesh;
+    }
 
-        // The front half of the winding is omitted as a visual cutaway.
-        // The physical model remains a complete, densely wound ideal toroid.
-        const winding = [];
-        for (let i = 0; i <= 2304; i++) {
-            const a = Math.PI + i / 2304 * Math.PI;
-            const b = a * 40;
-            const r = 3.25 + 0.86 * Math.cos(b);
-            winding.push(new T.Vector3(r * Math.cos(a), 0.86 * Math.sin(b), r * Math.sin(a)));
-        }
-        apparatus.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(winding), 2304, 0.032, 8, false), copper));
-        const fieldVolume = new T.Mesh(new T.TorusGeometry(3.25, 0.82, 48, 192), new T.MeshPhongMaterial({
-            color: 0x2e8a96,
-            emissive: 0x0d2a30,
-            transparent: true,
-            opacity: 0.28,
-            shininess: 40,
-            depthWrite: false,
-            side: T.BackSide
-        }));
-        fieldVolume.rotation.x = Math.PI / 2;
-        fieldVolume.renderOrder = -1;
-        scene.add(fieldVolume);
-        for (const radius of [2.36, 4.14]) {
-            const rail = new T.Mesh(new T.TorusGeometry(radius, 0.035, 8, 192), copper);
-            rail.rotation.x = Math.PI / 2;
-            apparatus.add(rail);
-        }
-        for (let j = 0; j < 12; j++) {
-            const points = [];
-            const theta = j / 6 * Math.PI * 2;
-            const shell = j < 6 ? 0.36 : 0.67;
-            const radius = 3.25 + shell * Math.cos(theta);
+    // Circular field lines drawn as dashes travelling along B. Dash speed is
+    // proportional to |B| = B0 R / r, so the inner side runs visibly faster.
+    function buildFieldLines(T) {
+        const segments = 256;
+        const positions = [],
+            arcs = [],
+            dashes = [],
+            rates = [];
+        const lines = [
+            [0, 0]
+        ];
+        for (let k = 0; k < 6; k++) lines.push([0.32, k / 6 * Math.PI * 2]);
+        for (let k = 0; k < 8; k++) lines.push([0.62, (k + 0.5) / 8 * Math.PI * 2]);
+        for (const [shell, theta] of lines) {
+            const radius = MAJOR_RADIUS + shell * Math.cos(theta);
             const y = shell * Math.sin(theta);
-            for (let i = 0; i <= 192; i++) {
-                const a = i / 192 * Math.PI * 2;
-                points.push(new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)));
-            }
-            fieldLines.add(new T.Line(new T.BufferGeometry().setFromPoints(points), fineLine));
-            if (j % 3 === 0) {
-                const a = j * 2.399;
-                const arrow = new T.ArrowHelper(new T.Vector3(-Math.sin(a), 0, Math.cos(a)),
-                    new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)), 0.3, 0x8fd3dc, 0.16, 0.09);
-                fieldLines.add(arrow);
+            const count = Math.round(radius * 5);
+            const rate = MAJOR_RADIUS * count / (2 * Math.PI * radius * radius);
+            for (let i = 0; i < segments; i++) {
+                for (const arc of [i / segments, (i + 1) / segments]) {
+                    const a = arc * Math.PI * 2;
+                    positions.push(radius * Math.cos(a), y, radius * Math.sin(a));
+                    arcs.push(arc);
+                    dashes.push(count);
+                    rates.push(rate);
+                }
             }
         }
-        const count = 18,
-            history = 480,
-            step = 1 / 120,
-            playbackRate = 0.35;
-        const particles = [];
-        const trailPositions = new Float32Array(count * history * 6);
-        const trailNext = new Float32Array(trailPositions.length);
-        const trailColors = new Float32Array(trailPositions.length);
-        const trailAlpha = new Float32Array(count * history * 2);
-        const trailSides = new Float32Array(trailAlpha.length);
-        const trailIndices = [];
-        const teal = new T.Color(0x3fe0d0);
-        const copperTrail = new T.Color(0xffa64d);
-        for (let i = 0; i < count; i++) {
+        const geometry = new T.BufferGeometry();
+        geometry.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('arc', new T.Float32BufferAttribute(arcs, 1));
+        geometry.setAttribute('dashes', new T.Float32BufferAttribute(dashes, 1));
+        geometry.setAttribute('rate', new T.Float32BufferAttribute(rates, 1));
+        const material = new T.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                time: {
+                    value: 0
+                }
+            },
+            vertexShader: `attribute float arc;
+                attribute float dashes;
+                attribute float rate;
+                uniform float time;
+                varying float phase;
+                void main() {
+                    phase = arc * dashes - time * rate;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }`,
+            fragmentShader: `varying float phase;
+                void main() {
+                    float d = fract(phase);
+                    float dash = smoothstep(0.0, 0.1, d) * (1.0 - smoothstep(0.32, 0.45, d));
+                    gl_FragColor = vec4(0.62, 0.88, 0.9, 0.07 + 0.4 * dash);
+                }`
+        });
+        const mesh = new T.LineSegments(geometry, material);
+        mesh.renderOrder = 2;
+        return {
+            mesh,
+            setTime(time) {
+                material.uniforms.time.value = time;
+            }
+        };
+    }
+
+    function createParticles(T) {
+        return Array.from({
+            length: PARTICLE_COUNT
+        }, (_, i) => {
             // Matched initial conditions make the effect of charge sign clear.
             const pair = Math.floor(i / 2);
-            const a = pair / (count / 2) * Math.PI * 2;
-            const r = 3.25 + 0.2 * Math.sin(pair * 2.4);
+            const a = pair / (PARTICLE_COUNT / 2) * Math.PI * 2;
+            const r = MAJOR_RADIUS + 0.2 * Math.sin(pair * 2.4);
             const position = new T.Vector3(r * Math.cos(a), 0.2 * Math.cos(pair * 1.7), r * Math.sin(a));
             const phase = pair * 2.399;
             const velocity = new T.Vector3(-Math.sin(a) * 1.35 + Math.cos(a) * Math.cos(phase),
                 Math.sin(phase), Math.cos(a) * 1.35 + Math.sin(a) * Math.cos(phase));
-            const charge = i % 2 === 0 ? -1 : 1;
-            const color = charge > 0 ? teal : copperTrail;
-            particles.push({
+            return {
                 position,
                 velocity,
-                charge,
-                initialVelocity: velocity.clone(),
+                charge: i % 2 === 0 ? -1 : 1,
                 initialPosition: position.clone(),
+                initialVelocity: velocity.clone(),
                 cursor: 0,
                 age: 0,
                 opacity: 0,
                 retiring: false,
                 history: Array.from({
-                    length: history
+                    length: TRAIL_LENGTH
                 }, () => position.clone())
-            });
-            for (let j = 0; j < history; j++) {
-                for (let k = 0; k < 2; k++) {
-                    const index = (i * history + j) * 6 + k * 3;
-                    color.toArray(trailColors, index);
-                    trailSides[(i * history + j) * 2 + k] = k === 0 ? -1 : 1;
-                }
-                if (j < history - 1) {
-                    const v = (i * history + j) * 2;
-                    trailIndices.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
-                }
+            };
+        });
+    }
+
+    const chargeColor = (T, p) => new T.Color(p.charge > 0 ? COLORS.positive : COLORS.negative);
+
+    // Screen-space ribbons: each history sample becomes two vertices pushed
+    // apart perpendicular to the projected direction of travel. Ordinary
+    // alpha blending bounds brightness at crossings.
+    function createTrails(T, particles) {
+        const vertexCount = particles.length * TRAIL_LENGTH * 2;
+        const positions = new Float32Array(vertexCount * 3);
+        const nextPositions = new Float32Array(vertexCount * 3);
+        const colors = new Float32Array(vertexCount * 3);
+        const alphas = new Float32Array(vertexCount);
+        const sides = new Float32Array(vertexCount);
+        const indices = [];
+        particles.forEach((p, i) => {
+            const color = chargeColor(T, p);
+            for (let j = 0; j < TRAIL_LENGTH; j++) {
+                const v = (i * TRAIL_LENGTH + j) * 2;
+                color.toArray(colors, v * 3);
+                color.toArray(colors, v * 3 + 3);
+                sides[v] = -1;
+                sides[v + 1] = 1;
+                if (j < TRAIL_LENGTH - 1) indices.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
             }
-        }
-        const trailsGeometry = new T.BufferGeometry();
-        trailsGeometry.setAttribute('position', new T.BufferAttribute(trailPositions, 3).setUsage(T.DynamicDrawUsage));
-        trailsGeometry.setAttribute('color', new T.BufferAttribute(trailColors, 3));
-        trailsGeometry.setAttribute('nextPosition', new T.BufferAttribute(trailNext, 3).setUsage(T.DynamicDrawUsage));
-        trailsGeometry.setAttribute('side', new T.BufferAttribute(trailSides, 1));
-        trailsGeometry.setAttribute('trailAlpha', new T.BufferAttribute(trailAlpha, 1).setUsage(T.DynamicDrawUsage));
-        trailsGeometry.setIndex(trailIndices);
-        // Ordinary alpha blending bounds brightness at crossings. No luminous
-        // point sprites, additive layers, pulsing, or automatic camera motion.
-        const trails = new T.Mesh(trailsGeometry, new T.ShaderMaterial({
+        });
+        const geometry = new T.BufferGeometry();
+        const dynamic = (array, size) => new T.BufferAttribute(array, size).setUsage(T.DynamicDrawUsage);
+        geometry.setAttribute('position', dynamic(positions, 3));
+        geometry.setAttribute('nextPosition', dynamic(nextPositions, 3));
+        geometry.setAttribute('trailAlpha', dynamic(alphas, 1));
+        geometry.setAttribute('color', new T.BufferAttribute(colors, 3));
+        geometry.setAttribute('side', new T.BufferAttribute(sides, 1));
+        geometry.setIndex(indices);
+        const material = new T.ShaderMaterial({
             vertexColors: true,
             transparent: true,
             depthWrite: false,
             side: T.DoubleSide,
-            uniforms: { viewport: { value: new T.Vector2(1, 1) } },
+            uniforms: {
+                viewport: {
+                    value: new T.Vector2(1, 1)
+                },
+                lineWidth: {
+                    value: 3
+                }
+            },
             vertexShader: `attribute float trailAlpha;
                 attribute vec3 nextPosition;
                 attribute float side;
                 uniform vec2 viewport;
+                uniform float lineWidth;
                 varying float alpha;
                 varying vec3 tint;
                 varying float edge;
@@ -302,7 +383,7 @@
                     vec4 next = projectionMatrix * modelViewMatrix * vec4(nextPosition, 1.0);
                     vec2 delta = (next.xy / next.w - current.xy / current.w) * viewport;
                     vec2 normal = vec2(-delta.y, delta.x) / max(length(delta), 0.00001);
-                    current.xy += normal * side * 3.4 / viewport * current.w;
+                    current.xy += normal * side * lineWidth * (0.45 + 0.55 * alpha) / viewport * current.w;
                     gl_Position = current;
                 }`,
             fragmentShader: `varying float alpha;
@@ -310,87 +391,215 @@
                 varying float edge;
                 void main() {
                     float coverage = 1.0 - smoothstep(0.35, 1.0, abs(edge));
-                    gl_FragColor = vec4(tint * (0.85 + 0.45 * alpha), alpha * coverage * 0.95);
+                    gl_FragColor = vec4(tint * (0.8 + 0.5 * alpha), alpha * coverage * 0.95);
                 }`
-        }));
-        trails.frustumCulled = false;
-        scene.add(trails);
-        // Bright head on each trail so the motion reads at a glance.
-        const headPositions = new Float32Array(count * 3);
-        const headColors = new Float32Array(count * 3);
-        particles.forEach((p, i) => (p.charge > 0 ? teal : copperTrail).toArray(headColors, i * 3));
-        const headGeometry = new T.BufferGeometry();
-        headGeometry.setAttribute('position', new T.BufferAttribute(headPositions, 3).setUsage(T.DynamicDrawUsage));
-        headGeometry.setAttribute('color', new T.BufferAttribute(headColors, 3));
-        const heads = new T.Points(headGeometry, new T.PointsMaterial({
-            size: 9, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false
-        }));
-        heads.frustumCulled = false;
-        scene.add(heads);
-        // Soft glow beneath the apparatus.
-        const glowCanvas = document.createElement('canvas');
-        glowCanvas.width = glowCanvas.height = 256;
-        const g = glowCanvas.getContext('2d');
-        const grad = g.createRadialGradient(128, 128, 20, 128, 128, 128);
-        grad.addColorStop(0, 'rgba(63,224,208,0.35)');
-        grad.addColorStop(0.55, 'rgba(63,224,208,0.08)');
-        grad.addColorStop(1, 'rgba(63,224,208,0)');
-        g.fillStyle = grad;
-        g.fillRect(0, 0, 256, 256);
-        const glow = new T.Mesh(new T.PlaneGeometry(13, 13), new T.MeshBasicMaterial({
-            map: new T.CanvasTexture(glowCanvas), transparent: true, depthWrite: false
-        }));
-        glow.rotation.x = -Math.PI / 2;
-        glow.position.y = -1.6;
-        glow.renderOrder = -2;
-        scene.add(glow);
-        let field = 1,
+        });
+        const mesh = new T.Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 3;
+        return {
+            mesh,
+            resize(width, height) {
+                material.uniforms.viewport.value.set(width, height);
+                material.uniforms.lineWidth.value = width < 600 ? 2.8 : 3.4;
+            },
+            update() {
+                particles.forEach((p, i) => {
+                    for (let j = 0; j < TRAIL_LENGTH; j++) {
+                        const v = (i * TRAIL_LENGTH + j) * 2;
+                        const point = p.history[(p.cursor - j + TRAIL_LENGTH) % TRAIL_LENGTH];
+                        const next = p.history[(p.cursor - Math.min(j + 1, TRAIL_LENGTH - 1) + TRAIL_LENGTH) % TRAIL_LENGTH];
+                        point.toArray(positions, v * 3);
+                        point.toArray(positions, v * 3 + 3);
+                        next.toArray(nextPositions, v * 3);
+                        next.toArray(nextPositions, v * 3 + 3);
+                        alphas[v] = alphas[v + 1] = p.opacity * (1 - j / (TRAIL_LENGTH - 1)) ** 1.15;
+                    }
+                });
+                geometry.attributes.position.needsUpdate = true;
+                geometry.attributes.nextPosition.needsUpdate = true;
+                geometry.attributes.trailAlpha.needsUpdate = true;
+            }
+        };
+    }
+
+    // Round head on each trail, faded with the trail so reinjection never pops.
+    function createHeads(T, particles) {
+        const positions = new Float32Array(particles.length * 3);
+        const colors = new Float32Array(particles.length * 3);
+        const alphas = new Float32Array(particles.length);
+        particles.forEach((p, i) => chargeColor(T, p).toArray(colors, i * 3));
+        const geometry = new T.BufferGeometry();
+        geometry.setAttribute('position', new T.BufferAttribute(positions, 3).setUsage(T.DynamicDrawUsage));
+        geometry.setAttribute('headAlpha', new T.BufferAttribute(alphas, 1).setUsage(T.DynamicDrawUsage));
+        geometry.setAttribute('color', new T.BufferAttribute(colors, 3));
+        const material = new T.ShaderMaterial({
+            vertexColors: true,
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                size: {
+                    value: 9
+                }
+            },
+            vertexShader: `attribute float headAlpha;
+                uniform float size;
+                varying float alpha;
+                varying vec3 tint;
+                void main() {
+                    alpha = headAlpha;
+                    tint = color;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = size;
+                }`,
+            fragmentShader: `varying float alpha;
+                varying vec3 tint;
+                void main() {
+                    float r = length(gl_PointCoord * 2.0 - 1.0);
+                    if (r > 1.0) discard;
+                    vec3 core = mix(tint, vec3(1.0), 0.65 * (1.0 - smoothstep(0.0, 0.5, r)));
+                    gl_FragColor = vec4(core, alpha * (1.0 - smoothstep(0.55, 1.0, r)));
+                }`
+        });
+        const points = new T.Points(geometry, material);
+        points.frustumCulled = false;
+        points.renderOrder = 4;
+        return {
+            points,
+            resize(width, pixelRatio) {
+                material.uniforms.size.value = (width < 600 ? 7 : 9) * pixelRatio;
+            },
+            update() {
+                particles.forEach((p, i) => {
+                    p.position.toArray(positions, i * 3);
+                    alphas[i] = p.retiring ? 0 : p.opacity;
+                });
+                geometry.attributes.position.needsUpdate = true;
+                geometry.attributes.headAlpha.needsUpdate = true;
+            }
+        };
+    }
+
+    // Projected extent of the apparatus for a camera at the given distance and
+    // pitch looking at the origin, in units of the focal length. The apparatus
+    // is rotationally symmetric, so yaw does not matter.
+    function silhouette(distance, pitch) {
+        const sin = Math.sin(pitch),
+            cos = Math.cos(pitch);
+        let halfWidth = 0,
+            top = -Infinity,
+            bottom = Infinity;
+        for (let k = 0; k < 32; k++) {
+            const a = k / 32 * Math.PI * 2;
+            for (const radius of [EXTENT.inner, EXTENT.outer]) {
+                for (const y of [-EXTENT.height, EXTENT.height]) {
+                    const x = radius * Math.cos(a),
+                        z = radius * Math.sin(a);
+                    const depth = distance - (y * sin + z * cos);
+                    const screenY = (y * cos - z * sin) / depth;
+                    halfWidth = Math.max(halfWidth, Math.abs(x) / depth);
+                    top = Math.max(top, screenY);
+                    bottom = Math.min(bottom, screenY);
+                }
+            }
+        }
+        return {
+            halfWidth,
+            halfHeight: (top - bottom) / 2,
+            center: (top + bottom) / 2
+        };
+    }
+
+    // Smallest distance at which the silhouette fits the given half extents.
+    function fittingDistance(pitch, halfWidth, halfHeight) {
+        let near = 5,
+            far = 80;
+        for (let i = 0; i < 20; i++) {
+            const middle = (near + far) / 2;
+            const extent = silhouette(middle, pitch);
+            if (extent.halfWidth <= halfWidth && extent.halfHeight <= halfHeight) far = middle;
+            else near = middle;
+        }
+        return far;
+    }
+
+    window.createRingUniverseSimulation = function(container) {
+        if (!container || !window.THREE) return null;
+        const T = window.THREE;
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const renderer = new T.WebGLRenderer({
+            antialias: true,
+            alpha: true
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+        container.classList.add('ring-lab');
+        container.innerHTML = MARKUP;
+        const canvas = renderer.domElement;
+        canvas.tabIndex = 0;
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', 'Interactive toroidal magnetic field with charged particle trajectories. Drag or use arrow keys to orbit, plus and minus to zoom.');
+        container.prepend(canvas);
+        const stage = container.querySelector('[data-stage]');
+
+        const scene = new T.Scene();
+        const fieldLines = buildFieldLines(T);
+        const particles = createParticles(T);
+        const trails = createTrails(T, particles);
+        const heads = createHeads(T, particles);
+        scene.add(buildShell(T), buildWinding(T), fieldLines.mesh, trails.mesh, heads.points);
+        const camera = new T.PerspectiveCamera(36, 1, 0.1, 100);
+
+        const view = {
+            yaw: DEFAULT_VIEW.yaw,
+            pitch: DEFAULT_VIEW.pitch,
+            targetYaw: DEFAULT_VIEW.yaw,
+            targetPitch: DEFAULT_VIEW.pitch,
+            zoom: 1,
+            width: 1,
+            height: 1,
+            focal: 1,
+            stageX: 0.5,
+            stageY: 0.5,
+            stageHalfWidth: 0.5,
+            stageHalfHeight: 0.5
+        };
+        let current = 1,
+            fieldTime = 0,
             paused = reducedMotion.matches,
             visible = false,
-            disposed = false;
-        let yaw = 0.45,
-            pitch = 0.49,
-            distance = 15.5,
-            targetYaw = yaw,
-            targetPitch = pitch;
-        let dragging = null,
+            disposed = false,
+            dragging = null,
             previous = 0,
             accumulator = 0,
             raf;
+
         function integrate() {
-            particles.forEach(p => advanceTrail(p, field, step));
+            particles.forEach(p => advanceTrail(p, current, STEP));
+            fieldTime += STEP * current;
+        }
+        for (let i = 0; i < TRAIL_LENGTH; i++) integrate();
+
+        // Keep the apparatus framed inside the stage element, which is the
+        // space the header and footer leave free, at every container size.
+        function placeCamera() {
+            view.yaw += (view.targetYaw - view.yaw) * 0.12;
+            view.pitch += (view.targetPitch - view.pitch) * 0.12;
+            const distance = view.zoom * fittingDistance(view.pitch,
+                view.stageHalfWidth / view.focal, view.stageHalfHeight / view.focal);
+            const lift = silhouette(distance, view.pitch).center * view.focal;
+            camera.setViewOffset(view.width, view.height,
+                view.width / 2 - view.stageX, view.height / 2 - view.stageY - lift, view.width, view.height);
+            camera.position.set(distance * Math.cos(view.pitch) * Math.sin(view.yaw), distance * Math.sin(view.pitch),
+                distance * Math.cos(view.pitch) * Math.cos(view.yaw));
+            camera.lookAt(0, 0, 0);
         }
 
-        for (let i = 0; i < history; i++) integrate();
-
         function draw() {
-            particles.forEach((p, i) => {
-                for (let j = 0; j < history; j++) {
-                    const offset = (i * history + j) * 6;
-                    const point = p.history[(p.cursor - j + history) % history];
-                    const next = p.history[(p.cursor - Math.min(j + 1, history - 1) + history) % history];
-                    point.toArray(trailPositions, offset);
-                    point.toArray(trailPositions, offset + 3);
-                    next.toArray(trailNext, offset);
-                    next.toArray(trailNext, offset + 3);
-                    const alphaIndex = (i * history + j) * 2;
-                    trailAlpha[alphaIndex] = p.opacity * (1 - j / (history - 1)) ** 1.15;
-                    trailAlpha[alphaIndex + 1] = trailAlpha[alphaIndex];
-                }
-            });
-            trailsGeometry.attributes.position.needsUpdate = true;
-            trailsGeometry.attributes.nextPosition.needsUpdate = true;
-            trailsGeometry.attributes.trailAlpha.needsUpdate = true;
-            particles.forEach((p, i) => {
-                headPositions[i * 3] = p.position.x;
-                headPositions[i * 3 + 1] = p.retiring ? 1e4 : p.position.y;
-                headPositions[i * 3 + 2] = p.position.z;
-            });
-            headGeometry.attributes.position.needsUpdate = true;
-            yaw += (targetYaw - yaw) * 0.12;
-            pitch += (targetPitch - pitch) * 0.12;
-            camera.position.set(distance * Math.cos(pitch) * Math.sin(yaw), distance * Math.sin(pitch), distance * Math.cos(pitch) * Math.cos(yaw));
-            camera.lookAt(0, -0.65, 0);
+            trails.update();
+            heads.update();
+            fieldLines.setTime(fieldTime);
+            placeCamera();
             renderer.render(scene, camera);
         }
 
@@ -401,21 +610,42 @@
             previous = now;
             if (!visible || document.hidden) return;
             if (!paused) {
-                accumulator += elapsed * playbackRate;
-                while (accumulator >= step) {
+                accumulator += elapsed * PLAYBACK_RATE;
+                while (accumulator >= STEP) {
                     integrate();
-                    accumulator -= step;
+                    accumulator -= STEP;
                 }
             }
             draw();
         }
+
+        function resize() {
+            const width = Math.max(container.clientWidth, 1),
+                height = Math.max(container.clientHeight, 1);
+            Object.assign(view, {
+                width,
+                height,
+                focal: height / 2 / Math.tan(camera.fov * Math.PI / 360),
+                stageX: stage.offsetLeft + stage.offsetWidth / 2,
+                stageY: stage.offsetTop + stage.offsetHeight / 2,
+                stageHalfWidth: Math.max(stage.offsetWidth, 120) * 0.47,
+                stageHalfHeight: Math.max(stage.offsetHeight, 120) * 0.47
+            });
+            renderer.setSize(width, height, false);
+            trails.resize(width, height);
+            heads.resize(width, renderer.getPixelRatio());
+            draw();
+        }
+
         const listeners = [];
 
         function on(target, event, handler) {
             target.addEventListener(event, handler);
             listeners.push(() => target.removeEventListener(event, handler));
         }
-        const canvas = renderer.domElement;
+        const clampPitch = pitch => Math.max(0.12, Math.min(1.4, pitch));
+        const clampZoom = zoom => Math.max(0.6, Math.min(1.6, zoom));
+
         on(canvas, 'pointerdown', e => {
             if (e.button !== 0) return;
             dragging = {
@@ -430,8 +660,8 @@
         });
         on(canvas, 'pointermove', e => {
             if (!dragging || dragging.id !== e.pointerId) return;
-            targetYaw -= (e.clientX - dragging.x) * 0.008;
-            targetPitch = Math.max(0.12, Math.min(1.4, targetPitch + (e.clientY - dragging.y) * 0.006));
+            view.targetYaw -= (e.clientX - dragging.x) * 0.008;
+            view.targetPitch = clampPitch(view.targetPitch + (e.clientY - dragging.y) * 0.006);
             dragging.x = e.clientX;
             dragging.y = e.clientY;
         });
@@ -441,18 +671,21 @@
         on(canvas, 'keydown', e => {
             if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-'].includes(e.key)) return;
             e.preventDefault();
-            if (e.key === 'ArrowLeft') targetYaw -= 0.15;
-            if (e.key === 'ArrowRight') targetYaw += 0.15;
-            if (e.key === 'ArrowUp') targetPitch = Math.min(1.4, targetPitch + 0.1);
-            if (e.key === 'ArrowDown') targetPitch = Math.max(0.12, targetPitch - 0.1);
-            if (e.key === '+' || e.key === '=') distance = Math.max(10, distance - 1);
-            if (e.key === '-') distance = Math.min(25, distance + 1);
+            if (e.key === 'ArrowLeft') view.targetYaw -= 0.15;
+            if (e.key === 'ArrowRight') view.targetYaw += 0.15;
+            if (e.key === 'ArrowUp') view.targetPitch = clampPitch(view.targetPitch + 0.1);
+            if (e.key === 'ArrowDown') view.targetPitch = clampPitch(view.targetPitch - 0.1);
+            if (e.key === '+' || e.key === '=') view.zoom = clampZoom(view.zoom - 0.1);
+            if (e.key === '-') view.zoom = clampZoom(view.zoom + 0.1);
         });
+
+        // The pause toggle keeps a constant name; aria-pressed carries its state.
         const pause = container.querySelector('[data-pause]');
 
         function updatePause() {
-            pause.textContent = paused ? 'Resume' : 'Pause';
+            pause.innerHTML = paused ? ICONS.play : ICONS.pause;
             pause.setAttribute('aria-pressed', String(paused));
+            pause.title = paused ? 'Resume' : 'Pause';
         }
         updatePause();
         on(pause, 'click', () => {
@@ -463,43 +696,31 @@
             paused = e.matches;
             updatePause();
         });
+
+        function updateReadouts() {
+            container.querySelector('[data-current]').value = `${current.toFixed(1)}×`;
+            container.querySelector('[data-inner-field]').value = (REFERENCE_FIELD * current * MAJOR_RADIUS / (MAJOR_RADIUS - TUBE_RADIUS)).toFixed(2);
+            container.querySelector('[data-outer-field]').value = (REFERENCE_FIELD * current * MAJOR_RADIUS / (MAJOR_RADIUS + TUBE_RADIUS)).toFixed(2);
+            container.querySelector('[data-radius]').value = (1 / (REFERENCE_FIELD * current)).toFixed(3);
+        }
+        updateReadouts();
         on(container.querySelector('input'), 'input', e => {
-            field = Number(e.target.value);
+            current = Number(e.target.value);
             updateReadouts();
         });
         on(container.querySelector('[data-field]'), 'click', e => {
-            fieldLines.visible = !fieldLines.visible;
-            e.currentTarget.setAttribute('aria-pressed', String(fieldLines.visible));
+            fieldLines.mesh.visible = !fieldLines.mesh.visible;
+            e.currentTarget.setAttribute('aria-pressed', String(fieldLines.mesh.visible));
         });
-        function updateReadouts() {
-            container.querySelector('[data-current]').value = field.toFixed(1);
-            container.querySelector('[data-inner-field]').value = (7 * field * 3.25 / (3.25 - 0.82)).toFixed(2);
-            container.querySelector('[data-outer-field]').value = (7 * field * 3.25 / (3.25 + 0.82)).toFixed(2);
-            container.querySelector('[data-radius]').value = (1 / (7 * field)).toFixed(3);
-        }
-        updateReadouts();
         on(container.querySelector('[data-reset]'), 'click', () => {
-            targetYaw = 0.45;
-            targetPitch = 0.49;
-            distance = fittedDistance();
+            view.targetYaw = DEFAULT_VIEW.yaw;
+            view.targetPitch = DEFAULT_VIEW.pitch;
+            view.zoom = 1;
         });
 
-        function fittedDistance() {
-            return Math.max(15.5, 13 / camera.aspect);
-        }
-
-        function resize() {
-            const width = container.clientWidth,
-                height = container.clientHeight;
-            camera.aspect = width / Math.max(height, 1);
-            distance = fittedDistance();
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-            trails.material.uniforms.viewport.value.set(width, height);
-            draw();
-        }
         const resizeObserver = new ResizeObserver(resize);
         resizeObserver.observe(container);
+        resizeObserver.observe(stage);
         const observer = new IntersectionObserver(entries => {
             visible = entries[0].isIntersecting;
             previous = 0;
@@ -507,6 +728,7 @@
         observer.observe(container);
         resize();
         raf = requestAnimationFrame(frame);
+
         return {
             dispose() {
                 disposed = true;
@@ -514,14 +736,10 @@
                 observer.disconnect();
                 resizeObserver.disconnect();
                 listeners.forEach(remove => remove());
-                const geometries = new Set(),
-                    materials = new Set();
                 scene.traverse(object => {
-                    if (object.geometry) geometries.add(object.geometry);
-                    if (object.material) materials.add(object.material);
+                    if (object.geometry) object.geometry.dispose();
+                    if (object.material) object.material.dispose();
                 });
-                geometries.forEach(g => g.dispose());
-                materials.forEach(m => m.dispose());
                 renderer.dispose();
                 container.replaceChildren();
                 container.classList.remove('ring-lab');
