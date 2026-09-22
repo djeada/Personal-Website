@@ -1,0 +1,305 @@
+/*
+ * Reel capture skin.
+ *
+ * Injected by render.js on top of the live Data Structure Lab page. It hides the
+ * tool's chrome and re-homes #visual-stage inside a 9:16 shell so the recorder can
+ * screenshot the page directly instead of re-implementing the visualizations.
+ *
+ * Authored in CSS pixels at 540x960; render.js captures at deviceScaleFactor 2 to
+ * emit 1080x1920 frames.
+ */
+
+:root {
+    --reel-head: 208px;
+    --reel-stage: 522px;
+    --reel-foot: 230px;
+}
+
+/* The shell sits on four different tools. Only the Data Structure Lab defines the
+   --ds-* palette, so every reel token carries the lab's dark value as a fallback -
+   otherwise the declarations are simply invalid on the other three pages and the
+   chips, kicker and accents silently disappear. */
+#reel-root {
+    --reel-ink: var(--ds-ink, #edf4f6);
+    --reel-muted: var(--ds-muted, #a6b7c8);
+    --reel-line: var(--ds-line, #344454);
+    --reel-canvas: var(--ds-canvas, #0d1720);
+    --reel-accent: var(--ds-accent, #38c6c2);
+    --reel-hot: var(--ds-hit, #35f2ad);
+    --reel-cold: var(--ds-remove, #ff526f);
+}
+
+html,
+body {
+    width: 540px !important;
+    height: 960px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    scroll-behavior: auto !important;
+    background: var(--ds-canvas, #0d1720) !important;
+}
+
+/* Hide the host page wholesale rather than naming its parts: render.js lifts the
+   stage into #reel-root, which is itself a direct child of body, so the one element
+   that must survive is exempted by id. This is what lets the same skin sit on top of
+   four tools that share no markup. */
+body>* {
+    display: none !important;
+}
+
+body>#reel-root {
+    display: grid !important;
+}
+
+/* Still hidden explicitly: these live *inside* the lifted stage. */
+.stage-status,
+.comparison-bubble {
+    display: none !important;
+}
+
+/* Frame-accurate capture: every visual state must be a settled frame, so nothing is
+   allowed to tween on the wall clock while the recorder steps a mocked timer. */
+*,
+*::before,
+*::after {
+    transition: none !important;
+    animation: none !important;
+}
+
+#reel-root {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: grid;
+    /* An explicit, clamped column: the stage's intrinsic width is far wider than the
+       frame, and an `auto` column would let it blow the whole shell out sideways. */
+    grid-template-columns: 540px;
+    grid-template-rows: var(--reel-head) var(--reel-stage) var(--reel-foot);
+    width: 540px;
+    height: 960px;
+    padding: 0;
+    background: var(--reel-canvas);
+    color: var(--reel-ink);
+    text-align: center;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+#reel-root>* {
+    min-width: 0;
+    max-width: 540px;
+    overflow: hidden;
+}
+
+.reel-head {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding: 26px 30px 0;
+}
+
+.reel-kicker {
+    color: var(--reel-accent);
+    font-size: .92rem;
+    font-weight: 900;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.reel-hook {
+    margin: 0;
+    font-size: 2.7rem;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -.025em;
+    text-wrap: balance;
+}
+
+.reel-hook em {
+    color: var(--reel-accent);
+    font-style: normal;
+}
+
+.reel-stage-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 0 16px;
+}
+
+#visual-stage {
+    width: 100%;
+    height: auto;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    border-radius: 24px;
+    border-width: 2px;
+}
+
+#structure-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 16px 8px !important;
+}
+
+/* Single scale target wrapped around whatever the lab drew, so a heap's tree and its
+   backing array scale together rather than drifting apart. */
+.reel-fit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: max-content;
+    flex: 0 0 auto;
+}
+
+/* The lab caps node text so desktop cells stay tidy; a reel is watched at arm's
+   length on a phone, so push every label up to poster size. */
+#visual-stage .selectable span:not(.type-badge) {
+    max-width: none;
+    font-size: 1.9rem !important;
+    font-weight: 900 !important;
+}
+
+#visual-stage .tree-node span:not(.type-badge),
+#visual-stage .graph-node span:not(.type-badge),
+#visual-stage .trie-node span:not(.type-badge) {
+    font-size: 1.75rem !important;
+}
+
+#visual-stage .heap-array .ds-cell span:not(.type-badge) {
+    font-size: 1.35rem !important;
+}
+
+#visual-stage .type-badge {
+    display: none !important;
+}
+
+#visual-stage .slot-index,
+#visual-stage .role-label,
+#visual-stage .index-label,
+#visual-stage .bucket-load {
+    font-size: .82rem !important;
+    font-weight: 900 !important;
+}
+
+#visual-stage .bucket-label {
+    font-size: 1.4rem !important;
+}
+
+#visual-stage .degree-badge {
+    font-size: .8rem !important;
+    min-width: 24px;
+    line-height: 22px;
+}
+
+#visual-stage .link-layer line {
+    stroke-width: 3 !important;
+}
+
+#visual-stage .link-layer .edge-label {
+    font-size: 15px !important;
+}
+
+#visual-stage .link-layer .edge-chip {
+    r: 13;
+}
+
+/* The dimming carries the "half the tree just got discarded" idea, but it has to stay
+   light enough that the viewer can still read the shape being discarded. The lab
+   un-dims the nodes on the current path with a plain rule, so the restore has to be
+   !important too or this override would swallow it. */
+#visual-stage.is-playing .selectable {
+    opacity: .34 !important;
+}
+
+#visual-stage.is-playing .selectable.animation-focus,
+#visual-stage.is-playing .selectable.animation-done,
+#visual-stage.is-playing .selectable.animation-result,
+#visual-stage.is-playing .selectable.animation-miss {
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+.reel-foot {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 18px;
+    padding: 22px 30px 0;
+}
+
+/* Deliberately not a flex container: flex would wrap the caption's bare text and its
+   <b> in separate anonymous items and collapse the space between them. */
+.reel-caption {
+    display: block;
+    min-height: 2.5em;
+    color: var(--reel-ink);
+    font-size: 1.95rem;
+    font-weight: 850;
+    line-height: 1.22;
+    letter-spacing: -.015em;
+}
+
+.reel-caption b {
+    color: var(--reel-accent);
+}
+
+.reel-chips {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.reel-chip {
+    padding: 9px 18px;
+    border: 2px solid var(--reel-line);
+    border-radius: 999px;
+    color: var(--reel-muted);
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.reel-chip b {
+    color: var(--reel-ink);
+}
+
+.reel-chip.is-hot {
+    border-color: var(--reel-hot);
+    color: var(--reel-hot);
+}
+
+.reel-chip.is-cold {
+    border-color: var(--reel-cold);
+    color: var(--reel-cold);
+}
+
+/* Hook card: a full-bleed opener that holds for the first beat, then gets out of
+   the way. Reels are judged in the first second. */
+#reel-root.is-hook .reel-stage-slot,
+#reel-root.is-hook .reel-foot {
+    opacity: .12;
+}
+
+#reel-root.is-hook .reel-head {
+    grid-row: 1 / -1;
+    justify-content: center;
+    gap: 20px;
+}
+
+#reel-root.is-hook .reel-hook {
+    font-size: 3.6rem;
+}
+
+#reel-root.is-hook .reel-stage-slot,
+#reel-root.is-hook .reel-foot {
+    display: none;
+}
