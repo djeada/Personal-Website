@@ -141,10 +141,10 @@ const STRUCTURES = {
         memory: "O(n) items.",
         initial: ["4", "9", "16", "25", "36"],
         sampleValues: ["49", "64", "81", "100"],
-        secondaryLabel: "End",
+        secondaryLabel: "End (front / back)",
         specialLabel: "Pop front",
         operations: {
-            add: ["Push back", "O(1)", "O(1)", "O(1)", "Add on either end in a proper deque."],
+            add: ["Push", "O(1)", "O(1)", "O(1)", "Type front or back to pick the end; both are constant time."],
             search: ["Search", "O(1)", "O(n)", "O(n)", "Lookup is a scan unless indexed separately."],
             remove: ["Remove value", "O(1)", "O(n)", "O(n)", "Removing a middle value requires search."],
             special: ["Pop front", "O(1)", "O(1)", "O(1)", "Remove from the opposite end."]
@@ -379,13 +379,26 @@ function nextSample() {
     return value;
 }
 
-function hashValue(value, bucketCount) {
+function rawHash(value) {
     const text = String(value);
     let hash = 0;
     for (let i = 0; i < text.length; i += 1) {
         hash = (hash * 31 + text.charCodeAt(i)) % 9973;
     }
-    return hash % bucketCount;
+    return hash;
+}
+
+function hashValue(value, bucketCount) {
+    return rawHash(value) % bucketCount;
+}
+
+function bucketCountFor(key) {
+    return key === "hashTable" ? 7 : 6;
+}
+
+function hashExplanation(value, bucketCount) {
+    const hash = rawHash(value);
+    return `h("${value}") = ${hash}, ${hash} mod ${bucketCount} = ${hash % bucketCount}`;
 }
 
 function asEntryLabel(entry) {
@@ -404,6 +417,25 @@ function numericValue(value) {
     return Number.isFinite(number) ? number : String(value).charCodeAt(0);
 }
 
+function isNumeric(value) {
+    const text = String(value).trim();
+    return text !== "" && Number.isFinite(Number(text));
+}
+
+// Ordering used by the BST and the heap. Two numbers compare numerically, anything
+// else compares as text, so mixed data still gets a total, stable order instead of
+// being reduced to its first character code.
+function compareValues(a, b) {
+    if (isNumeric(a) && isNumeric(b)) {
+        const difference = Number(a) - Number(b);
+        return difference < 0 ? -1 : difference > 0 ? 1 : 0;
+    }
+    if (isNumeric(a) !== isNumeric(b)) return isNumeric(a) ? -1 : 1;
+    const left = String(a);
+    const right = String(b);
+    return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function addTrace(message) {
     trace.unshift(message);
     trace = trace.slice(0, 8);
@@ -418,17 +450,8 @@ function structureSize() {
     return config.kind === "graph" ? state.nodes.length : state.length;
 }
 
-function estimatedTouched(operation, detail = {}) {
-    const n = Math.max(1, structureSize());
-    if (detail.touched !== undefined) return detail.touched;
-    if (["stack", "queue"].includes(currentKey) && operation !== "search") return Math.min(1, n);
-    if (currentKey === "array" && ["add", "special"].includes(operation)) return Math.min(1, n);
-    if (currentKey === "deque" && ["add", "special"].includes(operation)) return Math.min(1, n);
-    if (["hashTable", "set", "map"].includes(currentKey)) return Math.max(1, Math.ceil(n / 4));
-    if (["bst", "heap"].includes(currentKey) && operation !== "search") return Math.max(1, Math.ceil(Math.log2(n + 1)));
-    if (currentKey === "trie") return Math.max(1, String(valueInput.value || "").length || 1);
-    if (currentKey === "graph") return operation === "search" || operation === "remove" ? n : 1;
-    return operation === "add" ? 1 : n;
+function measuredTouched(detail) {
+    return detail.touched !== undefined ? detail.touched : structureSize();
 }
 
 function planForOperation(operation, primary, secondary) {
@@ -452,6 +475,8 @@ function planForOperation(operation, primary, secondary) {
         return operation === "special" ? ["Remove the root.", "Move the last item to the root.", "Sink it until heap order is restored."] : [`Locate ${primary}.`, `${opName} the heap array.`, "Bubble or heapify to restore heap order."];
     }
     if (currentKey === "array" && operation === "special") return [`Compute address for index ${secondary || primary}.`, "Read the slot directly.", "No scan is needed."];
+    if (currentKey === "deque" && operation === "add") return [`Read the requested end: ${dequeEnd(secondaryInput.value)}.`, `Move that end pointer one slot outward.`, `Write ${primary} into the freed slot.`];
+    if (currentKey === "stack" && operation === "search") return ["Start at the top of the stack.", `Compare downward until ${primary} appears.`, "Report how far below the top it sat."];
     if (currentKey === "linkedList") return ["Start at head.", "Follow next pointers in order.", `${opName} when the target node is reached.`];
     return [`Use the ${config.name} access rule.`, `${opName} ${primary}.`, "Update the visible model and cost counters."];
 }
@@ -460,7 +485,7 @@ function setMetrics(operation, detail = {}) {
     const op = operationConfig(operation);
     lastMetrics = {
         label: op[0],
-        touched: estimatedTouched(operation, detail),
+        touched: measuredTouched(detail),
         measured: detail.measured || 0,
         growth: op[2],
         plan: detail.plan || planForOperation(operation, detail.primary || valueInput.value || "value", detail.secondary || secondaryInput.value || "secondary")
@@ -503,30 +528,80 @@ function resetState() {
     render();
 }
 
+const WORD_POOL = ["amber", "anchor", "bison", "brick", "cedar", "cider", "delta", "ember", "fable", "grove", "harbor", "indigo", "jasper", "kelp", "lumen", "maple", "nectar", "onyx", "pearl", "quartz", "river", "slate", "tulip", "umber", "violet", "willow"];
+const TRIE_STEMS = ["ca", "co", "do", "ba", "st", "pl", "tr"];
+const TRIE_TAILS = ["r", "t", "b", "p", "ne", "rt", "ll", "ck", "re", "ve", "sh"];
+
+function randomInt(min, max) {
+    return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function shuffled(list) {
+    const copy = list.slice();
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = randomInt(0, i);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function distinctRandom(count, make) {
+    const seen = new Set();
+    let guard = 0;
+    while (seen.size < count && guard < count * 40) {
+        seen.add(make());
+        guard += 1;
+    }
+    return Array.from(seen);
+}
+
+// Randomize should give a genuinely different dataset each click, and one that suits
+// the structure: numbers where ordering is the point, words where prefixes are.
+function randomDataset(key) {
+    const config = STRUCTURES[key];
+    const count = randomInt(5, 8);
+    if (config.kind === "graph") {
+        const vertices = Array.from({
+            length: randomInt(5, 7)
+        }, (unused, index) => String.fromCharCode(65 + index));
+        // Start from a random spanning tree so the graph is always connected, then add
+        // a couple of extra edges for cycles.
+        const edges = vertices.slice(1).map((vertex, index) => [vertices[randomInt(0, index)], vertex]);
+        for (let extra = randomInt(1, 2); extra > 0; extra -= 1) {
+            const a = vertices[randomInt(0, vertices.length - 1)];
+            const b = vertices[randomInt(0, vertices.length - 1)];
+            if (a !== b && !edges.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) edges.push([a, b]);
+        }
+        return {
+            nodes: vertices,
+            edges
+        };
+    }
+    if (key === "map") {
+        return shuffled(WORD_POOL).slice(0, count).map((word) => ({
+            key: word,
+            value: String(randomInt(1, 99))
+        }));
+    }
+    if (key === "trie") {
+        // Share stems so the tree actually branches instead of becoming a row of chains.
+        const stems = shuffled(TRIE_STEMS).slice(0, randomInt(2, 3));
+        return distinctRandom(count, () => stems[randomInt(0, stems.length - 1)] + TRIE_TAILS[randomInt(0, TRIE_TAILS.length - 1)]);
+    }
+    const numeric = cloneInitial(config.initial).every((value) => isNumeric(value));
+    if (numeric) return distinctRandom(count, () => String(randomInt(1, 99)));
+    return shuffled(WORD_POOL).slice(0, count);
+}
+
 function randomizeState() {
     cancelAnimation();
     const config = STRUCTURES[currentKey];
-    const pool = config.sampleValues.concat(["11", "22", "33", "44", "55", "K", "M", "P"]);
-    if (config.kind === "graph") {
-        const nodes = pool.slice(0, 6).map((value, index) => String.fromCharCode(65 + index));
-        state = {
-            nodes,
-            edges: nodes.slice(1).map((node, index) => [nodes[Math.max(0, index - 1)], node])
-        };
-    } else if (currentKey === "map") {
-        state = pool.slice(0, 5).map((key, index) => ({
-            key,
-            value: String((index + 1) * 10)
-        }));
-    } else {
-        state = pool.slice(0, 6);
-        if (config.kind === "heap") {
-            heapifyState();
-        }
-    }
-    addTrace(`Randomized ${config.name}.`);
+    state = randomDataset(currentKey);
+    if (config.kind === "heap") heapifyState();
+    addTrace(`Randomized ${config.name} with ${structureSize()} ${structureSize() === 1 ? "item" : "items"}.`);
     setHighlight({});
     selectedRef = null;
+    sampleCursor = 0;
     lastMetrics = {
         label: "Randomize",
         touched: structureSize(),
@@ -566,19 +641,20 @@ function updateCommandUI() {
         add: `${capitalized} to add`,
         search: `${capitalized} to find`,
         remove: ["stack", "queue"].includes(currentKey) ? "Value (not required)" : `${capitalized} to remove`,
-        special: currentKey === "array" ? "Fallback value" : capitalized
+        special: currentKey === "array" ? "Not used by access" : capitalized
     };
     valueLabel.textContent = labels[operation];
     secondaryLabel.textContent = currentKey === "array" && operation === "special" ? "Index to access" : currentKey === "graph" && operation === "special" ? "Connect to vertex" : currentKey === "map" && operation === "add" ? "Value to store" : currentKey === "trie" && operation === "special" ? "Prefix to find" : config.secondaryLabel;
     const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add") || (currentKey === "trie" && operation === "special");
+    const optionalSecondary = currentKey === "deque" && operation === "add";
     secondaryField.classList.toggle("is-required", needsSecondary);
-    secondaryField.classList.toggle("is-muted", !needsSecondary);
-    primaryField.classList.toggle("is-muted", (["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation)) || (["deque", "heap", "bst", "hashTable", "trie"].includes(currentKey) && operation === "special"));
+    secondaryField.classList.toggle("is-muted", !needsSecondary && !optionalSecondary);
+    primaryField.classList.toggle("is-muted", (["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation)) || (["array", "deque", "heap", "bst", "hashTable", "trie"].includes(currentKey) && operation === "special"));
     executeOperationButton.querySelector("span").textContent = `Run ${op[0].toLowerCase()}`;
     dockOperation.textContent = op[0];
     const primary = valueInput.value || "value";
-    const secondary = secondaryInput.value || config.secondaryLabel.toLowerCase();
-    const args = needsSecondary ? `${primary}, ${secondary}` : primary;
+    const secondary = optionalSecondary ? dequeEnd(secondaryInput.value) : secondaryInput.value || config.secondaryLabel.toLowerCase();
+    const args = needsSecondary || optionalSecondary ? `${primary}, ${secondary}` : primary;
     commandPreview.innerHTML = `<code>${escapeHTML(op[0].toLowerCase().replace(/\s+/g, "_"))}(${escapeHTML(args)})</code><span>${escapeHTML(op[4])}</span>`;
     const algorithm = algorithmFor(currentKey, operation);
     algorithmName.textContent = algorithm.name;
@@ -646,10 +722,14 @@ function algorithmFor(key, operation) {
         detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match."
     };
     if (config.kind === "stack") return {
-        name: operation === "search" ? "Linear stack scan" : "LIFO top operation",
-        detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack."
+        name: operation === "search" ? "Top-down stack scan" : "LIFO top operation",
+        detail: operation === "search" ? "Inspect items from the top downward; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack."
     };
-    if (["queue", "deque"].includes(config.kind)) return {
+    if (config.kind === "deque") return {
+        name: operation === "search" ? "Linear deque scan" : operation === "add" ? "Double-ended push" : "Constant-time endpoint operation",
+        detail: operation === "search" ? "Inspect items from front to back; only the two ends are cheap." : operation === "add" ? "Type front or back in the end field; either pointer moves outward in constant time." : "Use the front or back pointer without scanning middle items."
+    };
+    if (config.kind === "queue") return {
         name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation",
         detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items."
     };
@@ -723,10 +803,14 @@ function renderComparison() {
                 score: complexityWeight(growth, n)
             };
         })
-        .sort((a, b) => a.score - b.score)
-        .slice(0, 6);
-    const maxScore = Math.max(...rows.map((row) => row.score), 1);
-    comparisonList.innerHTML = rows.map((row) => `
+        .sort((a, b) => a.score - b.score);
+    const top = rows.slice(0, 6);
+    if (!top.some((row) => row.key === currentKey)) {
+        const current = rows.find((row) => row.key === currentKey);
+        if (current) top.splice(5, 1, current);
+    }
+    const maxScore = Math.max(...top.map((row) => row.score), 1);
+    comparisonList.innerHTML = top.map((row) => `
         <div class="comparison-row ${row.key === currentKey ? "active" : ""}">
             <div>
                 <strong>${row.name}</strong>
@@ -832,7 +916,7 @@ function validateOperationInput(operation) {
     secondaryInput.removeAttribute("aria-invalid");
     const primary = normalizeValue(valueInput.value);
     const primaryOptional = (operation === "remove" && ["stack", "queue"].includes(currentKey)) ||
-        (operation === "special" && ["stack", "queue", "deque", "heap", "bst", "hashTable"].includes(currentKey));
+        (operation === "special" && ["array", "stack", "queue", "deque", "heap", "bst", "hashTable"].includes(currentKey));
     if (!primary && !primaryOptional && !(currentKey === "trie" && operation === "special")) {
         return showInputError(primaryField, valueInput, "Enter a value before running this operation.", "No sample or fallback value will be used.");
     }
@@ -889,6 +973,11 @@ function buildOutcome(operation, requestedValue, beforeSize) {
         returned = success ? (highlight.value ?? "removed") : "not found";
     } else {
         returned = highlight.resultValue ?? highlight.value ?? (highlight.index !== undefined ? state[highlight.index] : "complete");
+        const lookupSpecial = ["map", "trie"].includes(currentKey) || (currentKey === "array" && highlight.index === undefined);
+        if (lookupSpecial && highlight.mode === "scan") {
+            success = false;
+            title = `${operationConfig(operation)[0]} found no match for ${requestedValue}`;
+        }
     }
     const status = success ? "Operation succeeded" : operation === "add" ? "No change needed" : "Operation finished: no match";
     return {
@@ -936,6 +1025,11 @@ function cancelAnimation() {
 
 function animationTargets() {
     const selectable = Array.from(visual.querySelectorAll(".selectable"));
+    if (highlight.indices && highlight.indices.length) {
+        return highlight.indices
+            .map((index) => selectable.find((node) => node.dataset.kind === "linear" && Number(node.dataset.index) === index))
+            .filter(Boolean);
+    }
     if (highlight.prefix) {
         return selectable.filter((node) => {
             const value = node.dataset.value || "";
@@ -949,11 +1043,13 @@ function animationTargets() {
             return index < 0 ? null : remaining.splice(index, 1)[0];
         }).filter(Boolean).slice(0, Math.max(1, lastMetrics.touched));
     }
-    const exact = selectable.filter((node) => {
+    // A freshly inserted value is not on screen yet, so matching it against the
+    // pre-insert render would light up an unrelated duplicate.
+    if (highlight.mode === "new") return [];
+    return selectable.filter((node) => {
         if (highlight.index !== undefined && Number(node.dataset.index) === highlight.index) return true;
         return highlight.value !== undefined && String(node.dataset.value) === String(highlight.value);
     });
-    return exact;
 }
 
 function delay(ms) {
@@ -976,7 +1072,7 @@ async function animateTargets(targets, label) {
         button.disabled = true;
     });
     executeOperationButton.disabled = true;
-    targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
+    targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result", "animation-miss"));
     await delay(Math.min(420, Math.max(220, interval * 0.55)));
     visualStage.classList.remove("is-starting");
 
@@ -1019,8 +1115,9 @@ async function animateTargets(targets, label) {
 
     if (run !== animationRun) return false;
     const result = targets[targets.length - 1];
+    const missed = Boolean(lastOutcome) && lastOutcome.success === false;
     result.classList.remove("animation-focus");
-    result.classList.add("animation-result");
+    result.classList.add(missed ? "animation-miss" : "animation-result");
     visualStage.classList.remove("is-playing");
     visualStage.classList.add("is-finishing");
     comparisonBubble.textContent = lastOutcome && lastOutcome.success ? "Match confirmed" : "Traversal complete";
@@ -1043,50 +1140,46 @@ async function playOperationAnimation(operation) {
         let endpoint = null;
         if (currentKey === "stack") endpoint = nodes[nodes.length - 1];
         else if (currentKey === "queue") endpoint = operation === "add" ? nodes[nodes.length - 1] : nodes[0];
-        else if (currentKey === "deque" && operation === "add") endpoint = nodes[nodes.length - 1];
+        else if (currentKey === "deque" && operation === "add") endpoint = dequeEnd(secondaryInput.value) === "front" ? nodes[0] : nodes[nodes.length - 1];
         else if (currentKey === "deque" && operation === "special") endpoint = nodes[0];
         if (endpoint) lastAnimationTargets = [endpoint];
     }
 
 
-    if (!lastAnimationTargets.length) {
-        const nodes = Array.from(visual.querySelectorAll(".selectable"));
-        const touched = Math.max(1, Math.min(nodes.length, lastMetrics.touched || 1));
-        if (["bst", "heap", "trie", "graph"].includes(currentKey)) {
-            lastAnimationTargets = nodes.slice(0, touched);
-        } else if (["hashTable", "set", "map"].includes(currentKey)) {
-            lastAnimationTargets = nodes.slice(0, touched);
-        } else {
-            lastAnimationTargets = nodes.slice(-touched);
-        }
-    }
     return animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
 }
 
 function bstPath(value) {
-    const target = numericValue(value);
     const path = [];
     let node = buildBST(state);
+    let found = false;
     while (node) {
         path.push(String(node.value));
-        if (numericValue(node.value) === target) break;
-        node = target < numericValue(node.value) ? node.left : node.right;
+        const order = compareValues(value, node.value);
+        if (order === 0) {
+            found = true;
+            break;
+        }
+        node = order < 0 ? node.left : node.right;
     }
-    return path;
+    return {
+        path,
+        found
+    };
 }
 
 function deleteBSTNode(node, target) {
     if (!node) return null;
-    const nodeValue = numericValue(node.value);
-    if (target < nodeValue) node.left = deleteBSTNode(node.left, target);
-    else if (target > nodeValue) node.right = deleteBSTNode(node.right, target);
+    const order = compareValues(target, node.value);
+    if (order < 0) node.left = deleteBSTNode(node.left, target);
+    else if (order > 0) node.right = deleteBSTNode(node.right, target);
     else {
         if (!node.left) return node.right;
         if (!node.right) return node.left;
         let successor = node.right;
         while (successor.left) successor = successor.left;
         node.value = successor.value;
-        node.right = deleteBSTNode(node.right, numericValue(successor.value));
+        node.right = deleteBSTNode(node.right, successor.value);
     }
     return node;
 }
@@ -1099,10 +1192,31 @@ function bstPreorder(node, values = []) {
     return values;
 }
 
+function findBSTNode(node, value) {
+    let current = node;
+    while (current) {
+        const order = compareValues(value, current.value);
+        if (order === 0) return current;
+        current = order < 0 ? current.left : current.right;
+    }
+    return null;
+}
+
+function bstInorder(node, values = []) {
+    if (!node) return values;
+    bstInorder(node.left, values);
+    values.push(node.value);
+    bstInorder(node.right, values);
+    return values;
+}
+
 function performBSTOperation(operation) {
     const value = getPrimaryValue();
-    const path = bstPath(value);
-    const exists = state.some((item) => String(item) === value);
+    const walk = bstPath(value);
+    const path = walk.path;
+    // Membership is decided by the search walk itself, so the reported result always
+    // agrees with the highlighted path instead of with a separate array lookup.
+    const exists = walk.found;
 
     if (operation === "add") {
         if (!exists) state.push(value);
@@ -1128,8 +1242,23 @@ function performBSTOperation(operation) {
             touched: Math.max(1, path.length)
         });
     } else if (operation === "remove") {
-        if (exists) state = bstPreorder(deleteBSTNode(buildBST(state), numericValue(value)));
-        addTrace(exists ? `Deleted ${value} using the in-order successor rule.` : `${value} was not present.`);
+        let successorSteps = 0;
+        if (exists) {
+            const tree = buildBST(state);
+            const target = findBSTNode(tree, value);
+            if (target && target.left && target.right) {
+                let successor = target.right;
+                successorSteps = 1;
+                while (successor.left) {
+                    successor = successor.left;
+                    successorSteps += 1;
+                }
+            }
+            state = bstPreorder(deleteBSTNode(tree, value));
+        }
+        addTrace(exists ?
+            successorSteps ? `Deleted ${value}: walked ${path.join(" -> ")}, then ${successorSteps} more ${successorSteps === 1 ? "step" : "steps"} to its in-order successor.` : `Deleted ${value} after walking ${path.join(" -> ")}.` :
+            `${value} was not present; stopped after ${path.join(" -> ") || "root"}.`);
         setHighlight({
             value,
             mode: "remove",
@@ -1137,14 +1266,15 @@ function performBSTOperation(operation) {
         });
         setMetrics(operation, {
             primary: value,
-            touched: Math.max(1, path.length)
+            touched: Math.max(1, path.length + successorSteps)
         });
     } else {
-        const sorted = state.slice().sort((a, b) => numericValue(a) - numericValue(b));
-        addTrace(`In-order traversal: ${sorted.join(", ")}.`);
+        const sorted = bstInorder(buildBST(state)).map(String);
+        addTrace(`In-order traversal: ${sorted.join(", ") || "empty tree"}.`);
         setHighlight({
             mode: "scan",
-            scan: sorted
+            scan: sorted,
+            resultValue: sorted.join(", ") || "empty"
         });
         setMetrics(operation, {
             primary: value,
@@ -1153,15 +1283,21 @@ function performBSTOperation(operation) {
     }
 }
 
+function dequeEnd(rawValue) {
+    return /^f(ront)?$/i.test(String(rawValue).trim()) ? "front" : "back";
+}
+
 function performLinearOperation(operation) {
     const value = getPrimaryValue();
     const config = STRUCTURES[currentKey];
     const secondary = getSecondaryValue();
 
     if (operation === "add") {
-        const endpoint = state[state.length - 1];
-        state.push(value);
-        addTrace(`${config.operations.add[0]} ${value}.`);
+        const atFront = currentKey === "deque" && dequeEnd(secondary) === "front";
+        const endpoint = atFront ? state[0] : state[state.length - 1];
+        if (atFront) state.unshift(value);
+        else state.push(value);
+        addTrace(currentKey === "deque" ? `Pushed ${value} at the ${atFront ? "front" : "back"}.` : `${config.operations.add[0]} ${value}.`);
         setHighlight({
             value,
             mode: "new",
@@ -1177,17 +1313,26 @@ function performLinearOperation(operation) {
     }
 
     if (operation === "search") {
-        const index = state.findIndex((item) => String(item) === value);
-        addTrace(index >= 0 ? `Found ${value} at position ${index}.` : `${value} was not found.`);
+        // A stack can only be examined from the top, so its scan runs in reverse to
+        // match both the rendered column and the real access pattern.
+        const probeOrder = state.map((unused, index) => index);
+        if (currentKey === "stack") probeOrder.reverse();
+        const position = probeOrder.findIndex((index) => String(state[index]) === value);
+        const foundIndex = position >= 0 ? probeOrder[position] : -1;
+        const inspected = position >= 0 ? probeOrder.slice(0, position + 1) : probeOrder;
+        addTrace(foundIndex >= 0 ?
+            currentKey === "stack" ? `Found ${value} ${position} ${position === 1 ? "slot" : "slots"} below the top.` : `Found ${value} at position ${foundIndex}.` :
+            `${value} was not found after ${state.length} ${state.length === 1 ? "comparison" : "comparisons"}.`);
         setHighlight({
             value,
-            mode: index >= 0 ? "hit" : "scan",
-            scan: state.map(String)
+            mode: foundIndex >= 0 ? "hit" : "scan",
+            index: foundIndex >= 0 ? foundIndex : undefined,
+            indices: inspected
         });
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: index >= 0 ? index + 1 : state.length
+            touched: inspected.length
         });
         return;
     }
@@ -1222,27 +1367,24 @@ function performLinearOperation(operation) {
             return;
         }
         const index = state.findIndex((item) => String(item) === value);
+        const inspected = state.map((unused, slot) => slot).slice(0, index >= 0 ? index + 1 : state.length);
         if (index >= 0) {
-            const scanned = state.slice(0, index + 1).map(String);
+            const shifted = state.length - index - 1;
             state.splice(index, 1);
-            addTrace(`Removed ${value}.`);
-            setHighlight({
-                value,
-                mode: "remove",
-                scan: scanned
-            });
+            addTrace(`Removed ${value} from index ${index}; ${shifted} ${shifted === 1 ? "element" : "elements"} shifted left.`);
         } else {
             addTrace(`${value} was not present.`);
-            setHighlight({
-                value,
-                mode: "scan",
-                scan: state.map(String)
-            });
         }
+        setHighlight({
+            value,
+            mode: index >= 0 ? "remove" : "scan",
+            index: index >= 0 ? index : undefined,
+            indices: inspected
+        });
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: index >= 0 ? index + 1 : state.length
+            touched: inspected.length
         });
         return;
     }
@@ -1253,7 +1395,8 @@ function performLinearOperation(operation) {
         addTrace(state.length ? `Accessed index ${safeIndex}: ${state[safeIndex]}.` : "Array is empty.");
         setHighlight({
             index: safeIndex,
-            mode: "hit"
+            mode: "hit",
+            resultValue: state.length ? String(state[safeIndex]) : "empty"
         });
         setMetrics(operation, {
             primary: value,
@@ -1265,7 +1408,8 @@ function performLinearOperation(operation) {
         addTrace(removed === undefined ? "Deque is empty." : `Popped front ${removed}.`);
         setHighlight({
             value: removed,
-            mode: "remove"
+            mode: "remove",
+            resultValue: removed === undefined ? "empty" : String(removed)
         });
         setMetrics(operation, {
             primary: removed,
@@ -1277,7 +1421,8 @@ function performLinearOperation(operation) {
         addTrace(item === undefined ? `${config.name} is empty.` : `${config.specialLabel}: ${item}.`);
         setHighlight({
             index: currentKey === "stack" ? state.length - 1 : 0,
-            mode: "hit"
+            mode: "hit",
+            resultValue: item === undefined ? "empty" : String(item)
         });
         setMetrics(operation, {
             primary: item,
@@ -1290,75 +1435,20 @@ function performLinearOperation(operation) {
 function performHashSetOperation(operation) {
     const value = getPrimaryValue();
     const exists = state.some((item) => String(item) === value);
-    const bucketCount = currentKey === "hashTable" ? 7 : 6;
-    const bucketEntries = state.filter((item) => hashValue(entryKey(item), bucketCount) === hashValue(value, bucketCount)).map((item) => String(item));
-    const bucketSize = bucketEntries.length;
+    const bucketCount = bucketCountFor(currentKey);
+    const bucket = hashValue(value, bucketCount);
+    const bucketEntries = state.filter((item) => hashValue(entryKey(item), bucketCount) === bucket).map((item) => String(item));
+    // Only the chain in the target bucket is inspected; an empty bucket still costs the
+    // one hash computation, hence the floor of 1.
+    const probes = Math.max(1, exists ? bucketEntries.indexOf(value) + 1 : bucketEntries.length);
+    const hashNote = hashExplanation(value, bucketCount);
 
-    if (operation === "add") {
-        if (!exists) {
-            state.push(value);
-            addTrace(`Added ${value}.`);
-        } else {
-            addTrace(`${value} already exists.`);
-        }
-        setHighlight({
-            value,
-            mode: exists ? "hit" : "new",
-            scan: bucketEntries
-        });
-        setMetrics(operation, {
-            primary: value,
-            touched: Math.max(1, bucketSize)
-        });
-    } else if (operation === "search") {
-        addTrace(exists ? `${value} is present.` : `${value} is absent.`);
-        setHighlight({
-            value,
-            mode: exists ? "hit" : "scan",
-            scan: bucketEntries
-        });
-        setMetrics(operation, {
-            primary: value,
-            touched: Math.max(1, bucketSize)
-        });
-    } else if (operation === "remove") {
-        state = state.filter((item) => String(item) !== value);
-        addTrace(exists ? `Deleted ${value}.` : `${value} was not present.`);
-        setHighlight({
-            value,
-            mode: "remove",
-            scan: bucketEntries
-        });
-        setMetrics(operation, {
-            primary: value,
-            touched: Math.max(1, bucketSize)
-        });
-    } else if (currentKey === "set") {
-        if (exists) {
-            state = state.filter((item) => String(item) !== value);
-            addTrace(`Toggled ${value} off.`);
-            setHighlight({
-                value,
-                mode: "remove",
-                scan: bucketEntries
-            });
-        } else {
-            state.push(value);
-            addTrace(`Toggled ${value} on.`);
-            setHighlight({
-                value,
-                mode: "new",
-                scan: bucketEntries
-            });
-        }
-        setMetrics(operation, {
-            primary: value,
-            touched: Math.max(1, bucketSize)
-        });
-    } else {
-        const bucketCount = 7;
+    if (operation === "special" && currentKey === "hashTable") {
         const load = state.length / bucketCount;
-        addTrace(`Load factor: ${state.length}/${bucketCount} = ${load.toFixed(2)}.`);
+        const longest = Math.max(0, ...Array.from({
+            length: bucketCount
+        }, (unused, index) => state.filter((item) => hashValue(entryKey(item), bucketCount) === index).length));
+        addTrace(`Load factor ${state.length}/${bucketCount} = ${load.toFixed(2)}; longest chain ${longest}.`);
         setHighlight({
             mode: "scan",
             scan: state.map(String),
@@ -1366,81 +1456,130 @@ function performHashSetOperation(operation) {
         });
         setMetrics(operation, {
             primary: value,
-            touched: state.length
+            touched: state.length,
+            plan: [`Walk all ${bucketCount} buckets.`, `Count the ${state.length} stored entries.`, `Report entries / buckets = ${load.toFixed(2)}.`]
         });
+        return;
     }
+
+    let mode = "scan";
+    if (operation === "add") {
+        if (!exists) state.push(value);
+        addTrace(`${hashNote}; ${exists ? `${value} already in bucket ${bucket}` : `stored ${value} in bucket ${bucket}`}.`);
+        mode = exists ? "hit" : "new";
+    } else if (operation === "search") {
+        addTrace(`${hashNote}; ${exists ? `found ${value} after ${probes} ${probes === 1 ? "probe" : "probes"}` : `bucket ${bucket} has no ${value}`}.`);
+        mode = exists ? "hit" : "scan";
+    } else if (operation === "remove") {
+        state = state.filter((item) => String(item) !== value);
+        addTrace(`${hashNote}; ${exists ? `unlinked ${value} from bucket ${bucket}` : `${value} was not in bucket ${bucket}`}.`);
+        mode = "remove";
+    } else {
+        if (exists) {
+            state = state.filter((item) => String(item) !== value);
+            addTrace(`${hashNote}; toggled ${value} off.`);
+            mode = "remove";
+        } else {
+            state.push(value);
+            addTrace(`${hashNote}; toggled ${value} on.`);
+            mode = "new";
+        }
+    }
+
+    setHighlight({
+        value,
+        mode,
+        bucket,
+        scan: bucketEntries
+    });
+    setMetrics(operation, {
+        primary: value,
+        touched: probes,
+        plan: [hashNote, `Walk the ${bucketEntries.length}-entry chain in bucket ${bucket}.`, `${operationConfig(operation)[0]} the matching entry.`]
+    });
 }
 
 function performMapOperation(operation) {
     const key = getPrimaryValue();
     const value = getSecondaryValue() || String(Math.floor(Math.random() * 90 + 10));
     const index = state.findIndex((entry) => entry.key === key);
-    const bucketCount = 6;
-    const bucketEntries = state.filter((entry) => hashValue(entry.key, bucketCount) === hashValue(key, bucketCount)).map((entry) => String(entry.key));
-    const bucketSize = bucketEntries.length;
+    const bucketCount = bucketCountFor(currentKey);
+    const bucket = hashValue(key, bucketCount);
+    const bucketEntries = state.filter((entry) => hashValue(entry.key, bucketCount) === bucket).map((entry) => String(entry.key));
+    const hashNote = hashExplanation(key, bucketCount);
+    const bucketSize = Math.max(1, index >= 0 ? bucketEntries.indexOf(key) + 1 : bucketEntries.length);
+    const mapPlan = [hashNote, `Walk the ${bucketEntries.length}-entry chain in bucket ${bucket}.`, `${operationConfig(operation)[0]} the entry for "${key}".`];
 
     if (operation === "add") {
         if (index >= 0) {
             state[index].value = value;
-            addTrace(`Updated ${key} to ${value}.`);
+            addTrace(`${hashNote}; updated ${key} to ${value}.`);
         } else {
             state.push({
                 key,
                 value
             });
-            addTrace(`Set ${key} to ${value}.`);
+            addTrace(`${hashNote}; stored ${key} -> ${value} in bucket ${bucket}.`);
         }
         setHighlight({
             value: key,
             mode: index >= 0 ? "hit" : "new",
+            bucket,
             scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
             secondary: value,
-            touched: Math.max(1, bucketSize)
+            touched: bucketSize,
+            plan: mapPlan
         });
     } else if (operation === "search") {
-        addTrace(index >= 0 ? `${key} exists.` : `${key} is absent.`);
+        addTrace(`${hashNote}; ${index >= 0 ? `key ${key} is in bucket ${bucket}` : `bucket ${bucket} has no key ${key}`}.`);
         setHighlight({
             value: key,
             mode: index >= 0 ? "hit" : "scan",
+            bucket,
             scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
             secondary: value,
-            touched: Math.max(1, bucketSize)
+            touched: bucketSize,
+            plan: mapPlan
         });
     } else if (operation === "remove") {
         if (index >= 0) {
             state.splice(index, 1);
-            addTrace(`Deleted key ${key}.`);
+            addTrace(`${hashNote}; deleted key ${key} from bucket ${bucket}.`);
         } else {
             addTrace(`${key} was not present.`);
         }
         setHighlight({
             value: key,
             mode: "remove",
+            bucket,
             scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
             secondary: value,
-            touched: Math.max(1, bucketSize)
+            touched: bucketSize,
+            plan: mapPlan
         });
     } else {
         addTrace(index >= 0 ? `${key} maps to ${state[index].value}.` : `${key} has no value.`);
         setHighlight({
             value: key,
             mode: index >= 0 ? "hit" : "scan",
+            bucket,
             scan: bucketEntries,
             resultValue: index >= 0 ? state[index].value : "not found"
         });
         setMetrics(operation, {
             primary: key,
             secondary: value,
-            touched: Math.max(1, bucketSize)
+            touched: bucketSize,
+            plan: mapPlan
         });
     }
 }
@@ -1453,12 +1592,12 @@ function performHeapOperation(operation) {
         while (insertionIndex > 0) {
             const parent = Math.floor((insertionIndex - 1) / 2);
             comparisonPath.push(String(state[parent]));
-            if (numericValue(state[parent]) <= numericValue(value)) break;
+            if (compareValues(state[parent], value) <= 0) break;
             insertionIndex = parent;
         }
         state.push(value);
-        bubbleUp(state.length - 1);
-        addTrace(`Inserted ${value} and restored heap order.`);
+        const swaps = bubbleUp(state.length - 1);
+        addTrace(`Inserted ${value} at index ${state.length - 1} and bubbled up ${swaps} ${swaps === 1 ? "level" : "levels"}.`);
         setHighlight({
             value,
             mode: "new",
@@ -1471,11 +1610,12 @@ function performHeapOperation(operation) {
     } else if (operation === "search") {
         const index = state.findIndex((item) => String(item) === value);
         const found = index >= 0;
-        addTrace(found ? `Found ${value}; arbitrary heap search is linear.` : `${value} was not found.`);
+        addTrace(found ? `Found ${value} at index ${index}; arbitrary heap search is linear.` : `${value} was not found after ${state.length} comparisons.`);
         setHighlight({
             value,
             mode: found ? "hit" : "scan",
-            scan: state.slice(0, found ? index + 1 : state.length).map(String)
+            index: found ? index : undefined,
+            indices: state.map((unused, slot) => slot).slice(0, found ? index + 1 : state.length)
         });
         setMetrics(operation, {
             primary: value,
@@ -1483,41 +1623,45 @@ function performHeapOperation(operation) {
         });
     } else if (operation === "remove") {
         const index = state.findIndex((item) => String(item) === value);
-        const scanned = state.slice(0, index >= 0 ? index + 1 : state.length).map(String);
+        const scanned = state.map((unused, slot) => slot).slice(0, index >= 0 ? index + 1 : state.length);
+        let repairSwaps = 0;
         if (index >= 0) {
             const last = state.pop();
             if (index < state.length) {
                 state[index] = last;
-                if (!bubbleUp(index)) sinkDown(index);
+                repairSwaps = bubbleUp(index);
+                if (!repairSwaps) repairSwaps = sinkDown(index);
             }
-            addTrace(`Removed ${value} and restored heap order.`);
+            addTrace(`Removed ${value} after ${index + 1} ${index === 0 ? "comparison" : "comparisons"}, then ${repairSwaps} repair ${repairSwaps === 1 ? "swap" : "swaps"}.`);
         } else {
-            addTrace(`${value} was not present.`);
+            addTrace(`${value} was not present after scanning all ${state.length} slots.`);
         }
         setHighlight({
             value,
             mode: "remove",
-            scan: scanned
+            indices: scanned
         });
         setMetrics(operation, {
             primary: value,
-            touched: index >= 0 ? index + Math.max(1, Math.ceil(Math.log2(state.length + 2))) : state.length
+            touched: index >= 0 ? index + 1 + repairSwaps : state.length
         });
     } else {
         const removed = state[0];
         const last = state.pop();
+        let sinkSwaps = 0;
         if (state.length && last !== undefined) {
             state[0] = last;
-            sinkDown(0);
+            sinkSwaps = sinkDown(0);
         }
-        addTrace(removed === undefined ? "Heap is empty." : `Extracted min ${removed}.`);
+        addTrace(removed === undefined ? "Heap is empty." : `Extracted min ${removed}; the last item sank ${sinkSwaps} ${sinkSwaps === 1 ? "level" : "levels"}.`);
         setHighlight({
             value: removed,
-            mode: "remove"
+            mode: "remove",
+            resultValue: removed === undefined ? "empty" : String(removed)
         });
         setMetrics(operation, {
             primary: removed,
-            touched: removed === undefined ? 0 : Math.max(1, Math.ceil(Math.log2(state.length + 2)))
+            touched: removed === undefined ? 0 : 1 + sinkSwaps
         });
     }
 }
@@ -1528,29 +1672,32 @@ function heapifyState() {
 
 function bubbleUp(startIndex) {
     let index = startIndex;
-    let moved = false;
+    let swaps = 0;
     while (index > 0) {
         const parent = Math.floor((index - 1) / 2);
-        if (numericValue(state[parent]) <= numericValue(state[index])) break;
+        if (compareValues(state[parent], state[index]) <= 0) break;
         [state[parent], state[index]] = [state[index], state[parent]];
         index = parent;
-        moved = true;
+        swaps += 1;
     }
-    return moved;
+    return swaps;
 }
 
 function sinkDown(startIndex) {
     let index = startIndex;
+    let swaps = 0;
     while (true) {
         const left = index * 2 + 1;
         const right = left + 1;
         let smallest = index;
-        if (left < state.length && numericValue(state[left]) < numericValue(state[smallest])) smallest = left;
-        if (right < state.length && numericValue(state[right]) < numericValue(state[smallest])) smallest = right;
+        if (left < state.length && compareValues(state[left], state[smallest]) < 0) smallest = left;
+        if (right < state.length && compareValues(state[right], state[smallest]) < 0) smallest = right;
         if (smallest === index) break;
         [state[index], state[smallest]] = [state[smallest], state[index]];
         index = smallest;
+        swaps += 1;
     }
+    return swaps;
 }
 
 function performGraphOperation(operation) {
@@ -1575,23 +1722,34 @@ function performGraphOperation(operation) {
             touched: 1
         });
     } else if (operation === "search") {
-        const visited = bfsOrder(state.nodes[0], value);
-        const reached = visited.includes(value);
-        addTrace(reached ? `BFS visited ${visited.join(", ")} and found ${value}.` : `BFS visited ${visited.join(", ") || "no vertices"}; ${value} was not reached.`);
+        const start = state.nodes[0];
+        const {
+            order,
+            found
+        } = bfsOrder(start, value);
+        addTrace(found ?
+            `BFS from ${start} dequeued ${order.join(" -> ")} and found ${value}.` :
+            hasNode ?
+            `BFS from ${start} dequeued ${order.join(" -> ") || "no vertices"}; ${value} exists but is not reachable from ${start}.` :
+            `BFS from ${start} dequeued ${order.join(" -> ") || "no vertices"}; ${value} is not in the graph.`);
         setHighlight({
             value,
-            mode: reached ? "hit" : "scan",
-            scan: visited
+            mode: found ? "hit" : "scan",
+            scan: order
         });
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: visited.length
+            touched: Math.max(1, order.length)
         });
     } else if (operation === "remove") {
+        // Counted before the mutation: deletion inspects every vertex and every edge
+        // that existed when the operation started.
+        const inspected = state.nodes.length + state.edges.length;
+        const incident = state.edges.filter((edge) => edge[0] === value || edge[1] === value).length;
         state.nodes = state.nodes.filter((node) => node !== value);
         state.edges = state.edges.filter((edge) => edge[0] !== value && edge[1] !== value);
-        addTrace(hasNode ? `Removed vertex ${value} and incident edges.` : `${value} was not present.`);
+        addTrace(hasNode ? `Removed vertex ${value} and ${incident} incident ${incident === 1 ? "edge" : "edges"}.` : `${value} was not present.`);
         setHighlight({
             value,
             mode: "remove"
@@ -1599,19 +1757,21 @@ function performGraphOperation(operation) {
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: state.nodes.length + state.edges.length
+            touched: inspected
         });
     } else {
+        const duplicate = hasEdge(value, secondary);
+        const selfLoop = value === secondary;
         if (!state.nodes.includes(value)) state.nodes.push(value);
         if (!state.nodes.includes(secondary)) state.nodes.push(secondary);
-        if (!hasEdge(value, secondary)) {
-            state.edges.push([value, secondary]);
-        }
-        addTrace(`Added edge ${value} - ${secondary}.`);
+        if (!duplicate && !selfLoop) state.edges.push([value, secondary]);
+        addTrace(selfLoop ? `Skipped self-loop on ${value}.` : duplicate ? `Edge ${value} - ${secondary} already exists.` : `Added edge ${value} - ${secondary}.`);
         setHighlight({
             value,
             secondary,
-            mode: "new"
+            mode: duplicate || selfLoop ? "hit" : "new",
+            edge: selfLoop ? null : [value, secondary],
+            resultValue: selfLoop ? "self-loop skipped" : `${value} - ${secondary}`
         });
         setMetrics(operation, {
             primary: value,
@@ -1626,21 +1786,40 @@ function hasEdge(a, b) {
 }
 
 function bfsOrder(start, target) {
-    if (!state.nodes.includes(start)) return [];
+    if (!state.nodes.includes(start)) return {
+        order: [],
+        found: false
+    };
     const queue = [start];
-    const visited = new Set([start]);
+    const discovered = new Set([start]);
+    const order = [];
     while (queue.length) {
         const node = queue.shift();
-        if (node === target) break;
-        state.edges.forEach((edge) => {
-            const next = edge[0] === node ? edge[1] : edge[1] === node ? edge[0] : null;
-            if (next && !visited.has(next)) {
-                visited.add(next);
+        order.push(node);
+        if (node === target) return {
+            order,
+            found: true
+        };
+        neighborsOf(node).forEach((next) => {
+            if (!discovered.has(next)) {
+                discovered.add(next);
                 queue.push(next);
             }
         });
     }
-    return Array.from(visited);
+    return {
+        order,
+        found: false
+    };
+}
+
+function neighborsOf(node) {
+    const neighbors = [];
+    state.edges.forEach((edge) => {
+        const next = edge[0] === node ? edge[1] : edge[1] === node ? edge[0] : null;
+        if (next && !neighbors.includes(next)) neighbors.push(next);
+    });
+    return neighbors;
 }
 
 function performTrieOperation(operation) {
@@ -1673,10 +1852,11 @@ function performTrieOperation(operation) {
         });
     } else if (operation === "remove") {
         state = state.filter((item) => item !== word);
-        addTrace(exists ? `Deleted ${word}.` : `${word} was not present.`);
+        addTrace(exists ? `Deleted ${word} and pruned any node left without a word below it.` : `${word} was not present.`);
         setHighlight({
             value: word,
-            mode: "remove"
+            mode: "remove",
+            prefix: word
         });
         setMetrics(operation, {
             primary: word,
@@ -1689,7 +1869,8 @@ function performTrieOperation(operation) {
         setHighlight({
             value: prefix,
             mode: matches.length ? "hit" : "scan",
-            prefix
+            prefix,
+            resultValue: matches.join(", ") || "no matches"
         });
         setMetrics(operation, {
             primary: word,
@@ -1772,6 +1953,14 @@ function render() {
     if (config.kind === "heap") renderTree(buildHeapTree(state), true);
     if (config.kind === "graph") renderGraph();
     if (config.kind === "trie") renderTrie();
+    fitStageContent();
+}
+
+// Renderers size themselves to the stage, so anything still wider than it is genuinely
+// too dense to shrink further; centre the scroll on it rather than starting at its edge.
+function fitStageContent() {
+    const overflow = visual.scrollWidth - visualStage.clientWidth;
+    visualStage.scrollLeft = overflow > 0 ? overflow / 2 : 0;
 }
 
 function classFor(value, index) {
@@ -1780,6 +1969,12 @@ function classFor(value, index) {
     if (selectedRef && selectedRef.index === index && selectedRef.kind !== "trie") return "is-selected";
     if (selectedRef && selectedRef.value !== undefined && String(selectedRef.value) === text) return "is-selected";
     if (highlight.index === index) return `is-${highlight.mode || "hit"}`;
+    if (highlight.indices) {
+        if (highlight.indices.includes(index)) {
+            return highlight.value !== undefined && String(highlight.value) === text ? `is-${highlight.mode || "hit"}` : "is-scan";
+        }
+        return "";
+    }
     if (highlight.value !== undefined && String(highlight.value) === text) return `is-${highlight.mode || "hit"}`;
     if (highlight.scan && highlight.scan.slice(0, Math.max(1, lastMetrics.touched)).map(String).includes(text)) return "is-scan";
     return "";
@@ -1803,17 +1998,20 @@ function renderArray() {
 }
 
 function renderList(rowClass) {
-    const labels = currentKey === "queue" ? ["front", "back"] : currentKey === "deque" ? ["front", "back"] : ["head", "tail"];
+    const labels = currentKey === "linkedList" ? ["head", "tail"] : ["front", "back"];
+    const connector = currentKey === "linkedList" ? "&rarr;" : "&#9474;";
     visual.innerHTML = `<div class="${rowClass}">
         ${state.map((item, index) => `
             <div class="array-item">
                 <div class="role-label">${index === 0 ? labels[0] : index === state.length - 1 ? labels[1] : "&nbsp;"}</div>
                 <button class="ds-node selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button">
+                    <small class="slot-index">${index}</small>
                     <span>${escapeHTML(item)}</span>${typeBadge(item)}
                 </button>
             </div>
-            ${index < state.length - 1 ? `<span class="arrow">${rowClass === "list-row" ? "->" : "|"}</span>` : ""}
+            ${index < state.length - 1 ? `<span class="arrow">${connector}</span>` : ""}
         `).join("")}
+        ${currentKey === "linkedList" ? `<span class="arrow">&rarr;</span><div class="array-item"><div class="role-label">&nbsp;</div><span class="null-terminator">null</span></div>` : ""}
     </div>`;
 }
 
@@ -1821,11 +2019,13 @@ function renderStack() {
     visual.innerHTML = `<div class="stack-wrap">
         <div class="stack-column">
             ${state.map((item, index) => `
-                <div class="array-item">
+                <div class="array-item stack-item">
+                    ${index === state.length - 1 ? `<div class="role-label stack-top-label">top &darr; push / pop</div>` : ""}
                     <button class="ds-cell stack-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button">
+                        <small class="slot-index">[${index}]</small>
                         <span>${escapeHTML(item)}</span>${typeBadge(item)}
                     </button>
-                    ${index === state.length - 1 ? `<div class="role-label">top</div>` : ""}
+                    ${index === 0 ? `<div class="role-label stack-base-label">bottom</div>` : ""}
                 </div>
             `).join("")}
         </div>
@@ -1837,20 +2037,28 @@ function renderBuckets() {
     const buckets = Array.from({
         length: bucketCount
     }, () => []);
-    state.forEach((entry) => {
-        buckets[hashValue(entryKey(entry), bucketCount)].push(entry);
+    state.forEach((entry, stateIndex) => {
+        buckets[hashValue(entryKey(entry), bucketCount)].push({
+            entry,
+            stateIndex
+        });
     });
+    const activeBucket = highlight.bucket;
 
     visual.innerHTML = `<div class="bucket-table">
         ${buckets.map((bucket, index) => `
-            <div class="bucket-row">
+            <div class="bucket-row ${activeBucket === index ? "is-active-bucket" : ""}">
                 <div class="bucket-label">${index}</div>
                 <div class="bucket-chain">
-                    ${bucket.length ? bucket.map((entry) => `
-                        <button class="ds-node selectable ${classFor(entryKey(entry), index)}" data-kind="${currentKey === "map" ? "map" : "linear"}" data-index="${state.findIndex((item) => entryKey(item) === entryKey(entry))}" data-key="${escapeHTML(entryKey(entry))}" data-value="${escapeHTML(typeof entry === "object" ? entry.value : entry)}" type="button">
-                            <span>${escapeHTML(asEntryLabel(entry))}</span>${typeBadge(typeof entry === "object" ? entry.value : entry)}
+                    ${bucket.length ? bucket.map(({ entry, stateIndex }) => `
+                        <button class="ds-node selectable ${classFor(entryKey(entry), stateIndex)}" data-kind="${currentKey === "map" ? "map" : "linear"}" data-index="${stateIndex}" data-key="${escapeHTML(entryKey(entry))}" data-value="${escapeHTML(typeof entry === "object" ? entry.value : entry)}" type="button">
+                            ${typeof entry === "object" ?
+                                `<span>${escapeHTML(entry.key)}</span><small class="entry-value">&rarr; ${escapeHTML(entry.value)}</small>` :
+                                `<span>${escapeHTML(entry)}</span>`}
+                            ${typeBadge(typeof entry === "object" ? entry.value : entry)}
                         </button>
-                    `).join(`<span class="arrow">-></span>`) : `<span class="role-label">empty</span>`}
+                    `).join(`<span class="arrow">&rarr;</span>`) : `<span class="role-label">empty</span>`}
+                    ${bucket.length > 1 ? `<span class="bucket-load">${bucket.length}-long chain</span>` : ""}
                 </div>
             </div>
         `).join("")}
@@ -1873,7 +2081,7 @@ function insertBST(node, value) {
             right: null
         };
     }
-    if (numericValue(value) < numericValue(node.value)) {
+    if (compareValues(value, node.value) < 0) {
         node.left = insertBST(node.left, value);
     } else {
         node.right = insertBST(node.right, value);
@@ -1894,116 +2102,245 @@ function buildHeapTree(values) {
     return nodes[0] || null;
 }
 
-function renderTree(root, includeArray) {
-    const positions = [];
-    const links = [];
-    const width = 760;
-    const levelHeight = 132;
+const TREE_NODE_WIDTH = 96;
+const TREE_NODE_HEIGHT = 74;
+const TREE_SLOT = 104;
+const TREE_LEVEL = 116;
 
-    function place(node, depth, left, right, parent) {
-        if (!node) return;
-        const x = (left + right) / 2;
-        const y = 34 + depth * levelHeight;
-        positions.push({
-            node,
-            x,
-            y
-        });
-        if (parent) links.push([parent.x, parent.y, x, y]);
-        place(node.left, depth + 1, left, x, {
-            x,
-            y
-        });
-        place(node.right, depth + 1, x, right, {
-            x,
-            y
-        });
-    }
-
-    place(root, 0, 36, width - 36, null);
-    const height = Math.max(470, 110 + Math.max(0, ...positions.map((item) => item.y)) + (includeArray ? 130 : 0));
-
-    visual.innerHTML = `<div class="tree-canvas" style="height:${height}px">
-        <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
-            ${links.map((line) => `<line x1="${line[0]}" y1="${line[1] + 50}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`).join("")}
-        </svg>
-        ${positions.map((item, index) => `
-            <button class="tree-node selectable ${classFor(item.node.value, state.findIndex((value) => String(value) === String(item.node.value)))}" data-kind="linear" data-index="${state.findIndex((value) => String(value) === String(item.node.value))}" data-value="${escapeHTML(item.node.value)}" style="left:${item.x - 62}px; top:${item.y}px" type="button">
-                <span>${escapeHTML(item.node.value)}</span>${typeBadge(item.node.value)}
-            </button>
-        `).join("")}
-        ${includeArray ? `<div class="heap-array">${state.map((item, index) => `<button class="ds-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button"><span>${escapeHTML(item)}</span>${typeBadge(item)}</button>`).join("")}</div>` : ""}
-    </div>`;
+// Horizontal room the stage can give a drawing before it has to scroll.
+function availableStageWidth() {
+    return Math.max(280, visualStage.clientWidth - 44);
 }
 
-function renderGraph() {
-    const width = 760;
-    const height = 470;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = 168;
-    const positions = new Map();
-    state.nodes.forEach((node, index) => {
-        const angle = -Math.PI / 2 + (index / state.nodes.length) * Math.PI * 2;
-        positions.set(node, {
-            x: centerX + Math.cos(angle) * radius,
-            y: centerY + Math.sin(angle) * radius
+const CANVAS_PAD = 14;
+
+// Shrink the per-column pitch (and with it the node box) until the drawing fits the
+// stage, but never past the point where the labels stop being readable; anything
+// still wider than that scrolls.
+function columnMetrics(columns, naturalSlot, minSlot) {
+    const usable = availableStageWidth() - CANVAS_PAD * 2;
+    const slot = Math.max(minSlot, Math.min(naturalSlot, usable / Math.max(1, columns)));
+    return {
+        slot,
+        ratio: slot / naturalSlot
+    };
+}
+
+// The same idea vertically: a degenerate tree is one node per level, so tighten the
+// level spacing before letting it grow into a very tall scroll. The budget follows the
+// stage's own max-height rule rather than its measured height, which would otherwise
+// shrink on every re-render. `reserve` is room kept for anything drawn below the
+// canvas, such as a heap's backing array.
+function levelHeight(levels, naturalLevel, minLevel, ratio, reserve = 0) {
+    const maxStage = Math.min(window.innerHeight * 0.78, 860);
+    const budget = Math.max(240, maxStage - 56 - reserve);
+    return Math.round(Math.max(minLevel, Math.min(naturalLevel * Math.max(ratio, 0.72), (budget - 60) / Math.max(1, levels))));
+}
+
+function renderTree(root, includeArray) {
+    const entries = [];
+    let column = 0;
+    let maxDepth = 0;
+
+    if (includeArray) {
+        // A heap is always a complete tree, so its nodes can be laid out straight from
+        // their array indices; that keeps the picture symmetric and lined up with the
+        // backing array underneath it.
+        (function collect(node, index) {
+            if (!node) return;
+            const depth = Math.floor(Math.log2(index + 1));
+            maxDepth = Math.max(maxDepth, depth);
+            entries.push({
+                node,
+                depth,
+                index
+            });
+            collect(node.left, index * 2 + 1);
+            collect(node.right, index * 2 + 2);
+        })(root, 0);
+        column = Math.pow(2, maxDepth);
+        entries.forEach((entry) => {
+            const slotsInLevel = Math.pow(2, entry.depth);
+            entry.column = ((entry.index + 1 - slotsInLevel) + 0.5) * (column / slotsInLevel);
+        });
+    } else {
+        // In-order column assignment: every node gets its own vertical lane, so a deep
+        // or lopsided tree can never stack two nodes on the same pixel the way the old
+        // "split the canvas in half per level" layout did.
+        (function place(node, depth, parent) {
+            if (!node) return;
+            maxDepth = Math.max(maxDepth, depth);
+            place(node.left, depth + 1, node);
+            entries.push({
+                node,
+                depth,
+                column: column + 0.5,
+                side: parent ? (parent.left === node ? "L" : "R") : ""
+            });
+            column += 1;
+            place(node.right, depth + 1, node);
+        })(root, 0, null);
+    }
+
+    const {
+        slot,
+        ratio
+    } = columnMetrics(column, TREE_SLOT, 56);
+    const level = levelHeight(maxDepth + 1, TREE_LEVEL, 78, ratio, includeArray ? 124 : 0);
+    const nodeWidth = Math.round(TREE_NODE_WIDTH * ratio);
+    const nodeHeight = Math.min(Math.round(TREE_NODE_HEIGHT * Math.max(ratio, 0.72)), level - 24);
+    const width = Math.max(280, Math.round(column * slot) + CANVAS_PAD * 2);
+    const height = Math.max(300, 60 + (maxDepth + 1) * level);
+    entries.forEach((entry) => {
+        entry.x = CANVAS_PAD + entry.column * slot;
+        entry.y = 22 + entry.depth * level;
+    });
+
+    const byNode = new Map(entries.map((item) => [item.node, item]));
+    const links = [];
+    entries.forEach((item) => {
+        [item.node.left, item.node.right].forEach((child) => {
+            const target = byNode.get(child);
+            if (target) links.push([item, target]);
         });
     });
 
-    visual.innerHTML = `<div class="graph-canvas" style="height:${height}px">
+    const indexOf = (value) => state.findIndex((item) => String(item) === String(value));
+
+    visual.innerHTML = `<div class="tree-canvas" style="width:${width}px; height:${height}px; --node-w:${nodeWidth}px; --node-h:${nodeHeight}px">
+        <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
+            ${links.map(([from, to]) => `
+                <line x1="${from.x.toFixed(1)}" y1="${from.y + nodeHeight}" x2="${to.x.toFixed(1)}" y2="${to.y}" stroke-width="2" />
+                ${includeArray ? "" : `<circle class="edge-chip" cx="${((from.x + to.x) / 2).toFixed(1)}" cy="${(from.y + nodeHeight + to.y) / 2}" r="11" /><text class="edge-label" x="${((from.x + to.x) / 2).toFixed(1)}" y="${(from.y + nodeHeight + to.y) / 2}" text-anchor="middle" dominant-baseline="central">${to.side === "L" ? "&lt;" : "&#8805;"}</text>`}
+            `).join("")}
+        </svg>
+        ${entries.map((item) => `
+            <button class="tree-node selectable ${classFor(item.node.value, indexOf(item.node.value))}" data-kind="linear" data-index="${indexOf(item.node.value)}" data-value="${escapeHTML(item.node.value)}" style="left:${(item.x - nodeWidth / 2).toFixed(1)}px; top:${item.y}px" type="button">
+                <span>${escapeHTML(item.node.value)}</span>
+            </button>
+        `).join("")}
+    </div>
+    ${includeArray ? `<div class="heap-array" aria-label="Backing array">${state.map((item, index) => `
+        <div class="heap-slot">
+            <small class="slot-index">${index}</small>
+            <button class="ds-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button"><span>${escapeHTML(item)}</span></button>
+            <small class="slot-index">${index === 0 ? "root" : `p=${Math.floor((index - 1) / 2)}`}</small>
+        </div>`).join("")}</div>` : ""}`;
+}
+
+const GRAPH_NODE_RADIUS = 34;
+
+function renderGraph() {
+    const count = state.nodes.length;
+    // The ring has to grow with the vertex count, otherwise vertices overlap as soon
+    // as a few are added; if that no longer fits the stage, shrink ring and vertices
+    // together instead of letting the drawing run off the edge.
+    const naturalRing = Math.max(150, (GRAPH_NODE_RADIUS + 26) / Math.sin(Math.PI / Math.max(3, count)));
+    const naturalSize = (naturalRing + GRAPH_NODE_RADIUS + 20) * 2;
+    const ratio = Math.max(0.6, Math.min(1, availableStageWidth() / naturalSize));
+    const nodeRadius = Math.round(GRAPH_NODE_RADIUS * ratio);
+    const ringRadius = naturalRing * ratio;
+    const size = Math.round((ringRadius + nodeRadius + 20) * 2);
+    const width = Math.max(280, size);
+    const height = Math.max(300, size);
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const positions = new Map();
+    state.nodes.forEach((node, index) => {
+        const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
+        positions.set(node, {
+            x: centerX + Math.cos(angle) * ringRadius,
+            y: centerY + Math.sin(angle) * ringRadius
+        });
+    });
+
+    const highlightedEdges = new Set();
+    if (highlight.edge) highlightedEdges.add([highlight.edge[0], highlight.edge[1]].sort().join("\u0000"));
+
+    visual.innerHTML = `<div class="graph-canvas" style="width:${width}px; height:${height}px; --node-w:${nodeRadius * 2}px">
         <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
             ${state.edges.map((edge) => {
                 const a = positions.get(edge[0]);
                 const b = positions.get(edge[1]);
                 if (!a || !b) return "";
-                return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`;
+                // Clip each end at the vertex border so the line reads as a connector
+                // between two circles instead of disappearing under them.
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const length = Math.hypot(dx, dy) || 1;
+                const ux = dx / length;
+                const uy = dy / length;
+                const active = highlightedEdges.has([edge[0], edge[1]].sort().join("\u0000"));
+                return `<line class="graph-edge ${active ? "is-active-edge" : ""}" x1="${(a.x + ux * nodeRadius).toFixed(1)}" y1="${(a.y + uy * nodeRadius).toFixed(1)}" x2="${(b.x - ux * nodeRadius).toFixed(1)}" y2="${(b.y - uy * nodeRadius).toFixed(1)}" stroke-width="2" />`;
             }).join("")}
         </svg>
         ${state.nodes.map((node, index) => {
             const point = positions.get(node);
-            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${point.x - 60}px; top:${point.y - 54}px" type="button"><span>${escapeHTML(node)}</span>${typeBadge(node, "vertex")}</button>`;
+            const degree = neighborsOf(node).length;
+            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${(point.x - nodeRadius).toFixed(1)}px; top:${(point.y - nodeRadius).toFixed(1)}px" title="${escapeHTML(node)} - degree ${degree}" type="button"><span>${escapeHTML(node)}</span><small class="degree-badge">${degree}</small></button>`;
         }).join("")}
     </div>`;
 }
+
+const TRIE_NODE_SIZE = 62;
+const TRIE_SLOT = 92;
+const TRIE_LEVEL = 104;
 
 function renderTrie() {
     const trie = buildTrie(state);
     const positions = [];
     const links = [];
     let cursor = 0;
-    const width = 900;
-    const levelHeight = 118;
+    let maxDepth = 0;
 
     function place(node, depth, parent) {
+        maxDepth = Math.max(maxDepth, depth);
         const children = Object.values(node.children);
         if (!children.length) {
+            node.column = cursor + 0.5;
             cursor += 1;
-            node.x = cursor * 118;
         } else {
             children.forEach((child) => place(child, depth + 1, node));
-            node.x = children.reduce((sum, child) => sum + child.x, 0) / children.length;
+            node.column = (children[0].column + children[children.length - 1].column) / 2;
         }
-        node.y = 28 + depth * levelHeight;
+        node.depth = depth;
         positions.push(node);
-        if (parent) links.push([parent, node, node.char]);
+        if (parent) links.push([parent, node]);
     }
 
     place(trie, 0, null);
-    const height = Math.max(390, 100 + Math.max(...positions.map((node) => node.y)));
-    const canvasWidth = Math.max(width, cursor * 132);
-    visual.innerHTML = `<div class="trie-canvas" style="min-width:${canvasWidth}px; height:${height}px">
+    const {
+        slot,
+        ratio
+    } = columnMetrics(cursor, TRIE_SLOT, 46);
+    const level = levelHeight(maxDepth + 1, TRIE_LEVEL, 70, ratio);
+    const nodeSize = Math.min(Math.round(TRIE_NODE_SIZE * ratio), level - 22);
+    positions.forEach((node) => {
+        node.x = CANVAS_PAD + node.column * slot;
+        node.y = 22 + node.depth * level;
+    });
+    const canvasWidth = Math.max(280, Math.round(cursor * slot) + CANVAS_PAD * 2);
+    const height = Math.max(300, 60 + (maxDepth + 1) * level);
+    visual.innerHTML = `<div class="trie-canvas" style="width:${canvasWidth}px; height:${height}px; --node-w:${nodeSize}px">
         <svg class="link-layer" style="width:${canvasWidth}px; height:${height}px" viewBox="0 0 ${canvasWidth} ${height}">
-            ${links.map((line) => `
-                <line x1="${line[0].x}" y1="${line[0].y + 46}" x2="${line[1].x}" y2="${line[1].y}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />
-                <text x="${(line[0].x + line[1].x) / 2}" y="${(line[0].y + line[1].y) / 2}" fill="var(--text-secondary)" font-size="11">${escapeHTML(line[2])}</text>
-            `).join("")}
+            ${links.map(([from, to]) => {
+                // Anchor the character on the visible part of the edge, not at the
+                // midpoint of the two node tops, which used to hide it behind the parent.
+                const y1 = from.y + nodeSize;
+                const midX = (from.x + to.x) / 2;
+                const midY = (y1 + to.y) / 2;
+                return `
+                <line x1="${from.x.toFixed(1)}" y1="${y1}" x2="${to.x.toFixed(1)}" y2="${to.y}" stroke-width="2" />
+                <circle class="edge-chip" cx="${midX.toFixed(1)}" cy="${midY.toFixed(1)}" r="${Math.max(8, Math.round(11 * ratio))}" />
+                <text class="edge-label" x="${midX.toFixed(1)}" y="${midY.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${escapeHTML(to.char)}</text>`;
+            }).join("")}
         </svg>
         ${positions.map((node, index) => {
-            const label = node.root ? "root" : node.terminal ? `${node.char}*` : node.char;
+            const label = node.root ? "\u25cf" : node.char;
             const active = highlight.prefix ? node.wordPrefix.startsWith(highlight.prefix) || highlight.prefix.startsWith(node.wordPrefix) : false;
             const selected = selectedRef && selectedRef.kind === "trie" && selectedRef.value === node.wordPrefix;
-            return `<button class="trie-node selectable ${selected ? "is-selected" : active ? "is-hit" : classFor(node.wordPrefix, index)}" data-kind="trie" data-index="${index}" data-value="${escapeHTML(node.wordPrefix)}" style="left:${node.x - 54}px; top:${node.y}px" type="button"><span>${escapeHTML(label)}</span>${typeBadge(node.wordPrefix, node.root ? "root" : node.terminal ? "word" : "prefix")}</button>`;
+            const title = node.root ? "root" : `${node.wordPrefix}${node.terminal ? " (complete word)" : ""}`;
+            return `<button class="trie-node selectable ${node.terminal ? "is-terminal" : ""} ${node.root ? "is-root" : ""} ${selected ? "is-selected" : active ? "is-hit" : classFor(node.wordPrefix, index)}" data-kind="trie" data-index="${index}" data-value="${escapeHTML(node.wordPrefix)}" style="left:${(node.x - nodeSize / 2).toFixed(1)}px; top:${node.y}px" title="${escapeHTML(title)}" type="button"><span>${escapeHTML(label)}</span></button>`;
         }).join("")}
     </div>`;
 }
@@ -2167,6 +2504,11 @@ replayAnimationButton.addEventListener("click", () => {
     animateTargets(targets, lastMetrics.label);
 });
 
+let resizeTimer = 0;
+window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(render, 150);
+});
 randomizeButton.addEventListener("click", randomizeState);
 resetButton.addEventListener("click", resetState);
 visual.addEventListener("click", (event) => selectRenderedItem(event.target));
