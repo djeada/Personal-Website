@@ -2,6 +2,8 @@
 
 Audit date: 2026-09-21. This is an implementation backlog; unchecked items are proposed work, not completed features.
 
+Progress (2026-09-23): M0 P0 repairs landed for all seven tools. Pure models live in `src/tools/shared/optics/` with numerical regressions in `tests/optics/` (`npm run test:optics`).
+
 ## Goal and scope
 
 Turn the seven existing optics demonstrations into quantitative learning tools, then fill the gaps needed for an undergraduate optics course and an advanced undergraduate photonics course. Students should be able to predict an outcome, change an experiment, measure the result, and explain discrepancies using the stated model and its limits.
@@ -51,12 +53,12 @@ Evidence: [app.js](src/tools/double_slit/app.js), especially `updateStats`, `get
 
 **Implementation tasks**
 
-- [ ] Store all lengths in metres internally. Provide independent slit width `a`, centre separation `d`, wavelength `λ`, and distance `L`; use realistic micrometre/millimetre defaults and enforce non-overlapping slits.
-- [ ] Implement the equal-amplitude coherent Fraunhofer baseline `I/Imax = sinc²(π a sinθ/λ) cos²(π d sinθ/λ)`, with `sinc(u) = sin(u)/u` and `θ = atan(y/L)`. State the far-field assumptions; using an exact screen angle does not make this a near-field solver.
-- [ ] Derive the readouts, detector image, envelope, and line plot from one sampled physical intensity array. Report actual screen extent, fringe spacing, orders, and visibility instead of a capped estimate.
-- [ ] Add an aperture view, a large detector view, and an intensity-versus-position plot with a cursor. Keep the ray/wavefront schematic explicitly marked as not to scale.
-- [ ] Add relative phase, unequal illumination, single-slit blocking, and partial coherence after the baseline is correct.
-- [ ] Rewrite the quantum paragraph to describe probability amplitudes and path information; label the current solver as classical scalar optics.
+- [x] Store all lengths in metres internally. Provide independent slit width `a`, centre separation `d`, wavelength `λ`, and distance `L`; use realistic micrometre/millimetre defaults and enforce non-overlapping slits.
+- [x] Implement the equal-amplitude coherent Fraunhofer baseline `I/Imax = sinc²(π a sinθ/λ) cos²(π d sinθ/λ)`, with `sinc(u) = sin(u)/u` and `θ = atan(y/L)`. State the far-field assumptions; using an exact screen angle does not make this a near-field solver.
+- [x] Derive the readouts, detector image, envelope, and line plot from one sampled physical intensity array. Report actual screen extent, fringe spacing, orders, and visibility instead of a capped estimate.
+- [x] Add an aperture view, a large detector view, and an intensity-versus-position plot with a cursor. Keep the ray/wavefront schematic explicitly marked as not to scale.
+- [x] Add relative phase, unequal illumination, single-slit blocking, and partial coherence after the baseline is correct.
+- [x] Rewrite the quantum paragraph to describe probability amplitudes and path information; label the current solver as classical scalar optics.
 
 **Acceptance:** with `λ = 500 nm`, `d = 0.25 mm`, `a = 0.05 mm`, and `L = 1 m`, the paraxial interference spacing is 2 mm and the envelope's first zero is 10 mm. Blocking a slit leaves its single-slit envelope. A subwavelength-separation case must not invent impossible off-axis orders.
 
@@ -78,11 +80,11 @@ Evidence: [app.js](src/tools/diffraction/app.js), especially `getPatternScale`, 
 
 **Implementation tasks**
 
-- [ ] Use physical detector coordinates. Evaluate slit `sinc²(π a sinθ/λ)` and circular `[2 J1(u)/u]²`, where `u = π D sinθ/λ`; define `a` as slit width and `D` as circular diameter.
-- [ ] Show a 2D detector with a linked line cut, annotated minima, and linear/log intensity options. Label log floors and normalized versus absolute quantities.
-- [ ] Show Fresnel number with its aperture-size convention. Warn or switch models when the far-field approximation is inappropriate.
-- [ ] Keep wavelets as an optional explanatory overlay. Add actual numerical propagation in N5 below.
-- [ ] Fix reset ordering: currently `applyPreset()` redraws before the wavelet/intensity checkboxes are restored, so reset can leave the paused canvas inconsistent with checked controls.
+- [x] Use physical detector coordinates. Evaluate slit `sinc²(π a sinθ/λ)` and circular `[2 J1(u)/u]²`, where `u = π D sinθ/λ`; define `a` as slit width and `D` as circular diameter.
+- [x] Show a 2D detector with a linked line cut, annotated minima, and linear/log intensity options. Label log floors and normalized versus absolute quantities.
+- [x] Show Fresnel number with its aperture-size convention. Warn or switch models when the far-field approximation is inappropriate.
+- [x] Keep wavelets as an optional explanatory overlay. Add actual numerical propagation in N5 below.
+- [x] Fix reset ordering: currently `applyPreset()` redraws before the wavelet/intensity checkboxes are restored, so reset can leave the paused canvas inconsistent with checked controls.
 
 **Acceptance:** for `λ = 550 nm`, `L = 1 m`, and width/diameter `100 μm`, the slit first zero is approximately 5.50 mm and the circular first dark ring approximately 6.71 mm. Both central limits are finite and equal to one when peak-normalized. The 2D circular result is radially symmetric.
 
@@ -94,10 +96,10 @@ Evidence: [app.js](src/tools/interference/app.js), especially `drawWave`, `drawR
 - **Substance:** no detector averaging, coherence, or polarization overlap connects field addition to observed intensity. Broad phase bins label nearby states “Constructive” or “Destructive” without reporting the quantitative result.
 - **Visuals:** axes have no numerical scale, coincident component waves obscure each other, and the resultant changes color between wave and phasor views. The phasor view lacks calibrated axes and a probe position linked to the spatial plot.
 
-- [ ] Use `E_j(x,t) = A_j cos(k_j x − ω_j t + φ_j)` with a declared medium and dispersion relation; distinguish spatial interference from temporal beats.
-- [ ] Add synchronized spatial field, fixed-position time trace, detector intensity, and phasor views. For different frequencies, use instantaneous rotating vectors at the probe position or explain why a single stationary phasor sum is unavailable.
-- [ ] Implement `I = I1 + I2 + 2 sqrt(I1 I2) Re(γ12 exp(iΔφ))` for a stated scalar/co-polarized model; add polarization overlap when connected to the polarization tool.
-- [ ] Add detector integration time and visibility `V = (Imax − Imin)/(Imax + Imin)`. Use shared colors, numerical axes, and adaptive plot bounds.
+- [x] Use `E_j(x,t) = A_j cos(k_j x − ω_j t + φ_j)` with a declared medium and dispersion relation; distinguish spatial interference from temporal beats.
+- [x] Add synchronized spatial field, fixed-position time trace, detector intensity, and phasor views. For different frequencies, use instantaneous rotating vectors at the probe position or explain why a single stationary phasor sum is unavailable.
+- [ ] Implement `I = I1 + I2 + 2 sqrt(I1 I2) Re(γ12 exp(iΔφ))` for a stated scalar/co-polarized model; add polarization overlap when connected to the polarization tool. *(Partial: real |γ| only; polarization overlap not yet linked.)*
+- [x] Add detector integration time and visibility `V = (Imax − Imin)/(Imax + Imin)`. Use shared colors, numerical axes, and adaptive plot bounds.
 
 **Acceptance:** equal coherent waves cancel at phase π and give four times a single wave's intensity at phase zero. Unequal amplitudes leave a nonzero minimum. Two frequencies separated by `Δf` produce an intensity beat at `|Δf|`; sufficiently long detector integration averages that cross term away.
 
@@ -110,11 +112,11 @@ Evidence: [app.js](src/tools/fresnel/app.js), especially `calculateFresnelCoeffi
 - **Visuals:** ray widths always use the average of s and p power, even in a selected single-polarization mode. A reflected ray retains a minimum width at zero power. Wavefront spacing is the same in both media, and field phase is assigned by arbitrary diagram positions rather than `k·r − ωt`.
 - **Readability:** light-mode text can be drawn dark on the forced dark canvas; the desktop Fresnel medium labels and coefficient-panel heading are difficult to read. This is a shared theme/state problem, not just a choice of ray color.
 
-- [ ] Return explicit complex `r_s`, `r_p`, `t_s`, `t_p`, alongside real power coefficients `R_s`, `R_p`, `T_s`, `T_p`. Document field bases and time convention.
-- [ ] Handle TIR using the physical complex transmitted normal wavevector; show reflection phase and evanescent decay. Distinguish zero normal transmitted power from zero electric field.
-- [ ] Link ray brightness/width to the selected polarization. Hide or explicitly mark zero-power rays; preserve a schematic direction guide separately if useful.
-- [ ] Add plots of R/T and reflection phase versus angle, with a cursor linked to the geometry, Brewster angle, and critical angle.
-- [ ] Show conserved frequency and `λ_medium = λ0/n`; make field samples obey the same boundary solution. Scope the first version to lossless isotropic nonmagnetic media; add absorption later through N4.
+- [x] Return explicit complex `r_s`, `r_p`, `t_s`, `t_p`, alongside real power coefficients `R_s`, `R_p`, `T_s`, `T_p`. Document field bases and time convention.
+- [x] Handle TIR using the physical complex transmitted normal wavevector; show reflection phase and evanescent decay. Distinguish zero normal transmitted power from zero electric field.
+- [x] Link ray brightness/width to the selected polarization. Hide or explicitly mark zero-power rays; preserve a schematic direction guide separately if useful.
+- [x] Add plots of R/T and reflection phase versus angle, with a cursor linked to the geometry, Brewster angle, and critical angle.
+- [x] Show conserved frequency and `λ_medium = λ0/n`; make field samples obey the same boundary solution. Scope the first version to lossless isotropic nonmagnetic media; add absorption later through N4.
 
 **Acceptance:** air-to-glass at normal incidence gives `R = 0.04`, `T = 0.96`; `R + T = 1` for both polarizations in the lossless model; p reflection vanishes at `atan(1.5) ≈ 56.31°`. Glass-to-air critical angle is approximately 41.81°. TIR has unit reflected power, angle-dependent phase, and a decaying transmitted field.
 
@@ -126,11 +128,11 @@ Evidence: [app.js](src/tools/polarization/app.js), especially `updateStats`, `dr
 - **Substance:** Malus's law, birefringence, and Stokes parameters appear in explanatory text but cannot be explored. There are no optical elements or partially polarized states.
 - **Visuals:** the transverse plot labels its axes `x` and `y`, although they represent field components. The fixed oblique “3D” view does not establish the observer's direction or a handedness convention. A redraw while paused omits the 2D instantaneous vector because it is conditional on animation running.
 
-- [ ] Classify from the field/Jones or Stokes state, including degenerate cases; show ellipticity, orientation, and an explicit tolerance for “approximately” linear/circular.
-- [ ] Label axes `Ex/E0` and `Ey/E0`, show propagation direction and viewing convention, and retain the instantaneous vector during pause, reset, and parameter changes.
-- [ ] Add an ordered optical-element bench: polarizer, analyzer, half-wave plate, quarter-wave plate, and general retarder. Show the Jones matrix and resulting field after each element.
-- [ ] Add Stokes parameters, degree of polarization, and a linked Poincaré sphere; use coherency matrices or Mueller calculus for partial/unpolarized light. A single Jones vector cannot represent those states.
-- [ ] Explain birefringent retardance `δ = 2π Δn d/λ`; visualize ordinary/extraordinary behavior with declared crystal geometry before adding more general anisotropic propagation.
+- [x] Classify from the field/Jones or Stokes state, including degenerate cases; show ellipticity, orientation, and an explicit tolerance for “approximately” linear/circular.
+- [x] Label axes `Ex/E0` and `Ey/E0`, show propagation direction and viewing convention, and retain the instantaneous vector during pause, reset, and parameter changes.
+- [ ] Add an ordered optical-element bench: polarizer, analyzer, half-wave plate, quarter-wave plate, and general retarder. Show the Jones matrix and resulting field after each element. *(Partial: one element at a time implemented; ordered multi-element bench pending.)*
+- [ ] Add Stokes parameters, degree of polarization, and a linked Poincaré sphere; use coherency matrices or Mueller calculus for partial/unpolarized light. A single Jones vector cannot represent those states. *(Partial: Stokes/DoP readouts and coherency-matrix model done; Poincaré sphere and partial-polarization input pending.)*
+- [ ] Explain birefringent retardance `δ = 2π Δn d/λ`; visualize ordinary/extraordinary behavior with declared crystal geometry before adding more general anisotropic propagation. *(Partial: formula and prose done; o/e crystal visualization pending.)*
 
 **Acceptance:** single-component states are linear for every relative phase; equal amplitudes with ±π/2 phase are circular. An ideal analyzer obeys Malus's law, a quarter-wave plate at the appropriate orientation converts linear to circular, and ideal retarders preserve intensity and degree of polarization.
 
@@ -143,11 +145,11 @@ Evidence: [app.js](src/tools/standing_waves/app.js), especially `incidentWave`, 
 - A generic dielectric interface is not a perfectly reflecting “free end.” Optical reflection amplitude and phase depend on the media and polarization.
 - **Technical/visual:** nodes, antinodes, and envelopes are repeatedly estimated by sampling 20 times at about 1000 positions. Their locations should follow an analytic envelope and should not drift with global phase or a sampling threshold.
 
-- [ ] Offer explicit modes: a wave reflecting from one boundary, and a finite resonator with two declared boundary conditions.
-- [ ] Set physical `L`, medium index/speed, frequency, and complex reflection coefficient; alternatively label a fully normalized model consistently. Show optical time with a separate animation slow-down factor.
-- [ ] Derive the envelope from the complex field sum and compute extrema analytically where possible; cache parameter-dependent results.
-- [ ] For optical mode, display complementary E/H standing patterns and energy flow; connect resonance mode number to the passive resonator tool N9.
-- [ ] Rewrite formulas around the same origin and boundary position as the implementation, including reflection phase.
+- [x] Offer explicit modes: a wave reflecting from one boundary, and a finite resonator with two declared boundary conditions.
+- [x] Set physical `L`, medium index/speed, frequency, and complex reflection coefficient; alternatively label a fully normalized model consistently. Show optical time with a separate animation slow-down factor.
+- [x] Derive the envelope from the complex field sum and compute extrema analytically where possible; cache parameter-dependent results.
+- [ ] For optical mode, display complementary E/H standing patterns and energy flow; connect resonance mode number to the passive resonator tool N9. *(Partial: E/H patterns and energy flow done; N9 link pending.)*
+- [x] Rewrite formulas around the same origin and boundary position as the implementation, including reflection phase.
 
 **Acceptance:** a perfect electric conductor enforces zero tangential electric field at its surface. A two-perfect-mirror, nondispersive cavity gives `νm = m c/(2nL)`. Changing only global temporal phase does not move nodes. Partial reflection produces the correct nonzero minima and standing-wave ratio.
 
@@ -161,13 +163,13 @@ Evidence: [app.js](src/tools/laser_cavity/app.js), especially `getParams`, thres
 - The two-level picture omits the pumping/relaxation mechanism needed for the claimed inversion. The text mixes additive gain and multiplicative gain, and its “round trip” equation labels gain as single-pass while using only one pass factor.
 - **Visuals/technical:** the graph says “Time (round trips)” but stores one value per animation frame, with no physical timestamps or numerical ticks. Photon turning points at normalized 0.1/0.9 do not coincide with the drawn mirrors at 0/1.
 
-- [ ] Immediately correct the preset and output-coupling behavior and explicitly label the current model as qualitative until replaced.
-- [ ] Define single-pass intensity gain/loss coefficients `g, α` in inverse metres. For a uniform linear cavity use round-trip multiplier `M = R1 R2 exp[2(g − α)L]`; threshold satisfies `M = 1`, hence `g_th = α + ln(1/(R1 R2))/(2L)`. If the gain medium occupies only part of the cavity, use its actual length in the gain exponent.
-- [ ] Replace independent animations with a documented three-/four-level rate-equation model, or an explicitly derived effective inversion/photon-number model. Include pump rate, upper-state lifetime, stimulated emission, spontaneous-emission coupling, and photon lifetime.
-- [ ] Derive intracavity power and transmitted output from the same state; `Pout = T2 Pcirc` at the output mirror, with `T2 = 1 − R2` only for a lossless mirror.
-- [ ] Use numerical integration with a controlled time step and convergence checks. Derive threshold presets from the model parameters rather than hardcoding percentages.
-- [ ] Plot inversion, intracavity photons/power, output power, and gain versus loss against physical time. Add a pump sweep and relaxation oscillations where the selected model supports them.
-- [ ] Make photons/atoms illustrative views of that state; align mirror collisions with geometry. Link longitudinal/transverse mode selection to N9 instead of implying that particle dots establish coherence.
+- [x] Immediately correct the preset and output-coupling behavior and explicitly label the current model as qualitative until replaced.
+- [x] Define single-pass intensity gain/loss coefficients `g, α` in inverse metres. For a uniform linear cavity use round-trip multiplier `M = R1 R2 exp[2(g − α)L]`; threshold satisfies `M = 1`, hence `g_th = α + ln(1/(R1 R2))/(2L)`. If the gain medium occupies only part of the cavity, use its actual length in the gain exponent.
+- [x] Replace independent animations with a documented three-/four-level rate-equation model, or an explicitly derived effective inversion/photon-number model. Include pump rate, upper-state lifetime, stimulated emission, spontaneous-emission coupling, and photon lifetime.
+- [x] Derive intracavity power and transmitted output from the same state; `Pout = T2 Pcirc` at the output mirror, with `T2 = 1 − R2` only for a lossless mirror.
+- [x] Use numerical integration with a controlled time step and convergence checks. Derive threshold presets from the model parameters rather than hardcoding percentages.
+- [ ] Plot inversion, intracavity photons/power, output power, and gain versus loss against physical time. Add a pump sweep and relaxation oscillations where the selected model supports them. *(Partial: gain and output vs physical time with relaxation oscillations done; pump sweep and intracavity plot pending.)*
+- [ ] Make photons/atoms illustrative views of that state; align mirror collisions with geometry. Link longitudinal/transverse mode selection to N9 instead of implying that particle dots establish coherence. *(Partial: state-driven, mirror-aligned, labelled illustrative; N9 mode link pending.)*
 
 **Acceptance:** the threshold preset evaluates to threshold within the declared tolerance; below/above threshold behavior matches the rate model; zero output-mirror transmission gives zero transmitted output; numerical results converge as the time step decreases. Changing cavity length affects round-trip time and the physically defined threshold/lifetime consistently.
 

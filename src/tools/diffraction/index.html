@@ -6,8 +6,8 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Diffraction Simulation</title>
     <meta charset="utf-8" />
-    <meta content="Interactive simulation of single-slit and circular aperture diffraction, showing Huygens wavelets, far-field patterns, and intensity distribution." name="description" />
-    <meta content="diffraction, single slit, circular aperture, Airy disk, Huygens, Fraunhofer, wave optics, physics" name="keywords" />
+    <meta content="Interactive simulation of single-slit and circular aperture diffraction, computing Fraunhofer sinc² and Airy patterns in physical detector coordinates with enclosed power, absolute irradiance and a Fresnel-number check." name="description" />
+    <meta content="diffraction, single slit, circular aperture, Airy disk, Huygens, Fraunhofer, Fresnel number, encircled energy, wave optics, physics" name="keywords" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -28,7 +28,7 @@
             "@type": "WebPage",
             "name": "Diffraction Simulation",
             "url": "https://adamdjellouli.com/tools/diffraction/",
-            "description": "Interactive simulation of single-slit and circular aperture diffraction, showing Huygens wavelets, far-field patterns, and intensity distribution."
+            "description": "Interactive simulation of single-slit and circular aperture diffraction, computing Fraunhofer sinc² and Airy patterns in physical detector coordinates with enclosed power, absolute irradiance and a Fresnel-number check."
         }
     </script>
 </head>
@@ -76,12 +76,13 @@
                 </div>
                 <h1>Diffraction Simulation</h1>
                 <p class="subtitle">
-                    Interactive visualization of <strong>single-slit</strong> and <strong>circular aperture</strong>
-                    diffraction. Watch waves spread through an aperture and observe the far-field
-                    <strong>diffraction pattern</strong> on a screen.
+                    Far-field (<strong>Fraunhofer</strong>) diffraction from a long <strong>single slit</strong> and a
+                    <strong>circular aperture</strong>, computed in physical detector coordinates: sinc² for the slit,
+                    the Airy function [2J₁(u)/u]² for the circle, with enclosed power, absolute irradiance and a
+                    Fresnel-number check of the far-field regime.
                 </p>
                 <div class="keyboard-hint">
-                    Adjust aperture width, wavelength, and screen distance • Toggle between slit and circular aperture
+                    Type exact values in the number boxes • Click or use the arrow keys on a plot to move the probe • Share the setup with “Copy link”
                 </div>
             </div>
         </header>
@@ -89,8 +90,8 @@
         <div class="stats-bar">
             <div class="stat-item">
                 <span class="stat-icon">↔️</span>
-                <span class="stat-value" id="stat-aperture">50 μm</span>
-                <span class="stat-label">Aperture Width</span>
+                <span class="stat-value" id="stat-aperture">a = 100 µm</span>
+                <span class="stat-label" id="stat-aperture-label">Slit Width</span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">λ</span>
@@ -99,13 +100,23 @@
             </div>
             <div class="stat-item">
                 <span class="stat-icon">📏</span>
-                <span class="stat-value" id="stat-distance">200 mm</span>
+                <span class="stat-value" id="stat-distance">1.00 m</span>
                 <span class="stat-label">Screen Distance</span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">📊</span>
                 <span class="stat-value" id="stat-pattern">Single Slit</span>
                 <span class="stat-label">Aperture Type</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">◐</span>
+                <span class="stat-value" id="stat-first-min">5.50 mm</span>
+                <span class="stat-label">First Minimum y₁</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">N<sub>F</sub></span>
+                <span class="stat-value" id="stat-fresnel">0.0045</span>
+                <span class="stat-label">Fresnel No. b²/(λL)</span>
             </div>
         </div>
         <section class="tool-content">
@@ -114,107 +125,372 @@
                 <div class="sidebar-header">
                     <h2><span class="icon">⚙️</span> Controls</h2>
                 </div>
-                <!-- Quick Presets -->
+                <!-- Experiments -->
                 <div class="option-card preset-card">
-                    <h3><span class="card-icon">⚡</span> Quick Presets</h3>
+                    <h3><span class="card-icon">⚡</span> Experiments</h3>
                     <div class="preset-buttons">
-                        <button class="preset-option active" id="btnDefault" title="Default single-slit setup">
-                            Default Slit
-                        </button>
-                        <button class="preset-option" id="btnNarrow" title="Narrow aperture (wider pattern)">
-                            Narrow Slit
-                        </button>
-                        <button class="preset-option" id="btnWide" title="Wide aperture (tighter pattern)">
-                            Wide Slit
-                        </button>
-                        <button class="preset-option" id="btnCircular" title="Circular aperture (Airy disk)">
-                            Airy Disk
-                        </button>
+                        <button class="preset-option active" data-preset="slit100" type="button" title="100 µm slit, 550 nm, L = 1 m">100 µm Slit</button>
+                        <button class="preset-option" data-preset="circle100" type="button" title="100 µm circular aperture compared with the slit">Airy Disk</button>
+                        <button class="preset-option" data-preset="halfwidth" type="button" title="Halve the slit width">Half Width</button>
+                        <button class="preset-option" data-preset="blue" type="button" title="Shorter wavelength">Blue Light</button>
+                        <button class="preset-option" data-preset="sidelobes" type="button" title="Airy rings on a log scale">Faint Rings</button>
+                        <button class="preset-option" data-preset="nearfield" type="button" title="Large aperture, short distance: Fresnel number ≈ 0.5">Near-Field Limit</button>
                     </div>
+                    <p class="diffraction-preset-note" id="presetNote" aria-live="polite"></p>
                 </div>
                 <!-- Parameters -->
                 <div class="option-card">
-                    <h3><span class="card-icon">🎚️</span> Parameters</h3>
+                    <h3><span class="card-icon">🎚️</span> Aperture &amp; Geometry</h3>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Aperture Width (a)</span>
-                            <span id="apertureValue">50 μm</span>
-                        </div>
-                        <input id="apertureWidth" max="200" min="10" step="5" type="range" value="50" />
+                        <label class="control-label" for="apType"><span>Aperture</span></label>
+                        <select class="diffraction-select" id="apType">
+                            <option value="slit">Long single slit (width a)</option>
+                            <option value="circular">Circular aperture (diameter D)</option>
+                        </select>
                     </div>
                     <div class="control-group">
                         <div class="control-label">
-                            <span>Wavelength (λ)</span>
+                            <span id="apertureLabel">Slit width a</span>
+                            <span id="apertureValue">100 µm</span>
+                        </div>
+                        <input id="apertureWidth" max="1000" min="5" step="1" type="range" value="100" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Wavelength λ (vacuum)</span>
                             <span id="wavelengthValue">550 nm</span>
                         </div>
-                        <input id="wavelength" max="700" min="380" step="10" type="range" value="550" />
+                        <input id="wavelength" max="780" min="380" step="1" type="range" value="550" />
                     </div>
                     <div class="control-group">
                         <div class="control-label">
-                            <span>Screen Distance (L)</span>
-                            <span id="screenDistValue">200 mm</span>
+                            <span>Screen distance L</span>
+                            <span id="screenDistValue">1000 mm</span>
                         </div>
-                        <input id="screenDistance" max="500" min="50" step="10" type="range" value="200" />
+                        <input id="screenDistance" max="3000" min="10" step="10" type="range" value="1000" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Incident irradiance I<sub>inc</sub></span>
+                            <span id="irradianceValue">1000 W/m²</span>
+                        </div>
+                        <input id="irradiance" max="10000" min="1" step="1" type="range" value="1000" />
+                        <p class="diffraction-hint">Used only by the absolute (W/m²) scale.</p>
                     </div>
                 </div>
-                <!-- View Options -->
+                <!-- Display -->
                 <div class="option-card">
-                    <h3><span class="card-icon">👁️</span> View Options</h3>
-                    <div class="option-item">
-                        <label class="toggle-switch">
-                            <input checked="" id="showWavelets" type="checkbox" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                        <span class="option-label">Show Huygens Wavelets</span>
+                    <h3><span class="card-icon">👁️</span> Detector &amp; Display</h3>
+                    <div class="control-group">
+                        <label class="control-label" for="normMode"><span>Normalization</span></label>
+                        <select class="diffraction-select" id="normMode">
+                            <option value="peak">Peak-normalized I/I₀</option>
+                            <option value="power">Power-normalized I/P</option>
+                            <option value="absolute">Absolute irradiance (W/m²)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="intensityScale"><span>Intensity scale</span></label>
+                        <select class="diffraction-select" id="intensityScale">
+                            <option value="linear">Linear</option>
+                            <option value="log3">Log (floor 10⁻³ of peak)</option>
+                            <option value="log5">Log (floor 10⁻⁵ of peak)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="detectorRange"><span>Detector field of view</span></label>
+                        <select class="diffraction-select" id="detectorRange">
+                            <option value="auto">Auto (≈ 4 minima)</option>
+                            <option value="1">±1 mm</option>
+                            <option value="2">±2 mm</option>
+                            <option value="5">±5 mm</option>
+                            <option value="10">±10 mm</option>
+                            <option value="20">±20 mm</option>
+                            <option value="50">±50 mm</option>
+                        </select>
                     </div>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input checked="" id="showIntensity" type="checkbox" />
+                            <input id="holdScale" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Intensity Plot</span>
+                        <label class="option-label" for="holdScale">Hold intensity scale (fixed limits)</label>
                     </div>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input id="circularAperture" type="checkbox" />
+                            <input id="compareOther" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Circular Aperture</span>
+                        <label class="option-label" for="compareOther">Overlay other aperture (same size)</label>
+                    </div>
+                    <div class="option-item">
+                        <label class="toggle-switch">
+                            <input id="showWavelets" type="checkbox" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="option-label" for="showWavelets">Huygens wavelets (illustrative)</label>
                     </div>
                 </div>
             </aside>
             <!-- Main Canvas Area -->
             <div class="canvas-area">
-                <div class="canvas-container">
-                    <div class="canvas-header">
-                        <span class="canvas-title">
-                            <span>📊</span> Diffraction Simulation
-                        </span>
+                <p class="optics-warning" id="regimeWarn" role="status" hidden></p>
+                <div class="optics-plot-grid">
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">2D detector <span class="optics-badge" id="detBadge">Fraunhofer</span></h3>
+                        <canvas class="optics-canvas" data-export-name="detector" id="detectorCanvas" tabindex="0"></canvas>
+                        <p class="optics-caption" id="detCaption">Time-averaged intensity on a flat screen at distance L, in millimetres. Dashed lines mark the computed minima. Click or use the arrow keys to move the probe (+).</p>
                     </div>
-                    <canvas height="500" id="canvas" width="700"></canvas>
-                    <div class="action-bar">
-                        <button class="action-btn primary" id="startStopBtn">
-                            <span>▶️</span> Start Animation
-                        </button>
-                        <button class="action-btn secondary" id="resetBtn">
-                            <span>↺</span> Reset
-                        </button>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Line cut through the centre <span class="optics-badge" id="cutBadge">I/I₀</span></h3>
+                        <canvas class="optics-canvas" data-export-name="line-cut" id="cutCanvas" tabindex="0"></canvas>
+                        <p class="optics-caption" id="cutCaption">Same data as the detector image along its horizontal axis. y = L tan θ with the exact angle; the far-field formula itself assumes N<sub>F</sub> ≪ 1.</p>
+                    </div>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Enclosed power</h3>
+                        <canvas class="optics-canvas" data-export-name="enclosed-power" id="powerCanvas"></canvas>
+                        <p class="optics-caption">Fraction of the transmitted power that lands inside |y| &lt; Y (slit) or r &lt; R (circle). The curve ends at the edge of the field of view, so the power that misses the detector is reported, not renormalized away.</p>
+                    </div>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Apparatus <span class="optics-badge">schematic, not to scale</span></h3>
+                        <canvas class="optics-canvas" data-export-name="schematic" id="schematicCanvas"></canvas>
+                        <div class="action-bar diffraction-actions">
+                            <button class="action-btn primary" id="startStopBtn" type="button">▶ Start</button>
+                            <button class="action-btn secondary" id="stepBtn" type="button">Step</button>
+                            <button class="action-btn secondary" id="resetBtn" type="button">↺ Reset</button>
+                        </div>
+                        <p class="optics-caption">Angles are exaggerated. Wavefront brightness after the aperture follows the computed far-field intensity in that direction; the profile drawn on the screen is the line cut. The wavelets are construction lines, not a propagated field.</p>
                     </div>
                 </div>
+                <dl class="optics-readouts" id="readouts">
+                    <div>
+                        <dt>First minimum y₁</dt>
+                        <dd id="rY1">—</dd>
+                    </div>
+                    <div>
+                        <dt>Small-angle y₁</dt>
+                        <dd id="rY1p">—</dd>
+                    </div>
+                    <div>
+                        <dt>Angle θ₁</dt>
+                        <dd id="rTheta1">—</dd>
+                    </div>
+                    <div>
+                        <dt>Central max width</dt>
+                        <dd id="rWidth">—</dd>
+                    </div>
+                    <div>
+                        <dt>Fresnel number</dt>
+                        <dd id="rNF">—</dd>
+                    </div>
+                    <div>
+                        <dt>On-axis peak</dt>
+                        <dd id="rPeak">—</dd>
+                    </div>
+                    <div>
+                        <dt>Power in central max</dt>
+                        <dd id="rCentral">—</dd>
+                    </div>
+                    <div>
+                        <dt>Power on detector (FOV)</dt>
+                        <dd id="rCaptured">—</dd>
+                    </div>
+                    <div>
+                        <dt>Probe position</dt>
+                        <dd id="rCurPos">—</dd>
+                    </div>
+                    <div>
+                        <dt>Probe angle θ</dt>
+                        <dd id="rCurTheta">—</dd>
+                    </div>
+                    <div>
+                        <dt>Probe intensity</dt>
+                        <dd id="rCurI">—</dd>
+                    </div>
+                </dl>
+                <div class="optics-table-scroll">
+                    <table class="optics-data-table" id="minimaTable">
+                        <caption>Dark fringes / rings on the positive side (exact flat-screen position and paraxial estimate)</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">m</th>
+                                <th scope="col">sin θ<sub>m</sub></th>
+                                <th scope="col">y<sub>m</sub> (mm)</th>
+                                <th scope="col">paraxial (mm)</th>
+                                <th scope="col">Δy from previous (mm)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="exportHost"></div>
             </div>
         </section>
         <!-- Help Box -->
         <div class="help-box">
             <strong>💡 How to Use</strong>
             <ul>
-                <li><strong>Aperture Width (a)</strong>: Width of the slit or diameter of the circular aperture. Narrower aperture = wider diffraction pattern</li>
-                <li><strong>Wavelength (λ)</strong>: Light wavelength (380–700 nm visible). Longer wavelength = wider diffraction pattern</li>
-                <li><strong>Screen Distance (L)</strong>: Distance from aperture to detection screen. Farther = wider pattern on screen</li>
-                <li><strong>Huygens Wavelets</strong>: Toggle to see secondary wavelets emanating from the aperture</li>
-                <li><strong>Circular Aperture</strong>: Switch to see the Airy disk pattern produced by a round opening</li>
-                <li><strong>Animation</strong>: Click Start to see wavefronts propagate through the aperture</li>
+                <li><strong>Experiments</strong>: each button sets up a reproducible measurement and states what you should observe.</li>
+                <li><strong>Aperture size</strong>: the same control is the full slit width a or the full circle diameter D, in micrometres.</li>
+                <li><strong>Probe</strong>: click the detector or line cut (or focus it and use ←/→, and ↑/↓ on the detector) to read position, angle and intensity.</li>
+                <li><strong>Normalization</strong>: I/I₀ is peak-normalized; I/P divides by the transmitted power (per metre of slit length for the slit); absolute uses the incident irradiance. Turn on <em>Hold intensity scale</em> before changing a size to see how the peak really changes.</li>
+                <li><strong>Log scale</strong>: shows the weak side lobes down to the stated floor; anything below the floor is drawn at the floor (black on the detector).</li>
+                <li><strong>Fresnel number</strong>: N<sub>F</sub> = b²/(λL) with half-width b = a/2 (or D/2). A warning appears when N<sub>F</sub> ≥ 0.1, with a link to the numerical near-field tool.</li>
+                <li><strong>Animation</strong>: only the schematic moves. The detector shows time-averaged intensity and does not depend on the animation.</li>
             </ul>
         </div>
+        <section class="optics-teaching" aria-labelledby="learn-h">
+            <h2 id="learn-h">Learn with this tool</h2>
+            <div class="optics-teaching-grid">
+                <div class="optics-objectives">
+                    <h3>Learning objectives</h3>
+                    <ul>
+                        <li>Predict the position of the diffraction minima from a, D, λ and L, and explain why the angular spread scales as λ/a.</li>
+                        <li>Explain the factor 1.22 for a circular aperture from the first zero of J₁, and use it to state a resolution limit.</li>
+                        <li>Decide from the Fresnel number whether the Fraunhofer (far-field) model applies to a given setup.</li>
+                    </ul>
+                </div>
+                <div class="optics-prereqs">
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li><a href="../interference/">Two-beam interference</a> and phasor addition</li>
+                        <li><a href="../double_slit/">Double-slit experiment</a> (the single-slit envelope)</li>
+                        <li>Huygens’ principle; small-angle approximations; complex exponentials</li>
+                        <li>Helpful: Fourier transforms and the Bessel function J₁</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="optics-model">
+                <h3>Model</h3>
+                <p>A monochromatic plane wave of vacuum wavelength λ illuminates the aperture at normal incidence. In the far field the complex amplitude on a screen at distance L is the Fourier transform of the aperture transmission, evaluated at spatial frequency sin θ/λ. For a flat screen, a point at transverse position y is seen at angle θ with y = L tan θ.</p>
+                <ul>
+                    <li>Long slit: I(θ) = I₀ sinc²β, β = π a sin θ / λ, minima at a sin θ<sub>m</sub> = mλ.</li>
+                    <li>Circle: I(θ) = I₀ [2J₁(u)/u]², u = π D sin θ / λ, dark rings at u = 3.8317, 7.0156, 10.1735, …, so sin θ₁ = 1.22 λ/D.</li>
+                    <li>Peak values (paraxial, obliquity neglected): slit I₀ = I<sub>inc</sub> a²/(λL); circle I₀ = I<sub>inc</sub> A²/(λ²L²) with A = πD²/4. These make ∫I dy = I<sub>inc</sub>a (per metre of slit) and ∬I dA = I<sub>inc</sub>A.</li>
+                    <li>Validity: N<sub>F</sub> = b²/(λL) ≪ 1 with b = a/2 or D/2 (this tool warns at N<sub>F</sub> ≥ 0.1), aperture ≫ λ (scalar theory), fully coherent monochromatic illumination.</li>
+                </ul>
+                <dl class="optics-symbols">
+                    <dt>a, D</dt>
+                    <dd>slit width, circular aperture diameter (full size)</dd>
+                    <dt>λ</dt>
+                    <dd>vacuum wavelength (the medium is air, n ≈ 1)</dd>
+                    <dt>L</dt>
+                    <dd>aperture-to-screen distance</dd>
+                    <dt>y, r</dt>
+                    <dd>transverse screen coordinate / radius, y = L tan θ</dd>
+                    <dt>I₀</dt>
+                    <dd>on-axis intensity (time-averaged irradiance)</dd>
+                    <dt>I<sub>inc</sub></dt>
+                    <dd>irradiance of the incident plane wave</dd>
+                    <dt>N<sub>F</sub></dt>
+                    <dd>Fresnel number b²/(λL), b = half-width or radius</dd>
+                    <dt>J₀, J₁</dt>
+                    <dd>Bessel functions of the first kind</dd>
+                </dl>
+                <details class="optics-derivation">
+                    <summary>Derivation</summary>
+                    <p>The Fresnel–Kirchhoff integral sums secondary wavelets from each aperture point x′: U(x) ∝ ∫ t(x′) exp[ik(x − x′)²/(2L)] dx′. Expanding the square gives a phase kx′²/(2L). Its largest value, kb²/(2L) = π N<sub>F</sub>, is negligible when N<sub>F</sub> ≪ 1. Only the linear term remains, and U(x) ∝ ∫ t(x′) exp(−2πi x′ sin θ/λ) dx′, the Fourier transform of the aperture.</p>
+                    <p>For a slit, t = 1 on |x′| &lt; a/2, which gives U ∝ a sin β/β. Squaring gives sinc²β, which is zero wherever β = mπ (m ≠ 0). You can also see this with Huygens zones: at a sin θ = λ the slit splits into two halves whose wavelets cancel in pairs.</p>
+                    <p>For a circle, the 2D transform of a disc of radius D/2 in polar coordinates uses ∫₀^{2π} e^{−iρ cos φ} dφ = 2πJ₀(ρ) and ∫ ρJ₀(ρ) dρ = ρJ₁(ρ). This gives U ∝ A · 2J₁(u)/u. Because 2J₁(u)/u → 1 as u → 0, the central value is finite.</p>
+                    <p>Enclosed power follows by integrating the intensity: for the circle d/du[J₀² + J₁²] = −2J₁²/u, so the fraction inside u is 1 − J₀²(u) − J₁²(u) (Rayleigh). For the slit it is (2/π)[Si(2β) − sin²β/β]. At the first zero these fractions are 83.8 % and 90.3 %.</p>
+                </details>
+            </div>
+            <div class="optics-exercise-list">
+                <article class="optics-exercise">
+                    <h4>Exercise 1 — Width versus spread</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">With λ = 550 nm and L = 1 m, where is the first minimum of a 100 µm slit? What happens to it when the width is halved?</li>
+                        <li class="optics-step" data-step="test">Run <em>100 µm Slit</em>, then <em>Half Width</em>.</li>
+                        <li class="optics-step" data-step="measure">Put the probe on the first dark fringe in each case and read y₁. Compare it with the minima table.</li>
+                        <li class="optics-step" data-step="explain">Why does a narrower opening spread the light more?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>y₁ ≈ λL/a = 5.50 mm, and 11.0 mm for a = 50 µm. The far field is the Fourier transform of the aperture, so a feature of size a produces angular widths of order λ/a. This is the reciprocal width relation behind the uncertainty principle for photon momentum.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 2 — The factor 1.22</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">A circular hole of diameter D = 100 µm replaces the slit. Is its first dark ring inside or outside 5.50 mm, and by what ratio?</li>
+                        <li class="optics-step" data-step="test">Run <em>Airy Disk</em>. The dashed curve is the slit of the same size.</li>
+                        <li class="optics-step" data-step="measure">Read the first dark ring radius and compute the ratio to the slit value. Read the power in the central disk.</li>
+                        <li class="optics-step" data-step="explain">Why is a circle of diameter D “effectively narrower” than a slit of width D?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>r₁ ≈ 6.71 mm, which is 1.2197 × 5.50 mm (= 3.8317/π). A disc has less open area near its edges than a slit of the same width. Its effective width, weighted by open area, is smaller, so the pattern is wider. The Airy disk holds 83.8 % of the power, against 90.3 % between the slit's first zeros.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 3 — Limiting case: when does “far” stop being far?</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Increase a at fixed λ = 500 nm, L = 100 mm. The Fraunhofer y₁ = λL/a shrinks, but the geometric shadow of the slit (half-width a/2) grows. At what width are they equal, and what is N<sub>F</sub> there?</li>
+                        <li class="optics-step" data-step="test">Set λ = 500 nm, L = 100 mm, a ≈ 316 µm. Then try the <em>Near-Field Limit</em> experiment.</li>
+                        <li class="optics-step" data-step="measure">Compare y₁ with a/2, and watch when the Fresnel-number warning appears.</li>
+                        <li class="optics-step" data-step="explain">What does a real screen show when N<sub>F</sub> ≳ 1?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>λL/a = a/2 gives a = √(2λL) ≈ 316 µm and N<sub>F</sub> = 1/2. Beyond this, the predicted far-field pattern would be smaller than the shadow of the aperture itself, which is impossible. A real screen shows a Fresnel pattern instead: a bright image of the aperture with edge fringes. As N<sub>F</sub> → ∞ this becomes the geometric shadow. Explore it numerically in the <a href="../aperture_propagation/">aperture propagation tool</a>.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 4 — Where does the power go?</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Switch to absolute irradiance and hold the scale. When the circle diameter doubles, by what factor does the on-axis peak change? And the ring radius?</li>
+                        <li class="optics-step" data-step="test">Start from <em>Airy Disk</em>, pick <em>Absolute</em>, tick <em>Hold intensity scale</em>, then change D from 100 µm to 200 µm.</li>
+                        <li class="optics-step" data-step="measure">Read the on-axis peak and y₁ before and after.</li>
+                        <li class="optics-step" data-step="explain">Reconcile the two factors with energy conservation.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>The peak rises 16× (I₀ ∝ D⁴) and the ring radius halves. The transmitted power grows as D² (4×) and the disk area shrinks as 1/D² (¼), so the peak irradiance grows by 4 × 4 = 16. The enclosed-power fractions do not change.</p>
+                    </details>
+                </article>
+            </div>
+            <div class="optics-worked-example">
+                <h3>Worked example — measuring a hair with a laser pointer</h3>
+                <p>A red laser pointer (λ = 650 nm) illuminates a hair. On a wall L = 1.50 m away, the dark fringes are spaced 12.0 ± 0.5 mm apart near the axis. By Babinet’s principle, an opaque strand of width a gives the same pattern off-axis as a slit of width a.</p>
+                <ol>
+                    <li>Small angles: Δy = λL/a, so a = λL/Δy = (650 × 10⁻⁹ m)(1.50 m)/(12.0 × 10⁻³ m) = 81 µm.</li>
+                    <li>Uncertainty: δa/a = δΔy/Δy = 0.5/12 ≈ 4 %, so a = 81 ± 3 µm (λ and L are assumed exact).</li>
+                    <li>Regime: N<sub>F</sub> = (40.5 µm)²/(650 nm × 1.5 m) ≈ 1.7 × 10⁻³ ≪ 1, so the Fraunhofer model is justified. θ₁ ≈ 8 mrad, so tan θ ≈ sin θ to 3 × 10⁻⁵.</li>
+                    <li>Check it here: set a = 81 µm, λ = 650 nm, L = 1500 mm. The minima table should show Δy ≈ 12.0 mm.</li>
+                </ol>
+            </div>
+            <div class="optics-limits">
+                <h3>When the model fails</h3>
+                <ul>
+                    <li><strong>Near field</strong>: at N<sub>F</sub> ≳ 0.1 the quadratic aperture phase matters. At N<sub>F</sub> ≳ 1 the screen shows a Fresnel pattern (including the on-axis dark spot of a circular hole for even zone counts), not sinc² or Airy. Use the <a href="../aperture_propagation/">numerical propagation tool</a>.</li>
+                    <li><strong>Apertures comparable to λ</strong>: scalar theory ignores polarization and the boundary conditions at the metal edges. Results for a ≲ 2λ are qualitative only.</li>
+                    <li><strong>Partial coherence and bandwidth</strong>: a finite source size or a broad spectrum fills in the zeros. The minima here are exact zeros only for a perfectly coherent monochromatic plane wave.</li>
+                    <li><strong>Finite slit length, obliquity and 1/r² fall-off</strong>: these are neglected. The absolute scale is paraxial, so it overstates the irradiance at large angles.</li>
+                    <li><strong>Real detectors</strong>: pixel size, noise and dynamic range limit what you can see. The log floor here is a display choice, not a detector model.</li>
+                </ul>
+            </div>
+            <div class="optics-references">
+                <h3>References</h3>
+                <ul>
+                    <li>E. Hecht, <em>Optics</em>, 5th ed., §10.2 (Fraunhofer diffraction), §10.3 (Fresnel diffraction).</li>
+                    <li>M. Born &amp; E. Wolf, <em>Principles of Optics</em>, 7th ed., §8.5 (Fraunhofer diffraction at apertures; Airy pattern and encircled energy).</li>
+                    <li>J. W. Goodman, <em>Introduction to Fourier Optics</em>, 4th ed., ch. 4 (Fresnel number and the Fraunhofer approximation).</li>
+                    <li>B. E. A. Saleh &amp; M. C. Teich, <em>Fundamentals of Photonics</em>, 3rd ed., ch. 4.</li>
+                    <li><a href="https://ocw.mit.edu/courses/2-71-optics-spring-2014/pages/lecture-notes/" rel="noopener" target="_blank">MIT OCW 2.71 Optics lecture notes</a>.</li>
+                </ul>
+            </div>
+            <section role="navigation" class="diffraction-related" aria-label="Related optics tools">
+                <h3>Related tools</h3>
+                <ul>
+                    <li><a href="../double_slit/">Double slit</a>: two slits under this single-slit envelope</li>
+                    <li><a href="../diffraction_grating/">Diffraction grating</a>: N slits, orders and resolving power</li>
+                    <li><a href="../aperture_propagation/">Aperture propagation</a>: Fresnel ↔ Fraunhofer, numerical</li>
+                    <li><a href="../fourier_optics/">Fourier optics &amp; imaging</a>: Airy PSF, resolution, MTF</li>
+                    <li><a href="../gaussian_beams/">Gaussian beams</a>: diffraction of a beam without hard edges</li>
+                    <li><a href="../interference/">Interference</a>: two-source fringes</li>
+                </ul>
+            </section>
+        </section>
         <!-- Physics Background Section -->
         <section class="explanation-section">
             <div class="section-header">
@@ -224,86 +500,55 @@
                 <div class="explanation-card">
                     <h3>🌊 What Is Diffraction?</h3>
                     <p>
-                        Diffraction is the bending and spreading of waves as they pass through an aperture or around
-                        an obstacle. It occurs when the aperture size is comparable to the wavelength of the wave. This
-                        phenomenon demonstrates the <strong>wave nature of light</strong> and cannot be explained by
-                        geometric optics alone.
-                    </p>
-                    <p>
-                        According to <strong>Huygens' Principle</strong>, every point on a wavefront acts as a source
-                        of secondary spherical wavelets. The new wavefront is the envelope of all these wavelets. When a
-                        wave passes through a narrow aperture, only a few wavelets contribute, causing the wave to spread out.
+                        Diffraction is the spreading of a wave after it passes through an aperture or around an obstacle.
+                        The angular spread is of order λ/a, so it is conspicuous when the aperture is not many thousands of
+                        wavelengths wide. <strong>Huygens’ principle</strong> treats every point of the open wavefront as a
+                        source of secondary wavelets. The field at the screen is their coherent sum.
                     </p>
                 </div>
                 <div class="explanation-card">
                     <h3>📐 Single-Slit Diffraction</h3>
-                    <p>For a single slit of width <em>a</em>, the intensity pattern on a distant screen is given by:</p>
                     <div class="formula-box">
-                        <p><strong>I(θ) = I₀ [sin(β) / β]²</strong></p>
-                        <p><strong>β = (π a sin θ) / λ</strong></p>
+                        <p><strong>I(θ) = I₀ [sin β / β]², β = π a sin θ / λ</strong></p>
+                        <p><strong>a sin θ<sub>m</sub> = mλ</strong> (m = ±1, ±2, …), y<sub>m</sub> = L tan θ<sub>m</sub></p>
                     </div>
-                    <p>Minima (dark fringes) occur when:</p>
-                    <div class="formula-box">
-                        <p><strong>a sin(θ) = mλ</strong> (m = ±1, ±2, ±3, ...)</p>
-                    </div>
-                    <p>Where:</p>
-                    <ul>
-                        <li><strong>a</strong> is the slit width</li>
-                        <li><strong>λ</strong> is the wavelength of light</li>
-                        <li><strong>θ</strong> is the angle from the central axis</li>
-                        <li><strong>m</strong> is the order of the minimum</li>
-                    </ul>
+                    <p>
+                        Example: a = 100 µm, λ = 550 nm and L = 1 m give the first zero at y₁ ≈ 5.50 mm. At β = 0 the
+                        ratio sin β/β has the finite limit 1. The first side lobes carry 4.7 % of the peak intensity.
+                    </p>
                 </div>
                 <div class="explanation-card">
                     <h3>⭕ Circular Aperture &amp; Airy Disk</h3>
-                    <p>For a circular aperture of diameter <em>D</em>, the far-field diffraction pattern is the
-                        <strong>Airy pattern</strong>:
-                    </p>
                     <div class="formula-box">
-                        <p><strong>I(θ) = I₀ [2 J₁(x) / x]²</strong></p>
-                        <p><strong>x = (π D sin θ) / λ</strong></p>
+                        <p><strong>I(θ) = I₀ [2 J₁(u) / u]², u = π D sin θ / λ</strong></p>
+                        <p><strong>sin θ₁ = 1.2197 λ / D</strong> (u = 3.8317, first zero of J₁)</p>
                     </div>
                     <p>
-                        Here J₁ is the first-order Bessel function. The central bright disk is the <strong>Airy disk</strong>.
-                        The first dark ring occurs at:
-                    </p>
-                    <div class="formula-box">
-                        <p><strong>sin(θ) ≈ 1.22 λ / D</strong></p>
-                    </div>
-                    <p>
-                        The Airy disk determines the <strong>angular resolution</strong> of telescopes, microscopes,
-                        and cameras—this is the Rayleigh criterion.
+                        For D = 100 µm, λ = 550 nm and L = 1 m, the first dark ring has a radius of ≈ 6.71 mm, 1.22× the
+                        slit's first zero. The pattern depends only on r, so the 2D detector image is radially symmetric.
+                        The Airy disk sets the <strong>Rayleigh resolution</strong> θ<sub>R</sub> = 1.22 λ/D of telescopes,
+                        microscopes and cameras.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>🌊 Huygens' Principle</h3>
-                    <div class="polarization-type">
-                        <h4>Secondary Wavelets</h4>
-                        <p><strong>Concept:</strong> Every point on a wavefront is a source of spherical secondary wavelets.</p>
-                        <p>
-                            The envelope of these wavelets at a later time gives the new position of the wavefront.
-                            In the aperture, the limited number of wavelet sources causes the wave to spread out,
-                            producing the diffraction pattern.
-                        </p>
-                    </div>
-                    <div class="polarization-type">
-                        <h4>Fraunhofer vs Fresnel Diffraction</h4>
-                        <p><strong>Fraunhofer (far-field):</strong> Source and screen are effectively at infinity (plane waves). This is the regime shown in this simulation.</p>
-                        <p>
-                            <strong>Fresnel (near-field):</strong> Source or screen is close to the aperture, requiring
-                            more complex calculations with curved wavefronts.
-                        </p>
-                    </div>
+                    <h3>🔭 Fraunhofer vs Fresnel</h3>
+                    <p>
+                        The far-field formulas require N<sub>F</sub> = b²/(λL) ≪ 1, with b the half-width or radius.
+                        This page computes <strong>only</strong> the Fraunhofer model. It reports N<sub>F</sub> and warns
+                        when N<sub>F</sub> ≥ 0.1. For example, a = 200 µm, λ = 380 nm and L = 50 mm give N<sub>F</sub> ≈ 0.53,
+                        where the true pattern differs visibly from the curve shown. A lens placed after the aperture
+                        produces the Fraunhofer pattern in its focal plane, with L replaced by the focal length f.
+                    </p>
                 </div>
                 <div class="explanation-card">
                     <h3>🔬 Applications</h3>
                     <ul>
-                        <li><strong>Telescope Resolution:</strong> The Airy disk limits the angular resolution of optical instruments (Rayleigh criterion)</li>
-                        <li><strong>X-ray Crystallography:</strong> Diffraction of X-rays by crystal lattices reveals atomic structure</li>
-                        <li><strong>Spectroscopy:</strong> Diffraction gratings split light into component wavelengths</li>
-                        <li><strong>Optical Disc Reading:</strong> CD/DVD/Blu-ray players use diffraction to read data</li>
-                        <li><strong>Waveguides &amp; Fiber Optics:</strong> Diffraction effects govern mode propagation in optical fibers</li>
+                        <li><strong>Resolution limits:</strong> the Airy disk limits telescopes, microscopes and cameras (Rayleigh criterion).</li>
+                        <li><strong>Particle and fibre sizing:</strong> laser diffraction measures hairs, wires and droplets (Babinet’s principle).</li>
+                        <li><strong>Spectroscopy:</strong> the single-slit envelope multiplies grating orders.</li>
+                        <li><strong>Beam divergence:</strong> any finite beam spreads at an angle of order λ/D.</li>
                     </ul>
+                    <p>These applications are described here but not simulated.</p>
                 </div>
             </div>
         </section>
@@ -361,6 +606,9 @@
         <script src="/app.js"></script>
     </footer>
     <script src="../shared/base.js"></script>
+    <script src="../shared/optics/core.js"></script>
+    <script src="../shared/optics/ui.js"></script>
+    <script src="../shared/optics/diffraction.js"></script>
     <script src="app.js"></script>
 </body>
 

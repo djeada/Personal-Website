@@ -4,10 +4,10 @@
 
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
-    <title>Laser Cavity Simulator</title>
+    <title>Laser Cavity Simulator: Rate Equations, Threshold and L–I Curve</title>
     <meta charset="utf-8" />
-    <meta content="Interactive demonstration of how a laser works: stimulated emission combined with an optical cavity to produce coherent light." name="description" />
-    <meta content="laser, stimulated emission, optical cavity, gain, feedback, photons, population inversion, threshold" name="keywords" />
+    <meta content="Four-level laser rate-equation simulator in physical time: inversion, intracavity photons, output power, gain clamping, an automated pump sweep (L–I curve, threshold, slope efficiency) and relaxation oscillations compared with analytic results." name="description" />
+    <meta content="laser, rate equations, four-level laser, threshold, slope efficiency, L-I curve, relaxation oscillations, photon lifetime, output coupler, gain clamping, free spectral range" name="keywords" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -26,9 +26,9 @@
         {
             "@context": "https://schema.org",
             "@type": "WebPage",
-            "name": "Laser Cavity Simulator",
+            "name": "Laser Cavity Simulator: Rate Equations, Threshold and L–I Curve",
             "url": "https://adamdjellouli.com/tools/laser_cavity/",
-            "description": "Interactive demonstration of how a laser works: stimulated emission combined with an optical cavity to produce coherent light."
+            "description": "Four-level laser rate-equation simulator in physical time: inversion, intracavity photons, output power, gain clamping, an automated pump sweep (L–I curve, threshold, slope efficiency) and relaxation oscillations compared with analytic results."
         }
     </script>
 </head>
@@ -76,12 +76,12 @@
                 </div>
                 <h1>Laser Cavity Simulator</h1>
                 <p class="subtitle">
-                    Interactive visualization of how a laser works through
-                    <strong>stimulated emission</strong> and <strong>optical feedback</strong>.
-                    Explore the relationship between pump rate, mirror reflectivity, and laser threshold.
+                    Coupled <strong>rate equations</strong> for inversion and intracavity photons in a two-mirror cavity,
+                    solved in physical time. Measure the <strong>threshold</strong>, the <strong>slope efficiency</strong>
+                    and the <strong>relaxation oscillations</strong> and compare them with the analytic results.
                 </p>
                 <div class="keyboard-hint">
-                    Adjust sliders to control laser parameters • Watch intensity build up over time
+                    Pick a preset, press Start (or Step), then read the L–I curve and the relaxation readouts
                 </div>
             </div>
         </header>
@@ -89,22 +89,22 @@
         <div class="stats-bar">
             <div class="stat-item">
                 <span class="stat-icon">⚡</span>
-                <span class="stat-value" id="stat-pump">50%</span>
-                <span class="stat-label">Pump Rate</span>
+                <span class="stat-value" id="stat-pump">–</span>
+                <span class="stat-label">Pump / Threshold</span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">🪞</span>
-                <span class="stat-value" id="stat-reflectivity">95%</span>
-                <span class="stat-label">Output Reflectivity</span>
+                <span class="stat-value" id="stat-reflectivity">–</span>
+                <span class="stat-label">Output Mirror R₂</span>
             </div>
             <div class="stat-item">
-                <span class="stat-icon">📏</span>
-                <span class="stat-value" id="stat-length">10 cm</span>
-                <span class="stat-label">Cavity Length</span>
+                <span class="stat-icon">🔦</span>
+                <span class="stat-value" id="stat-pout">–</span>
+                <span class="stat-label">Steady-state P<sub>out</sub></span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">🔥</span>
-                <span class="stat-value" id="stat-status">Below Threshold</span>
+                <span class="stat-value" id="stat-status">–</span>
                 <span class="stat-label">Laser Status</span>
             </div>
         </div>
@@ -116,89 +116,262 @@
                 </div>
                 <!-- Quick Presets -->
                 <div class="option-card preset-card">
-                    <h3><span class="card-icon">⚡</span> Quick Presets</h3>
+                    <h3><span class="card-icon">⚡</span> Experiments</h3>
                     <div class="preset-buttons">
-                        <button class="preset-option active" id="btnBelowThreshold" title="Below lasing threshold">
-                            Below Threshold
-                        </button>
-                        <button class="preset-option" id="btnAtThreshold" title="At lasing threshold">
-                            At Threshold
-                        </button>
-                        <button class="preset-option" id="btnAboveThreshold" title="Above lasing threshold">
-                            Above Threshold
-                        </button>
-                        <button class="preset-option" id="btnHighPower" title="High power laser">
-                            High Power
-                        </button>
+                        <button class="preset-option" data-preset="below" type="button">Below threshold</button>
+                        <button class="preset-option" data-preset="at" type="button">At threshold</button>
+                        <button class="preset-option" data-preset="nearThreshold" type="button">1.2 × threshold</button>
+                        <button class="preset-option" data-preset="above" type="button">2 × threshold</button>
+                        <button class="preset-option" data-preset="highPower" type="button">High power</button>
+                        <button class="preset-option" data-preset="closed" type="button">R₂ = 100 %</button>
                     </div>
+                    <p class="control-note preset-note" id="presetNote" aria-live="polite"></p>
                 </div>
                 <!-- Parameters -->
                 <div class="option-card">
                     <h3><span class="card-icon">🎚️</span> Parameters</h3>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Pump Rate</span>
-                            <span id="pumpValue">50%</span>
-                        </div>
-                        <input id="pumpSlider" max="100" min="0" step="1" type="range" value="50" />
+                        <div class="control-label"><span>Absorbed pump power P<sub>p</sub></span></div>
+                        <input aria-label="Absorbed pump power" id="pumpSlider" max="40" min="0" step="0.01" type="range" value="0.84" />
                     </div>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Output Mirror Reflectivity</span>
-                            <span id="reflectivityValue">95%</span>
-                        </div>
-                        <input id="reflectivitySlider" max="100" min="50" step="1" type="range" value="95" />
+                        <div class="control-label"><span>Output mirror R<sub>2</sub></span></div>
+                        <input aria-label="Output mirror reflectivity R2" id="reflectivitySlider" max="100" min="50" step="0.1" type="range" value="95" />
                     </div>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Cavity Length</span>
-                            <span id="lengthValue">10 cm</span>
-                        </div>
-                        <input id="lengthSlider" max="30" min="5" step="1" type="range" value="10" />
+                        <div class="control-label"><span>Cavity length L</span></div>
+                        <input aria-label="Cavity length L" id="lengthSlider" max="30" min="5" step="0.5" type="range" value="10" />
                     </div>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Internal Losses</span>
-                            <span id="lossValue">5%</span>
-                        </div>
-                        <input id="lossSlider" max="30" min="0" step="1" type="range" value="5" />
+                        <div class="control-label"><span>Gain-medium length l<sub>g</sub></span></div>
+                        <input aria-label="Gain-medium length" id="gainLengthSlider" max="5" min="1" step="0.5" type="range" value="5" />
                     </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Internal loss α</span></div>
+                        <input aria-label="Internal loss coefficient alpha" id="lossSlider" max="2" min="0" step="0.05" type="range" value="0.2" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><label for="couplingSelect">Output bookkeeping</label></div>
+                        <select id="couplingSelect">
+                            <option value="transmission">Mirror transmission: P_out = T₂ · P_circ</option>
+                            <option value="budget">Exact photon budget: P_out = ln(1/R₂) · q hν / T_rt</option>
+                        </select>
+                    </div>
+                    <p class="control-note">Fixed: R<sub>1</sub> = 99.8 %, σ = 2.8×10⁻²³ m², τ = 230 µs, mode radius 0.5 mm, β = 10⁻⁹, λ = 1064 nm, pump λ<sub>p</sub> = 808 nm, gain bandwidth 120 GHz (Nd:YAG-like values).</p>
+                </div>
+                <!-- Model readouts -->
+                <div class="option-card">
+                    <h3><span class="card-icon">📐</span> Cavity constants</h3>
+                    <dl class="readout-list">
+                        <dt>Round-trip time T<sub>rt</sub> = 2L/c</dt>
+                        <dd id="ro-roundtrip">–</dd>
+                        <dt>Round-trip log loss δ</dt>
+                        <dd id="ro-delta">–</dd>
+                        <dt>Photon lifetime τ<sub>p</sub> = T<sub>rt</sub>/δ</dt>
+                        <dd id="ro-photon-lifetime">–</dd>
+                        <dt>Threshold gain g<sub>th</sub></dt>
+                        <dd id="ro-gth">–</dd>
+                        <dt>Threshold inversion N<sub>th</sub></dt>
+                        <dd id="ro-nth">–</dd>
+                        <dt>Threshold pump P<sub>p,th</sub></dt>
+                        <dd id="ro-pth">–</dd>
+                        <dt>Integration step Δt</dt>
+                        <dd id="ro-dt">–</dd>
+                    </dl>
                 </div>
                 <!-- View Options -->
                 <div class="option-card">
-                    <h3><span class="card-icon">👁️</span> View Options</h3>
+                    <h3><span class="card-icon">👁️</span> View</h3>
+                    <div class="control-group">
+                        <div class="control-label"><label for="speedSelect">Playback speed</label></div>
+                        <select id="speedSelect">
+                            <option value="20">20 µs simulated per second</option>
+                            <option selected="" value="100">100 µs simulated per second</option>
+                            <option value="500">500 µs simulated per second</option>
+                        </select>
+                    </div>
                     <div class="option-item">
                         <label class="toggle-switch">
                             <input checked="" id="showEnergyLevels" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Energy Levels</span>
+                        <label class="option-label" for="showEnergyLevels">Show energy-level diagram</label>
                     </div>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input checked="" id="showIntensityGraph" type="checkbox" />
+                            <input id="logPhotons" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Intensity Graph</span>
+                        <label class="option-label" for="logPhotons">Log scale for photon number</label>
+                    </div>
+                    <div class="option-item">
+                        <label class="toggle-switch">
+                            <input id="logLI" type="checkbox" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="option-label" for="logLI">Log scale for L–I curve</label>
                     </div>
                 </div>
             </aside>
             <!-- Main Canvas Area -->
             <div class="canvas-area">
-                <div class="canvas-container">
+                <div class="canvas-container laser-lab">
                     <div class="canvas-header">
-                        <span class="canvas-title">
-                            <span>📊</span> Laser Cavity Visualization
-                        </span>
+                        <span class="canvas-title"><span>📊</span> Cavity, time traces and measurements</span>
                     </div>
-                    <canvas height="760" id="canvas" width="700"></canvas>
-                    <div class="action-bar">
-                        <button class="action-btn primary" id="startStopBtn">
-                            <span>▶️</span> Start Simulation
-                        </button>
-                        <button class="action-btn secondary" id="resetBtn">
-                            <span>↺</span> Reset
-                        </button>
+                    <div class="laser-lab-body">
+                        <div class="action-bar laser-actions">
+                            <button class="action-btn primary" id="startStopBtn" type="button"><span aria-hidden="true">▶</span> Start</button>
+                            <button class="action-btn secondary" id="stepBtn" type="button" title="Advance the simulation by one twentieth of the plot window"><span aria-hidden="true">⏭</span> Step</button>
+                            <button class="action-btn secondary" id="resetBtn" type="button" title="Switch the pump on again at t = 0 from an empty cavity"><span aria-hidden="true">↺</span> Reset</button>
+                        </div>
+
+                        <div class="optics-plot-grid" id="schematicGrid">
+                            <div class="optics-panel" id="cavityPanel">
+                                <h3 class="optics-panel-title">Cavity <span class="optics-badge">schematic</span></h3>
+                                <canvas class="optics-canvas" id="cavityCanvas" data-export-name="cavity"></canvas>
+                                <p class="optics-caption">Mirrors and gain medium are drawn to scale along the axis. The dots are illustrative only: the photon-dot count grows with log₁₀ q, and the dots move far slower than c. The output beam brightness follows P<sub>out</sub>.</p>
+                            </div>
+                            <div class="optics-panel" id="levelsPanel">
+                                <h3 class="optics-panel-title">Four-level scheme <span class="optics-badge">illustrative</span></h3>
+                                <canvas class="optics-canvas" id="levelsCanvas"></canvas>
+                                <p class="optics-caption">The red fraction of the drawn atoms is N/(2N<sub>th</sub>), so half of them are red at threshold. Pump band E<sub>3</sub> and lower level E<sub>1</sub> empty instantly, so the inversion equals the upper-level population N.</p>
+                            </div>
+                        </div>
+
+                        <h3 class="laser-subhead">Time traces since the pump was switched on</h3>
+                        <div class="optics-plot-grid" id="timeGrid">
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Inversion N / N<sub>th</sub></h3>
+                                <canvas class="optics-canvas time-canvas" id="invCanvas" data-export-name="inversion"></canvas>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Intracavity photons q <span class="optics-badge">peak per time bin</span></h3>
+                                <canvas class="optics-canvas time-canvas" id="photonCanvas" data-export-name="photons"></canvas>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Output power P<sub>out</sub> <span class="optics-badge">peak per time bin</span></h3>
+                                <canvas class="optics-canvas time-canvas" id="outCanvas" data-export-name="output"></canvas>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Gain g(t) versus loss g<sub>th</sub></h3>
+                                <canvas class="optics-canvas time-canvas" id="gainCanvas" data-export-name="gain"></canvas>
+                            </div>
+                        </div>
+                        <p class="optics-caption">All four panels share one physical time axis (µs). Move the pointer over any panel to read all four quantities at the same instant. q and P<sub>out</sub> show the largest value in each of the 480 time bins so that short spikes are not lost. N and g are sampled at the end of each bin. The intracavity (one-way circulating) power is P<sub>circ</sub> = q hν/T<sub>rt</sub>.</p>
+                        <dl class="optics-readouts" id="liveReadouts">
+                            <div>
+                                <dt>Time t</dt>
+                                <dd id="ro-time">–</dd>
+                            </div>
+                            <div>
+                                <dt>N / N<sub>th</sub></dt>
+                                <dd id="ro-inv">–</dd>
+                            </div>
+                            <div>
+                                <dt>Gain g(t)</dt>
+                                <dd id="ro-gain">–</dd>
+                            </div>
+                            <div>
+                                <dt>Round-trip multiplier M</dt>
+                                <dd id="ro-m">–</dd>
+                            </div>
+                            <div>
+                                <dt>Photons q</dt>
+                                <dd id="ro-q">–</dd>
+                            </div>
+                            <div>
+                                <dt>P<sub>circ</sub></dt>
+                                <dd id="ro-pcirc">–</dd>
+                            </div>
+                            <div>
+                                <dt>P<sub>out</sub></dt>
+                                <dd id="ro-pout">–</dd>
+                            </div>
+                            <div>
+                                <dt>Latest spike spacing</dt>
+                                <dd id="ro-spacing">–</dd>
+                            </div>
+                        </dl>
+                        <div id="exportHostTime"></div>
+
+                        <h3 class="laser-subhead">Steady state and small-signal dynamics</h3>
+                        <div class="optics-plot-grid" id="analysisGrid">
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">L–I curve: pump sweep <span class="optics-badge">steady state</span></h3>
+                                <canvas class="optics-canvas" id="liCanvas" data-export-name="LI"></canvas>
+                                <div class="laser-panel-actions">
+                                    <button class="optics-export-btn" id="sweepBtn" type="button">Re-run sweep</button>
+                                    <span class="optics-caption" id="sweepStatus" role="status" aria-live="polite"></span>
+                                </div>
+                                <p class="optics-caption">Dots are the automated sweep: at each pump step the rate equations are integrated from the previous settled state until dN/dt and dq/dt vanish. Solid line: exact algebraic steady state, including spontaneous emission β. Dashed line: the analytic above-threshold solution η<sub>s</sub>(P<sub>p</sub> − P<sub>p,th</sub>). The white cursor is the current pump.</p>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Relaxation oscillations <span class="optics-badge">small signal</span></h3>
+                                <canvas class="optics-canvas" id="roCanvas" data-export-name="relaxation"></canvas>
+                                <p class="optics-caption">The steady state at the current pump is kicked by Δq/q = 10⁻³, and the full nonlinear rate equations are integrated (solid). Dashed: the analytic linearised response e<sup>−γt</sup>[cos ω<sub>R</sub>t + (γ/ω<sub>R</sub>) sin ω<sub>R</sub>t]. Dotted: the envelope ±e<sup>−γt</sup>.</p>
+                            </div>
+                        </div>
+                        <dl class="optics-readouts" id="analysisReadouts">
+                            <div>
+                                <dt>Threshold P<sub>p,th</sub>: analytic / sweep fit</dt>
+                                <dd id="ro-pth-cmp">–</dd>
+                            </div>
+                            <div>
+                                <dt>Slope efficiency η<sub>s</sub>: analytic / sweep fit</dt>
+                                <dd id="ro-eta-cmp">–</dd>
+                            </div>
+                            <div>
+                                <dt>Steady P<sub>out</sub> at current pump</dt>
+                                <dd id="ro-pout-ss">–</dd>
+                            </div>
+                            <div>
+                                <dt>f<sub>R</sub>: analytic / simulated</dt>
+                                <dd id="ro-fr-cmp">–</dd>
+                            </div>
+                            <div>
+                                <dt>Damping γ: analytic / simulated</dt>
+                                <dd id="ro-gamma-cmp">–</dd>
+                            </div>
+                            <div>
+                                <dt>Loss shares (output / back mirror / internal)</dt>
+                                <dd id="ro-shares">–</dd>
+                            </div>
+                        </dl>
+                        <div id="exportHostLI"></div>
+
+                        <div class="optics-panel laser-modes" id="modesPanel">
+                            <h3 class="optics-panel-title">Which modes lase? <span class="optics-badge">passive cavity</span></h3>
+                            <dl class="optics-readouts">
+                                <div>
+                                    <dt>Free spectral range c/2L</dt>
+                                    <dd id="ro-fsr">–</dd>
+                                </div>
+                                <div>
+                                    <dt>Cold-cavity linewidth 1/(2πτ<sub>p</sub>)</dt>
+                                    <dd id="ro-linewidth">–</dd>
+                                </div>
+                                <div>
+                                    <dt>Finesse 2π/δ</dt>
+                                    <dd id="ro-finesse">–</dd>
+                                </div>
+                                <div>
+                                    <dt>Longitudinal modes under the gain curve</dt>
+                                    <dd id="ro-nmodes">–</dd>
+                                </div>
+                            </dl>
+                            <p class="optics-caption">
+                                The rate equations above describe <em>one</em> lasing mode, and they say nothing about which one it is.
+                                The mode structure is fixed by the passive resonator. Longitudinal modes sit at ν<sub>m</sub> = m c/(2nL), spaced by one
+                                free spectral range, and each has the cold-cavity linewidth set by the same photon lifetime τ<sub>p</sub> used here.
+                                A homogeneously broadened gain medium clamps at the loss of the mode closest to the gain peak. Spatial hole burning and
+                                inhomogeneous broadening let several modes lase. Transverse (TEM<sub>pq</sub>) modes exist only with curved mirrors
+                                in a stable resonator, 0 ≤ g<sub>1</sub>g<sub>2</sub> ≤ 1, and their size is the Gaussian-beam waist.
+                                Explore these in the <a href="../fabry_perot/">Fabry–Pérot and passive-resonator tool</a> (transmission comb, finesse, g<sub>1</sub>–g<sub>2</sub> stability)
+                                and the <a href="../gaussian_beams/">Gaussian-beam tool</a> (waist, Rayleigh range, q-parameter).
+                                The moving dots do not create coherence. Coherence comes from stimulated emission into a resonator mode.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -207,15 +380,182 @@
         <div class="help-box">
             <strong>💡 How to Use</strong>
             <ul>
-                <li><strong>Pump Rate</strong>: Controls how much energy is supplied to excite atoms (0% to 100%)</li>
-                <li><strong>Output Mirror Reflectivity</strong>: Sets how much light is reflected back into the cavity (50% to 100%)</li>
-                <li><strong>Cavity Length</strong>: Distance between the two mirrors (5 to 30 cm); longer cavities build up more slowly</li>
-                <li><strong>Internal Losses</strong>: Energy lost per round trip due to absorption and scattering (0% to 30%)</li>
-                <li><strong>Threshold</strong>: When gain exceeds losses, laser action begins—watch for the intensity to build up!</li>
-                <li>Use preset buttons to see different operating regimes</li>
-                <li>Toggle view options to focus on energy levels or intensity buildup</li>
+                <li><strong>Experiments</strong>: each one sets a cavity and computes the pump from the model's own threshold. The note under the buttons says what to expect. Press <strong>Start</strong> (or <strong>Step</strong>) to switch the pump on at t = 0.</li>
+                <li><strong>Absorbed pump power P<sub>p</sub></strong>: every absorbed 808 nm photon puts one atom in the upper laser level, so R<sub>p</sub> = P<sub>p</sub>/hν<sub>p</sub>. Every slider has a number box for exact keyboard entry.</li>
+                <li><strong>L–I curve</strong>: the sweep re-runs automatically when a cavity parameter changes. Pump changes only move the cursor. Compare the fitted threshold and slope with the analytic values in the readouts.</li>
+                <li><strong>Relaxation oscillations</strong>: compare the simulated frequency and damping with the small-signal formulas. Then compare the <em>Latest spike spacing</em> during a turn-on transient: the first large spikes are much slower than the linear estimate.</li>
+                <li>Changing a slider while the simulation runs keeps the current state, so you can step the pump by hand. <strong>Copy link</strong> reproduces the settings. JSON, CSV and PNG buttons export the configuration, the data and the figures.</li>
             </ul>
         </div>
+
+        <!-- Teaching section -->
+        <section class="optics-teaching" aria-labelledby="learn-h">
+            <h2 id="learn-h">Learn with this tool</h2>
+            <div class="optics-teaching-grid">
+                <div class="optics-objectives">
+                    <h3>Learning objectives</h3>
+                    <ul>
+                        <li>Derive the threshold condition R<sub>1</sub>R<sub>2</sub>e<sup>2gl<sub>g</sub>−2αL</sup> = 1 and show that the rate equations reproduce it through τ<sub>p</sub>.</li>
+                        <li>Predict the threshold pump and slope efficiency of a laser from its cavity losses and measure both from an L–I sweep.</li>
+                        <li>Explain gain clamping and relaxation oscillations, and estimate ω<sub>R</sub> and γ<sub>R</sub> from linearised rate equations.</li>
+                    </ul>
+                </div>
+                <div class="optics-prereqs">
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li>Exponential gain and loss, logarithms, and first-order ODEs</li>
+                        <li>Linearisation of a 2×2 system and damped harmonic oscillators</li>
+                        <li><a href="../standing_waves/">Standing waves</a> between two mirrors (cavity modes)</li>
+                        <li><a href="../fabry_perot/">Fabry–Pérot resonators</a>: FSR, finesse, photon lifetime</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="optics-model">
+                <h3>Model</h3>
+                <p>
+                    An ideal four-level medium of length l<sub>g</sub> sits in a linear cavity of length L between mirrors R<sub>1</sub>, R<sub>2</sub>.
+                    One cavity mode of area A holds q photons, and N atoms are inverted. In the uniform-field (mean-field) approximation:
+                </p>
+                <div class="formula-box">
+                    <p><strong>dN/dt = R<sub>p</sub> − N/τ − G N q, &nbsp;&nbsp; dq/dt = G N q − q/τ<sub>p</sub> + β N/τ</strong></p>
+                    <p>G = cσ/(AL), &nbsp; τ<sub>p</sub> = T<sub>rt</sub>/δ, &nbsp; δ = ln(1/(R<sub>1</sub>R<sub>2</sub>)) + 2αL, &nbsp; T<sub>rt</sub> = 2L/c</p>
+                    <p>Threshold: N<sub>th</sub> = 1/(Gτ<sub>p</sub>), &nbsp; g<sub>th</sub> = δ/(2l<sub>g</sub>), &nbsp; P<sub>p,th</sub> = hν<sub>p</sub> N<sub>th</sub>/τ</p>
+                    <p>Above threshold: P<sub>out</sub> = η<sub>s</sub>(P<sub>p</sub> − P<sub>p,th</sub>), &nbsp; η<sub>s</sub> = (λ<sub>p</sub>/λ)·T<sub>2</sub>/δ</p>
+                    <p>Relaxation: s² + (r/τ)s + (r−1)/(ττ<sub>p</sub>) = 0 &nbsp;⇒&nbsp; γ<sub>R</sub> = r/(2τ), &nbsp; ω<sub>R</sub> = √[(r−1)/(ττ<sub>p</sub>) − γ<sub>R</sub>²]</p>
+                </div>
+                <dl class="optics-symbols">
+                    <dt>N</dt>
+                    <dd>number of inverted atoms in the mode volume (four-level: N = N<sub>2</sub>)</dd>
+                    <dt>q</dt>
+                    <dd>photons in the lasing mode, both directions together</dd>
+                    <dt>R<sub>p</sub></dt>
+                    <dd>pump rate into the upper level, R<sub>p</sub> = P<sub>p</sub>/hν<sub>p</sub> (s⁻¹)</dd>
+                    <dt>τ, τ<sub>p</sub></dt>
+                    <dd>upper-state lifetime and photon (cavity) lifetime</dd>
+                    <dt>σ, A, β</dt>
+                    <dd>emission cross-section, mode area, spontaneous-emission fraction into the mode</dd>
+                    <dt>g, α</dt>
+                    <dd>single-pass intensity gain coefficient σN/(Al<sub>g</sub>) and internal loss (m⁻¹)</dd>
+                    <dt>δ</dt>
+                    <dd>logarithmic round-trip loss, so photons decay as e<sup>−δ</sup> per round trip</dd>
+                    <dt>r</dt>
+                    <dd>pump ratio R<sub>p</sub>/R<sub>p,th</sub></dd>
+                    <dt>T<sub>2</sub></dt>
+                    <dd>output-coupler transmission 1 − R<sub>2</sub> (lossless mirror)</dd>
+                </dl>
+                <p><strong>Assumptions and validity:</strong> ideal four-level medium with instant pump-band and lower-level decay, a single mode, the uniform-field limit (small loss per pass, δ ≲ 0.3), unit pump quantum efficiency, group index 1, and no spatial hole burning, thermal lensing or reabsorption. Numerics: fixed-step RK4 with Δt = min(τ<sub>p</sub>/10, τ/1000). Halving Δt changes the transient by less than 10⁻⁴. The pump sweep uses Δt = τ<sub>p</sub>/2, which is allowed because RK4's fixed points are the exact equilibria of the ODE.</p>
+                <details class="optics-derivation">
+                    <summary>Derivation: threshold, photon lifetime and the L–I line</summary>
+                    <p>Over one round trip the intensity is multiplied by M = R<sub>1</sub>R<sub>2</sub>e<sup>2gl<sub>g</sub></sup>e<sup>−2αL</sup>. Spreading that change evenly over T<sub>rt</sub> gives a photon growth rate ln M/T<sub>rt</sub> = 2gl<sub>g</sub>/T<sub>rt</sub> − δ/T<sub>rt</sub>. With g = σN/(Al<sub>g</sub>), the first term is 2σN/(A T<sub>rt</sub>) = cσN/(AL) = GN, and the second is 1/τ<sub>p</sub>. So the photon equation is exactly dq/dt = (GN − 1/τ<sub>p</sub>)q, and threshold GN = 1/τ<sub>p</sub> is the same as M = 1.</p>
+                    <p>In steady state above threshold, dq/dt = 0 with q ≫ 1 forces GN = 1/τ<sub>p</sub>. The inversion, and hence the gain, is <em>clamped</em> at N<sub>th</sub>. Then dN/dt = 0 gives R<sub>p</sub> − N<sub>th</sub>/τ = GN<sub>th</sub>q = q/τ<sub>p</sub>, so q = τ<sub>p</sub>(R<sub>p</sub> − R<sub>p,th</sub>). Every photon hits the output coupler once per round trip, so P<sub>circ</sub> = q hν/T<sub>rt</sub> and P<sub>out</sub> = T<sub>2</sub>P<sub>circ</sub> = (T<sub>2</sub>/δ)(hν/hν<sub>p</sub>)(P<sub>p</sub> − P<sub>p,th</sub>). The slope η<sub>s</sub> is the output-coupling efficiency T<sub>2</sub>/δ times the quantum defect λ<sub>p</sub>/λ.</p>
+                    <p><strong>Exact bookkeeping.</strong> The photon loss rate q/τ<sub>p</sub> = qδ/T<sub>rt</sub> splits between the output mirror, the back mirror and internal loss in the ratio ln(1/R<sub>2</sub>) : ln(1/R<sub>1</sub>) : 2αL. With the "exact photon budget" option, P<sub>out</sub> = ln(1/R<sub>2</sub>) q hν/T<sub>rt</sub>, and absorbed pump photons = spontaneous decays + output + back mirror + internal loss holds exactly. Since ln(1/R<sub>2</sub>) = T<sub>2</sub> + T<sub>2</sub>²/2 + …, the two options differ by about T<sub>2</sub>/2 (2.5 % at R<sub>2</sub> = 95 %).</p>
+                    <p><strong>Relaxation oscillations.</strong> Write N = N<sub>th</sub> + n and q = q<sub>0</sub> + m, drop the products nm, and set β → 0. This gives dn/dt = −(r/τ)n − m/τ<sub>p</sub> and dm/dt = Gq<sub>0</sub>n = ((r−1)/τ)n. Eliminating n gives m̈ + (r/τ)ṁ + (r−1)/(ττ<sub>p</sub>) m = 0, a damped oscillator with ω<sub>0</sub>² = (r−1)/(ττ<sub>p</sub>) and γ<sub>R</sub> = r/(2τ). Because τ<sub>p</sub> ≪ τ, the oscillation is strongly underdamped for any r that is not extremely close to 1.</p>
+                </details>
+            </div>
+
+            <div class="optics-exercise-list">
+                <article class="optics-exercise">
+                    <h4>Exercise 1: Threshold and slope from an L–I sweep</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">With R<sub>2</sub> = 95 % (preset "2 × threshold"), P<sub>p,th</sub> = 1.40 W and η<sub>s</sub> = 0.407. Predict both values after changing R<sub>2</sub> to 90 %.</li>
+                        <li class="optics-step" data-step="test">Set R<sub>2</sub> = 90 % in the number box. The sweep re-runs automatically.</li>
+                        <li class="optics-step" data-step="measure">Read the fitted threshold and slope under the L–I plot.</li>
+                        <li class="optics-step" data-step="explain">Why do both the threshold and the slope rise?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>δ rises from 0.0933 to ln(1/(0.998·0.9)) + 0.04 = 0.1474, and P<sub>p,th</sub> ∝ δ gives 1.40 × 0.1474/0.0933 ≈ 2.21 W. The slope is η<sub>s</sub> = 0.759 × 0.10/0.1474 ≈ 0.515. A larger share of the loss now leaves through the useful mirror, which raises the slope, but more gain is needed to reach threshold. The optimum output coupling balances the two at a given pump.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 2: Relaxation frequency versus pump</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Going from the "1.2 × threshold" preset to "2 × threshold", by what factor should f<sub>R</sub> change?</li>
+                        <li class="optics-step" data-step="test">Load each preset in turn.</li>
+                        <li class="optics-step" data-step="measure">Read the simulated f<sub>R</sub> and γ in both cases, and the period of the kicked response.</li>
+                        <li class="optics-step" data-step="explain">Why does γ grow only linearly with r while f<sub>R</sub> grows as √(r−1)?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>Since γ<sub>R</sub>² ≪ ω<sub>0</sub>², f<sub>R</sub> ≈ √((r−1)/(ττ<sub>p</sub>))/2π, and the ratio is √(1/0.2) ≈ 2.24: 55.5 kHz → 124 kHz. γ = r/(2τ) goes from 2.6×10³ to 4.3×10³ s⁻¹. The restoring force comes from the extra stimulated emission G q<sub>0</sub> ∝ r − 1 acting through the short photon lifetime. The damping comes from the inversion recovery rate 1/τ + Gq<sub>0</sub> = r/τ.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 3 (limiting case): a perfect output mirror</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Load "R₂ = 100 %". Does the laser reach threshold? What are P<sub>out</sub> and P<sub>circ</sub>?</li>
+                        <li class="optics-step" data-step="test">Press Start and wait for the oscillations to decay.</li>
+                        <li class="optics-step" data-step="measure">Read P<sub>circ</sub>, P<sub>out</sub> and the slope efficiency.</li>
+                        <li class="optics-step" data-step="explain">Where does the pump power go?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>δ drops to 0.042 (back mirror plus internal loss only), so the threshold falls to 0.63 W and the preset pumps at 1.26 W. The cavity lases with P<sub>circ</sub> ≈ 11 W, yet P<sub>out</sub> = 0 exactly and η<sub>s</sub> = 0. All of the extracted power is lost to scattering (2αL) and to the 0.2 % back mirror. f<sub>R</sub> also drops to 83 kHz, because τ<sub>p</sub> grew from 7.2 ns to 15.9 ns.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 4 (limiting case): large versus small signal</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">In the "2 × threshold" turn-on, will the spacing between the first two spikes equal the small-signal period 1/f<sub>R</sub> ≈ 8.06 µs?</li>
+                        <li class="optics-step" data-step="test">Press Reset, then Start, and watch the "Latest spike spacing" readout.</li>
+                        <li class="optics-step" data-step="measure">Note the spacing after the first few spikes and again after about 1 ms (500 µs/s speed).</li>
+                        <li class="optics-step" data-step="explain">Explain the difference.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>The first spikes are about 15 µs apart, roughly twice 1/f<sub>R</sub>, because each spike drives N far below N<sub>th</sub>. The inversion then has to be rebuilt by the pump, which is a nonlinear, relaxation-type cycle. Only once Δq/q ≪ 1 does the spacing approach 8.06 µs, which it does to within 0.5 % after 2.5 ms (see the unit tests). The linearised formula is a small-signal result.</p>
+                    </details>
+                </article>
+            </div>
+
+            <div class="optics-worked-example">
+                <h3>Worked example: a diode-pumped Nd:YAG laser</h3>
+                <p>Take L = 10 cm, l<sub>g</sub> = 5 cm, R<sub>1</sub> = 99.8 %, R<sub>2</sub> = 95 %, α = 0.2 m⁻¹, σ = 2.8×10⁻²³ m², τ = 230 µs, w = 0.5 mm and P<sub>p</sub> = 2.80 W at 808 nm. Find the threshold, output power and relaxation frequency.</p>
+                <ol>
+                    <li>Round-trip loss: δ = ln(1/0.998) + ln(1/0.95) + 2(0.2)(0.1) = 0.0020 + 0.0513 + 0.0400 = 0.0933. T<sub>rt</sub> = 2L/c = 0.667 ns, so τ<sub>p</sub> = T<sub>rt</sub>/δ = 7.15 ns.</li>
+                    <li>Threshold gain: g<sub>th</sub> = δ/(2l<sub>g</sub>) = 0.933 m⁻¹. With A = πw² = 7.85×10⁻⁷ m², G = cσ/(AL) = 1.07×10⁻⁷ s⁻¹ and N<sub>th</sub> = 1/(Gτ<sub>p</sub>) = 1.31×10¹⁵ atoms.</li>
+                    <li>Threshold pump: R<sub>p,th</sub> = N<sub>th</sub>/τ = 5.69×10¹⁸ s⁻¹, and hν<sub>p</sub> = 2.46×10⁻¹⁹ J gives P<sub>p,th</sub> = 1.40 W. The pump ratio is r = 2.00.</li>
+                    <li>Slope and output: η<sub>s</sub> = (808/1064)(0.05/0.0933) = 0.407, so P<sub>out</sub> = 0.407 × (2.80 − 1.40) = 0.569 W and P<sub>circ</sub> = P<sub>out</sub>/T<sub>2</sub> = 11.4 W.</li>
+                    <li>Relaxation: γ<sub>R</sub> = r/(2τ) = 4.35×10³ s⁻¹ (1/e time 230 µs), and ω<sub>R</sub> ≈ √((r−1)/(ττ<sub>p</sub>)) = 7.80×10⁵ s⁻¹, so f<sub>R</sub> = 124 kHz. The simulator's kicked response gives the same value to better than 10⁻⁴.</li>
+                </ol>
+                <p>Load "2 × threshold" and check each number against the readouts.</p>
+            </div>
+
+            <div class="optics-limits">
+                <h3>When the model fails</h3>
+                <ul>
+                    <li><strong>High output coupling or high gain per pass</strong> (δ ≳ 0.3): the intracavity intensity is no longer uniform along the axis. Use the Rigrod analysis with separate forward and backward waves. The two bookkeeping options then disagree noticeably.</li>
+                    <li><strong>Several modes</strong>: spatial hole burning in a standing-wave cavity, inhomogeneous broadening and mode competition need a multimode model. Mode beating and relative-intensity noise are not captured.</li>
+                    <li><strong>Quasi-three-level media</strong> (Yb:YAG, 946 nm Nd, Er fibre): the lower level is populated and reabsorbs, so N ≠ N<sub>2</sub> and threshold depends on the total ion density.</li>
+                    <li><strong>Thermal effects</strong>: thermal lensing changes the mode area A and the resonator stability at high pump power. The pump–mode overlap efficiency is taken as 1 here.</li>
+                    <li><strong>Q-switching, mode locking, noise and linewidth</strong>: phase, spontaneous-emission noise (Schawlow–Townes linewidth) and pulse formation are outside a mean-photon-number model.</li>
+                </ul>
+            </div>
+
+            <div class="optics-references">
+                <h3>References</h3>
+                <ul>
+                    <li>A. E. Siegman, <em>Lasers</em> (University Science Books, 1986), ch. 11 (threshold, output coupling), ch. 25 (relaxation oscillations).</li>
+                    <li>O. Svelto, <em>Principles of Lasers</em>, 5th ed. (Springer, 2010), ch. 7 (continuous-wave behaviour, slope efficiency, optimum coupling) and ch. 8.</li>
+                    <li>B. E. A. Saleh and M. C. Teich, <em>Fundamentals of Photonics</em>, 3rd ed. (Wiley, 2019), chapters on resonator optics and lasers.</li>
+                    <li>W. Koechner, <em>Solid-State Laser Engineering</em>, 6th ed. (Springer, 2006), ch. 3: Nd:YAG parameters and L–I measurements.</li>
+                    <li>MIT OCW 6.974, <a href="https://ocw.mit.edu/courses/6-974-fundamentals-of-photonics-quantum-electronics-spring-2006/pages/lecture-notes/">Fundamentals of Photonics: Quantum Electronics</a>, lecture notes on laser dynamics.</li>
+                </ul>
+            </div>
+        </section>
+
+        <div class="laser-related" role="navigation" aria-label="Related optics tools">
+            <h2>Related tools</h2>
+            <ul>
+                <li><a href="../fabry_perot/">Fabry–Pérot and passive resonators</a>: FSR, finesse, photon lifetime and g<sub>1</sub>–g<sub>2</sub> stability of the cavity used here</li>
+                <li><a href="../gaussian_beams/">Gaussian beams</a>: transverse mode size, waist and the q-parameter</li>
+                <li><a href="../standing_waves/">Standing waves</a>: the longitudinal field pattern between two mirrors</li>
+                <li><a href="../thin_films/">Thin films and coatings</a>: how dielectric mirrors reach R = 99.8 %</li>
+                <li><a href="../interferometers/">Interferometers and coherence</a>: measuring what a single-mode laser gives you</li>
+            </ul>
+        </div>
+
         <!-- Physics Background Section -->
         <section class="explanation-section">
             <div class="section-header">
@@ -226,141 +566,62 @@
                     <h3>💡 How a Laser Works</h3>
                     <p>
                         LASER stands for <strong>Light Amplification by Stimulated Emission of Radiation</strong>.
-                        A laser produces coherent, monochromatic light through a combination of two key processes:
-                        <strong>stimulated emission</strong> (the gain mechanism) and <strong>optical feedback</strong>
-                        (provided by the cavity mirrors).
+                        A laser combines an amplifier, a <strong>gain medium with population inversion</strong>,
+                        with <strong>optical feedback</strong> from two mirrors. Oscillation starts when one round trip
+                        amplifies the light by at least as much as the mirrors and internal losses remove.
                     </p>
                     <p>
-                        Unlike ordinary light sources that emit photons randomly in all directions, a laser produces
-                        photons that are all in phase, traveling in the same direction, with the same wavelength.
+                        What this simulator computes: the number of inverted atoms N(t) and the number of photons q(t) in
+                        one cavity mode, from coupled rate equations. It does not model the optical phase, the transverse
+                        beam profile, or which longitudinal modes lase. Coherence and mode selection come from the resonator's
+                        field modes (see "Which modes lase?"), not from the dots in the animation.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>⚛️ Energy Levels and Population Inversion</h3>
+                    <h3>⚛️ Why a Four-Level System</h3>
                     <p>
-                        Atoms in the gain medium exist in discrete energy states. For laser action to occur, we need
-                        <strong>population inversion</strong>—more atoms in the excited state than in the ground state.
+                        In a two-level system, pumping can at best equalise the populations, so optical pumping alone
+                        cannot produce inversion. The model uses an ideal <strong>four-level</strong> scheme:
                     </p>
-                    <div class="formula-box">
-                        <p><strong>N<sub>2</sub> &gt; N<sub>1</sub></strong> (Population Inversion Condition)</p>
-                    </div>
-                    <p>Where:</p>
                     <ul>
-                        <li><strong>N<sub>2</sub></strong>: Number of atoms in the excited (upper) energy level</li>
-                        <li><strong>N<sub>1</sub></strong>: Number of atoms in the lower energy level</li>
+                        <li>The pump lifts atoms from E<sub>0</sub> to a pump band E<sub>3</sub>, which relaxes quickly to the upper laser level E<sub>2</sub>.</li>
+                        <li>E<sub>2</sub> has a long lifetime τ (230 µs here).</li>
+                        <li>The lower laser level E<sub>1</sub> empties to E<sub>0</sub> almost instantly, so it stays empty.</li>
                     </ul>
                     <p>
-                        This is achieved by <strong>pumping</strong>—supplying energy (optical, electrical, or chemical)
-                        to excite atoms from the ground state to higher energy levels.
+                        So any pump rate produces some inversion. Threshold is the inversion at which the gain balances the cavity loss.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>✨ Stimulated Emission</h3>
-                    <p>
-                        When a photon with the right energy encounters an excited atom, it can trigger
-                        <strong>stimulated emission</strong>: the atom drops to a lower energy state and emits
-                        a second photon that is:
-                    </p>
-                    <ul>
-                        <li>Identical in <strong>wavelength</strong> (same color/frequency)</li>
-                        <li>Identical in <strong>phase</strong> (waves aligned)</li>
-                        <li>Traveling in the <strong>same direction</strong></li>
-                    </ul>
-                    <div class="formula-box">
-                        <p><strong>E<sub>photon</sub> = E<sub>2</sub> - E<sub>1</sub> = hν</strong></p>
-                    </div>
-                    <p>
-                        This process creates <strong>optical gain</strong>—each photon can produce more photons,
-                        leading to light amplification.
-                    </p>
-                </div>
-                <div class="explanation-card">
-                    <h3>🪞 The Optical Cavity (Resonator)</h3>
-                    <p>
-                        The gain medium is placed between two mirrors that form an <strong>optical cavity</strong>.
-                        Photons bounce back and forth, passing through the gain medium multiple times and triggering
-                        more stimulated emission with each pass.
-                    </p>
-                    <ul>
-                        <li><strong>Back Mirror</strong>: Highly reflective (99%+), keeps most light in the cavity</li>
-                        <li><strong>Output Mirror</strong>: Partially transmitting (95-99%), allows the laser beam to exit</li>
-                        <li><strong>Cavity Length (L)</strong>: Determines resonant frequencies (longitudinal modes)</li>
-                    </ul>
-                    <div class="formula-box">
-                        <p><strong>Round-trip time = 2L/c</strong></p>
-                    </div>
-                    <p>
-                        The cavity provides <strong>feedback</strong>—photons make multiple passes, building up
-                        the light intensity exponentially when above threshold.
-                    </p>
-                </div>
-                <div class="explanation-card">
-                    <h3>🎯 Laser Threshold</h3>
-                    <p>
-                        Lasing occurs only when <strong>gain exceeds losses</strong>. The threshold condition is:
-                    </p>
-                    <div class="formula-box">
-                        <p><strong>G ≥ L<sub>total</sub> = L<sub>mirror</sub> + L<sub>internal</sub></strong></p>
-                    </div>
-                    <p>Where:</p>
-                    <ul>
-                        <li><strong>G</strong>: Round-trip gain from stimulated emission</li>
-                        <li><strong>L<sub>mirror</sub></strong>: Losses from imperfect mirror reflectivity</li>
-                        <li><strong>L<sub>internal</sub></strong>: Internal losses (absorption, scattering)</li>
-                    </ul>
+                    <h3>🎯 Below, At and Above Threshold</h3>
                     <div class="polarization-type">
-                        <h4>⬇️ Below Threshold</h4>
-                        <p>
-                            Losses exceed gain. The light intensity decays with each round trip. Only spontaneous emission
-                            occurs—the output is dim and incoherent, similar to a LED.
-                        </p>
+                        <h4>⬇️ Below threshold (r &lt; 1)</h4>
+                        <p>The inversion rises to R<sub>p</sub>τ &lt; N<sub>th</sub>, so the gain stays below the loss line. The mode holds only tens of photons, fed by spontaneous emission, and the output is at the nanowatt level.</p>
                     </div>
                     <div class="polarization-type">
-                        <h4>⚡ At Threshold</h4>
-                        <p>
-                            Gain exactly balances losses. Intensity remains constant but low. This is the critical
-                            pump power where laser action just begins.
-                        </p>
+                        <h4>⚡ At threshold (within ±1 %)</h4>
+                        <p>The gain approaches the loss line (M → 1) and the photon number grows slowly. Its final value is set only by spontaneous emission, many orders of magnitude below the above-threshold output. This is the knee of the L–I curve on a log scale.</p>
                     </div>
                     <div class="polarization-type">
-                        <h4>🔥 Above Threshold</h4>
-                        <p>
-                            Gain exceeds losses. Intensity grows exponentially until gain saturation limits the output.
-                            The laser produces bright, coherent light with characteristic laser properties.
-                        </p>
+                        <h4>🔥 Above threshold (r &gt; 1)</h4>
+                        <p>After a delay τ ln(r/(r−1)), the inversion overshoots N<sub>th</sub> and the photon number explodes into a spike. Damped <strong>relaxation oscillations</strong> follow. In steady state the gain is <strong>clamped</strong> at g<sub>th</sub>, and every extra pumped atom becomes a photon: q = τ<sub>p</sub>(R<sub>p</sub> − R<sub>p,th</sub>).</p>
                     </div>
                 </div>
                 <div class="explanation-card">
-                    <h3>📈 Intensity Build-up</h3>
-                    <p>
-                        Above threshold, the intracavity intensity grows according to:
-                    </p>
-                    <div class="formula-box">
-                        <p><strong>I(n) = I<sub>0</sub> × (G × R<sub>1</sub> × R<sub>2</sub> × e<sup>-αL</sup>)<sup>n</sup></strong></p>
-                    </div>
-                    <p>Where:</p>
+                    <h3>⚠️ What Is Computed and What Is Illustrative</h3>
                     <ul>
-                        <li><strong>I(n)</strong>: Intensity after n round trips</li>
-                        <li><strong>G</strong>: Single-pass gain</li>
-                        <li><strong>R<sub>1</sub>, R<sub>2</sub></strong>: Mirror reflectivities</li>
-                        <li><strong>α</strong>: Internal loss coefficient</li>
-                        <li><strong>L</strong>: Cavity length</li>
+                        <li><strong>Computed:</strong> N(t), q(t), g(t), M(t), P<sub>circ</sub>, P<sub>out</sub>, the threshold, the L–I sweep, the relaxation response and the passive-cavity mode numbers.</li>
+                        <li><strong>Illustrative only:</strong> the atom dots (the red fraction is N/2N<sub>th</sub>) and the photon dots (their count grows with log₁₀ q, with none below 10⁴ photons). New dots copy the direction of an existing mode photon, which stands for stimulated emission into the mode. Faint sparks show spontaneous emission going in random directions.</li>
+                        <li><strong>Mentioned but not simulated:</strong> coherence, linewidth, mode competition and transverse modes.</li>
                     </ul>
-                    <p>
-                        The intensity grows until <strong>gain saturation</strong> occurs—the gain medium cannot
-                        provide more amplification, and the laser reaches steady-state operation.
-                    </p>
                 </div>
                 <div class="explanation-card">
                     <h3>🔬 Applications of Lasers</h3>
-                    <p>Lasers are used in countless applications due to their unique properties:</p>
                     <ul>
-                        <li><strong>Communications:</strong> Fiber optic networks transmit data as laser pulses</li>
-                        <li><strong>Medicine:</strong> Laser surgery, eye correction (LASIK), dermatology</li>
-                        <li><strong>Manufacturing:</strong> Cutting, welding, and engraving materials</li>
-                        <li><strong>Science:</strong> Spectroscopy, interferometry, atomic cooling</li>
-                        <li><strong>Consumer Electronics:</strong> CD/DVD/Blu-ray players, laser printers, barcode scanners</li>
-                        <li><strong>Defense:</strong> Targeting, range finding, directed energy weapons</li>
+                        <li><strong>Communications:</strong> fibre-optic links. Relaxation oscillations limit how fast a directly modulated diode laser can be switched.</li>
+                        <li><strong>Materials processing:</strong> cutting, welding and marking, often with Nd:YAG or fibre lasers like the one modelled here.</li>
+                        <li><strong>Medicine:</strong> surgery, ophthalmology and dermatology.</li>
+                        <li><strong>Science:</strong> spectroscopy, interferometry and atomic cooling.</li>
                     </ul>
                 </div>
             </div>
@@ -419,6 +680,9 @@
         <script src="/app.js"></script>
     </footer>
     <script src="../shared/base.js"></script>
+    <script src="../shared/optics/core.js"></script>
+    <script src="../shared/optics/ui.js"></script>
+    <script src="../shared/optics/laserCavity.js"></script>
     <script src="app.js"></script>
 </body>
 
