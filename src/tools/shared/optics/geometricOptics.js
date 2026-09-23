@@ -1516,7 +1516,7 @@
                 },
                 {
                     type: "detector",
-                    z: 54 * mm,
+                    z: 63 * mm,
                     semi: 10 * mm
                 }
             ]
@@ -1553,7 +1553,7 @@
                 },
                 {
                     type: "detector",
-                    z: 105 * mm,
+                    z: 102.1 * mm,
                     semi: 10 * mm
                 }
             ]

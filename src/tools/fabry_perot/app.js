@@ -455,7 +455,7 @@
         set("rG", fixed(md.g1, 4) + ", " + fixed(md.g2, 4));
         set("rM", fixed(md.m, 4) + " (" + md.status + ")");
         set("rGouy", Number.isFinite(md.gouy) ? (md.gouy * 180 / Math.PI).toFixed(3) + "°" : "— (unstable)");
-        set("rDT", cav.psi ? fmt(cav.fsr * cav.psi / Math.PI, "Hz", 4) : "0 (degenerate)");
+        set("rDT", md.status === "unstable" ? "— (unstable)" : cav.psi ? fmt(cav.fsr * cav.psi / Math.PI, "Hz", 4) : "0 (degenerate)");
         set("rW0", Number.isFinite(md.w0) ? fmt(md.w0, "m") + " at " + fmt(Math.abs(md.zWaist) < 1e-15 ? 0 : md.zWaist, "m") : "—");
         set("rW12", Number.isFinite(md.w1) ? fmt(md.w1, "m") + ", " + fmt(md.w2, "m") : "—");
         set("rZR", Number.isFinite(md.zR) ? fmt(md.zR, "m") : "—");

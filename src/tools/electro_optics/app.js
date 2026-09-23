@@ -55,7 +55,7 @@
                 dev: "pm",
                 vm: 3.94
             },
-            note: "β = πV_m/V_π = 2.40 (V_π = 5.15 V): the carrier J₀² drops to ≈ 10⁻⁶. Each first sideband carries 26.9 %, each second 18.6 %; lines stay 10 GHz apart and Σ J_n² = 1."
+            note: "β = πV_m/V_π = 2.40 (V_π = 5.15 V): the carrier J₀² drops to ≈ 10⁻⁶. Each first sideband carries 27.0 %, each second 18.6 %; lines stay 10 GHz apart and Σ J_n² = 1."
         },
         pmSmall: {
             s: {

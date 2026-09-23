@@ -956,7 +956,7 @@
             "°, arg rp = " + phaseDeg(s.phaseRp).toFixed(1) + "°.");
         dDepth.update("Transmitted |E|² versus depth: at the surface s = " + f3(Fresnel.transmittedIntensity(s, "s", 0)) + ", p = " +
             f3(Fresnel.transmittedIntensity(s, "p", 0)) + " times the incident value; " +
-            (s.fieldDecayLength && Number.isFinite(s.fieldDecayLength) ? "it falls by e² at depth " + formatLength(s.fieldDecayLength) + "." : "it is constant with depth (lossless propagating wave)."));
+            (s.fieldDecayLength && Number.isFinite(s.fieldDecayLength) ? "it falls to 1/e² of its surface value at depth " + formatLength(s.fieldDecayLength) + "." : "it is constant with depth (lossless propagating wave)."));
     }
 
     // ------------------------------------------------------------------ render

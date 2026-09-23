@@ -66,6 +66,9 @@ test("ellipse parameters satisfy tan 2θ = tan 2ψ cos δ and sin 2χ = sin 2ψ 
     close(Math.tan(2 * d.orientation), Math.tan(2 * psi) * Math.cos(delta), 1e-9);
     close(Math.sin(2 * d.ellipticity), Math.sin(2 * psi) * Math.sin(delta), 1e-9);
     close(d.dop, 1, 1e-12);
+    // values quoted in the "Elliptical" preset note: 2θ ≈ 40.9°, so θ ≈ 20.4° (not 40.9°), χ ≈ 24.3°
+    close(d.orientation / deg, 20.45, 0.01, "θ");
+    close(d.ellipticity / deg, 24.30, 0.01, "χ");
 });
 
 test("ideal analyzer obeys Malus's law", () => {

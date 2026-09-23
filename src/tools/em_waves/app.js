@@ -259,17 +259,20 @@
         // tighter energy/flux bounds from a coarse space-time sweep (fixed per configuration)
         uMax = 0;
         sMax = 0;
+        let sMin = 0;
         for (let i = 0; i < zs.length; i += 4) {
             for (let j = 0; j < 24; j++) {
                 const f = em.fields(cfg, zs[i], j * cfg.period / 24);
                 uMax = Math.max(uMax, f.uE, f.uH);
                 sMax = Math.max(sMax, Math.abs(f.S[2]));
+                sMin = Math.min(sMin, f.S[2]);
             }
         }
         ranges = {
             f: fMax || 1,
             u: uMax / cfg.u0 || 1,
             s: sMax / cfg.I0 || 1,
+            sMin: sMin / cfg.I0, // most negative S_z/I₀ (0 unless energy flows back toward the source)
             sAbs: sMax || 1
         };
         // Poynting theorem check away from the interface, several instants
@@ -521,10 +524,10 @@
                 color: COL.E,
                 weight: 700
             });
-            text(ctx, "z_p", c1[0] - 8, c1[1] - 5, {
+            // label at the plane's lower far corner: the upper corners can leave the canvas top
+            text(ctx, "z_p", c4[0] + 4, c4[1] + 4, {
                 color: pal.textMuted,
-                size: 11,
-                align: "center"
+                size: 11
             });
         }
 
@@ -851,7 +854,7 @@
             I0 = cfg.I0;
         const n = (arr, s) => Array.from(arr, (v) => v / s);
         const top = Math.max(ranges.u, ranges.s) * 1.1;
-        const bottom = cfg.boundary === "none" ? -0.1 * top : -ranges.s * 1.1;
+        const bottom = Math.min(-0.1 * top, ranges.sMin * 1.1);
         mapZE = UI.plot(ctx, {
             x: 0,
             y: 0,
@@ -932,7 +935,7 @@
             u0 = cfg.u0,
             I0 = cfg.I0;
         const top = Math.max(ranges.u, ranges.s) * 1.1;
-        const bottom = cfg.boundary === "none" ? -0.1 * top : -ranges.s * 1.1;
+        const bottom = Math.min(-0.1 * top, ranges.sMin * 1.1);
         mapTE = UI.plot(ctx, {
             x: 0,
             y: 0,
@@ -1118,10 +1121,15 @@
 
         const f = em.fields(cfg, zProbe(), tNow());
         const eta1 = cfg.m1.eta;
-        const Em = em.vec.norm(f.E),
-            Hm = em.vec.norm(f.H);
-        const ang = Em > 1e-9 * cfg.E0 && Hm > 1e-9 * cfg.E0 / eta1 ? Math.acos(core.clamp(em.vec.dot(f.E, f.H) / (Em * Hm), -1, 1)) * 180 / Math.PI : NaN;
-        $("rTrans").textContent = `${sig(f.E[2])} V/m, ${sig(eta1 * f.H[2])} V/m, η₁E·H/E₀² = ${sig(eta1 * em.vec.dot(f.E, f.H) / (cfg.E0 * cfg.E0), 2)}` +
+        // transversality of the forward (+z) travelling wave alone: H_f = ẑ × E_f / η. The total field of a
+        // standing wave need not have E ⟂ H (e.g. circular polarization in front of a mirror).
+        const etaF = f.region === 2 ? cfg.m2.eta : eta1;
+        const Ef = f.Ef,
+            Hf = [-Ef[1] / etaF, Ef[0] / etaF, 0];
+        const Em = em.vec.norm(Ef),
+            Hm = em.vec.norm(Hf);
+        const ang = Em > 1e-9 * cfg.E0 && Hm > 1e-9 * cfg.E0 / eta1 ? Math.acos(core.clamp(em.vec.dot(Ef, Hf) / (Em * Hm), -1, 1)) * 180 / Math.PI : NaN;
+        $("rTrans").textContent = `${sig(Ef[2])} V/m, ${sig(eta1 * Hf[2])} V/m, η₁E·H/E₀² = ${sig(eta1 * em.vec.dot(Ef, Hf) / (cfg.E0 * cfg.E0), 2)}` +
             (Number.isFinite(ang) ? `; ∠(E, H) = ${ang.toFixed(1)}°` : "");
         const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v); // hide round-off at exact nodes
         $("rProbe").textContent = `${fmt(snap(f.uE, cfg.u0), "J/m³")}, ${fmt(snap(f.uH, cfg.u0), "J/m³")}, ${fmt(snap(f.S[2], cfg.I0), "W/m²")}`;

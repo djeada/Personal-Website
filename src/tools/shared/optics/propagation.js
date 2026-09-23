@@ -594,7 +594,7 @@
         const pxPerFeature = feat / dx;
         // Paraxial check: largest angle between an aperture point and an observed point, with the
         // observed half-width capped at five diffraction widths 5λz/feature (beyond which a
-        // well-sampled pattern carries negligible power). sinθ ≈ tanθ ≈ θ to 1 % needs θ ≲ 0.14 rad.
+        // well-sampled pattern carries negligible power). sinθ ≈ tanθ to 1 % (1/cosθ − 1 ≈ θ²/2) needs θ ≲ 0.14 rad.
         const featR = Number.isFinite(feat) ? feat : (Number.isFinite(a) ? a : L);
         const rho = (Number.isFinite(a) ? a : L / 2) + Math.min(outL / 2, Math.max(L / 2, 5 * lambda * z / featR));
         const paraxialAngle = z > 0 ? Math.atan(rho / z) : Math.PI / 2;
@@ -626,7 +626,7 @@
         });
         if (p.method !== "asm" && paraxialAngle > 0.14) warnings.push({
             level: "warn",
-            text: "Rays reach θ ≈ " + (paraxialAngle * 180 / Math.PI).toFixed(1) + "° from the axis: the paraxial (Fresnel/Fraunhofer) approximation sinθ ≈ θ is off by more than 1 %. Use the angular-spectrum method."
+            text: "Rays reach θ ≈ " + (paraxialAngle * 180 / Math.PI).toFixed(1) + "° from the axis: the paraxial (Fresnel/Fraunhofer) approximation sinθ ≈ tanθ = ρ/z (spatial frequency ≈ x/(λz)) is off by about 1 % or more. Use the angular-spectrum method."
         });
         if (!direct && z > 0 && Number.isFinite(a)) {
             // geometric + diffraction spread of the beam compared with the padded window

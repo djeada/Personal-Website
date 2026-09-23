@@ -273,3 +273,15 @@ test("coupled fibres (CMT): coupling decays with separation at the rate w/a", ()
     const Dmean = 2 * a + 5e-6;
     close(rate, w / a + 1 / (2 * Dmean), 0.02 * w / a);
 });
+
+test("fibre: confinement at cut-off → 0 for LP0m/LP1m but → (l − 1)/l for l ≥ 2 (Γ caption)", () => {
+    const n2 = 1.45, NA = 0.1, a = 1e-6, n1 = Math.sqrt(n2 * n2 + NA * NA);
+    const gammaNearCutoff = (l, m, dv) => {
+        const V = W.lpCutoff(l, m) + dv;
+        const s = W.solveFibre({ n1, n2, d: 2 * a, lambda0: 2 * Math.PI * a * NA / V });
+        return s.modes.find((q) => q.l === l && q.m === m).confinement;
+    };
+    assert.ok(gammaNearCutoff(1, 1, 1e-3) < 0.15, "LP11 Γ should fall towards 0 at cut-off");
+    assert.ok(gammaNearCutoff(0, 2, 1e-3) < 1e-3, "LP02 Γ → 0 at cut-off");
+    for (const l of [2, 3, 4]) close(gammaNearCutoff(l, 1, 1e-4), (l - 1) / l, 0.01, `LP${l}1 Γ at cut-off`);
+});

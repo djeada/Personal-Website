@@ -95,7 +95,7 @@
                 distance: 1,
                 halfWidth: 10e-3
             },
-            expect: "Fine 0.633 mm fringes; 19 bright fringes inside the central lobe (d/a = 10)."
+            expect: "Fine 0.633 mm fringes; 19 bright fringes inside the central lobe (d/a = 10). N_F ≈ 0.48 is only marginally far field (warning below)."
         },
         subwave: {
             set: {
@@ -500,7 +500,9 @@
         }
         el("stat-orders").textContent = orderText;
         el("stat-orders-label").textContent = `Orders on Screen (max ±${maxOrder})`;
-        el("stat-visibility").textContent = analysis.measuredVisibility === null ? "unresolved" : fmtNum(analysis.measuredVisibility);
+        // with d < λ there is a single broad maximum and no fringe period to measure a contrast over
+        const visText = bothOpen && maxOrder === 0 ? "n/a (d < λ)" : analysis.measuredVisibility === null ? "unresolved" : null;
+        el("stat-visibility").textContent = visText || fmtNum(analysis.measuredVisibility);
 
         const items = [];
         items.push(["Screen extent", `±${fmtLen(state.halfWidth)} (|θ| ≤ ${fmtDeg(v.maxAngle)})`]);
@@ -518,7 +520,7 @@
         items.push(["Envelope zero, exact", Number.isFinite(zero) ? fmtLen(zero, 4) : "none (a ≤ λ)"]);
         const missing = orders.filter((o) => o.missing && o.m > 0).map((o) => o.m);
         if (bothOpen && missing.length) items.push(["Missing orders", "±" + missing.slice(0, 5).join(", ±") + (missing.length > 5 ? ", …" : "")]);
-        items.push(["Visibility, measured", analysis.measuredVisibility === null ? "unresolved" : fmtNum(analysis.measuredVisibility, 3)]);
+        items.push(["Visibility, measured", visText || fmtNum(analysis.measuredVisibility, 3)]);
         items.push(["Visibility, theory", fmtNum(DS.theoreticalVisibility(q), 3)]);
         items.push(["Peak intensity", sample.peak > 0 ? fmtNum(sample.peak / sample.reference, 3) + " I₀" : "0 (all slits blocked)"]);
         const nfText = v.fresnelNumber < 0.001 ? v.fresnelNumber.toExponential(1) : fmtNum(v.fresnelNumber, 3);
@@ -712,7 +714,7 @@
         const c1 = cy - (q.slitSeparation * s) / 2; // top slit (y = +d/2)
         const c2 = cy + (q.slitSeparation * s) / 2; // bottom slit
         const A = [q.slit1 ? 1 : 0, q.slit2 ? q.amplitudeRatio : 0];
-        const P = [0, q.relativePhase];
+        const P = [0, -q.relativePhase]; // bottom leads by φ: cos(kr − ωt − φ), fringes shift toward the top slit as in the model
         const lamPx = Math.max(10, (x1 - x0) / 16); // display wavelength: NOT the physical λ
         const k = (2 * Math.PI) / lamPx;
 

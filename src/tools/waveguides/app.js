@@ -1627,6 +1627,7 @@
         } = couplerLc();
         if (S.geo === "slab") {
             $("coupleBadge").textContent = `exact ${S.pol} supermodes${S.pol === "TE" ? " + CMT" : ""}`;
+            $("cDBLabel").textContent = "β_even − β_odd (exact)";
             set("cDB", Number.isFinite(coup.betaEven - coup.betaOdd) ? ((coup.betaEven - coup.betaOdd) * 1e-3).toPrecision(4) + " rad/mm" : "—");
             set("cLc", Number.isFinite(coup.Lc) && coup.reliable ? core.formatSI(coup.Lc, "m") :
                 !Number.isFinite(coup.betaOdd) ? "odd supermode not guided" : "beyond double precision");
@@ -1638,6 +1639,7 @@
             }
         } else {
             $("coupleBadge").textContent = "LP01 coupled-mode theory";
+            $("cDBLabel").textContent = "β_even − β_odd ≈ 2κ (coupled-mode)";
             set("cDB", Number.isFinite(coup.kappaCMT) ? (2 * coup.kappaCMT * 1e-3).toPrecision(4) + " rad/mm (2κ)" : "—");
             set("cLc", "no exact fibre solver here");
             set("cLcCMT", Number.isFinite(coup.LcCMT) ? core.formatSI(coup.LcCMT, "m") : "—");

@@ -276,3 +276,15 @@ test("emitter rate solver: Γp + Γr = 1/τ₀ and 1/Γp + 1/Γr = 1/R, saturati
     close((1 / r.gammaP + 1 / r.gammaR) * 5e7, 1, 1e-9);
     assert.ok(Q.emitterRates(2e-9, 2e8).saturated);
 });
+
+test("saturated emitter: detected rate per detector is Remit·η/2 = η/(8τ₀), not the requested rate", () => {
+    // The page's signal fraction ρ = S/(S + dark) must use this delivered rate S when saturated.
+    const tau0 = 1e-6,
+        eta = 0.5;
+    const sim = Q.simulateHBT({ kind: "emitter", tau0, rate: 1e6, eta, dark: 0, T: 0.4, seed: 5 });
+    assert.ok(sim.info.saturated);
+    close(sim.info.Remit, 1 / (4 * tau0), 1e-9);
+    const S = sim.info.Remit * eta / 2;
+    const measured = sim.t1.length / sim.T;
+    close(measured / S, 1, 5 * Math.sqrt(1 / (S * sim.T)) + 0.02, "delivered rate");
+});
