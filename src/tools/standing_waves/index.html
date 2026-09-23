@@ -6,8 +6,8 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Standing Waves Visualization</title>
     <meta charset="utf-8" />
-    <meta content="Interactive demonstration of standing waves formed by the superposition of incident and reflected waves, showing nodes and antinodes in real time." name="description" />
-    <meta content="standing waves, nodes, antinodes, superposition, reflection, fixed boundary, free boundary, wave physics" name="keywords" />
+    <meta content="Standing light waves from one reflector or a two-mirror resonator: complex reflection coefficient, analytic nodes and antinodes, standing-wave ratio and allowed cavity modes in physical units." name="description" />
+    <meta content="standing waves, nodes, antinodes, superposition, reflection, reflection coefficient, standing-wave ratio, optical resonator, cavity modes" name="keywords" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -28,7 +28,7 @@
             "@type": "WebPage",
             "name": "Standing Waves Visualization",
             "url": "https://adamdjellouli.com/tools/standing_waves/",
-            "description": "Interactive demonstration of standing waves formed by the superposition of incident and reflected waves, showing nodes and antinodes in real time."
+            "description": "Standing light waves from one reflector or a two-mirror resonator: complex reflection coefficient, analytic nodes and antinodes, standing-wave ratio and allowed cavity modes in physical units."
         }
     </script>
 </head>
@@ -76,37 +76,52 @@
                 </div>
                 <h1>Standing Waves Visualization</h1>
                 <p class="subtitle">
-                    Interactive demonstration of standing waves formed by superposition of
-                    <strong>incident</strong> and <strong>reflected</strong> waves.
-                    Explore how boundary conditions, frequency, and phase affect
-                    <strong>nodes</strong> and <strong>antinodes</strong>.
+                    A monochromatic light wave at normal incidence meets <strong>one reflector</strong> or is trapped
+                    between <strong>two mirrors</strong>. The coherent sum of the counterpropagating waves forms a
+                    standing pattern whose <strong>nodes</strong>, <strong>antinodes</strong> and
+                    <strong>standing-wave ratio</strong> follow from the complex reflection coefficient.
                 </p>
                 <div class="keyboard-hint">
-                    Use sliders to adjust parameters • Toggle boundary type to see fixed vs free reflection
+                    Physical units: x in µm, frequency in THz, optical time in fs • Settings are kept in the URL • The animation is slowed by an explicit factor
                 </div>
             </div>
         </header>
         <!-- Stats Bar -->
         <div class="stats-bar">
             <div class="stat-item">
-                <span class="stat-icon">🔊</span>
-                <span class="stat-value" id="stat-freq">1.0 Hz</span>
+                <span class="stat-icon">ν</span>
+                <span class="stat-value" id="stat-freq">500 THz</span>
                 <span class="stat-label">Frequency</span>
             </div>
             <div class="stat-item">
-                <span class="stat-icon">φ</span>
-                <span class="stat-value" id="stat-phase">0°</span>
-                <span class="stat-label">Phase</span>
+                <span class="stat-icon">λ</span>
+                <span class="stat-value" id="stat-lambda">600 nm</span>
+                <span class="stat-label">Medium wavelength</span>
             </div>
             <div class="stat-item">
-                <span class="stat-icon">🧱</span>
-                <span class="stat-value" id="stat-boundary">Fixed</span>
-                <span class="stat-label">Boundary</span>
+                <span class="stat-icon">r</span>
+                <span class="stat-value" id="stat-boundary">1.00 ∠180°</span>
+                <span class="stat-label">Reflection</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">S</span>
+                <span class="stat-value" id="stat-swr">∞</span>
+                <span class="stat-label">SWR</span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">⚫</span>
                 <span class="stat-value" id="stat-nodes">0</span>
-                <span class="stat-label">Nodes</span>
+                <span class="stat-label" id="stat-nodes-label">Nodes (E = 0)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">t</span>
+                <span class="stat-value" id="stat-time">0.00 fs</span>
+                <span class="stat-label">Optical time</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">⏱</span>
+                <span class="stat-value" id="stat-slow">1.00×10¹⁵</span>
+                <span class="stat-label">Slow-down</span>
             </div>
         </div>
         <section class="tool-content">
@@ -117,48 +132,98 @@
                 </div>
                 <!-- Quick Presets -->
                 <div class="option-card preset-card">
-                    <h3><span class="card-icon">⚡</span> Quick Presets</h3>
+                    <h3><span class="card-icon">⚡</span> Experiments</h3>
                     <div class="preset-buttons">
-                        <button class="preset-option" id="btnFundamental" title="Fundamental mode (½ wavelength)">
-                            Fundamental
-                        </button>
-                        <button class="preset-option active" id="btnSecondHarmonic" title="Second harmonic (1 wavelength)">
-                            2nd Harmonic
-                        </button>
-                        <button class="preset-option" id="btnThirdHarmonic" title="Third harmonic (1½ wavelengths)">
-                            3rd Harmonic
-                        </button>
-                        <button class="preset-option" id="btnHighFreq" title="High frequency (3 wavelengths)">
-                            High Freq
-                        </button>
+                        <button class="preset-option active" data-preset="pec" id="btnPec" type="button" title="Perfect electric conductor, r = −1">PEC mirror</button>
+                        <button class="preset-option" data-preset="glass" id="btnGlass" type="button" title="Air to glass, r = −0.2">Air → glass</button>
+                        <button class="preset-option" data-preset="glassOut" id="btnGlassOut" type="button" title="Glass to air, r = +0.2">Glass → air</button>
+                        <button class="preset-option" data-preset="absorber" id="btnAbsorber" type="button" title="Matched absorber, r = 0">Absorber</button>
+                        <button class="preset-option" data-preset="cavity1" id="btnCavity1" type="button" title="Two PEC mirrors, mode m = 1">Cavity m = 1</button>
+                        <button class="preset-option" data-preset="cavity4" id="btnCavity4" type="button" title="Two PEC mirrors, mode m = 4, R = 0.9 spectrum preview">Cavity m = 4</button>
+                        <button class="preset-option" data-preset="quarter" id="btnQuarter" type="button" title="PEC and ideal PMC mirror: quarter-wave modes">PEC | PMC</button>
+                        <button class="preset-option" data-preset="micro" id="btnMicro" type="button" title="Worked example: n = 3.5, L = 1.5 µm, m = 8, R = 0.99">Microcavity</button>
                     </div>
+                    <p class="sw-expect" id="presetExpect" aria-live="polite"></p>
                 </div>
-                <!-- Boundary Type -->
+                <!-- Mode -->
                 <div class="option-card">
-                    <h3><span class="card-icon">🧱</span> Boundary Type</h3>
+                    <h3><span class="card-icon">🧱</span> Geometry</h3>
                     <div class="control-group">
-                        <select id="boundaryType" style="width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--surface-color);color:var(--text-primary);font-size:0.9rem;font-weight:600;cursor:pointer;">
-                            <option value="fixed">Fixed End (inverted reflection)</option>
-                            <option value="free">Free End (same-phase reflection)</option>
+                        <label class="control-label" for="modeSelect"><span>Mode</span><span></span></label>
+                        <select class="sw-select" id="modeSelect">
+                            <option value="single">One boundary (reflector at x = L)</option>
+                            <option value="resonator">Resonator (mirrors at x = 0 and x = L)</option>
                         </select>
+                    </div>
+                    <div id="singleControls">
+                        <div class="control-group">
+                            <label class="control-label" for="boundaryType"><span>Reflector</span><span></span></label>
+                            <select class="sw-select" id="boundaryType">
+                                <option value="pec">Perfect electric conductor (r = −1)</option>
+                                <option value="dielectric">Dielectric interface n₁ → n₂ (Fresnel)</option>
+                                <option value="pmc">Ideal magnetic conductor (r = +1)</option>
+                                <option value="absorber">Matched absorber (r = 0)</option>
+                                <option value="custom">Custom complex r</option>
+                            </select>
+                        </div>
+                        <div class="control-group" hidden id="dielectricGroup">
+                            <div class="control-label"><span>Index beyond boundary n₂</span><span id="n2Value">1.50</span></div>
+                            <input id="n2Slider" max="4" min="1" step="0.01" type="range" value="1.5" />
+                        </div>
+                        <div hidden id="customGroup">
+                            <div class="control-group">
+                                <div class="control-label"><span>|r|</span><span id="rMagValue">0.50</span></div>
+                                <input id="rMagSlider" max="1" min="0" step="0.01" type="range" value="0.5" />
+                            </div>
+                            <div class="control-group">
+                                <div class="control-label"><span>arg r</span><span id="rPhaseValue">180°</span></div>
+                                <input id="rPhaseSlider" max="180" min="-180" step="1" type="range" value="180" />
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Frequency ν</span><span id="frequencyValue">500 THz</span></div>
+                            <input id="frequencySlider" max="1000" min="150" step="5" type="range" value="500" />
+                        </div>
+                    </div>
+                    <div hidden id="resonatorControls">
+                        <div class="control-group">
+                            <label class="control-label" for="mirrorConfig"><span>Mirrors (x = 0 | x = L)</span><span></span></label>
+                            <select class="sw-select" id="mirrorConfig">
+                                <option value="pec-pec">PEC | PEC (r₁ = r₂ = −1)</option>
+                                <option value="pmc-pmc">PMC | PMC (r₁ = r₂ = +1)</option>
+                                <option value="pec-pmc">PEC | PMC (r₁ = −1, r₂ = +1)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Mode number m</span><span id="modeValue">4</span></div>
+                            <input id="modeSlider" max="20" min="1" step="1" type="range" value="4" />
+                        </div>
+                        <p class="control-note">The frequency is set to the allowed mode ν<sub>m</sub>. A lossless closed cavity has no steady state between modes.</p>
+                        <div class="control-group">
+                            <div class="control-label"><span>Mirror reflectance R (spectrum preview)</span><span id="mirrorRValue">0.900</span></div>
+                            <input id="mirrorRSlider" max="0.995" min="0.3" step="0.005" type="range" value="0.9" />
+                        </div>
+                        <p class="control-note">R = |r|² sets only the finite-finesse spectrum below. The field plot shows the ideal R → 1 mode. For the driven, partially transmitting cavity use the <a href="../fabry_perot/">passive resonator tool</a>.</p>
                     </div>
                 </div>
                 <!-- Parameters -->
                 <div class="option-card">
-                    <h3><span class="card-icon">🎚️</span> Parameters</h3>
+                    <h3><span class="card-icon">🎚️</span> Medium &amp; time</h3>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Frequency</span>
-                            <span id="frequencyValue">1.0 Hz</span>
-                        </div>
-                        <input id="frequencySlider" max="5" min="0.5" step="0.1" type="range" value="1" />
+                        <div class="control-label"><span>Length L</span><span id="lengthValue">1.50 µm</span></div>
+                        <input id="lengthSlider" max="4" min="0.5" step="0.05" type="range" value="1.5" />
                     </div>
                     <div class="control-group">
-                        <div class="control-label">
-                            <span>Phase (φ)</span>
-                            <span id="phaseValue">0°</span>
-                        </div>
+                        <div class="control-label"><span>Medium index n (n₁)</span><span id="indexValue">1.00</span></div>
+                        <input id="indexSlider" max="3.5" min="1" step="0.01" type="range" value="1" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Global temporal phase φ</span><span id="phaseValue">0°</span></div>
                         <input id="phaseSlider" max="180" min="-180" step="1" type="range" value="0" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Wall time per optical period</span><span id="periodValue">2.0 s</span></div>
+                        <input id="periodSlider" max="6" min="0.5" step="0.1" type="range" value="2" />
                     </div>
                 </div>
                 <!-- View Options -->
@@ -166,17 +231,24 @@
                     <h3><span class="card-icon">👁️</span> View Options</h3>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input id="showIncident" type="checkbox" />
+                            <input id="showIncident" type="checkbox" aria-label="Show incident wave (−x wave in the cavity)" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Incident Wave</span>
+                        <span class="option-label">Show incident (−x in cavity) wave</span>
                     </div>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input id="showReflected" type="checkbox" />
+                            <input id="showReflected" type="checkbox" aria-label="Show reflected wave (+x wave in the cavity)" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Reflected Wave</span>
+                        <span class="option-label">Show reflected (+x in cavity) wave</span>
+                    </div>
+                    <div class="option-item">
+                        <label class="toggle-switch">
+                            <input id="showH" type="checkbox" aria-label="Show magnetic field ηH" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="option-label">Show magnetic field ηH</span>
                     </div>
                 </div>
             </aside>
@@ -185,17 +257,47 @@
                 <div class="canvas-container">
                     <div class="canvas-header">
                         <span class="canvas-title">
-                            <span>📊</span> Wave Visualization
+                            <span>📊</span> Field, energy and spectrum
                         </span>
                     </div>
-                    <canvas height="500" id="canvas" width="700"></canvas>
-                    <div class="action-bar">
-                        <button class="action-btn primary" id="startStopBtn">
-                            <span>▶️</span> Start Animation
-                        </button>
-                        <button class="action-btn secondary" id="resetBtn">
-                            <span>↺</span> Reset
-                        </button>
+                    <div class="sw-body">
+                        <div class="optics-plot-grid">
+                            <div class="optics-panel wide">
+                                <h3 class="optics-panel-title">Instantaneous field E(x, t) <span class="optics-badge" id="fieldBadge">1D plane wave</span></h3>
+                                <canvas class="optics-canvas" id="fieldCanvas" tabindex="0" data-export-name="field"></canvas>
+                                <div class="sw-legend" id="fieldLegend" aria-hidden="true"></div>
+                                <p class="optics-caption" id="fieldCaption">Signed field in units of the incident amplitude E₀. Dashed curves: analytic envelope ±|Ẽ(x)|. Circles on the axis mark E minima (nodes when |r| = 1), diamonds mark maxima. x is to scale. Drag or use ←/→ on a plot to move the probe x<sub>p</sub>.</p>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Time-averaged energy density <span class="optics-badge">⟨u⟩ ∝ |Ẽ|²</span></h3>
+                                <canvas class="optics-canvas" id="energyCanvas" tabindex="0" data-export-name="energy"></canvas>
+                                <p class="optics-caption">|Ẽ|²/E₀² (electric, solid) and η²|H̃|²/E₀² (magnetic, dashed); ⟨u<sub>E</sub>⟩ = ε|Ẽ|²/4. Their sum is constant, 2(1 + |r|²). An incident wave alone gives 1 for each.</p>
+                            </div>
+                            <div class="optics-panel">
+                                <h3 class="optics-panel-title">Probe time trace at x<sub>p</sub></h3>
+                                <canvas class="optics-canvas" id="traceCanvas" data-export-name="trace"></canvas>
+                                <p class="optics-caption">E(x<sub>p</sub>, t) and ηH(x<sub>p</sub>, t) over two optical periods; the white line is the current optical time. In a pure standing wave E and H are 90° apart; in a travelling wave they are in phase.</p>
+                            </div>
+                            <div class="optics-panel wide" hidden id="spectrumPanel">
+                                <h3 class="optics-panel-title">Cavity spectrum <span class="optics-badge">lossless mirrors, plane wave</span></h3>
+                                <canvas class="optics-canvas" id="spectrumCanvas" tabindex="0" data-export-name="spectrum"></canvas>
+                                <p class="optics-caption">Vertical lines: ideal-mirror modes ν<sub>m</sub> (selected mode labelled). Curve: Airy transmission T(ν) if both mirrors had power reflectance R, with the same reflection phases. Peaks stay at ν<sub>m</sub>; their width FSR/F grows as R falls. Move the pointer over the plot to read T(ν). The <a href="../fabry_perot/">passive resonator tool</a> models the driven cavity field, losses and Gaussian modes.</p>
+                            </div>
+                        </div>
+                        <div class="action-bar">
+                            <button class="action-btn primary" id="startStopBtn" type="button">
+                                <span aria-hidden="true">▶️</span> Start Animation
+                            </button>
+                            <button class="action-btn secondary" id="stepBtn" type="button" title="Advance the optical time by T/16">
+                                <span aria-hidden="true">⏭</span> Step T/16
+                            </button>
+                            <button class="action-btn secondary" id="resetBtn" type="button">
+                                <span aria-hidden="true">↺</span> Reset
+                            </button>
+                        </div>
+                        <p class="optics-warning" hidden id="swWarn"></p>
+                        <dl class="optics-readouts sw-readouts" id="modelReadout"></dl>
+                        <div id="exportHost"></div>
                     </div>
                 </div>
             </div>
@@ -204,16 +306,172 @@
         <div class="help-box">
             <strong>💡 How to Use</strong>
             <ul>
-                <li><strong>Boundary Type</strong>: Choose fixed end (wave inverts on reflection) or free end (wave reflects in phase)</li>
-                <li><strong>Frequency</strong>: Controls the number of half-wavelengths that fit in the medium (0.5 to 5 Hz)</li>
-                <li><strong>Phase (φ)</strong>: Shifts the initial phase of the wave (-180° to 180°)</li>
-                <li><strong>Nodes (N)</strong>: Points that remain stationary — marked with red dots</li>
-                <li><strong>Antinodes (A)</strong>: Points of maximum oscillation — marked with green dots and dashed lines</li>
-                <li><strong>Show Incident/Reflected</strong>: Toggle to see the individual travelling waves that form the standing wave</li>
-                <li><strong>Envelope</strong>: Dashed orange curves show the maximum displacement at each point</li>
-                <li>Use preset buttons for common harmonic modes</li>
+                <li><strong>Experiments</strong>: each preset is a reproducible setup; the line under the buttons says what you should observe.</li>
+                <li><strong>Mode</strong>: "One boundary" shows the pattern in front of a single reflector at x = L (no resonance needed); "Resonator" places mirrors at x = 0 and x = L and shows only the allowed modes.</li>
+                <li><strong>Reflector</strong>: a perfect electric conductor (r = −1), a dielectric interface whose r follows from n₁ and n₂, an ideal magnetic wall, a matched absorber, or any complex r.</li>
+                <li><strong>Frequency, L, n</strong>: physical inputs. Every slider has a number box; type a value and press Enter. The wavelength in the medium is λ = c/(nν).</li>
+                <li><strong>Probe</strong>: drag on the field or energy plot (or focus it and press ←/→) to move x<sub>p</sub>; the time trace and readouts follow.</li>
+                <li><strong>Global temporal phase φ</strong>: shifts only the time origin. Nodes and the envelope stay put.</li>
+                <li><strong>Animation</strong>: an optical period is about 2 fs, so time is slowed by the factor in the stats bar. Use Step for single increments; the animation does not start by itself when your system asks for reduced motion.</li>
+                <li><strong>Share and export</strong>: the URL always holds the current settings. Copy link, or download JSON settings, CSV profiles and PNG figures.</li>
             </ul>
         </div>
+        <!-- Teaching section -->
+        <section class="optics-teaching" aria-labelledby="learn-h">
+            <h2 id="learn-h">Learn with this tool</h2>
+            <div class="optics-teaching-grid">
+                <div class="optics-objectives">
+                    <h3>Learning objectives</h3>
+                    <ul>
+                        <li>Predict where the nodes of a standing pattern fall, and its standing-wave ratio, from the complex reflection coefficient r. Then measure both with the probe.</li>
+                        <li>Derive the allowed frequencies of a two-mirror resonator from the round-trip condition, and relate the mode number m to the node count and the free spectral range.</li>
+                        <li>Explain why partially transmitting mirrors turn discrete modes into Airy resonances of width FSR/F, and estimate the finesse, Q and photon lifetime.</li>
+                    </ul>
+                </div>
+                <div class="optics-prereqs">
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li>Complex phasors and superposition of two waves (<a href="../interference/">interference and beating</a>).</li>
+                        <li>Plane waves in a medium: k = nω/c, η = η₀/n, and H = (1/η) k̂ × E (<a href="../em_waves/">electromagnetic waves</a>).</li>
+                        <li>Normal-incidence Fresnel coefficients r = (n₁ − n₂)/(n₁ + n₂) (<a href="../fresnel/">Fresnel reflection and refraction</a>).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="optics-model">
+                <h3>Model</h3>
+                <p>
+                    A monochromatic plane wave at normal incidence in a lossless medium of index n. The tool
+                    uses the phasor convention E(x, t) = Re[Ẽ(x) e<sup>−i(ωt − φ)</sup>]. One boundary: the
+                    reflector is at x = L, and s = L − x is the distance in front of it. Resonator: mirrors sit at
+                    x = 0 and x = L, and s = x. In both cases
+                    Ẽ = E₀[e<sup>−iks</sup> + r e<sup>iks</sup>] and ηH̃ = ±E₀[e<sup>−iks</sup> − r e<sup>iks</sup>].
+                    Two mirrors allow only frequencies with r₁r₂e<sup>2ikL</sup> = 1. With partial mirrors the
+                    same round trip is summed as a geometric series, which gives the Airy transmission.
+                </p>
+                <dl class="optics-symbols">
+                    <dt>ν, ω = 2πν</dt>
+                    <dd>optical frequency (THz); the same in every medium</dd>
+                    <dt>λ₀ = c/ν, λ = λ₀/n</dt>
+                    <dd>vacuum and medium wavelength</dd>
+                    <dt>k = 2πnν/c</dt>
+                    <dd>wavenumber in the medium</dd>
+                    <dt>r = |r|e<sup>iθ</sup></dt>
+                    <dd>amplitude reflection coefficient, E<sub>ref</sub>/E<sub>inc</sub> at the boundary</dd>
+                    <dt>SWR</dt>
+                    <dd>standing-wave ratio |E|<sub>max</sub>/|E|<sub>min</sub> = (1 + |r|)/(1 − |r|)</dd>
+                    <dt>η = η₀/n</dt>
+                    <dd>wave impedance of the medium (η₀ ≈ 376.73 Ω)</dd>
+                    <dt>FSR = c/(2nL)</dt>
+                    <dd>free spectral range, the spacing between adjacent modes</dd>
+                    <dt>R = |r|², F</dt>
+                    <dd>mirror power reflectance; finesse F = π(R₁R₂)<sup>1/4</sup>/(1 − √(R₁R₂))</dd>
+                    <dt>τ, Q</dt>
+                    <dd>photon lifetime τ = t<sub>rt</sub>/(−ln R₁R₂) with t<sub>rt</sub> = 2nL/c; quality factor Q = 2πντ</dd>
+                </dl>
+                <p><strong>Assumptions and validity:</strong> scalar, one-dimensional, infinitely wide plane waves; lossless, non-dispersive real n; ideal reflectors with frequency-independent r; steady state (every transient has decayed); perfect temporal coherence. The field plot of the resonator uses ideal mirrors (|r| = 1). Partial mirrors enter only the spectrum preview.</p>
+                <details class="optics-derivation">
+                    <summary>Derivation: envelope, extrema, modes and Airy function</summary>
+                    <p><strong>Envelope.</strong> |Ẽ|² = E₀²|e<sup>−iks</sup> + |r|e<sup>i(ks+θ)</sup>|² = E₀²[1 + |r|² + 2|r| cos(2ks + θ)]. Maxima E₀(1 + |r|) occur where 2ks + θ = 2πm, and minima E₀(1 − |r|) occur where 2ks + θ = (2m + 1)π. Adjacent minima are therefore Δs = π/k = λ/2 apart. Replacing |r| by −|r| gives η²|H̃|², so |Ẽ|² + η²|H̃|² = 2E₀²(1 + |r|²) everywhere.</p>
+                    <p><strong>Global phase.</strong> Changing φ multiplies Ẽ(x) by e<sup>iφ</sup> at every x. |Ẽ(x)|, and hence every node, is unchanged.</p>
+                    <p><strong>Time-averaged flux.</strong> ⟨S⟩ = Re(Ẽ H̃*)/2 = (E₀²/2η)(1 − |r|²). The cross terms are purely imaginary and carry no net power. They describe energy sloshing between the electric and magnetic forms.</p>
+                    <p><strong>Resonator.</strong> Start at x = 0 with the wave leaving mirror 1. After a round trip it has gained e<sup>2ikL</sup> and been multiplied by r₂ and r₁. A steady field without a source needs r₁r₂e<sup>2ikL</sup> = 1, so 2kL + θ₁ + θ₂ = 2πq. This gives ν<sub>q</sub> = (q − (θ₁ + θ₂)/2π)·c/(2nL). For two PEC mirrors θ₁ = θ₂ = π, so ν<sub>m</sub> = m c/(2nL) and Ẽ ∝ sin(mπx/L), with m antinodes and m + 1 nodes.</p>
+                    <p><strong>Airy function.</strong> Let an external wave enter through mirror 1 (amplitude transmission t₁) and leave through mirror 2 (t₂). The transmitted amplitude sums t₁t₂e<sup>ikL</sup>(1 + ρ + ρ² + …) with ρ = r₁r₂e<sup>2ikL</sup>. For |ρ| &lt; 1 the series gives t₁t₂e<sup>ikL</sup>/(1 − ρ). For lossless mirrors |t<sub>j</sub>|² = 1 − R<sub>j</sub> (the index factors cancel for equal outer media), so T = (1 − R₁)(1 − R₂)/[(1 − √(R₁R₂))² + 4√(R₁R₂) sin²(δ/2)], with δ = 2kL + θ₁ + θ₂. Setting the denominator to twice its minimum gives the half-width. In the high-finesse limit it is FSR/F.</p>
+                </details>
+            </div>
+            <div class="optics-exercise-list">
+                <article class="optics-exercise">
+                    <h4>Exercise 1: Wiener's node at a mirror</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Light at ν = 500 THz in air reflects from a perfect conductor. Where is the first electric-field node, and how far away is the second? Where is the first antinode?</li>
+                        <li class="optics-step" data-step="test">Press <em>PEC mirror</em>. Turn on ηH and watch the animation.</li>
+                        <li class="optics-step" data-step="measure">Move the probe to the two E minima nearest the mirror and read their distance from the boundary. Then read the probe values of |Ẽ|²/E₀² and η²|H̃|²/E₀² at the mirror.</li>
+                        <li class="optics-step" data-step="explain">Why did Wiener's tilted photographic film show a dark fringe exactly at the silvered surface?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>λ = c/ν = 599.6 nm. Tangential E must vanish on a conductor, so the first node lies at the surface. The next is λ/2 = 299.8 nm in front of it, and the first antinode is λ/4 = 149.9 nm away. At the mirror |Ẽ|² = 0 while η²|H̃|² = 4, the magnetic antinode. The emulsion responds to E, so it stays dark at the surface. This showed that the electric field drives the photochemistry.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 2: a weak standing wave at glass</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">For air → glass (n₂ = 1.5), predict r, the SWR, the ratio of maximum to minimum energy density, and whether the interface sits at an E maximum or minimum. What changes for glass → air?</li>
+                        <li class="optics-step" data-step="test">Press <em>Air → glass</em>, then <em>Glass → air</em>.</li>
+                        <li class="optics-step" data-step="measure">With the probe, read |Ẽ|²/E₀² at an adjacent maximum and minimum and form their ratio. Read the net power fraction from the readouts.</li>
+                        <li class="optics-step" data-step="explain">Why is a dielectric interface not a "free end", and where does the missing power go?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>r = (1 − 1.5)/(1 + 1.5) = −0.2, so SWR = 1.2/0.8 = 1.5 and the energy-density ratio is SWR² = 2.25 (1.44/0.64). With r &lt; 0 the interface sits at an E minimum of 0.8E₀. For glass → air r = +0.2, and the interface is a maximum of 1.2E₀. In both cases 1 − |r|² = 96 % of the incident power flows on through the interface. The field is continuous there, with t = 1 + r, so the boundary neither pins nor frees the field.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 3 (limiting case): from standing to travelling wave</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Choose <em>Custom complex r</em> with arg r = 180°. As |r| goes from 1 to 0, predict the SWR, the envelope, and the largest phase lag between E and ηH. It occurs λ/8 from an E minimum.</li>
+                        <li class="optics-step" data-step="test">Type |r| = 1, 0.5, 0.1 and 0 into the number box.</li>
+                        <li class="optics-step" data-step="measure">Record the SWR. Put the probe λ/8 from a minimum and read the E–H phase lag in the readouts; compare with the time trace.</li>
+                        <li class="optics-step" data-step="explain">Which quantity tells you that energy is flowing, and why is it zero for |r| = 1?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>SWR = ∞, 3, 1.22 and 1. The envelope flattens to |Ẽ| = E₀ at |r| = 0, the <em>Absorber</em> preset. From the model, ẼηH̃* = E₀²[1 − |r|² + 2i|r| sin(2ks + θ)]. The real part is the net flux, ⟨S⟩ ∝ 1 − |r|². The imaginary part is reactive energy that sloshes back and forth. The largest lag, atan[2|r|/(1 − |r|²)], is 90°, 53.1°, 11.4° and 0° for the four values. At |r| = 1, E and H are in quadrature at every point and no net energy flows. At |r| = 0 they are in phase, as in a travelling wave. At the extrema themselves the lag is always 0.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 4: mode number, finesse and linewidth</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Two PEC mirrors, L = 1.5 µm, n = 1. Predict ν₄, the number of nodes of mode 4, and the FSR. If the mirrors had R = 0.9, what would the finesse and linewidth be? What happens as R → 1?</li>
+                        <li class="optics-step" data-step="test">Press <em>Cavity m = 4</em>. Then slide R towards 0.995 and down to 0.3.</li>
+                        <li class="optics-step" data-step="measure">Count nodes in the field plot. Read the FSR, F and δν in the readouts, and check the half-maximum points with the spectrum cursor.</li>
+                        <li class="optics-step" data-step="explain">Why do the peak positions not move when R changes, while their widths do?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>FSR = c/(2L) = 99.93 THz, so ν₄ = 399.7 THz, with 5 nodes including both mirrors. For R = 0.9, F = π√0.9/0.1 = 29.8 and δν = FSR/F ≈ 3.35 THz (exact Airy FWHM 3.355 THz), so Q = ν/δν ≈ 119. As R → 1, F → ∞ and δν → 0, which recovers the discrete ideal modes of the field plot. The peak condition 2kL + θ₁ + θ₂ = 2πq depends only on the mirror <em>phases</em>. |r| sets how fast light leaks out, and hence the width.</p>
+                    </details>
+                </article>
+            </div>
+            <div class="optics-worked-example">
+                <h3>Worked example: a semiconductor microcavity</h3>
+                <p>
+                    A GaAs layer (n ≈ 3.5, dispersion neglected) of thickness L = 1.5 µm sits between two
+                    mirrors. Model them as conductors with R = 0.99. Which longitudinal mode lies nearest the
+                    1.31 µm telecom band, and what are its linewidth, Q and photon lifetime? Reproduce it with the
+                    <em>Microcavity</em> preset.
+                </p>
+                <ol>
+                    <li>FSR = c/(2nL) = 2.998×10⁸/(2 · 3.5 · 1.5×10⁻⁶) = 28.55 THz.</li>
+                    <li>At λ₀ = 1.31 µm, ν = 228.9 THz, so m = ν/FSR ≈ 8.02. The nearest mode is m = 8, with ν₈ = 228.41 THz (λ₀ = 1312.5 nm).</li>
+                    <li>Inside, λ/2 = λ₀/(2n) = 187.5 nm. Mode 8 has 9 E-field nodes, including both mirrors, spaced 187.5 nm apart.</li>
+                    <li>F = π√0.99/(1 − 0.99) = 312.6, so δν = FSR/F = 91.3 GHz and Q = ν₈/δν ≈ 2.50×10³.</li>
+                    <li>t<sub>rt</sub> = 2nL/c = 35.0 fs. Each round trip keeps R² = 0.9801 of the energy, so τ = t<sub>rt</sub>/(−ln 0.9801) = 1.74 ps. Check: 1/(2πτ) = 91.3 GHz, the same linewidth.</li>
+                </ol>
+                <p>Real vertical-cavity lasers use Bragg mirrors with R &gt; 0.99. Their reflection phase varies with frequency and the field penetrates the stack, so the effective length exceeds L. The <a href="../thin_films/">thin-film</a> and <a href="../fabry_perot/">passive resonator</a> tools handle that; this ideal-mirror model does not.</p>
+            </div>
+            <div class="optics-limits">
+                <h3>When the model fails</h3>
+                <ul>
+                    <li><strong>Real metals</strong>: at optical frequencies r is complex with |r| &lt; 1 (silver ≈ 0.95–0.98). The field penetrates a skin depth, so the node sits slightly behind the surface. Use a custom r to mimic this.</li>
+                    <li><strong>Oblique incidence and polarization</strong>: r then depends on angle and on s/p polarization, and the standing pattern has period λ/(2 cos θ). See the <a href="../fresnel/">Fresnel tool</a>.</li>
+                    <li><strong>Finite beams</strong>: a Gaussian beam gains a Gouy phase that shifts the resonances and adds transverse modes. Curved mirrors also decide stability. See the <a href="../gaussian_beams/">Gaussian beam</a> and <a href="../fabry_perot/">passive resonator</a> tools.</li>
+                    <li><strong>Finite coherence</strong>: a source of bandwidth Δν washes the pattern out beyond a distance of about c/(2nΔν) from the mirror. This model assumes a single frequency.</li>
+                    <li><strong>Dispersion, absorption and gain</strong>: n(ν) moves the modes and makes the FSR use the group index, and absorption damps the pattern. Gain is a laser problem (<a href="../laser_cavity/">laser cavity</a>).</li>
+                    <li><strong>Driven partial-mirror field</strong>: the field plot always shows the ideal-mirror mode. Only the Airy spectrum includes finite R.</li>
+                </ul>
+            </div>
+            <div class="optics-references">
+                <h3>References</h3>
+                <ul>
+                    <li>E. Hecht, <em>Optics</em>, 5th ed. (Pearson, 2017): superposition and standing waves (ch. 7) and the Fabry–Pérot interferometer (ch. 9).</li>
+                    <li>B. E. A. Saleh and M. C. Teich, <em>Fundamentals of Photonics</em> (Wiley): the chapter "Resonator Optics" covers planar-mirror resonators, finesse and photon lifetime.</li>
+                    <li>D. J. Griffiths, <em>Introduction to Electrodynamics</em>, 4th ed.: reflection at a conductor and at dielectric interfaces (ch. 9).</li>
+                    <li>O. Wiener, "Stehende Lichtwellen und die Schwingungsrichtung polarisirten Lichtes", <em>Annalen der Physik</em> 40, 203 (1890).</li>
+                    <li>A. E. Siegman, <em>Lasers</em> (University Science Books, 1986): Fabry–Pérot resonances and cavity lifetime.</li>
+                    <li><a href="https://ocw.mit.edu/courses/6-974-fundamentals-of-photonics-quantum-electronics-spring-2006/pages/lecture-notes/" rel="noopener" target="_blank">MIT OCW 6.974 Fundamentals of Photonics: lecture notes</a>.</li>
+                </ul>
+            </div>
+        </section>
         <!-- Physics Background Section -->
         <section class="explanation-section">
             <div class="section-header">
@@ -221,135 +479,149 @@
             </div>
             <div class="explanation-content">
                 <div class="explanation-card">
-                    <h3>〰️ What Are Standing Waves?</h3>
+                    <h3>〰️ Standing patterns versus resonances</h3>
                     <p>
-                        A <strong>standing wave</strong> (or stationary wave) is formed when two waves of the same frequency
-                        and amplitude travel in opposite directions and interfere with each other. Unlike travelling waves,
-                        standing waves do not propagate through space — instead, they oscillate in place with fixed
-                        <strong>nodes</strong> (points of zero displacement) and <strong>antinodes</strong> (points of
-                        maximum displacement).
+                        Two coherent waves of the same frequency travelling in opposite directions add to a
+                        <strong>standing pattern</strong>: the intensity envelope is fixed in space while the field
+                        oscillates in time. A <strong>single reflector</strong> is enough. Light reflected from one
+                        mirror forms a standing pattern at <em>any</em> frequency, with nodes spaced by λ/2.
                     </p>
                     <p>
-                        Standing waves are fundamental to understanding musical instruments, resonant cavities,
-                        quantum mechanics (particle in a box), and many engineering applications.
+                        <strong>Discrete frequencies</strong> appear only when a second boundary also constrains the
+                        field. Then the wave must reproduce itself after a round trip, and only a set of
+                        <strong>resonant modes</strong> survives. Resonance is a property of the two-boundary
+                        resonator, not a condition for a standing pattern.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>📐 Mathematical Formulation</h3>
-                    <p>Consider an incident wave travelling to the right and a reflected wave travelling to the left:</p>
+                    <h3>📐 Model and coordinates (identical to the code)</h3>
+                    <p>
+                        Each field is written as a complex phasor with time dependence e<sup>−iωt</sup>. The plotted
+                        field is E(x, t) = Re[Ẽ(x) e<sup>−i(ωt − φ)</sup>], with k = 2πnν/c and ω = 2πν.
+                    </p>
+                    <p><strong>One boundary.</strong> The medium (index n = n₁) fills 0 ≤ x ≤ L, the reflector sits at
+                        x = L, and s = L − x is the distance in front of it. With r = |r|e<sup>iθ</sup> defined at the
+                        boundary:</p>
                     <div class="formula-box">
-                        <p><strong>y<sub>incident</sub>(x, t) = A sin(kx − ωt)</strong></p>
-                        <p><strong>y<sub>reflected</sub>(x, t) = ±A sin(kx + ωt)</strong></p>
+                        <p>Ẽ(x) = E₀ [ e<sup>−iks</sup> + r e<sup>+iks</sup> ]</p>
+                        <p>ηH̃(x) = E₀ [ e<sup>−iks</sup> − r e<sup>+iks</sup> ],&nbsp; η = η₀/n</p>
+                        <p>|Ẽ(x)| = E₀ √(1 + |r|² + 2|r| cos(2ks + θ))</p>
                     </div>
-                    <p>For a <strong>fixed boundary</strong> (negative reflection), the superposition gives:</p>
+                    <p>The envelope is fixed by r alone, so the extrema follow analytically:</p>
                     <div class="formula-box">
-                        <p><strong>y(x, t) = 2A sin(kx) cos(ωt)</strong></p>
+                        <p>maxima E₀(1 + |r|) at 2ks + θ = 2πm</p>
+                        <p>minima E₀(1 − |r|) at 2ks + θ = (2m + 1)π</p>
+                        <p>SWR = |E|<sub>max</sub>/|E|<sub>min</sub> = (1 + |r|)/(1 − |r|)</p>
                     </div>
-                    <p>For a <strong>free boundary</strong> (same-phase reflection):</p>
+                    <p>
+                        Adjacent minima are λ/2 = c/(2nν) apart, and the reflection phase θ sets where they fall
+                        relative to the boundary. The global phase φ multiplies every point by the same factor
+                        e<sup>iφ</sup>, so it cannot move a node.
+                    </p>
+                </div>
+                <div class="explanation-card">
+                    <h3>🧱 Reflectors</h3>
+                    <div class="parameter-explanation">
+                        <h4>Perfect electric conductor, r = −1</h4>
+                        <p>
+                            Tangential E must vanish at a perfect conductor, so θ = π places an E-field node exactly on
+                            the surface (s = 0) and further nodes every λ/2 in front of it. The magnetic field has
+                            its maximum 2E₀/η there. Real metals at optical frequencies are close to this, but they
+                            absorb, and |r| is slightly below 1.
+                        </p>
+                    </div>
+                    <div class="parameter-explanation">
+                        <h4>Dielectric interface (Fresnel, normal incidence)</h4>
+                        <div class="formula-box">
+                            <p>r = (n₁ − n₂)/(n₁ + n₂),&nbsp;&nbsp; t = 2n₁/(n₁ + n₂) = 1 + r</p>
+                        </div>
+                        <p>
+                            At normal incidence s and p polarization give the same r. Going into a denser medium
+                            (n₂ &gt; n₁) gives r &lt; 0 and an E-field <em>minimum</em> at the interface. Going
+                            into a rarer medium gives r &gt; 0 and a <em>maximum</em>. In both cases |r| is small
+                            (0.2 for air/glass). The minima are therefore not zero and most power is transmitted.
+                            A dielectric interface is <strong>not a "free end"</strong>. The field continues into
+                            medium 2 with amplitude t, drawn to the right of the boundary.
+                        </p>
+                    </div>
+                    <div class="parameter-explanation">
+                        <h4>Ideal magnetic conductor (r = +1) and matched absorber (r = 0)</h4>
+                        <p>
+                            A perfect magnetic wall is the dual idealization. Tangential H vanishes and E has an
+                            antinode at the surface. It is approximated by some metamaterial or high-impedance
+                            surfaces, not by ordinary optics. A matched absorber reflects nothing and leaves a pure
+                            travelling wave with SWR = 1.
+                        </p>
+                    </div>
+                </div>
+                <div class="explanation-card">
+                    <h3>🎵 Two-boundary resonator</h3>
+                    <p>
+                        With mirrors r₁ at x = 0 and r₂ at x = L, the field in between is
+                        Ẽ(x) = E₀ [ e<sup>−ikx</sup> + r₁ e<sup>+ikx</sup> ]. This is the same expression as above
+                        with s = x. The wave reflected at x = L must reproduce it after one round trip:
+                    </p>
                     <div class="formula-box">
-                        <p><strong>y(x, t) = 2A cos(kx) sin(ωt)</strong></p>
+                        <p>r₁ r₂ e<sup>2ikL</sup> = 1 &nbsp;⇒&nbsp; ν = (q − (θ₁ + θ₂)/2π) · c/(2nL)</p>
+                        <p>Two perfect conductors: ν<sub>m</sub> = m c/(2nL),&nbsp; Ẽ ∝ sin(mπx/L),&nbsp; m = 1, 2, 3, …</p>
                     </div>
-                    <p>Where:</p>
                     <ul>
-                        <li><strong>A</strong> is the amplitude of each travelling wave</li>
-                        <li><strong>k = 2π/λ</strong> is the wave number (λ = wavelength)</li>
-                        <li><strong>ω = 2πf</strong> is the angular frequency (f = frequency)</li>
-                        <li><strong>sin(kx)</strong> or <strong>cos(kx)</strong> is the spatial envelope that determines node/antinode positions</li>
-                        <li><strong>cos(ωt)</strong> or <strong>sin(ωt)</strong> provides the temporal oscillation</li>
+                        <li>Mode m has m antinodes and m + 1 E-field nodes, including both mirror surfaces.</li>
+                        <li>The mode spacing is the free spectral range c/(2nL).</li>
+                        <li>PMC | PMC gives the same frequencies with cos(mπx/L) profiles.</li>
+                        <li>PEC | PMC gives quarter-wave modes ν = (2m − 1) c/(4nL).</li>
+                    </ul>
+                    <p>
+                        The field plot uses ideal, lossless mirrors. With partially reflecting mirrors (power
+                        reflectance R) the discrete modes broaden into Airy resonances of width FSR/F, with finesse
+                        F = π√R/(1 − R). The spectrum panel previews this at the same mode frequencies.
+                        The <a href="../fabry_perot/">passive resonator tool</a> models the driven,
+                        partially transmitting cavity field itself.
+                    </p>
+                </div>
+                <div class="explanation-card">
+                    <h3>⚡ Electric and magnetic fields, energy flow</h3>
+                    <p>
+                        In a standing wave E and H are complementary: |E|² + η²|H|² = 2E₀²(1 + |r|²) at every x.
+                        E-field nodes are H-field antinodes, and in time the two oscillate 90° apart, so energy
+                        sloshes between electric and magnetic form. The time-averaged Poynting flux toward the
+                        boundary is ⟨S⟩ = (1 − |r|²) S<sub>inc</sub>. It is zero for a perfect reflector and in a
+                        lossless cavity mode, even though the instantaneous flux is not.
+                    </p>
+                </div>
+                <div class="explanation-card">
+                    <h3>⏱ Time scale and limits of the model</h3>
+                    <p>
+                        Visible light oscillates at about 5×10¹⁴ Hz, so one optical period lasts about 2 fs. The
+                        animation advances the optical time t (shown in fs) by (wall time)/(slow-down factor). The
+                        slow-down factor is the chosen wall time per period multiplied by ν. The time origin t = 0 is the instant when the field at the first antinode peaks. This is only a fixed choice of clock zero.
+                    </p>
+                    <ul>
+                        <li>One-dimensional monochromatic plane wave at normal incidence; the field shown is the tangential E (E ⊥ x).</li>
+                        <li>Real, non-dispersive, lossless indices; the amplitude E₀ is normalized to 1.</li>
+                        <li>The pixel sampling is only for drawing. Nodes, antinodes, SWR and mode frequencies are computed in closed form.</li>
                     </ul>
                 </div>
                 <div class="explanation-card">
-                    <h3>🎯 Nodes and Antinodes</h3>
-                    <div class="parameter-explanation">
-                        <h4>⚫ Nodes</h4>
-                        <p>
-                            Nodes are points where the medium remains stationary at all times. At a node, the incident
-                            and reflected waves always cancel each other out completely. For a fixed boundary:
-                        </p>
-                        <div class="formula-box">
-                            <p><strong>sin(kx) = 0 → x = nλ/2</strong> (n = 0, 1, 2, …)</p>
-                        </div>
-                        <p>
-                            Nodes are spaced exactly <strong>half a wavelength</strong> apart. A fixed boundary always
-                            has a node at the boundary point.
-                        </p>
-                    </div>
-                    <div class="parameter-explanation">
-                        <h4>🟢 Antinodes</h4>
-                        <p>
-                            Antinodes are points of maximum oscillation amplitude. The medium swings between
-                            +2A and −2A at these positions. For a fixed boundary:
-                        </p>
-                        <div class="formula-box">
-                            <p><strong>|sin(kx)| = 1 → x = (2n+1)λ/4</strong> (n = 0, 1, 2, …)</p>
-                        </div>
-                        <p>
-                            Antinodes are located midway between consecutive nodes, also spaced <strong>half a
-                                wavelength</strong> apart. A free boundary always has an antinode at the boundary point.
-                        </p>
-                    </div>
-                </div>
-                <div class="explanation-card">
-                    <h3>🧱 Boundary Conditions</h3>
-                    <div class="parameter-explanation">
-                        <h4>Fixed End (Hard Boundary)</h4>
-                        <p>
-                            When a wave reflects from a <strong>fixed end</strong> (such as a string attached to a wall),
-                            the reflected wave is <strong>inverted</strong> (phase shift of 180°). This creates a
-                            <strong>node</strong> at the boundary. Examples include:
-                        </p>
-                        <ul>
-                            <li>A guitar string fixed at the bridge and nut</li>
-                            <li>Sound waves reflecting off a closed pipe end</li>
-                            <li>Electromagnetic waves reflecting off a perfect conductor</li>
-                        </ul>
-                    </div>
-                    <div class="parameter-explanation">
-                        <h4>Free End (Soft Boundary)</h4>
-                        <p>
-                            When a wave reflects from a <strong>free end</strong> (such as a string attached to a
-                            frictionless ring on a pole), the reflected wave is <strong>not inverted</strong>. This
-                            creates an <strong>antinode</strong> at the boundary. Examples include:
-                        </p>
-                        <ul>
-                            <li>Sound waves at an open pipe end</li>
-                            <li>Waves on a string with a free end</li>
-                            <li>Electromagnetic waves at a dielectric interface</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="explanation-card">
-                    <h3>🎵 Harmonics and Resonance</h3>
-                    <p>
-                        Standing waves only form at specific frequencies called <strong>resonant frequencies</strong>
-                        or <strong>harmonics</strong>. For a string of length L fixed at both ends:
-                    </p>
-                    <div class="formula-box">
-                        <p><strong>f<sub>n</sub> = n × v / (2L)</strong> (n = 1, 2, 3, …)</p>
-                    </div>
+                    <h3>🌟 Real-World Examples</h3>
                     <ul>
-                        <li><strong>n = 1 (Fundamental)</strong>: One half-wavelength fits in L — 2 nodes, 1 antinode</li>
-                        <li><strong>n = 2 (2nd Harmonic)</strong>: One full wavelength fits — 3 nodes, 2 antinodes</li>
-                        <li><strong>n = 3 (3rd Harmonic)</strong>: 1.5 wavelengths fit — 4 nodes, 3 antinodes</li>
-                    </ul>
-                    <p>
-                        The fundamental frequency is the lowest resonant mode. All higher harmonics are integer
-                        multiples of the fundamental, forming the <strong>harmonic series</strong> which is the
-                        basis of musical timbre and tone quality.
-                    </p>
-                </div>
-                <div class="explanation-card">
-                    <h3>🌟 Real-World Applications</h3>
-                    <ul>
-                        <li><strong>Musical Instruments</strong>: Strings, pipes, and drumheads all produce sound through standing wave patterns at their resonant frequencies</li>
-                        <li><strong>Microwave Ovens</strong>: Standing electromagnetic waves create hot and cold spots — the turntable rotates food through antinodes for even heating</li>
-                        <li><strong>Quantum Mechanics</strong>: Electron wave functions in atoms and the particle-in-a-box model are described by standing waves</li>
-                        <li><strong>Laser Cavities</strong>: Light bouncing between mirrors forms standing waves, selecting specific wavelengths for coherent emission</li>
-                        <li><strong>Acoustic Engineering</strong>: Room acoustics, noise cancellation, and speaker design all depend on understanding standing wave patterns</li>
-                        <li><strong>Seismology</strong>: Standing seismic waves help determine Earth's internal structure</li>
+                        <li><strong>Wiener's experiment (1890)</strong>: a photographic film tilted in front of a mirror recorded dark fringes λ/2 apart, with the first at the mirror surface. This showed that the E field, not H, exposes the emulsion.</li>
+                        <li><strong>Laser and Fabry–Pérot cavities</strong>: two mirrors select longitudinal modes spaced by c/(2nL); gain and losses decide which of them lase.</li>
+                        <li><strong>Optical lattices</strong>: counterpropagating laser beams form standing waves that trap cold atoms at nodes or antinodes.</li>
+                        <li><strong>Antireflection and dielectric mirrors</strong>: the reflection phase of each interface decides where standing-wave maxima fall inside thin-film stacks.</li>
+                        <li><strong>Microwave ovens</strong>: standing waves in the metal cavity create hot and cold spots λ/2 apart.</li>
                     </ul>
                 </div>
             </div>
+        </section>
+        <section role="navigation" class="sw-related" aria-label="Related optics tools">
+            <h2>Related optics tools</h2>
+            <ul>
+                <li><a href="../fabry_perot/"><strong>Passive resonators and Fabry–Pérot</strong><span>Driven cavities with partial mirrors, Airy spectra, stability and Gaussian modes.</span></a></li>
+                <li><a href="../em_waves/"><strong>Electromagnetic waves</strong><span>E, H and the Poynting vector for a single travelling plane wave.</span></a></li>
+                <li><a href="../fresnel/"><strong>Fresnel reflection and refraction</strong><span>Where r comes from: angle and polarization dependence, and total internal reflection.</span></a></li>
+                <li><a href="../laser_cavity/"><strong>Laser cavity</strong><span>Add gain to the resonator: threshold, rate equations and output coupling.</span></a></li>
+            </ul>
         </section>
     </main>
     <footer>
@@ -405,6 +677,9 @@
         <script src="/app.js"></script>
     </footer>
     <script src="../shared/base.js"></script>
+    <script src="../shared/optics/core.js"></script>
+    <script src="../shared/optics/ui.js"></script>
+    <script src="../shared/optics/standingWaves.js"></script>
     <script src="app.js"></script>
 </body>
 

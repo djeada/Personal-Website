@@ -2,6 +2,7 @@ const { defineConfig } = require("@playwright/test");
 
 module.exports = defineConfig({
   testDir: "./tests",
+  testIgnore: "optics/**",
   timeout: 30_000,
   use: {
     baseURL: "http://127.0.0.1:8000",

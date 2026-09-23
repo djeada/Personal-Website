@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <title>Aperture Propagation: Near- and Far-Field Diffraction</title>
+    <meta charset="utf-8" />
+    <meta content="Interactive numerical diffraction: draw an amplitude/phase aperture and propagate it with FFT angular-spectrum, Fresnel and Fraunhofer methods, with Fresnel number, sampling diagnostics, the Poisson spot and zone plates." name="description" />
+    <meta content="fresnel diffraction, fraunhofer diffraction, angular spectrum method, aperture propagation, fresnel number, poisson spot, arago spot, zone plate, airy pattern, fft optics" name="keywords" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/base.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/simulation.css" rel="stylesheet" type="text/css" />
+    <link href="style.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/array-visualizer-theme.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/optics-lab-theme.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="ie-edge" http-equiv="X-UA-Compatible" />
+    <link href="https://adamdjellouli.com/tools/aperture_propagation/" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "Aperture Propagation: Near- and Far-Field Diffraction",
+            "url": "https://adamdjellouli.com/tools/aperture_propagation/",
+            "description": "Interactive numerical diffraction: draw an amplitude/phase aperture and propagate it with FFT angular-spectrum, Fresnel and Fraunhofer methods, with Fresnel number, sampling diagnostics, the Poisson spot and zone plates."
+        }
+    </script>
+</head>
+
+<body class="tool-page tool-simulation tool-array-visualizer tool-optics-lab">
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="tool-main">
+        <header class="tool-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <span class="icon-wave">🔭</span>
+                </div>
+                <h1>Aperture Propagation: Near- and Far-Field Diffraction</h1>
+                <p class="subtitle">
+                    Draw a complex <strong>aperture</strong>, choose a <strong>propagation distance</strong> and watch the sampled
+                    scalar field evolve from <strong>Fresnel</strong> (near-field) to <strong>Fraunhofer</strong> (far-field) diffraction,
+                    computed with FFT <strong>angular-spectrum</strong> and Fresnel transforms on a physical grid.
+                </p>
+                <div class="keyboard-hint">
+                    Pick a preset • paint or erase on the aperture • click the intensity map to move the line cuts
+                </div>
+            </div>
+        </header>
+        <div class="stats-bar" aria-label="Key quantities">
+            <div class="stat-item"><span class="stat-icon">λ</span><span class="stat-value" id="statLambda">633 nm</span><span class="stat-label">Wavelength</span></div>
+            <div class="stat-item"><span class="stat-icon">z</span><span class="stat-value" id="statZ">—</span><span class="stat-label">Distance</span></div>
+            <div class="stat-item"><span class="stat-icon">N<sub>F</sub></span><span class="stat-value" id="statNF">—</span><span class="stat-label">Fresnel number a²/λz</span></div>
+            <div class="stat-item"><span class="stat-icon">⚙</span><span class="stat-value" id="statMethod">ASM</span><span class="stat-label">Method</span></div>
+            <div class="stat-item"><span class="stat-icon">P</span><span class="stat-value" id="statPower">—</span><span class="stat-label">Power on detector</span></div>
+        </div>
+        <section class="tool-content">
+            <aside class="options-sidebar">
+                <div class="sidebar-header">
+                    <h2><span class="icon">⚙️</span> Controls</h2>
+                </div>
+                <div class="option-card preset-card">
+                    <h3><span class="card-icon">⚡</span> Experiments</h3>
+                    <div class="preset-buttons" id="presetButtons"></div>
+                    <p class="preset-note" id="presetNote" role="status" aria-live="polite"></p>
+                    <div class="ap-row-buttons">
+                        <button class="action-btn secondary" id="resetBtn" type="button">↺ Reset</button>
+                    </div>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">◯</span> Aperture</h3>
+                    <div class="control-group">
+                        <label class="control-label" for="shapeSel"><span>Shape</span></label>
+                        <select id="shapeSel" class="ap-select">
+                            <option value="circle">Circular hole</option>
+                            <option value="slit">Slit (width a, length b)</option>
+                            <option value="rect">Rectangle (a × b)</option>
+                            <option value="annulus">Annulus</option>
+                            <option value="doubleSlit">Double slit</option>
+                            <option value="edge">Straight edge (x ≥ 0 open)</option>
+                            <option value="zonePlate">Fresnel zone plate</option>
+                            <option value="disk">Opaque disk</option>
+                            <option value="open">Open (no aperture)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" data-for="slit rect annulus circle doubleSlit disk">
+                        <div class="control-label"><span id="aLabel">Width / diameter a</span><span id="aValue">—</span></div>
+                        <input id="aSlider" type="range" min="-0.5" max="4" step="0.001" value="3" aria-label="Aperture width or diameter (log scale)" />
+                    </div>
+                    <div class="control-group" data-for="slit rect doubleSlit">
+                        <div class="control-label"><span>Length / height b</span><span id="bValue">—</span></div>
+                        <input id="bSlider" type="range" min="-0.5" max="4.2" step="0.001" value="3.5" aria-label="Aperture length or height (log scale)" />
+                    </div>
+                    <div class="control-group" data-for="doubleSlit">
+                        <div class="control-label"><span>Slit separation d</span><span id="dValue">—</span></div>
+                        <input id="dSlider" type="range" min="0" max="4" step="0.001" value="2.4" aria-label="Double-slit centre separation (log scale)" />
+                    </div>
+                    <div class="control-group" data-for="annulus">
+                        <div class="control-label"><span>Inner/outer ratio ε</span><span id="epsValue">—</span></div>
+                        <input id="epsSlider" type="range" min="0.05" max="0.95" step="0.01" value="0.5" />
+                    </div>
+                    <div class="control-group" data-for="zonePlate">
+                        <div class="control-label"><span>Zone-plate focal length f</span><span id="fzpValue">—</span></div>
+                        <input id="fzpSlider" type="range" min="10" max="2000" step="1" value="200" aria-label="Zone plate focal length in millimetres" />
+                    </div>
+                    <div class="control-group" data-for="zonePlate">
+                        <div class="control-label"><span>Number of zones</span><span id="zonesValue">—</span></div>
+                        <input id="zonesSlider" type="range" min="1" max="40" step="1" value="8" />
+                    </div>
+                    <div class="option-item" data-for="zonePlate">
+                        <label class="ap-check"><input id="zpPhaseBox" type="checkbox" /> π-phase zone plate (instead of amplitude)</label>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="illumSel"><span>Illumination</span></label>
+                        <select id="illumSel" class="ap-select">
+                            <option value="plane">Unit plane wave</option>
+                            <option value="gauss">Gaussian beam, peak 1</option>
+                        </select>
+                    </div>
+                    <div class="control-group" data-illum="gauss">
+                        <div class="control-label"><span>Beam radius w (1/e amplitude)</span><span id="wValue">—</span></div>
+                        <input id="wSlider" type="range" min="0" max="4.5" step="0.001" value="3.4" aria-label="Gaussian beam radius (log scale)" />
+                    </div>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">🖌️</span> Aperture editor</h3>
+                    <div class="ap-seg" role="radiogroup" aria-label="Pointer tool on the aperture view">
+                        <label><input type="radio" name="tool" value="probe" checked /> Probe</label>
+                        <label><input type="radio" name="tool" value="paint" /> Paint</label>
+                        <label><input type="radio" name="tool" value="erase" /> Erase</label>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Brush radius</span><span id="brushValue">—</span></div>
+                        <input id="brushSlider" type="range" min="0" max="3.5" step="0.01" value="2" aria-label="Brush radius (log scale)" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Brush amplitude |t|</span><span id="brushTValue">—</span></div>
+                        <input id="brushTSlider" type="range" min="0" max="1" step="0.01" value="1" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Brush phase arg t</span><span id="brushPValue">—</span></div>
+                        <input id="brushPSlider" type="range" min="-180" max="180" step="1" value="0" />
+                    </div>
+                    <div class="ap-row-buttons">
+                        <button class="action-btn secondary" id="undoBtn" type="button">Undo stroke</button>
+                        <button class="action-btn secondary" id="clearBtn" type="button">Clear strokes</button>
+                    </div>
+                    <p class="ap-hint" id="strokeInfo">No brush strokes. Choose Paint or Erase, then drag on the aperture view.</p>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">➡️</span> Propagation</h3>
+                    <div class="control-group">
+                        <div class="control-label"><span>Vacuum wavelength λ</span><span id="lambdaValue">—</span></div>
+                        <input id="lambdaSlider" type="range" min="380" max="800" step="1" value="633" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Distance z (log scale)</span><span id="zValue">—</span></div>
+                        <input id="zSlider" type="range" min="-6.5" max="1.3" step="0.001" value="-1" aria-label="Propagation distance (log scale)" />
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="methodSel"><span>Method</span></label>
+                        <select id="methodSel" class="ap-select">
+                            <option value="asm">Angular spectrum (exact scalar)</option>
+                            <option value="tf">Fresnel transfer function (paraxial)</option>
+                            <option value="ir">Fresnel impulse response (paraxial)</option>
+                            <option value="fresnel">Single-FFT Fresnel (new grid)</option>
+                            <option value="fraunhofer">Fraunhofer far field (new grid)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="evanSel"><span>Evanescent waves (f &gt; 1/λ)</span></label>
+                        <select id="evanSel" class="ap-select">
+                            <option value="drop">Drop (H = 0)</option>
+                            <option value="decay">Decay exp(−κz)</option>
+                        </select>
+                    </div>
+                    <div class="option-item">
+                        <label class="ap-check"><input id="blBox" type="checkbox" checked /> Band-limit the transfer function (Matsushima)</label>
+                    </div>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">▦</span> Grid &amp; display</h3>
+                    <div class="control-group">
+                        <label class="control-label" for="nSel"><span>Samples N × N</span></label>
+                        <select id="nSel" class="ap-select">
+                            <option value="64">64</option>
+                            <option value="128">128</option>
+                            <option value="256" selected>256</option>
+                            <option value="512">512</option>
+                            <option value="1024">1024</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Window extent L</span><span id="extentValue">—</span></div>
+                        <input id="extentSlider" type="range" min="0.5" max="5" step="0.001" value="3.6" aria-label="Window extent (log scale)" />
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="padSel"><span>Zero-padding factor</span></label>
+                        <select id="padSel" class="ap-select">
+                            <option value="1">1× (no padding)</option>
+                            <option value="2" selected>2×</option>
+                            <option value="4">4×</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="scaleSel"><span>Intensity scale</span></label>
+                        <select id="scaleSel" class="ap-select">
+                            <option value="lin">Linear</option>
+                            <option value="log">Logarithmic</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label"><span>Log floor (decades below peak)</span><span id="floorValue">—</span></div>
+                        <input id="floorSlider" type="range" min="1" max="8" step="1" value="4" />
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="apViewSel"><span>Aperture view</span></label>
+                        <select id="apViewSel" class="ap-select">
+                            <option value="amp">Amplitude |t|</option>
+                            <option value="phase">Phase arg t</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="viewSel"><span>Output view</span></label>
+                        <select id="viewSel" class="ap-select">
+                            <option value="det">Detector window</option>
+                            <option value="full">Whole padded grid</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="zoomSel"><span>Zoom (centre crop)</span></label>
+                        <select id="zoomSel" class="ap-select">
+                            <option value="1">1×</option>
+                            <option value="2">2×</option>
+                            <option value="4">4×</option>
+                            <option value="8">8×</option>
+                            <option value="16">16×</option>
+                        </select>
+                    </div>
+                    <div class="option-item">
+                        <label class="ap-check"><input id="refBox" type="checkbox" checked /> Overlay analytic Fraunhofer cut (N<sub>F</sub> ≤ 1)</label>
+                    </div>
+                </div>
+            </aside>
+            <div class="canvas-area">
+                <p class="ap-status" id="computeStatus" role="status" aria-live="polite">Preparing…</p>
+                <div class="optics-plot-grid">
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Aperture t(x, y) · illumination <span class="optics-badge" id="apBadge">z = 0</span></h3>
+                        <canvas id="apCanvas" class="optics-canvas" data-export-name="aperture"></canvas>
+                        <p class="optics-caption">Complex field just after the aperture, sampled on the N × N window. Grey: |U|; phase view uses a cyclic map, masked where |U| ≈ 0. Paint/erase edits this grid.</p>
+                    </div>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Propagated intensity |U|² <span class="optics-badge" id="intBadge">I/I₀</span></h3>
+                        <canvas id="intCanvas" class="optics-canvas" data-export-name="intensity" tabindex="0"></canvas>
+                        <p class="optics-caption">Absolute intensity in units of the incident I₀ (not renormalised). Click, drag or use arrow keys to move the cross-hair that sets the line cuts.</p>
+                    </div>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Phase arg U (carrier e<sup>ikz</sup> removed) <span class="optics-badge">cyclic</span></h3>
+                        <canvas id="phaseCanvas" class="optics-canvas" data-export-name="phase"></canvas>
+                        <p class="optics-caption">Phase in radians, transparent (undefined) where |U|² &lt; 10⁻³ of the peak.</p>
+                    </div>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Line cuts through the cross-hair <span class="optics-badge" id="cutBadge">x and y</span></h3>
+                        <canvas id="cutCanvas" class="optics-canvas" data-export-name="cuts"></canvas>
+                        <p class="optics-caption">Solid: numerical |U|² along x (top) and y (bottom). Dashed: analytic paraxial Fraunhofer pattern for the same aperture (only meaningful for N<sub>F</sub> ≪ 1).</p>
+                    </div>
+                </div>
+                <div id="warnHost" aria-live="polite"></div>
+                <dl class="optics-readouts" id="readouts">
+                    <div>
+                        <dt>Grid pitch Δx</dt>
+                        <dd id="rDx">—</dd>
+                    </div>
+                    <div>
+                        <dt>Window L = NΔx</dt>
+                        <dd id="rL">—</dd>
+                    </div>
+                    <div>
+                        <dt>Padded grid</dt>
+                        <dd id="rNp">—</dd>
+                    </div>
+                    <div>
+                        <dt>Output pitch</dt>
+                        <dd id="rOutDx">—</dd>
+                    </div>
+                    <div>
+                        <dt>Detector extent</dt>
+                        <dd id="rOutL">—</dd>
+                    </div>
+                    <div>
+                        <dt>Fresnel number N<sub>F</sub></dt>
+                        <dd id="rNF">—</dd>
+                    </div>
+                    <div>
+                        <dt>z<sub>c</sub> = L<sub>p</sub>Δx/λ</dt>
+                        <dd id="rZc">—</dd>
+                    </div>
+                    <div>
+                        <dt>Suggested method</dt>
+                        <dd id="rSuggest">—</dd>
+                    </div>
+                    <div>
+                        <dt>Band limit f<sub>max</sub></dt>
+                        <dd id="rBL">—</dd>
+                    </div>
+                    <div>
+                        <dt>Samples per feature</dt>
+                        <dd id="rPx">—</dd>
+                    </div>
+                    <div>
+                        <dt>Transmitted power</dt>
+                        <dd id="rPin">—</dd>
+                    </div>
+                    <div>
+                        <dt>On detector</dt>
+                        <dd id="rPdet">—</dd>
+                    </div>
+                    <div>
+                        <dt>Outside detector</dt>
+                        <dd id="rPout">—</dd>
+                    </div>
+                    <div>
+                        <dt>Removed (evanescent / band limit)</dt>
+                        <dd id="rPrem">—</dd>
+                    </div>
+                    <div>
+                        <dt>In outer grid band</dt>
+                        <dd id="rPedge">—</dd>
+                    </div>
+                    <div>
+                        <dt>Peak |U|²</dt>
+                        <dd id="rPeak">—</dd>
+                    </div>
+                    <div>
+                        <dt>On-axis |U|²</dt>
+                        <dd id="rAxis">—</dd>
+                    </div>
+                    <div>
+                        <dt>Exact on-axis (RS)</dt>
+                        <dd id="rAxisExact">—</dd>
+                    </div>
+                    <div>
+                        <dt>Cross-hair (x, y)</dt>
+                        <dd id="rCursor">—</dd>
+                    </div>
+                    <div>
+                        <dt>|U|², arg U at cross-hair</dt>
+                        <dd id="rCursorVal">—</dd>
+                    </div>
+                    <div>
+                        <dt>x-cut vs Fraunhofer (RMS/peak)</dt>
+                        <dd id="rRef">—</dd>
+                    </div>
+                    <div>
+                        <dt>Compute time</dt>
+                        <dd id="rTime">—</dd>
+                    </div>
+                </dl>
+                <div id="exportHost"></div>
+            </div>
+        </section>
+        <div class="help-box">
+            <strong>💡 How to use</strong>
+            <ul>
+                <li><strong>Experiments</strong> load a reproducible configuration and state what you should observe.</li>
+                <li><strong>Aperture</strong>: preset shapes are rasterised with 4 × 4 sub-pixel area averaging. Paint sets the transmittance inside the brush to |t|·e<sup>i·arg t</sup>; Erase makes it opaque. Strokes are stored in physical units, so they survive changes of N and L.</li>
+                <li><strong>Distance</strong> uses a logarithmic slider from 0.3 µm to 20 m; type an exact value (in mm) into the number box.</li>
+                <li><strong>Methods</strong>: the angular spectrum is exact for the scalar Helmholtz equation; the Fresnel TF and IR are paraxial; the single-FFT Fresnel and Fraunhofer transforms produce a new output grid with pitch λz/(N<sub>p</sub>Δx).</li>
+                <li><strong>Diagnostics</strong> below the plots report every sampling or regime problem. Power that leaves the detector window or is removed by the band limit is reported, not renormalised away.</li>
+                <li>Click or drag on the intensity map (or focus it and use the arrow keys) to move the line cuts.</li>
+            </ul>
+        </div>
+        <section class="optics-teaching" aria-labelledby="learn-h">
+            <h2 id="learn-h">Learn with this tool</h2>
+            <div class="optics-teaching-grid">
+                <div class="optics-objectives">
+                    <h3>Learning objectives</h3>
+                    <ul>
+                        <li>Predict whether a configuration is in the Fresnel or the Fraunhofer regime from the Fresnel number N<sub>F</sub> = a²/(λz), and recognise both patterns.</li>
+                        <li>Explain angular-spectrum propagation as a plane-wave decomposition with transfer function H(f<sub>x</sub>, f<sub>y</sub>; z), including what happens to evanescent spatial frequencies.</li>
+                        <li>Choose a grid (pitch, extent, padding) and method that sample the problem adequately, and diagnose aliasing and wraparound from the reported numbers.</li>
+                    </ul>
+                </div>
+                <div class="optics-prereqs">
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li><a href="../diffraction/">Single-slit and circular Fraunhofer diffraction</a></li>
+                        <li><a href="../double_slit/">Double-slit interference</a></li>
+                        <li><a href="../interference/">Superposition and phase</a></li>
+                        <li>Fourier transforms, the convolution theorem and the discrete FFT</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="optics-model">
+                <h3>Model</h3>
+                <p>
+                    A monochromatic scalar field U(x, y, z) e<sup>−iωt</sup> in vacuum obeys the Helmholtz equation (∇² + k²)U = 0 with k = 2π/λ.
+                    Writing the field at z = 0 as a superposition of plane waves (its angular spectrum A(f<sub>x</sub>, f<sub>y</sub>) = ℱ{U(x, y, 0)}),
+                    each plane wave simply acquires a phase on propagation:
+                </p>
+                <div class="formula-box">
+                    <p><strong>U(x, y, z) = ℱ⁻¹{ A(f<sub>x</sub>, f<sub>y</sub>) · H(f<sub>x</sub>, f<sub>y</sub>; z) }, &nbsp; H = exp[i2πz √(1/λ² − f<sub>x</sub>² − f<sub>y</sub>²)]</strong></p>
+                </div>
+                <p>
+                    For f<sub>x</sub>² + f<sub>y</sub>² &gt; 1/λ² the square root is imaginary, H = exp(−κz) with κ = 2π√(f² − 1/λ²): these
+                    <em>evanescent</em> components decay and carry no power to the far field. The tool either drops them or lets them decay.
+                    Expanding the square root to second order gives the paraxial <em>Fresnel</em> transfer function
+                    H ≈ e<sup>ikz</sup> exp(−iπλz f²), whose inverse transform is the impulse response h = e<sup>ikz</sup>/(iλz) · exp[iπ(x² + y²)/(λz)].
+                    When N<sub>F</sub> = a²/(λz) ≪ 1 the quadratic phase across the aperture is negligible and the field is the
+                    <em>Fraunhofer</em> pattern, a scaled Fourier transform of the aperture evaluated at f = x/(λz).
+                </p>
+                <dl class="optics-symbols">
+                    <dt>λ</dt>
+                    <dd>vacuum wavelength (medium index n = 1)</dd>
+                    <dt>t(x, y)</dt>
+                    <dd>complex aperture transmittance (thin-element model)</dd>
+                    <dt>a</dt>
+                    <dd>aperture half-width or radius (for zone plates the outer radius)</dd>
+                    <dt>N, Δx, L</dt>
+                    <dd>samples per side, grid pitch and window extent L = NΔx</dd>
+                    <dt>N<sub>p</sub>, L<sub>p</sub></dt>
+                    <dd>padded grid size and extent (padding factor × N)</dd>
+                    <dt>z<sub>c</sub></dt>
+                    <dd>critical distance L<sub>p</sub>Δx/λ: Fresnel TF is well sampled for z ≤ z<sub>c</sub>, IR and single-FFT Fresnel for z ≥ z<sub>c</sub></dd>
+                    <dt>f<sub>limit</sub></dt>
+                    <dd>band limit 1/[λ√((2z/L<sub>p</sub>)² + 1)] (Matsushima–Shimobaba) that prevents the ASM transfer function from aliasing</dd>
+                    <dt>I₀</dt>
+                    <dd>incident intensity; all maps are |U|² in units of I₀ (plane wave: |U| = 1)</dd>
+                </dl>
+                <p>
+                    <strong>Assumptions:</strong> scalar, monochromatic, fully coherent illumination; thin aperture (Kirchhoff boundary values
+                    U = t·U<sub>inc</sub> immediately behind it); homogeneous medium; periodic boundary conditions of the discrete Fourier transform.
+                    The phase maps show the reduced field U·e<sup>−ikz</sup>.
+                </p>
+                <details class="optics-derivation">
+                    <summary>Derivation: angular spectrum, Fresnel and the single-FFT transform</summary>
+                    <p>
+                        Insert U = ∬ A(f<sub>x</sub>, f<sub>y</sub>; z) e<sup>i2π(f<sub>x</sub>x + f<sub>y</sub>y)</sup> df<sub>x</sub> df<sub>y</sub> into the Helmholtz equation.
+                        Each component satisfies d²A/dz² + (2π)²(1/λ² − f²)A = 0; keeping only the forward-going (or decaying) solution gives
+                        A(z) = A(0) exp[i2πz√(1/λ² − f²)] with Im √ ≥ 0. This is exact for the scalar problem and equals the first Rayleigh–Sommerfeld solution.
+                    </p>
+                    <p>
+                        Paraxial: for λf ≪ 1, √(1/λ² − f²) ≈ 1/λ − λf²/2, giving the Fresnel TF. Its inverse Fourier transform is the chirp h(x, y).
+                        Writing the Fresnel convolution U(x) = ∫ U(ξ) h(x − ξ) dξ and expanding (x − ξ)² = x² − 2xξ + ξ² gives
+                        U(x) = e<sup>ikz</sup> e<sup>iπx²/(λz)</sup>/(iλz) · ℱ{U(ξ) e<sup>iπξ²/(λz)</sup>} at f = x/(λz). A discrete FFT over N<sub>p</sub> samples of
+                        pitch Δx returns frequencies spaced 1/(N<sub>p</sub>Δx), i.e. output positions spaced <strong>Δx₂ = λz/(N<sub>p</sub>Δx)</strong>.
+                        Dropping the inner chirp (N<sub>F</sub> ≪ 1) gives Fraunhofer diffraction.
+                    </p>
+                    <p>
+                        Sampling: the TF chirp exp(−iπλz f²) changes phase by 2πλz f Δf between frequency samples; requiring ≤ π at f = 1/(2Δx) gives
+                        Δx ≥ λz/L<sub>p</sub>, i.e. z ≤ z<sub>c</sub>. The IR chirp in space gives the opposite condition. Parseval's theorem makes the ASM
+                        and TF unitary on propagating frequencies, so power is conserved exactly unless the band limit or evanescent treatment removes some.
+                    </p>
+                </details>
+            </div>
+            <div class="optics-exercise-list">
+                <article class="optics-exercise">
+                    <h4>Exercise 1 — Counting Fresnel zones on axis</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">A 1 mm circular hole is lit by a 633 nm plane wave. Predict the on-axis intensity at the distance where the hole contains exactly N<sub>F</sub> = 2 Fresnel zones, and where it contains 3.</li>
+                        <li class="optics-step" data-step="test">Load “Circle: Fresnel”. Set z so that N<sub>F</sub> = 2 (z = a²/(2λ) ≈ 0.197 m), then N<sub>F</sub> = 3 (≈ 0.132 m).</li>
+                        <li class="optics-step" data-step="measure">Read “On-axis |U|²” and compare with “Exact on-axis (RS)”.</li>
+                        <li class="optics-step" data-step="explain">Explain the result using the alternating sign of successive zone contributions.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>Paraxially I(0) = 4 I₀ sin²(πN<sub>F</sub>/2): ≈ 0 for N<sub>F</sub> = 2 (two zones cancel) and ≈ 4 I₀ for N<sub>F</sub> = 3 (one uncancelled zone contributes twice the unobstructed amplitude). At N = 256 the numerical values are ≈ 3×10⁻⁴ I₀ and 3.94 I₀, against the exact Rayleigh–Sommerfeld values 2×10⁻⁴ I₀ and 4.00 I₀. The ≈ 1.5 % error comes from the pixelated rim and shrinks as N increases.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 2 — Limiting case: reaching the Fraunhofer regime</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">For a 0.2 mm circular hole, predict the distance beyond which N<sub>F</sub> &lt; 0.1 and the first dark-ring radius at z = 2 m.</li>
+                        <li class="optics-step" data-step="test">Load “Airy far field”. Switch the method between Fraunhofer and single-FFT Fresnel, then shorten z to 0.05 m with Fraunhofer selected.</li>
+                        <li class="optics-step" data-step="measure">Move the cross-hair to the first minimum of the x-cut and read its position; note the RMS difference from the analytic Airy curve in both cases.</li>
+                        <li class="optics-step" data-step="explain">Explain why the Fraunhofer result stops describing the physics at small z even though the numerical transform is still perfectly accurate.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>N<sub>F</sub> = (0.1 mm)²/(λz) &lt; 0.1 needs z &gt; 0.16 m. At 2 m the first zero is at 1.22λz/D ≈ 7.7 mm, matching the cut within one output pixel (0.32 mm). At z = 0.05 m, N<sub>F</sub> ≈ 0.32 and the tool warns: the Fraunhofer transform still returns an Airy pattern, but the physical (Fresnel/ASM) field differs because the quadratic phase across the aperture is no longer negligible.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 3 — The Poisson–Arago spot</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Behind an opaque 1 mm disk at z = 0.3 m, predict the on-axis intensity. Geometric optics says 0; what does wave optics say?</li>
+                        <li class="optics-step" data-step="test">Load “Poisson spot”. Compare with “Circle: Fresnel” at the same distance.</li>
+                        <li class="optics-step" data-step="measure">Read the on-axis intensity and the width of the central spot in the x-cut.</li>
+                        <li class="optics-step" data-step="explain">Use Babinet’s principle (U<sub>disk</sub> = U<sub>open</sub> − U<sub>hole</sub>) to explain the result.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>The exact scalar result for plane-wave illumination is |U(0)|² = z²/(z² + a²) ≈ I₀ at any distance. The preset uses a Gaussian beam (w = 2.5 mm) to avoid periodic copies, which scales the edge contribution by e<sup>−a²/w²</sup>: expected ≈ 0.92 I₀, observed ≈ 0.91 I₀. The spot is narrow (first zero ≈ 0.38λz/a ≈ 0.15 mm) because it is a J₀² pattern generated by the disk rim.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 4 — Breaking the sampling rules on purpose</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">With “Rectangle: near field”, predict what happens if you select the Fresnel TF with no band limit at z ≫ z<sub>c</sub>.</li>
+                        <li class="optics-step" data-step="test">Set z to about 10 z<sub>c</sub> (see the readout), uncheck the band limit and try TF, IR and ASM.</li>
+                        <li class="optics-step" data-step="measure">Watch the warnings, the outer-band power and the look of the pattern.</li>
+                        <li class="optics-step" data-step="explain">Relate the artifacts to aliasing of a chirp and to periodic wraparound.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>Beyond z<sub>c</sub> the TF chirp is undersampled: its aliased phase produces spurious replicas and ringing. The IR samples its spatial chirp correctly there and agrees with the band-limited ASM. Large outer-band power means light has spread to the edge of the padded grid and re-enters from the other side; more padding or a larger window is required.</p>
+                    </details>
+                </article>
+            </div>
+            <div class="optics-worked-example">
+                <h3>Worked example — designing a Fresnel zone plate</h3>
+                <p>
+                    Design an amplitude zone plate with focal length f = 0.2 m for λ = 633 nm. Zone boundaries sit where the path to the focus grows by
+                    λ/2: r<sub>n</sub> = √(nλf), so r₁ = √(633 × 10⁻⁹ × 0.2) m = 0.356 mm and with 8 zones the outer radius is r₈ = 1.006 mm.
+                    The outermost zone width is r₈ − r₇ ≈ r₈/(2·8) ≈ 65 µm, so a 4 mm window needs Δx ≲ 16 µm, i.e. N = 256 (Δx = 15.6 µm; the readout reports 4.2 samples per feature).
+                    Each open zone contributes amplitude 2 (relative to the unobstructed wave) with the same sign, so the four open zones of eight give |U| ≈ 8 and a focal intensity
+                    of ≈ N<sub>zones</sub>² = 64 I₀. The “Fresnel zone plate” preset gives about 63 I₀. Replacing the opaque zones by π phase steps doubles the amplitude: ≈ 250 I₀.
+                    Higher-order foci appear at f/3, f/5, …; try z = 66.7 mm. The peak there is still ≈ 53 I₀ (paraxial theory gives the same N² peak), but the spot is 3× narrower, so it carries only about 1/9 of the power.
+                </p>
+            </div>
+            <div class="optics-limits">
+                <h3>When the model fails</h3>
+                <ul>
+                    <li><strong>Scalar, thin aperture:</strong> Kirchhoff boundary values ignore the true fields near edges; for features comparable to λ (sub-wavelength slits, high-NA zone plates) polarization and vector effects matter and a rigorous solver (FDTD, RCWA) is needed.</li>
+                    <li><strong>Paraxial methods:</strong> TF, IR, single-FFT Fresnel and Fraunhofer fail at large angles; the tool warns when light reaches angles θ ≳ 0.14 rad (8°), where sin θ ≈ θ is off by more than 1 %. The stricter classical condition, that the fourth-order phase πρ⁴/(4λz³) ≪ 1, is sufficient but not necessary for accurate intensities.</li>
+                    <li><strong>Discrete Fourier transforms are periodic:</strong> light reaching the edge of the padded grid re-enters from the opposite side. Watch the outer-band power readout.</li>
+                    <li><strong>Band limiting</strong> suppresses aliasing but removes high angles at long distances; the removed power is reported.</li>
+                    <li><strong>Coherence:</strong> the source is a perfectly coherent monochromatic wave. Finite bandwidth or source size washes out fine Fresnel fringes and the Poisson spot.</li>
+                </ul>
+            </div>
+            <div class="optics-references">
+                <h3>References</h3>
+                <ul>
+                    <li>J. W. Goodman, <em>Introduction to Fourier Optics</em>, 4th ed., W. H. Freeman (2017), chapters 3–4.</li>
+                    <li>D. G. Voelz, <em>Computational Fourier Optics: A MATLAB Tutorial</em>, SPIE Press (2011), chapter 5 (TF vs IR sampling).</li>
+                    <li>K. Matsushima and T. Shimobaba, “Band-limited angular spectrum method for numerical simulation of free-space propagation in far and near fields,” <em>Opt. Express</em> 17, 19662 (2009).</li>
+                    <li>M. Born and E. Wolf, <em>Principles of Optics</em>, 7th ed., Cambridge (1999), §8.3 (Fresnel and Fraunhofer diffraction).</li>
+                    <li>E. Hecht, <em>Optics</em>, 5th ed., Pearson (2017), §10.3 (Fresnel zones, zone plates and the Poisson spot).</li>
+                </ul>
+            </div>
+            <section role="navigation" class="ap-related" aria-label="Related optics tools">
+                <h3>Related tools</h3>
+                <ul>
+                    <li><a href="../diffraction/">Single-slit &amp; circular diffraction</a> — analytic far-field reference</li>
+                    <li><a href="../double_slit/">Double slit</a></li>
+                    <li><a href="../fourier_optics/">Fourier optics &amp; imaging</a> — lenses, 4f filtering, PSF/MTF</li>
+                    <li><a href="../diffraction_grating/">Diffraction gratings</a></li>
+                    <li><a href="../gaussian_beams/">Gaussian beams</a></li>
+                    <li><a href="../fresnel/">Fresnel equations</a> (interface reflection, not Fresnel diffraction)</li>
+                </ul>
+            </section>
+        </section>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <script src="../shared/base.js"></script>
+    <script src="../shared/optics/core.js"></script>
+    <script src="../shared/optics/ui.js"></script>
+    <script src="../shared/optics/propagation.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

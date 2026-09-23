@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Double-Slit Experiment</title>
     <meta charset="utf-8" />
-    <meta content="Interactive simulation of the double-slit experiment, showing wavefronts, interference patterns, and intensity distribution on a screen." name="description" />
+    <meta content="Interactive double-slit experiment with physical slit width, separation, wavelength and screen distance: calibrated detector, intensity plot, photon counts, coherence, and exercises." name="description" />
     <meta content="double-slit, wave, interference, diffraction, quantum mechanics, physics, Young's experiment" name="keywords" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -28,7 +28,7 @@
             "@type": "WebPage",
             "name": "Double-Slit Experiment",
             "url": "https://adamdjellouli.com/tools/double_slit/",
-            "description": "Interactive simulation of the double-slit experiment, showing wavefronts, interference patterns, and intensity distribution on a screen."
+            "description": "Interactive double-slit experiment with physical slit width, separation, wavelength and screen distance: calibrated detector, intensity plot, photon counts, coherence, and exercises."
         }
     </script>
 </head>
@@ -76,229 +76,511 @@
                 </div>
                 <h1>Double-Slit Experiment</h1>
                 <p class="subtitle">
-                    Interactive simulation of Young's famous double-slit experiment.
-                    Watch <strong>wavefronts</strong> pass through two slits and observe the
-                    <strong>interference pattern</strong> on the detection screen.
+                    Young's double-slit experiment with physical units. Set the slit width, slit separation,
+                    wavelength and screen distance, then measure the <strong>interference fringes</strong> and the
+                    <strong>diffraction envelope</strong> on a calibrated detector, as a smooth intensity or as individual photon detections.
                 </p>
                 <div class="keyboard-hint">
-                    Adjust slit separation, wavelength, and screen distance • Watch interference patterns form
+                    Fraunhofer model • lengths in nm / µm / mm / m • type exact values in the number boxes • arrow keys move the plot cursor
                 </div>
             </div>
         </header>
         <!-- Stats Bar -->
         <div class="stats-bar">
             <div class="stat-item">
-                <span class="stat-icon">↔️</span>
-                <span class="stat-value" id="stat-separation">50 nm</span>
-                <span class="stat-label">Slit Separation</span>
+                <span class="stat-icon">↕️</span>
+                <span class="stat-value" id="stat-spacing">2.00 mm</span>
+                <span class="stat-label">Fringe Spacing λL/d</span>
             </div>
             <div class="stat-item">
-                <span class="stat-icon">λ</span>
-                <span class="stat-value" id="stat-wavelength">500 nm</span>
-                <span class="stat-label">Wavelength</span>
+                <span class="stat-icon">◌</span>
+                <span class="stat-value" id="stat-envelope">10.0 mm</span>
+                <span class="stat-label">Envelope First Zero</span>
             </div>
             <div class="stat-item">
-                <span class="stat-icon">📏</span>
-                <span class="stat-value" id="stat-distance">100 mm</span>
-                <span class="stat-label">Screen Distance</span>
+                <span class="stat-icon">#</span>
+                <span class="stat-value" id="stat-orders">±7</span>
+                <span class="stat-label" id="stat-orders-label">Orders on Screen</span>
             </div>
             <div class="stat-item">
                 <span class="stat-icon">📊</span>
-                <span class="stat-value" id="stat-fringes">5</span>
-                <span class="stat-label">Visible Fringes</span>
+                <span class="stat-value" id="stat-visibility">1.00</span>
+                <span class="stat-label">Fringe Visibility</span>
             </div>
         </div>
         <section class="tool-content">
             <!-- Sidebar Options -->
-            <aside class="options-sidebar">
+            <aside class="options-sidebar" aria-label="Experiment controls">
                 <div class="sidebar-header">
                     <h2><span class="icon">⚙️</span> Controls</h2>
                 </div>
-                <!-- Quick Presets -->
+                <!-- Experiments (presets) -->
                 <div class="option-card preset-card">
-                    <h3><span class="card-icon">⚡</span> Quick Presets</h3>
-                    <div class="preset-buttons">
-                        <button class="preset-option active" id="btnVisible" title="Visible light (green, 550nm)">
-                            Visible Light
-                        </button>
-                        <button class="preset-option" id="btnNarrow" title="Narrow slit separation">
-                            Narrow Slits
-                        </button>
-                        <button class="preset-option" id="btnWide" title="Wide slit separation">
-                            Wide Slits
-                        </button>
-                        <button class="preset-option" id="btnFar" title="Far screen">
-                            Far Screen
-                        </button>
+                    <h3><span class="card-icon">⚡</span> Experiments</h3>
+                    <div class="preset-buttons" id="presetButtons">
+                        <button class="preset-option active" data-preset="textbook" type="button">Textbook</button>
+                        <button class="preset-option" data-preset="narrow" type="button">Narrow slits</button>
+                        <button class="preset-option" data-preset="wide" type="button">Wide separation</button>
+                        <button class="preset-option" data-preset="subwave" type="button">d &lt; λ</button>
+                        <button class="preset-option" data-preset="blocked" type="button">One slit blocked</button>
+                        <button class="preset-option" data-preset="coherence" type="button">Partial coherence</button>
+                        <button class="preset-option" data-preset="phase" type="button">Phase φ = π</button>
+                        <button class="preset-option" data-preset="photons" type="button">Photon build-up</button>
+                        <button class="preset-option" data-preset="nearfield" type="button">Near field</button>
                     </div>
+                    <p class="ds-expect" id="presetExpect" aria-live="polite"></p>
                 </div>
                 <!-- Parameters -->
                 <div class="option-card">
-                    <h3><span class="card-icon">🎚️</span> Parameters</h3>
+                    <h3><span class="card-icon">🎚️</span> Geometry</h3>
                     <div class="control-group">
                         <div class="control-label">
-                            <span>Slit Separation (d)</span>
-                            <span id="slitSepValue">50 nm</span>
-                        </div>
-                        <input id="slitSeparation" max="200" min="10" step="5" type="range" value="50" />
-                    </div>
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Wavelength (λ)</span>
+                            <span>Wavelength λ (vacuum)</span>
                             <span id="wavelengthValue">500 nm</span>
                         </div>
-                        <input id="wavelength" max="700" min="380" step="10" type="range" value="500" />
+                        <input aria-label="Wavelength" id="wavelength" max="700" min="380" step="0.1" type="range" value="500" />
                     </div>
                     <div class="control-group">
                         <div class="control-label">
-                            <span>Screen Distance (L)</span>
-                            <span id="screenDistValue">100 mm</span>
+                            <span title="centre-to-centre">Slit separation d (centre to centre)</span>
+                            <span id="slitSepValue">0.250 mm</span>
                         </div>
-                        <input id="screenDistance" max="300" min="50" step="10" type="range" value="100" />
+                        <input aria-label="Slit separation" id="slitSeparation" max="1000" min="0" step="any" type="range" value="750" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Slit width a</span>
+                            <span id="slitWidthValue">50.0 µm</span>
+                        </div>
+                        <input aria-label="Slit width" id="slitWidth" max="1000" min="0" step="any" type="range" value="700" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Screen distance L</span>
+                            <span id="screenDistValue">1.00 m</span>
+                        </div>
+                        <input aria-label="Screen distance" id="screenDistance" max="1000" min="0" step="any" type="range" value="700" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Screen half-width (field of view)</span>
+                            <span id="screenHalfValue">±15.0 mm</span>
+                        </div>
+                        <input aria-label="Screen half-width" id="screenHalf" max="1000" min="0" step="any" type="range" value="500" />
+                    </div>
+                    <div class="ds-zoom">
+                        <button class="action-btn secondary" id="zoomIn" type="button" title="Halve the screen half-width">Zoom in ×2</button>
+                        <button class="action-btn secondary" id="zoomOut" type="button" title="Double the screen half-width">Zoom out ×2</button>
+                    </div>
+                    <p class="ds-note" id="geometryNote">Slits cannot overlap: a is kept below d.</p>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">🚪</span> Slits &amp; source</h3>
+                    <div class="control-group">
+                        <label class="control-label" for="slitMode"><span>Open slits</span></label>
+                        <select class="ds-select" id="slitMode">
+                            <option value="both">Both slits open</option>
+                            <option value="top">Top slit only (bottom blocked)</option>
+                            <option value="bottom">Bottom slit only (top blocked)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Bottom/top illumination I₂/I₁</span>
+                            <span id="illumValue">100%</span>
+                        </div>
+                        <input aria-label="Bottom to top illumination ratio in percent" id="illumRatio" max="100" min="0" step="1" type="range" value="100" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Relative phase φ (bottom − top)</span>
+                            <span id="phaseValue">0°</span>
+                        </div>
+                        <input aria-label="Relative phase in degrees" id="relPhase" max="360" min="0" step="5" type="range" value="0" />
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Mutual coherence |γ₁₂|</span>
+                            <span id="coherenceValue">1.00</span>
+                        </div>
+                        <input aria-label="Mutual coherence" id="coherence" max="1" min="0" step="0.01" type="range" value="1" />
+                    </div>
+                </div>
+                <div class="option-card">
+                    <h3><span class="card-icon">📷</span> Detector</h3>
+                    <div class="control-group">
+                        <label class="control-label" for="detMode"><span>Detector shows</span></label>
+                        <select class="ds-select" id="detMode">
+                            <option value="intensity">Time-averaged intensity I(y)</option>
+                            <option value="photons">Photon counts (simulated hits)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="photonGroup">
+                        <div class="control-label">
+                            <span>Detections N (log₁₀)</span>
+                            <span id="photonValue">10 000</span>
+                        </div>
+                        <input aria-label="Number of detections, log10" id="photons" max="6" min="1" step="0.05" type="range" value="4" />
+                        <button class="action-btn secondary ds-resample" id="resampleBtn" type="button" title="Draw a new random set of detections (changes the seed)">New random sample</button>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="cmap"><span>Colour map</span></label>
+                        <select class="ds-select" id="cmap">
+                            <option value="inferno">inferno (sequential)</option>
+                            <option value="viridis">viridis (sequential)</option>
+                            <option value="gray">grey (sequential)</option>
+                            <option value="spectral">wavelength hue (display aid)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="scaleMode"><span>Intensity scale</span></label>
+                        <select class="ds-select" id="scaleMode">
+                            <option value="fixed">Fixed: I/I₀ (I₀ = two equal coherent slits on axis)</option>
+                            <option value="auto">Auto: I/I_peak of the current pattern</option>
+                        </select>
+                    </div>
+                    <div class="option-item">
+                        <label class="toggle-switch">
+                            <input id="logScale" type="checkbox" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="option-label" for="logScale">Log scale (floor 10⁻⁴)</label>
                     </div>
                 </div>
                 <!-- View Options -->
                 <div class="option-card">
-                    <h3><span class="card-icon">👁️</span> View Options</h3>
+                    <h3><span class="card-icon">👁️</span> View options</h3>
                     <div class="option-item">
                         <label class="toggle-switch">
                             <input checked="" id="showWavefronts" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Wavefronts</span>
+                        <label class="option-label" for="showWavefronts">Schematic field Re ψ</label>
                     </div>
                     <div class="option-item">
                         <label class="toggle-switch">
-                            <input checked="" id="showIntensity" type="checkbox" />
+                            <input checked="" id="showEnvelope" type="checkbox" />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="option-label">Show Intensity Plot</span>
+                        <label class="option-label" for="showEnvelope">Fringe envelopes</label>
+                    </div>
+                    <div class="option-item">
+                        <label class="toggle-switch">
+                            <input checked="" id="showOrders" type="checkbox" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="option-label" for="showOrders">Order markers m</label>
                     </div>
                 </div>
             </aside>
             <!-- Main Canvas Area -->
             <div class="canvas-area">
-                <div class="canvas-container">
-                    <div class="canvas-header">
-                        <span class="canvas-title">
-                            <span>📊</span> Wave Simulation
-                        </span>
+                <div class="optics-plot-grid">
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Apparatus <span class="optics-badge">schematic · not to scale</span></h3>
+                        <canvas class="optics-canvas" id="schemCanvas"></canvas>
+                        <p class="optics-caption">Instantaneous signed field Re ψ (diverging colours, arbitrary units) from a plane wave and two
+                            cylindrical wavelets. Only the a : d ratio is to scale; the drawn wavelength and L are illustrative.
+                            Partial coherence cannot be shown in one snapshot.</p>
+                        <div class="action-bar ds-actions">
+                            <button class="action-btn primary" id="startStopBtn" type="button"><span aria-hidden="true">▶️</span> Start</button>
+                            <button class="action-btn secondary" id="stepBtn" type="button" title="Advance the schematic by 1/20 of a period">Step</button>
+                            <label class="ds-speed" for="speed">Speed
+                                <select class="ds-select" id="speed">
+                                    <option value="0.25">0.25×</option>
+                                    <option value="0.5">0.5×</option>
+                                    <option selected="" value="1">1×</option>
+                                    <option value="2">2×</option>
+                                </select>
+                            </label>
+                            <button class="action-btn secondary" id="resetBtn" type="button"><span aria-hidden="true">↺</span> Reset</button>
+                        </div>
                     </div>
-                    <canvas height="500" id="canvas" width="700"></canvas>
-                    <div class="action-bar">
-                        <button class="action-btn primary" id="startStopBtn">
-                            <span>▶️</span> Start Animation
-                        </button>
-                        <button class="action-btn secondary" id="resetBtn">
-                            <span>↺</span> Reset
-                        </button>
+                    <div class="optics-panel">
+                        <h3 class="optics-panel-title">Detector screen <span class="optics-badge" id="detBadge">time-averaged I</span></h3>
+                        <canvas class="optics-canvas" id="detCanvas"></canvas>
+                        <p class="optics-caption" id="detCaption">Screen seen face-on: horizontal axis is the physical screen coordinate y; the
+                            vertical direction runs along the slits, where the pattern is uniform. Colour bar gives the normalisation.</p>
+                    </div>
+                    <div class="optics-panel wide">
+                        <h3 class="optics-panel-title">Intensity versus screen position <span class="optics-badge">Fraunhofer · exact angle</span></h3>
+                        <canvas class="optics-canvas" id="plotCanvas" tabindex="0"></canvas>
+                        <p class="optics-caption">Solid: I(y) from one sampled array (the detector, readouts and CSV use the same samples).
+                            Dashed/dotted: upper and lower fringe envelopes. Ticks along the top mark interference orders m (orange with × = missing
+                            order on an envelope zero). Hover, drag or focus the plot and use ←/→ (Shift = ×10) to move the cursor.</p>
                     </div>
                 </div>
+                <p class="optics-warning" id="regimeWarn" hidden></p>
+                <p class="optics-warning" id="angleWarn" hidden></p>
+                <p class="optics-warning" id="scalarWarn" hidden></p>
+                <dl class="optics-readouts ds-readouts" id="readouts"></dl>
+                <div class="optics-table-scroll">
+                    <table class="optics-data-table" id="ordersTable">
+                        <caption>Interference maxima on the screen (φ-shifted; |m| ≤ 10 listed)</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">m</th>
+                                <th scope="col">sin θ</th>
+                                <th scope="col">y exact (mm)</th>
+                                <th scope="col">y paraxial mλL/d (mm)</th>
+                                <th scope="col">paraxial error</th>
+                                <th scope="col">envelope sinc²</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="exportHost"></div>
             </div>
         </section>
         <!-- Help Box -->
         <div class="help-box">
-            <strong>💡 How to Use</strong>
+            <strong>💡 How to use</strong>
             <ul>
-                <li><strong>Slit Separation (d)</strong>: Distance between the two slits. Larger separation = more fringes</li>
-                <li><strong>Wavelength (λ)</strong>: Light wavelength (380-700 nm visible). Shorter wavelength = narrower fringes</li>
-                <li><strong>Screen Distance (L)</strong>: Distance from slits to detection screen. Farther = wider fringes</li>
-                <li><strong>Bright Fringes</strong>: Occur where waves constructively interfere (path difference = nλ)</li>
-                <li><strong>Dark Fringes</strong>: Occur where waves destructively interfere (path difference = (n+½)λ)</li>
-                <li><strong>Animation</strong>: Click Start to see wavefronts propagate through the slits</li>
+                <li><strong>Experiments</strong> load a reproducible configuration and tell you what you should observe; check it against the readouts.</li>
+                <li><strong>Slit separation d</strong> (centre to centre) sets the fringe spacing λL/d. <strong>Slit width a</strong> sets the single-slit envelope, first zero at λL/a. a is always kept below d.</li>
+                <li><strong>Screen half-width</strong> is the physical field of view (zoom); every count and the CSV refer to that extent.</li>
+                <li><strong>Block a slit</strong>, lower the <strong>illumination ratio</strong> or <strong>coherence</strong>, or add a <strong>relative phase</strong> to see what changes the fringes but not the envelope.</li>
+                <li><strong>Photon counts</strong> draws N random detections (fixed seed, so the link reproduces them) from the same intensity.</li>
+                <li><strong>Animation</strong> only moves the schematic field; the detector always shows the time average.</li>
+                <li><strong>Copy link</strong> saves every setting in the URL; JSON/CSV/PNG export the configuration, the sampled pattern and the figures.</li>
             </ul>
         </div>
+        <!-- Teaching section -->
+        <section class="optics-teaching" aria-labelledby="learn-h">
+            <h2 id="learn-h">Learn with this tool</h2>
+            <div class="optics-teaching-grid">
+                <div class="optics-objectives">
+                    <h3>Learning objectives</h3>
+                    <ul>
+                        <li>Predict fringe spacing, envelope zeros, missing orders and the number of real orders from λ, a, d and L, and measure them on a calibrated screen.</li>
+                        <li>Separate the two-slit interference factor from the single-slit diffraction factor, and explain how unequal amplitudes, relative phase and partial coherence change the visibility but not the envelope.</li>
+                        <li>Decide when the far-field (Fraunhofer) and paraxial approximations are valid, using the Fresnel number and the observation angle.</li>
+                    </ul>
+                </div>
+                <div class="optics-prereqs">
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li><a href="../interference/">Two-beam interference</a>: phasor addition, I = I₁ + I₂ + 2√(I₁I₂) cos Δφ.</li>
+                        <li><a href="../diffraction/">Single-slit diffraction</a>: the sinc² pattern and its zeros a sinθ = nλ.</li>
+                        <li>Complex exponentials and the small-angle approximation sinθ ≈ tanθ ≈ θ.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="optics-model">
+                <h3>Model</h3>
+                <p>Two slits of width a, centres ±d/2, lit by a normally incident monochromatic plane wave. In the far field the screen
+                    field is the Fourier transform of the aperture, so at observation angle θ = atan(y/L)</p>
+                <div class="formula-box">
+                    <p><strong>I(θ) = I₁ sinc²(β) [A₁² + A₂² + 2A₁A₂|γ| cos(δ − φ)]</strong>, &nbsp; β = π a sinθ/λ, &nbsp; δ = 2π d sinθ/λ, &nbsp; sinc u = sin u / u</p>
+                    <p>Equal, coherent, in-phase slits: <strong>I/I₀ = sinc²(π a sinθ/λ) · cos²(π d sinθ/λ)</strong>, with I₀ = 4I₁.</p>
+                </div>
+                <dl class="optics-symbols">
+                    <dt>λ</dt>
+                    <dd>vacuum wavelength (the space between slits and screen is taken as vacuum/air, n = 1)</dd>
+                    <dt>a, d</dt>
+                    <dd>slit width; centre-to-centre separation (a &lt; d)</dd>
+                    <dt>L, y</dt>
+                    <dd>slit-to-screen distance; screen coordinate (y &gt; 0 toward the top slit)</dd>
+                    <dt>A₁, A₂</dt>
+                    <dd>field amplitudes of top/bottom slit, A₁ = 1, A₂ = √(I₂/I₁)</dd>
+                    <dt>φ</dt>
+                    <dd>extra phase of the bottom slit relative to the top</dd>
+                    <dt>|γ|</dt>
+                    <dd>modulus of the complex degree of mutual coherence of the fields at the two slits</dd>
+                    <dt>I₀</dt>
+                    <dd>on-axis intensity of two equal coherent in-phase slits (fixed-scale reference); I₁ = I₀/4 for one slit</dd>
+                    <dt>N<sub>F</sub></dt>
+                    <dd>Fresnel number (D/2)²/(λL), D = d + a; the model needs N<sub>F</sub> ≪ 1</dd>
+                </dl>
+                <p><strong>Assumptions and validity:</strong> scalar field; monochromatic, uniformly illuminated slits; infinitely thin opaque
+                    screen; Fraunhofer propagation (N<sub>F</sub> ≲ 0.1). The exact angle θ = atan(y/L) is used, but obliquity and 1/r fall-off are
+                    ignored, so the model is not a near-field solver. The paraxial formulas λL/d and λL/a hold only for |θ| ≲ 10°.
+                    Partial coherence enters only through the constant |γ|; spectral bandwidth and finite source size are not modelled.</p>
+                <details class="optics-derivation">
+                    <summary>Derivation</summary>
+                    <p>In the Fraunhofer limit the field at direction θ is E(θ) ∝ ∫ t(x) e<sup>−ikx sinθ</sup> dx, where t(x) is the aperture
+                        transmission. For one slit centred at x₀, ∫<sub>x₀−a/2</sub><sup>x₀+a/2</sup> e<sup>−ikx sinθ</sup> dx = a sinc(β) e<sup>−ikx₀ sinθ</sup>
+                        with β = ka sinθ/2 = π a sinθ/λ.</p>
+                    <p>Two slits at x₀ = ±d/2 with amplitudes A₁, A₂e<sup>iφ</sup> give
+                        E ∝ a sinc(β) [A₁e<sup>−iδ/2</sup> + A₂e<sup>iφ</sup>e<sup>+iδ/2</sup>], δ = kd sinθ. Then
+                        |E|² ∝ sinc²(β)[A₁² + A₂² + 2A₁A₂ cos(δ − φ)] (the sign of φ fixes which way the pattern shifts; this tool puts the top slit at +d/2).</p>
+                    <p>If the two slit fields are only partially correlated, the time average of the cross term is multiplied by |γ|
+                        (Born &amp; Wolf §10.3), giving the model above. For A₁ = A₂ = 1, γ = 1, φ = 0: 2 + 2cos δ = 4cos²(δ/2), so I/I₀ = sinc²β cos²(δ/2).</p>
+                    <p>Maxima of the cos² factor: d sinθ = mλ. Because |sinθ| &lt; 1, only |m| &lt; d/λ exist. Zeros of the envelope: a sinθ = nλ.
+                        When d/a is an integer p, orders m = ±p, ±2p… fall on envelope zeros and are missing. Small angles: y ≈ L sinθ gives Δy = λL/d and y<sub>zero</sub> = λL/a.</p>
+                    <p>Visibility: I<sub>max,min</sub> ∝ A₁² + A₂² ± 2A₁A₂|γ|, so V = 2A₁A₂|γ|/(A₁² + A₂²).</p>
+                </details>
+            </div>
+            <div class="optics-exercise-list">
+                <article class="optics-exercise">
+                    <h4>Exercise 1: measure a laser wavelength</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Set λ = 632.8 nm, d = 0.500 mm, a = 0.100 mm, L = 1.50 m. Predict the fringe spacing and the positions of the first envelope zeros.</li>
+                        <li class="optics-step" data-step="test">Type the values into the number boxes, set the half-width to 12 mm and look at the plot.</li>
+                        <li class="optics-step" data-step="measure">Put the cursor on the 5th dark fringe on each side of the centre and read both y values. Divide their distance by the number of fringe spacings between them, then compute λ = dΔy/L.</li>
+                        <li class="optics-step" data-step="explain">Why is measuring across many fringes better than measuring one? Which order is missing, and why?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>Δy = λL/d = 632.8 nm × 1.5 m / 0.5 mm = 1.898 mm; envelope zeros at λL/a = ±9.49 mm. The 5th dark fringe on each side
+                            sits at d sinθ = 4.5λ, i.e. y = ±4.5Δy = ±8.54 mm, so the two are 9 fringe spacings (17.08 mm) apart:
+                            Δy = 17.08/9 = 1.898 mm and λ = 0.5 mm × 1.898 mm / 1.5 m = 633 nm. The cursor error (about one screen pixel) is shared
+                            over nine intervals, so the relative error falls ninefold. d/a = 5, so order m = ±5 falls on the envelope zero and is missing.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 2: visibility from unequal illumination and coherence</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Start from Textbook. Predict the fringe visibility for I₂/I₁ = 25 % with |γ| = 1, and then with |γ| = 0.6.</li>
+                        <li class="optics-step" data-step="test">Set the illumination ratio and coherence sliders; switch the intensity scale to Fixed so the curves are comparable.</li>
+                        <li class="optics-step" data-step="measure">Read the measured visibility and the peak I/I₀. Do the fringe positions or the envelope move?</li>
+                        <li class="optics-step" data-step="explain">Explain why coherence changes the contrast but not the envelope or the fringe positions.</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>A₂ = √0.25 = 0.5. V = 2(1)(0.5)(1)/(1 + 0.25) = 0.80; with |γ| = 0.6, V = 0.48. The on-axis peak is
+                            (1 + 0.25 + 2·0.5·|γ|)/4 = 0.5625 I₀ for |γ| = 1. The envelope is a property of each slit alone (sinc² factor), and the fringe
+                            phase δ − φ does not involve A or γ, so only the amplitude of the cos term changes. The readout differs slightly from theory
+                            because the envelope slopes across the central fringe.</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 3 (limiting cases): how many bright fringes can exist?</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Load “d &lt; λ” (λ = 500 nm, d = 0.4 µm). How many intensity maxima exist over the whole half-space? What happens if a → 0 with d fixed, or if one slit is blocked?</li>
+                        <li class="optics-step" data-step="test">Increase the screen half-width to its maximum (the screen then spans almost ±90°). Then block a slit.</li>
+                        <li class="optics-step" data-step="measure">Read “Orders on screen”, the table, and the angle of the half-maximum from the cursor.</li>
+                        <li class="optics-step" data-step="explain">Why can no screen, however large, show an m = 1 fringe here?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>A maximum needs sinθ = mλ/d; with λ/d = 1.25 only m = 0 satisfies |sinθ| &lt; 1, so there is exactly one broad maximum. The
+                            paraxial formula λL/d would still predict a “spacing”, but it describes no real direction. As a → 0 the envelope becomes flat
+                            (sinc → 1) and the pattern tends to pure cos²(π d sinθ/λ). Blocking a slit removes the cross term, leaving the single-slit
+                            envelope at one quarter of I₀. In this regime a and d are below λ, so the scalar model is only qualitative (see the warning).</p>
+                    </details>
+                </article>
+                <article class="optics-exercise">
+                    <h4>Exercise 4: photons one at a time</h4>
+                    <ol class="optics-steps">
+                        <li class="optics-step" data-step="predict">Load “Photon build-up” (N ≈ 300). Predict how many detections are needed before the fringes are visible, if the relative scatter of a bin with n counts is 1/√n.</li>
+                        <li class="optics-step" data-step="test">Raise N step by step to 10⁵; press “New random sample” at each N.</li>
+                        <li class="optics-step" data-step="measure">Compare the histogram with the dashed expected curve and note the error bars (±√n).</li>
+                        <li class="optics-step" data-step="explain">What does the simulator assume about individual detections, and what does it not model?</li>
+                    </ol>
+                    <details class="optics-answer">
+                        <summary>Show answer</summary>
+                        <p>With 60 bins across ±15 mm and about 15 fringes, a bright-fringe bin needs roughly n ≳ 25 counts (20 % scatter) before bright and dark
+                            bins are clearly distinct, i.e. N of a few thousand. Each hit is drawn independently from the normalised intensity (Born rule for the
+                            screen position, conditioned on reaching the screen). Detector efficiency, dark counts, dead time and which-path markers are not modelled.</p>
+                    </details>
+                </article>
+            </div>
+            <div class="optics-worked-example">
+                <h3>Worked example</h3>
+                <p><strong>Problem.</strong> A He–Ne laser (λ = 632.8 nm) illuminates two slits with a = 40 µm and d = 0.20 mm. The screen is at L = 2.0 m.
+                    (a) Find the fringe spacing and the first envelope zero. (b) How many bright fringes lie inside the central envelope lobe?
+                    (c) Is the Fraunhofer model justified? (d) The laser is replaced by a filtered lamp that gives |γ| = 0.35 at the slits. What visibility do you expect?</p>
+                <p><strong>Solution.</strong> (a) Δy = λL/d = 632.8×10⁻⁹ × 2.0 / 2.0×10⁻⁴ = 6.33 mm; y<sub>zero</sub> = λL/a = 31.6 mm (θ = 0.91°, so the
+                    paraxial forms are accurate to 10⁻⁴). (b) d/a = 5, so orders m = ±5 are missing; the central lobe holds m = −4…4, i.e. 9 bright fringes.
+                    (c) D = d + a = 0.24 mm, N<sub>F</sub> = (0.12 mm)²/(632.8 nm × 2 m) = 0.011 ≪ 1: far field is fine (it would need L ≳ 0.23 m for N<sub>F</sub> ≤ 0.1).
+                    (d) Equal illumination, so V = |γ| = 0.35: minima at 0.65/1.35 ≈ 0.48 of the maxima. The fringe positions and envelope are unchanged.
+                    Load these numbers into the tool and check each answer against the readouts and the table.</p>
+            </div>
+            <div class="optics-limits">
+                <h3>When the model fails</h3>
+                <ul>
+                    <li><strong>Near field.</strong> For N<sub>F</sub> ≳ 0.1 the screen pattern is a Fresnel pattern of each slit, not a scaled Fourier transform. Use <a href="../aperture_propagation/">aperture propagation</a> for a numerical near/far-field solution.</li>
+                    <li><strong>Slits comparable to λ.</strong> Scalar theory ignores polarisation and the boundary conditions at real (metal, finite-thickness) slit edges; for a ≲ λ transmission becomes polarisation dependent and the envelope shape changes.</li>
+                    <li><strong>Large angles.</strong> Beyond ~10° the paraxial formulas fail (the tool places orders exactly), and the neglected obliquity factor and 1/r² fall-off make real outer fringes dimmer than shown.</li>
+                    <li><strong>Finite bandwidth and source size.</strong> A spectral width Δλ washes out orders beyond m ≈ λ/Δλ; an extended source reduces |γ| depending on d. Here |γ| is a single constant, not computed from a source.</li>
+                    <li><strong>Detectors and quanta.</strong> The photon view samples positions from the classical intensity; it does not model detector efficiency, noise, or the which-path measurement apparatus.</li>
+                </ul>
+            </div>
+            <div class="optics-references">
+                <h3>References</h3>
+                <ul>
+                    <li>E. Hecht, <em>Optics</em>, 5th ed., Pearson (2017), §9.3 (Young's experiment) and §10.2.4 (double slit).</li>
+                    <li>M. Born and E. Wolf, <em>Principles of Optics</em>, 7th ed., Cambridge (1999), §7.3 and §10.3–10.4 (partial coherence, visibility).</li>
+                    <li>B. E. A. Saleh and M. C. Teich, <em>Fundamentals of Photonics</em>, 3rd ed., Wiley (2019), Ch. 2, 4 and 12.</li>
+                    <li>R. P. Feynman, <em>The Feynman Lectures on Physics</em>, Vol. III, Ch. 1 (quantum behaviour).</li>
+                    <li>MIT OCW 2.71 Optics, <a href="https://ocw.mit.edu/courses/2-71-optics-spring-2014/pages/lecture-notes/" rel="noopener">lecture notes</a> on Fraunhofer diffraction.</li>
+                </ul>
+            </div>
+        </section>
+        <section role="navigation" class="ds-related" aria-label="Related optics tools">
+            <h2>Related tools</h2>
+            <ul>
+                <li><a href="../diffraction/">Single-slit &amp; circular diffraction</a><span>the sinc² envelope on its own</span></li>
+                <li><a href="../interference/">Interference &amp; beating</a><span>two-wave superposition and phasors</span></li>
+                <li><a href="../diffraction_grating/">Diffraction gratings</a><span>N slits: sharper orders and spectroscopy</span></li>
+                <li><a href="../aperture_propagation/">Aperture propagation</a><span>near field, Fresnel number, numerical diffraction</span></li>
+                <li><a href="../interferometers/">Interferometers &amp; coherence</a><span>Michelson, Mach–Zehnder, visibility and coherence</span></li>
+            </ul>
+        </section>
         <!-- Physics Background Section -->
         <section class="explanation-section">
             <div class="section-header">
-                <h2>📚 Physics Background</h2>
+                <h2>📚 Physics background</h2>
             </div>
             <div class="explanation-content">
                 <div class="explanation-card">
-                    <h3>🔬 Young's Double-Slit Experiment</h3>
+                    <h3>🔬 Young's double-slit experiment</h3>
                     <p>
-                        In 1801, Thomas Young performed a groundbreaking experiment that demonstrated the wave nature of light.
-                        By passing light through two closely spaced slits, he observed an <strong>interference pattern</strong>
-                        on a screen—alternating bright and dark bands that could only be explained if light behaved as a wave.
-                    </p>
-                    <p>
-                        This experiment was pivotal in establishing the wave theory of light and remains a cornerstone
-                        demonstration in quantum mechanics, where even single particles exhibit wave-like interference.
+                        In 1801 Thomas Young passed light through two closely spaced openings and observed alternating bright and dark
+                        bands, evidence that light behaves as a wave. A typical bench version uses slits a few tens of micrometres wide,
+                        a fraction of a millimetre apart and a screen about a metre away, which gives fringes a few millimetres apart.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>📐 Mathematical Formulation</h3>
-                    <p>The interference pattern depends on the path difference between waves from the two slits:</p>
-                    <div class="formula-box">
-                        <p><strong>Path difference: Δ = d sin(θ)</strong></p>
-                    </div>
-                    <p>For constructive interference (bright fringes):</p>
-                    <div class="formula-box">
-                        <p><strong>d sin(θ) = nλ</strong> (n = 0, ±1, ±2, ...)</p>
-                    </div>
-                    <p>For destructive interference (dark fringes):</p>
-                    <div class="formula-box">
-                        <p><strong>d sin(θ) = (n + ½)λ</strong></p>
-                    </div>
-                    <p>Where:</p>
+                    <h3>📏 Fringe spacing and allowed orders</h3>
                     <ul>
-                        <li><strong>d</strong> is the slit separation</li>
-                        <li><strong>λ</strong> is the wavelength of light</li>
-                        <li><strong>θ</strong> is the angle from the central axis</li>
-                        <li><strong>n</strong> is the order number (0 for central maximum)</li>
+                        <li><strong>Bright fringes:</strong> d sinθ = mλ, m = 0, ±1, ±2, …; <strong>dark fringes:</strong> d sinθ = (m + ½)λ.</li>
+                        <li><strong>Envelope zeros:</strong> a sinθ = nλ; an order on a zero is a <em>missing order</em> (every 5th when d = 5a).</li>
+                        <li><strong>Small angles:</strong> Δy = λL/d and y<sub>zero</sub> = λL/a.</li>
                     </ul>
+                    <p>
+                        Because sinθ cannot exceed 1, only orders with |m|λ/d &lt; 1 exist. When d &lt; λ there is only the central order.
+                        At large angles the simulator places orders at y = L tan(asin(mλ/d)) and the table lists the paraxial error.
+                    </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>📏 Fringe Spacing</h3>
-                    <p>For small angles (sin θ ≈ tan θ ≈ y/L), the fringe spacing is:</p>
+                    <h3>🌊 Visibility and coherence</h3>
                     <div class="formula-box">
-                        <p><strong>Δy = λL/d</strong></p>
+                        <p><strong>V = (I<sub>max</sub> − I<sub>min</sub>)/(I<sub>max</sub> + I<sub>min</sub>) = 2A₁A₂|γ| / (A₁² + A₂²)</strong></p>
                     </div>
                     <p>
-                        This formula shows that fringe spacing increases with wavelength (λ) and screen distance (L),
-                        but decreases with slit separation (d). This is why you see wider fringes when using red light
-                        compared to blue light, or when moving the screen farther away.
+                        Equal, fully coherent illumination gives V = 1. Unequal amplitudes leave a nonzero minimum, and |γ| &lt; 1 adds an
+                        unmodulated background; with |γ| = 0 the slit intensities simply add. The tool measures V from the sampled pattern over the
+                        central fringe period, which also includes the slight slope of the envelope.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>🌊 Wave Interference</h3>
-                    <div class="polarization-type">
-                        <h4>✅ Constructive Interference (Bright Fringes)</h4>
-                        <p><strong>Condition:</strong> Path difference = nλ (integer number of wavelengths)</p>
-                        <p>
-                            When waves arrive in phase, their amplitudes add together, creating maximum brightness.
-                            The central bright fringe (n=0) is always the brightest as both waves travel equal distances.
-                        </p>
-                    </div>
-                    <div class="polarization-type">
-                        <h4>❌ Destructive Interference (Dark Fringes)</h4>
-                        <p><strong>Condition:</strong> Path difference = (n+½)λ (half-integer wavelengths)</p>
-                        <p>
-                            When waves arrive 180° out of phase, their amplitudes cancel, creating darkness.
-                            These dark regions appear between the bright fringes.
-                        </p>
-                    </div>
-                </div>
-                <div class="explanation-card">
-                    <h3>🔮 Quantum Implications</h3>
+                    <h3>🔮 Quantum interpretation</h3>
                     <p>
-                        The double-slit experiment is central to quantum mechanics. When performed with single photons
-                        or electrons, the interference pattern still emerges over time—even though each particle passes
-                        through one slit at a time. This demonstrates <strong>wave-particle duality</strong>.
+                        With single photons or electrons each quantum is detected at one point, yet the accumulated hits reproduce the fringes.
+                        Quantum mechanics does not say the particle went through one slit or the other: it assigns a <strong>probability amplitude</strong>
+                        to each path, and the detection probability is |ψ₁ + ψ₂|² = |ψ₁|² + |ψ₂|² + 2 Re(ψ₁*ψ₂). The cross term is the interference.
                     </p>
                     <p>
-                        Even more mysteriously, if we try to detect which slit a particle passes through, the interference
-                        pattern disappears! This "observer effect" highlights fundamental aspects of quantum measurement.
+                        If anything records <strong>which path</strong> was taken (a detector, a polarisation tag, a recoiling slit), the cross term is
+                        multiplied by the overlap of the marker states. Full path information makes that overlap zero and the fringes vanish; partial
+                        information reduces the visibility. This is loss of coherence through entanglement with the marker, not a disturbance caused
+                        merely by “looking”. The |γ| slider plays the same mathematical role.
+                    </p>
+                    <p>
+                        <em>Scope:</em> this page computes a classical scalar-optics intensity. The photon view draws detection positions from that
+                        intensity with a seeded random generator; it does not model the measurement apparatus or detector physics.
                     </p>
                 </div>
                 <div class="explanation-card">
-                    <h3>🔬 Applications</h3>
+                    <h3>🔬 Applications (not simulated here)</h3>
                     <ul>
-                        <li><strong>Wavelength Measurement:</strong> The pattern can precisely determine light wavelength</li>
-                        <li><strong>Coherence Testing:</strong> Interference visibility indicates source coherence</li>
-                        <li><strong>Holography:</strong> Uses interference principles to create 3D images</li>
-                        <li><strong>Gravitational Wave Detection:</strong> LIGO uses interference to detect tiny space-time ripples</li>
-                        <li><strong>Thin Film Coatings:</strong> Anti-reflective coatings exploit interference</li>
+                        <li><strong>Wavelength measurement:</strong> λ = dΔy/L.</li>
+                        <li><strong>Coherence testing:</strong> fringe visibility measures the mutual coherence of the light at the two slits.</li>
+                        <li><strong>Stellar interferometry:</strong> visibility versus baseline d gives the angular size of a source.</li>
+                        <li><strong>Gratings:</strong> many slits sharpen the same orders into narrow spectral lines.</li>
                     </ul>
                 </div>
             </div>
@@ -357,6 +639,9 @@
         <script src="/app.js"></script>
     </footer>
     <script src="../shared/base.js"></script>
+    <script src="../shared/optics/core.js"></script>
+    <script src="../shared/optics/ui.js"></script>
+    <script src="../shared/optics/doubleSlit.js"></script>
     <script src="app.js"></script>
 </body>
 

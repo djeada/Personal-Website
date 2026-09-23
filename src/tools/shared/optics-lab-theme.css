@@ -70,11 +70,22 @@ body.tool-optics-lab .stats-bar::after {
     opacity: .55;
 }
 
+/* Result panels follow the site theme. (Previously they were forced dark in light mode too,
+   which put the light-theme text tokens, e.g. #5f667b, on a near-black background.) */
 body.tool-optics-lab .info-panel,
 body.tool-optics-lab .results-panel,
 body.tool-optics-lab .intensity-panel,
 body.tool-optics-lab .status-panel {
     color: var(--text-secondary);
+    background: var(--surface-elevated, #f7f6fb) !important;
+    border-color: var(--border-color, #dcd8eb) !important;
+    box-shadow: 0 12px 32px rgba(32, 36, 55, .08);
+}
+
+body.tool-optics-lab.dark-mode .info-panel,
+body.tool-optics-lab.dark-mode .results-panel,
+body.tool-optics-lab.dark-mode .intensity-panel,
+body.tool-optics-lab.dark-mode .status-panel {
     background: linear-gradient(145deg, rgba(20, 19, 35, .94), rgba(9, 9, 16, .94)) !important;
     border-color: rgba(167, 139, 250, .16) !important;
     box-shadow: 0 20px 55px rgba(0, 0, 0, .24);
@@ -106,4 +117,494 @@ body.tool-optics-lab .stat-value {
     body.tool-optics-lab .canvas-container::after {
         margin: 5px 0 10px;
     }
+}
+
+/* ======================================================================
+   Shared optics foundation (used with src/tools/shared/optics/ui.js)
+   See src/tools/shared/optics/TEMPLATE.md for markup examples.
+   ====================================================================== */
+
+body.tool-optics-lab {
+    --optics-canvas-bg: #07070d;
+    --optics-focus: #6855bd;
+    --optics-card-bg: var(--surface-elevated, #f7f6fb);
+    --optics-card-border: var(--border-color, #dcd8eb);
+    --optics-ink: var(--text-primary, #202437);
+    --optics-ink-2: var(--text-secondary, #4c5368);
+    --optics-accent: #0f7f7a;
+    --optics-warn-bg: #fff4e0;
+    --optics-warn-ink: #7a4a00;
+}
+
+body.tool-optics-lab.dark-mode {
+    --optics-focus: #69f5e7;
+    --optics-card-bg: rgba(20, 19, 35, .92);
+    --optics-card-border: rgba(167, 139, 250, .2);
+    --optics-ink: var(--text-primary, #f5f3ff);
+    --optics-ink-2: var(--text-secondary, #b8b2cf);
+    --optics-accent: #69f5e7;
+    --optics-warn-bg: rgba(255, 184, 107, .12);
+    --optics-warn-ink: #ffcf99;
+}
+
+/* The site body is a flex container, so .tool-main is shrink-to-fit. Pin it to the available
+   width so percentage-width canvases cannot feed their backing-store size back into layout. */
+body.tool-optics-lab .tool-main {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* ---------- accessibility helpers ---------- */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+body.tool-optics-lab :is(a, button, input, select, textarea, summary, canvas[tabindex], [tabindex="0"]):focus-visible {
+    outline: 3px solid var(--optics-focus) !important;
+    outline-offset: 2px !important;
+    box-shadow: none;
+}
+
+body.tool-optics-lab input[type="range"]:focus-visible {
+    outline-offset: 4px !important;
+}
+
+/* ---------- canvases & multi-panel plot layout ---------- */
+/* Canvases sized by OpticsUI.setupCanvas: CSS decides the width, JS sets the height. */
+body.tool-optics-lab canvas.optics-canvas {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    background: var(--optics-canvas-bg) !important;
+    border: 1px solid rgba(167, 139, 250, .24);
+    border-radius: 10px;
+    touch-action: pan-y;
+}
+
+.optics-plot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+    margin: 14px 0;
+}
+
+.optics-plot-grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.optics-plot-grid>.span-all,
+.optics-plot-grid>.optics-panel.wide {
+    grid-column: 1 / -1;
+}
+
+.optics-panel {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--optics-card-bg);
+    border: 1px solid var(--optics-card-border);
+    color: var(--optics-ink-2);
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.optics-panel-title {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 650;
+    color: var(--optics-ink);
+}
+
+.optics-caption {
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--optics-ink-2);
+}
+
+@media (max-width: 1100px) {
+    .optics-plot-grid.cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+
+    .optics-plot-grid,
+    .optics-plot-grid.cols-3 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .optics-panel {
+        padding: 8px;
+    }
+}
+
+/* approximation / scale badges and regime warnings */
+.optics-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font: 600 .72rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+    letter-spacing: .02em;
+    color: var(--optics-ink);
+    background: var(--primary-light, rgba(104, 85, 189, .09));
+    border: 1px solid var(--optics-card-border);
+}
+
+.optics-warning {
+    margin: 6px 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 4px solid #e8912d;
+    background: var(--optics-warn-bg);
+    color: var(--optics-warn-ink);
+    font-size: .88rem;
+}
+
+.optics-warning[hidden] {
+    display: none;
+}
+
+/* numeric readouts and data tables */
+.optics-readouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+    gap: 6px 14px;
+    margin: 0;
+}
+
+.optics-readouts>div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.optics-readouts dt {
+    color: var(--optics-ink-2);
+    font-size: .85rem;
+}
+
+.optics-readouts dd {
+    margin: 0;
+    color: var(--optics-ink);
+    font: 600 .88rem ui-monospace, SFMono-Regular, Consolas, monospace;
+    text-align: right;
+}
+
+.optics-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+    color: var(--optics-ink);
+}
+
+.optics-data-table caption {
+    text-align: left;
+    color: var(--optics-ink-2);
+    padding-bottom: 4px;
+}
+
+.optics-data-table th,
+.optics-data-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--optics-card-border);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.optics-data-table th:first-child,
+.optics-data-table td:first-child {
+    text-align: left;
+}
+
+.optics-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* ---------- slider + numeric input ---------- */
+.optics-num-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+body.tool-optics-lab input.optics-num-input,
+input.optics-num-input {
+    width: 7.5em;
+    min-height: 32px;
+    padding: 3px 6px;
+    box-sizing: border-box;
+    font: 500 .88rem ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: var(--optics-ink, #202437);
+    background: var(--surface-color, #fff);
+    border: 1px solid var(--optics-card-border, #c9c4dc);
+    border-radius: 6px;
+}
+
+body.tool-optics-lab.dark-mode input.optics-num-input {
+    background: rgba(0, 0, 0, .35);
+    border-color: rgba(167, 139, 250, .45);
+}
+
+input.optics-num-input[aria-invalid="true"] {
+    border-color: #d64545;
+    box-shadow: 0 0 0 2px rgba(214, 69, 69, .25);
+}
+
+.optics-num-unit {
+    font-size: .82rem;
+    color: var(--optics-ink-2, #4c5368);
+}
+
+/* ---------- export / share bar ---------- */
+.optics-export-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+body.tool-optics-lab .optics-export-bar button.optics-export-btn,
+.optics-export-btn {
+    min-height: 32px;
+    padding: 4px 12px;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--optics-ink, #202437);
+    background: var(--surface-color, #fff);
+    border: 1px solid var(--optics-card-border, #c9c4dc);
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: none;
+    transform: none;
+}
+
+body.tool-optics-lab .optics-export-bar button.optics-export-btn:hover {
+    border-color: var(--optics-focus);
+    background: var(--primary-light, rgba(104, 85, 189, .09));
+}
+
+.optics-export-status {
+    font-size: .8rem;
+    color: var(--optics-ink-2, #4c5368);
+    min-height: 1em;
+}
+
+/* ---------- teaching blocks ---------- */
+.optics-teaching {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    display: grid;
+    gap: 16px;
+    margin: 24px 0;
+    color: var(--optics-ink-2);
+    line-height: 1.6;
+}
+
+.optics-teaching h2,
+.optics-teaching h3,
+.optics-teaching h4 {
+    color: var(--optics-ink);
+    margin: 0 0 8px;
+}
+
+.optics-teaching-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 16px;
+}
+
+.optics-objectives,
+.optics-prereqs,
+.optics-model,
+.optics-exercise,
+.optics-worked-example,
+.optics-limits,
+.optics-references {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--optics-card-bg);
+    border: 1px solid var(--optics-card-border);
+    min-width: 0;
+}
+
+.optics-objectives {
+    border-left: 4px solid var(--optics-accent);
+}
+
+.optics-prereqs {
+    border-left: 4px solid var(--primary-color, #6855bd);
+}
+
+.optics-limits {
+    border-left: 4px solid #e8912d;
+}
+
+.optics-worked-example {
+    border-left: 4px solid #3f9d5a;
+}
+
+.optics-teaching ul,
+.optics-teaching ol {
+    margin: 0;
+    padding-left: 1.3em;
+}
+
+.optics-symbols {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 12px;
+    margin: 8px 0;
+}
+
+.optics-symbols dt {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: var(--optics-ink);
+}
+
+.optics-symbols dd {
+    margin: 0;
+}
+
+.optics-derivation>summary,
+.optics-answer>summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--optics-ink);
+    padding: 4px 0;
+}
+
+.optics-derivation[open]>summary,
+.optics-answer[open]>summary {
+    margin-bottom: 6px;
+}
+
+.optics-exercise-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 14px;
+}
+
+.optics-exercise>h4 {
+    font-size: 1rem;
+}
+
+.optics-steps {
+    list-style: none;
+    padding: 0 !important;
+    margin: 0 0 8px !important;
+    display: grid;
+    gap: 6px;
+    counter-reset: none;
+}
+
+.optics-step {
+    position: relative;
+    padding-left: 5.6em;
+    min-height: 1.6em;
+}
+
+.optics-step::before {
+    position: absolute;
+    left: 0;
+    top: .1em;
+    width: 5em;
+    padding: 1px 0;
+    text-align: center;
+    border-radius: 4px;
+    font: 700 .68rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--optics-ink);
+    border: 1px solid var(--optics-card-border);
+    background: var(--primary-light, rgba(104, 85, 189, .09));
+}
+
+.optics-step[data-step="predict"]::before {
+    content: "Predict";
+}
+
+.optics-step[data-step="test"]::before {
+    content: "Test";
+}
+
+.optics-step[data-step="measure"]::before {
+    content: "Measure";
+}
+
+.optics-step[data-step="explain"]::before {
+    content: "Explain";
+}
+
+.optics-answer {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--optics-card-border);
+}
+
+@media (max-width: 480px) {
+    .optics-step {
+        padding-left: 0;
+        padding-top: 1.5em;
+    }
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+
+    body.tool-optics-lab *,
+    body.tool-optics-lab *::before,
+    body.tool-optics-lab *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Shared related-tool navigation and hidden badges (tools may refine locally). */
+.optics-badge[hidden],
+.optics-warning[hidden] {
+    display: none;
+}
+
+.optics-related ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+}
+
+/* The site stylesheet italicises/greys the first row of every table; optics data tables are not captions. */
+.tool-optics-lab table tr:nth-child(1),
+.dark-mode.tool-optics-lab table tr:nth-child(1) {
+    font-style: normal;
+    color: inherit;
 }
