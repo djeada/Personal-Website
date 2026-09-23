@@ -1226,7 +1226,7 @@
     function drawLsa(ctx, w, h) {
         const r = result;
         const xA = {
-                label: "Δz from paraxial focus (d)",
+                label: "Δz from paraxial focus (" + (r && r.st.chrom ? "d" : r ? fmt(r.lamRef / NM, 4) + " nm" : "d") + ")",
                 unit: "mm"
             },
             yA = {
@@ -1513,7 +1513,7 @@
         const s = r.spot;
         let dl = false;
         if (s.mode === "angle") {
-            setText("rAiry", Number.isFinite(r.airyAngle) ? "angular diameter " + fmt(2 * r.airyAngle * 1e6, 4) + " µrad (1.22 λ/D_XP)" : "—");
+            setText("rAiry", Number.isFinite(r.airyAngle) ? "angular diameter " + fmt(2 * r.airyAngle * 1e6, 4) + " µrad (2.44 λ/D_XP)" : "—");
             setText("rSpot", fsmall(s.rms, 1e6, "µrad") + " vs " + fmt(r.airyAngle * 1e6, 3) + " µrad");
             dl = s.rms < r.airyAngle;
             setText("statRms", fsmall(s.rms, 1e6, "µrad"));

@@ -226,3 +226,15 @@ test("carrier snapping and order layout geometry", () => {
     assert.equal(inl.inline, true);
     assert.equal(inl.overlap, true);
 });
+
+test("worked example check: Δx = 3.5 µm, λ = 532 nm, NA_o = 0.019 puts |f_c| = 3B exactly at θ ≈ 3.27° with no overlap", () => {
+    const base = { object: "letters", N: 256, dx: 3.5e-6, lambda: 532e-9, NAo: 0.019, z: 9e-3, fill: 1, beta: Math.pow(10, 0.6), method: "filter" };
+    const opts = { table: false, sweep: false, objectPlane: false };
+    const r = Hg.simulate({ ...base, theta: 3.27 * DEG }, null, opts);
+    assert.equal(r.layout.overlap, false);
+    assert.equal(r.warnings.length, 0, r.warnings.join(" / "));
+    assert.ok(r.recon.corr.rho > 0.99, "ρ = " + r.recon.corr.rho);
+    // one DFT bin either side: the +1 disc touches the twin across Nyquist (3.30°) or the DC halo (3.25°)
+    assert.equal(Hg.simulate({ ...base, theta: 3.30 * DEG }, null, opts).layout.overlapTwin, true);
+    assert.equal(Hg.simulate({ ...base, theta: 3.25 * DEG }, null, opts).layout.overlapDC, true);
+});

@@ -217,3 +217,18 @@ test("limiting cases: n2 → n1 gives no reflection; n2 → ∞ approaches the P
     close(Math.max(...env) / Math.min(...env), d.swr, 1e-5);
     close(d.swr, 1.5, 1e-12);
 });
+
+test("circular standing wave: total E ∥ H (not ⟂) although the forward wave alone has E ⟂ H", () => {
+    // Why the page's transversality readout uses the forward wave: for RCP in front of a PEC,
+    // Ẽ ∝ sin k1z J and H̃ ∝ cos k1z ẑ×J; real fields are parallel or antiparallel at every z, t.
+    const cfg = em.setup({ lambda0: 633e-9, n1: 1, E0: 1, pol: { type: "rcp" }, boundary: "pec" });
+    for (const zf of [-0.125, -0.3, -0.62]) {
+        for (const tf of [0.05, 0.3, 0.71]) {
+            const f = em.fields(cfg, zf * cfg.lambda1, tf * cfg.period);
+            const cosang = em.vec.dot(f.E, f.H) / (em.vec.norm(f.E) * em.vec.norm(f.H));
+            close(Math.abs(cosang), 1, 1e-9);
+            const Hf = [-f.Ef[1] / cfg.m1.eta, f.Ef[0] / cfg.m1.eta, 0];
+            close(em.vec.dot(f.Ef, Hf), 0, 0, 1e-15);
+        }
+    }
+});

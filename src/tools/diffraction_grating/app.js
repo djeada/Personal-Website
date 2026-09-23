@@ -40,7 +40,7 @@
     const PRESETS = {
         hg: {
             state: {},
-            note: "Mercury lamp, 600 lines/mm, N = 3000. Expect five lines in each order; the yellow pair 577.0/579.1 nm (2.1 nm apart) needs only N ≈ 275 in first order, so the zoom shows it cleanly split."
+            note: "Mercury lamp, 600 lines/mm, N = 3000. Expect all five lines in orders ±1 and ±2 (only 404.7, 435.8 and 546.1 nm still propagate in order ±3); the yellow pair 577.0/579.1 nm (2.1 nm apart) needs only N ≈ 275 in first order, so the zoom shows it cleanly split."
         },
         naLow: {
             state: {
@@ -1099,8 +1099,25 @@
         label: "Schematic of the spectrometer"
     });
 
-    function hover(handle, getMap, set, readout) {
+    function hover(handle, getMap, set, readout, get) {
         const c = handle.canvas;
+        // keyboard equivalent of hovering: focus the plot, ←/→ move the cursor (Shift = ×10), Esc hides it
+        c.tabIndex = 0;
+        c.addEventListener("keydown", (e) => {
+            const map = getMap();
+            if (!map || !["ArrowLeft", "ArrowRight", "Escape"].includes(e.key)) return;
+            e.preventDefault();
+            if (e.key === "Escape") set(NaN);
+            else {
+                const lo = map.x.min,
+                    hi = map.x.max,
+                    cur = get();
+                const step = ((hi - lo) / 400) * (e.shiftKey ? 10 : 1) * (e.key === "ArrowLeft" ? -1 : 1);
+                set(Math.min(hi, Math.max(lo, Number.isFinite(cur) ? cur + step : 0.5 * (lo + hi))));
+            }
+            handle.redraw();
+            if (readout) readout();
+        });
         c.addEventListener("pointermove", (e) => {
             const map = getMap();
             if (!map) return;
@@ -1120,13 +1137,22 @@
     }
     hover(angH, () => angMap, (v) => {
         angCursor = v;
-    }, angReadout);
+    }, angReadout, () => angCursor);
     hover(detH, () => detMap, (v) => {
         detCursor = v;
-    }, detReadout);
+    }, detReadout, () => detCursor);
     hover(zoomH, () => zoomMap, (v) => {
         zoomCursor = v;
-    }, null);
+    }, null, () => zoomCursor);
+    detH.canvas.addEventListener("keydown", (e) => {
+        // Enter: keyboard equivalent of clicking the detector (zoom centre = wavelength under the cursor)
+        if (e.key !== "Enter" || !M.sim.ok || !Number.isFinite(detCursor)) return;
+        e.preventDefault();
+        const lam = M.sim.geo.lambdaAt(detCursor * MM) / NM;
+        ctl.set({
+            zc: Math.min(800, Math.max(350, Number(lam.toFixed(2))))
+        });
+    });
     detH.canvas.addEventListener("click", (e) => {
         if (!detMap || !M.sim.ok) return;
         const r = detH.canvas.getBoundingClientRect(),

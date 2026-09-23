@@ -14,6 +14,13 @@
         NP_MAX = 2048;
     const pal = UI.palette().canvas;
     const fmt = (v, u, d) => core.formatSI(v, u, d);
+    // areas: an SI prefix applies to the metre before squaring (1 mm² = 1e-6 m²), so formatSI(v, "m²") is wrong
+    const fmtArea = (v) => {
+        if (!Number.isFinite(v)) return "—";
+        if (v === 0) return "0 m²";
+        const u = [[1, "m²"], [1e-6, "mm²"], [1e-12, "µm²"], [1e-18, "nm²"]].find(([f]) => Math.abs(v) >= f * 0.01) || [1e-18, "nm²"]; // e.g. 0.785 mm², not 785000 µm²
+        return Number((v / u[0]).toPrecision(3)) + " " + u[1];
+    };
     const pct = (x) => (!Number.isFinite(x) ? "—" : x === 0 ? "0 %" : Math.abs(x) < 1e-4 ? (x * 100).toExponential(1) + " %" : (x * 100).toFixed(x < 0.01 ? 3 : 2) + " %");
     const lg = Math.log10;
 
@@ -158,7 +165,7 @@
                 n: "512",
                 L: 12
             },
-            note: "A bright spot of ≈ 0.92 I₀ appears on axis in the middle of the geometric shadow. Plane-wave theory gives z²/(z² + a²) ≈ 1; the Gaussian beam scales the rim by e^(−2a²/w²)."
+            note: "A bright spot of ≈ 0.92 I₀ appears on axis in the middle of the geometric shadow. Plane-wave theory gives z²/(z² + R²) ≈ 1 (R = 0.5 mm disk radius); the Gaussian beam lowers the rim intensity by e^(−2R²/w²) ≈ 0.92."
         },
         {
             id: "evan",
@@ -1108,9 +1115,10 @@
         set("rNF", Number.isFinite(info.NF) ? (info.NF < 0.01 ? info.NF.toExponential(2) : info.NF.toPrecision(3)) + " (a = " + fmt(info.a, "m") + ")" : "— (unbounded aperture)");
         set("rZc", fmt(info.zc, "m"));
         set("rSuggest", job.params.z <= info.zc ? "ASM or TF (z ≤ zc)" : "BL-ASM, IR or 1-FFT (z > zc)");
-        set("rBL", Number.isFinite(res.bandLimit) ? fmt(res.bandLimit * 1e-3, "") + " mm⁻¹ (" + (info.bandFraction * 100).toFixed(0) + " %)" : "off (grid fmax " + fmt(info.fMax * 1e-3, "") + " mm⁻¹)");
+        const perMm = (f) => Number((f * 1e-3).toPrecision(3)) + " mm⁻¹"; // no SI prefix on a reciprocal unit ("1.58 k mm⁻¹")
+        set("rBL", Number.isFinite(res.bandLimit) ? perMm(res.bandLimit) + " (" + (info.bandFraction * 100).toFixed(0) + " %)" : "off (grid fmax " + perMm(info.fMax) + ")");
         set("rPx", Number.isFinite(info.pxPerFeature) ? info.pxPerFeature.toFixed(1) : "—");
-        set("rPin", fmt(pw.input, "m²") + "·I₀");
+        set("rPin", fmtArea(pw.input) + "·I₀");
         set("rPdet", pct(pw.detector / pw.input));
         set("rPout", pct(pw.outside / pw.input));
         set("rPrem", pct(pw.removed / pw.input) + (pw.evanescentFraction > 0 ? " (evanescent " + pct(pw.evanescentFraction) + ")" : ""));
@@ -1178,7 +1186,7 @@
             host.appendChild(p);
         }
         // canvas summaries
-        descAp.update("Aperture on a " + job.N + "² grid, extent " + fmt(info.L, "m") + ", shape " + job.spec.shape + ", " + job.spec.strokes.length + " brush points; transmitted power " + fmt(pw.input, "m²") + " × I₀.");
+        descAp.update("Aperture on a " + job.N + "² grid, extent " + fmt(info.L, "m") + ", shape " + job.spec.shape + ", " + job.spec.strokes.length + " brush points; transmitted power " + fmtArea(pw.input) + " × I₀.");
         descInt.update("Intensity at z = " + fmt(job.params.z, "m") + " by " + job.params.method + ": peak " + view.max.toPrecision(3) + " I₀, on-axis " + onAxis.toPrecision(3) + " I₀, detector extent " + fmt(view.size * view.dx, "m") + ", " + pct(pw.detector / pw.input) + " of the power on the detector.");
         descPh.update("Phase map with carrier removed; undefined where intensity is below 10⁻³ of the peak. At the cross-hair: " + (Number.isFinite(vP) ? vP.toFixed(2) + " rad" : "undefined") + ".");
         descCut.update("Cuts through (" + fmt(cd.xc, "m") + ", " + fmt(cd.yc, "m") + "): x-cut max " + Math.max(...cd.Ix).toPrecision(3) + " I₀, y-cut max " + Math.max(...cd.Iy).toPrecision(3) + " I₀. Deviation from analytic Fraunhofer: " + refText + ".");

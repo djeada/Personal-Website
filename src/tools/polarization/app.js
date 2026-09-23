@@ -307,7 +307,7 @@
                 finishers.push(s.finish);
             };
             const T = TYPES[el.type];
-            if (T.angleLabel) add(makeSlider(T.angleLabel, -90, 90, 1, el.a, "°", (v) => {
+            if (T.angleLabel) add(makeSlider(T.angleLabel, -90, 90, 0.5, el.a, "°", (v) => {
                 el.a = v;
             }, `Element ${i + 1} ${T.angleLabel} (degrees)`));
             if (el.type === "retarder") add(makeSlider("Retardance Γ", 0, 360, 1, el.g, "°", (v) => {
@@ -454,7 +454,7 @@
             delta: 60,
             p: 1,
             bench: [],
-            note: "ψ = 30°, δ = 60°: tan 2θ = tan 60° cos 60° gives θ ≈ 40.9°, sin 2χ = sin 60° sin 60° gives χ ≈ 24.3°."
+            note: "ψ = 30°, δ = 60°: tan 2θ = tan 60° cos 60° gives 2θ ≈ 40.9°, θ ≈ 20.4°, sin 2χ = sin 60° sin 60° gives χ ≈ 24.3°."
         },
         malus: {
             psi: 0,
@@ -726,7 +726,8 @@
         el$.stepBody.innerHTML = result.stages.map((st, k) => {
             const d = st.desc;
             const name = k === 0 ? "Input" : `${k}. ${elementSummary(state.bench[k - 1])}`;
-            const jv = st.J ? `(${fmtComplex(st.J[0])}, ${fmtComplex(st.J[1])})` : `<span class="muted">— (p &lt; 1: Stokes only)</span>`;
+            const jv = st.J ? `(${fmtComplex(st.J[0])}, ${fmtComplex(st.J[1])})` :
+                d.dop >= 1 - 1e-9 ? `<span class="muted">— (Stokes only: an earlier stage had p &lt; 1)</span>` : `<span class="muted">— (p &lt; 1: Stokes only)</span>`;
             const cls = k - 1 === state.sel ? ' class="is-selected"' : "";
             return `<tr${cls}><th scope="row">${name}</th><td>${jv}</td><td>${fmtNum(d.S0)}</td><td>${fmtNum(d.S1)}</td><td>${fmtNum(d.S2)}</td><td>${fmtNum(d.S3)}</td>` +
                 `<td>${d.type === "none" ? "—" : fmtNum(d.dop)}</td><td>${typeLabel(d)}${d.handedness !== "none" ? " " + (d.handedness === "right" ? "R" : "L") : ""}</td>` +
@@ -799,9 +800,28 @@
     function drawField(ctx, w, h) {
         fillBg(ctx, w, h);
         const fs = w < 420 ? 11 : 12;
-        const cx = w / 2,
-            cy = h / 2 + 4;
-        const R = Math.min(w * 0.36, (h - 56) / 2.3);
+        const sel = state.sel;
+        const hasSel = sel >= 0 && sel < state.bench.length;
+        const before = hasSel ? result.stages[sel] : null;
+        const after = hasSel ? result.stages[sel + 1] : result.stages[0];
+        const afterColor = hasSel ? stageColor(sel + 1) : stageColor(0);
+        const lines = [];
+        if (before) lines.push([sel === 0 ? "- - input (before element 1)" : `- - after element ${sel}`, PAL.textMuted]);
+        lines.push([hasSel ? `— after element ${sel + 1}` : "— input (no element inspected)", afterColor]);
+        lines.push(["→ instantaneous E (polarized part)", "#ff8f8f"]);
+        if (after.S.S0 - Math.hypot(after.S.S1, after.S.S2, after.S.S3) > 1e-6) lines.push(["◯ unpolarized part, radius √I_u", PAL.textMuted]);
+
+        const cx = w / 2;
+        let cy = h / 2 + 4;
+        let R = Math.min(w * 0.36, (h - 56) / 2.3);
+        // On narrow canvases the legend reaches the y axis: start the plot below it.
+        ctx.font = font(fs);
+        const legendW = Math.max(...lines.map(([t]) => ctx.measureText(t).width));
+        const legendBottom = fs + 6 + (lines.length - 1) * (fs + 4) + 4;
+        if (10 + legendW > cx - 4 && cy - 1.2 * R < legendBottom + fs) {
+            R = Math.min(R, (h - fs - 14 - legendBottom) / 2.4);
+            cy = legendBottom + 1.2 * R;
+        }
         // axes
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1.2;
@@ -854,12 +874,6 @@
         ctx.textAlign = "right";
         ctx.fillText("+z", zx - 9, zy + 4);
 
-        const sel = state.sel;
-        const hasSel = sel >= 0 && sel < state.bench.length;
-        const before = hasSel ? result.stages[sel] : null;
-        const after = hasSel ? result.stages[sel + 1] : result.stages[0];
-        const afterColor = hasSel ? stageColor(sel + 1) : stageColor(0);
-
         // element axes
         if (hasSel) {
             const el = state.bench[sel];
@@ -879,7 +893,10 @@
                 ctx.fillStyle = color;
                 ctx.font = font(fs);
                 ctx.textAlign = c >= 0 ? "left" : "right";
-                ctx.fillText(label, cx + c * L + (c >= 0 ? 3 : -3), cy - s * L - 3);
+                // keep the label inside the canvas on narrow screens
+                const tw = ctx.measureText(label).width;
+                const lx = clamp(cx + c * L + (c >= 0 ? 3 : -3), c >= 0 ? 4 : tw + 4, c >= 0 ? w - tw - 4 : w - 4);
+                ctx.fillText(label, lx, cy - s * L - 3);
             };
             if (el.type === "polarizer") axisLine(el.a * DEG, "#7ee787", [9, 5], "transmission");
             else if (par) {
@@ -949,11 +966,6 @@
             arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, "#ff6b6b", 2.6, 10);
         }
         // legend
-        const lines = [];
-        if (before) lines.push([sel === 0 ? "- - input (before element 1)" : `- - after element ${sel}`, PAL.textMuted]);
-        lines.push([hasSel ? `— after element ${sel + 1}` : "— input (no element inspected)", afterColor]);
-        lines.push(["→ instantaneous E (polarized part)", "#ff8f8f"]);
-        if (after.S.S0 - Math.hypot(after.S.S1, after.S.S2, after.S.S3) > 1e-6) lines.push(["◯ unpolarized part, radius √I_u", PAL.textMuted]);
         textBox(ctx, lines, 10, fs + 6, fs);
         ctx.font = font(fs);
         ctx.textAlign = "left";
@@ -1535,7 +1547,7 @@
             label: el.type === "polarizer" ? "Transmission axis θ" : el.type === "plate" ? "Optic axis α" : "Fast axis θ",
             unit: "°",
             cur: el.a,
-            step: 1
+            step: 0.5
         };
     }
 
@@ -1732,18 +1744,25 @@
         if (ready && result) fn(ctx, w, h);
         else fillBg(ctx, w, h);
     };
-    const cvField = UI.setupCanvas(fieldCv, {
+    // On phones a square-ish canvas leaves no room for the corner legends above the plot, so make it taller.
+    const narrowSquare = (cv, opts) => Object.defineProperty(opts, "height", {
+        get: () => {
+            const cw = cv.clientWidth || 600;
+            return cw < 420 ? Math.round(Math.max(280, cw * 1.2)) : null;
+        }
+    });
+    const cvField = UI.setupCanvas(fieldCv, narrowSquare(fieldCv, {
         aspect: 1.15,
         minHeight: 280,
         maxHeight: 440,
         draw: guard(drawField)
-    });
-    const cvSphere = UI.setupCanvas(sphereCv, {
+    }));
+    const cvSphere = UI.setupCanvas(sphereCv, narrowSquare(sphereCv, {
         aspect: 1.15,
         minHeight: 280,
         maxHeight: 440,
         draw: guard(drawSphere)
-    });
+    }));
     const cvBench = UI.setupCanvas(benchCv, {
         aspect: 3.2,
         minHeight: 200,

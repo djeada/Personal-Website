@@ -350,3 +350,18 @@ test("presets evaluate without exceptions or non-finite surprises", () => {
         go.cardinalPoints(sys);
     }
 });
+
+test("thick-lens and achromat presets put the detector between the marginal and paraxial foci, near best focus", () => {
+    for (const name of ["thick", "achromat"]) {
+        const p = go.PRESETS[name];
+        const sys = go.buildSystem(p.elements.filter((e) => e.type !== "detector"));
+        const axial = { atInfinity: true, angle: 0 };
+        const zPar = go.imageOf(sys, axial).zImage;
+        const la = go.longitudinalAberration(sys, axial, [go.LINES.d]);
+        const dzMarg = la.curves[0].dz[la.curves[0].dz.length - 1];
+        const zDet = p.elements.find((e) => e.type === "detector").z;
+        assert.ok(zDet > zPar + dzMarg && zDet <= zPar, `${name}: detector ${zDet} outside [${zPar + dzMarg}, ${zPar}]`);
+        const bf = go.bestFocus(sys, axial, zPar, 5 * mm);
+        close(zDet, bf.z, 1 * mm, name + " best focus");
+    }
+});

@@ -710,13 +710,12 @@
                 cur: stack.layers[li] ? stack.layers[li].d : 0
             };
         }
-        // colour of the current stack (unpolarised, at θ0)
-        const cR = tf.colourOf((nmv) => tf.power(ms, nmv * NM, th, "u", {
+        // colour of the current stack (unpolarised, at θ0), including the back side when modelled
+        const colPower = (nmv) => (back ? tf.withBackside(ms, nmv * NM, th, "u", back) : tf.power(ms, nmv * NM, th, "u", {
             method: c.method
-        }).R);
-        const cT = tf.colourOf((nmv) => tf.power(ms, nmv * NM, th, "u", {
-            method: c.method
-        }).T);
+        }));
+        const cR = tf.colourOf((nmv) => colPower(nmv).R);
+        const cT = tf.colourOf((nmv) => colPower(nmv).T);
         res = {
             c,
             pol,

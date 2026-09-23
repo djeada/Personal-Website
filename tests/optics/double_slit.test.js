@@ -109,6 +109,14 @@ test("relative phase π swaps bright and dark fringes and shifts orders", () => 
     close(Math.min(...orders.map((o) => Math.abs(o.y))), 1e-3, 1e-8);
 });
 
+test("positive φ (bottom slit leads) shifts the zeroth order toward the top slit (y > 0), as the page states", () => {
+    const p = Object.assign({}, textbook, { relativePhase: Math.PI / 2 });
+    const zeroth = m.interferenceOrders(p, 5e-3).find((o) => o.m === 0);
+    close(zeroth.y, 0.5e-3, 1e-8);
+    // the bright fringe is where δ = φ, i.e. the top path is longer by φ/k
+    assert.ok(m.intensityAtY(0.5e-3, p) > m.intensityAtY(-0.5e-3, p));
+});
+
 test("energy: integrated two-slit incoherent-free pattern equals twice one slit (cross term averages out)", () => {
     // Over many fringes inside the envelope, the coherent pattern integrates to the incoherent sum.
     const both = m.sampleScreen(textbook, 0.2, { maxSamples: 400001, samplesPerFringe: 40 });

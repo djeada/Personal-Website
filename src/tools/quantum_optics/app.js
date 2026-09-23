@@ -179,9 +179,9 @@
             s: {
                 exp: "stats",
                 st: "thermal",
-                nbar: 10,
+                nbar: 5,
                 nc: 120,
-                etaS: 10,
+                etaS: 20,
                 dk: 0
             },
             note: "<strong>Expect:</strong> still thermal, now with n̄ = 1: P(m) = 1/2<sup>m+1</sup>, Q = ηn̄ = 1 and g²(0) = 2. Loss never turns chaotic light into laser light."
@@ -217,7 +217,7 @@
                 etaS: 100,
                 dk: 0
             },
-            note: "<strong>Expect:</strong> a warning. The basis |0⟩…|20⟩ discards P(n &gt; 20) = 0.44, so the renormalised state has ⟨n⟩ ≈ 16.4 instead of 20. Raise N to about 50 and the error drops below 10⁻⁶."
+            note: "<strong>Expect:</strong> a warning. The basis |0⟩…|20⟩ discards P(n &gt; 20) = 0.44, so the renormalised state has ⟨n⟩ ≈ 16.8 instead of 20. Raise N to about 50 and the error drops below 10⁻⁶."
         },
         hbLaser: {
             s: {
@@ -242,7 +242,7 @@
                 jit: -2,
                 tacq: -0.52
             },
-            note: "<strong>Expect:</strong> bunching. g²(0) ≈ 2, decaying as 1 + e<sup>−2|τ|/τc</sup> with τc = 1 µs (rotating ground-glass pseudo-thermal light)."
+            note: "<strong>Expect:</strong> bunching. g²(0) ≈ 2 (the two centre bins average over the cusp and read ≈ 1.86), decaying as 1 + e<sup>−2|τ|/τc</sup> with τc = 1 µs (rotating ground-glass pseudo-thermal light)."
         },
         hbThermG: {
             s: {
@@ -281,7 +281,7 @@
                 jit: -2,
                 tacq: -0.3
             },
-            note: "<strong>Expect:</strong> antibunching. g²(0) ≈ 0 (the finite bin width leaves about 0.04), recovering as 1 − e<sup>−|τ|/τ₀</sup> with τ₀ = 1 ns. No classical light can go below 1."
+            note: "<strong>Expect:</strong> antibunching. g²(0) ≈ 0 (averaging the two centre bins over the 0.15 ns bin width leaves about 0.07), recovering as 1 − e<sup>−|τ|/τ₀</sup> with τ₀ = 1 ns. No classical light can go below 1."
         },
         hbEmitDark: {
             s: {
@@ -1752,7 +1752,9 @@
                 range: W,
                 T: sim.T
             });
-            const rho1 = P.rate / (P.rate + P.dark),
+            // a saturated emitter delivers only Remit·η/2 per detector, not the requested rate
+            const sig = P.kind === "emitter" && sim.info.saturated ? sim.info.Remit * P.eta / 2 : P.rate;
+            const rho1 = sig > 0 ? sig / (sig + P.dark) : 0,
                 rho = rho1;
             const par = {
                 tau0: P.tau0,
@@ -1787,6 +1789,7 @@
                     ideal: fid
                 },
                 rho: rho1,
+                sig,
                 ms: performance.now() - t0
             };
             $("hbStatus").textContent = `Acquired ${sim.t1.length + sim.t2.length} time tags in ${Math.round(HB.res.ms)} ms (seed ${P.seed}).`;
@@ -1824,7 +1827,7 @@
         $("hBin").textContent = fsi(hist.binWidth, "s") + " / " + fsi(R.W, "s");
         $("hAcc").textContent = fx(hist.expectedAccidental, 1) + " (relative error ≈ " + fx(1 / Math.sqrt(Math.max(hist.expectedAccidental, 1e-9)), 3) + ")";
         $("hT").textContent = fsi(sim.T, "s") + (sim.truncated ? " (shortened from " + fsi(P.T, "s") + ")" : "");
-        $("hX").textContent = fp(P.rate * P.tau0, 3);
+        $("hX").textContent = fp(R.sig * P.tau0, 3);
         $("hEm").textContent = P.kind === "emitter" ? fsi(sim.info.gammaP, "s⁻¹") + " / " + fsi(sim.info.gammaR, "s⁻¹") + " (emission " + fsi(sim.info.Remit, "Hz") + ")" : "—";
         const w = [];
         if (sim.truncated) w.push(`Browser budget: the acquisition was shortened to T = ${fsi(sim.T, "s")} (at most 3 million field steps of τc/10, 4 million time tags or 12 million emitter photons). Raise the rate or accept larger error bars.`);
