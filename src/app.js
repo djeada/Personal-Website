@@ -472,6 +472,67 @@ function initArticleHeader() {
 }
 
 
+const SEARCH_ENGINE_ID = "8160ef9bb935f4f68";
+
+
+
+function initLazySearch() {
+    const host = document.getElementById("site-search");
+    const form = host && host.querySelector("form.site-search");
+    if (!form) return;
+    const input = form.querySelector('input[name="q"]');
+    let loading = null;
+
+    const load = () => {
+        if (loading) return loading;
+        loading = new Promise((resolve, reject) => {
+            window.__gcse = {
+                parsetags: "explicit",
+                callback: () => {
+                    const typed = input.value;
+                    const hadFocus = document.activeElement === input;
+                    form.remove();
+                    google.search.cse.element.render({
+                        div: host.id,
+                        tag: "search",
+                        gname: "site-search"
+                    });
+                    const realInput = host.querySelector("input.gsc-input");
+                    if (realInput) {
+                        realInput.value = typed;
+                        if (hadFocus) realInput.focus();
+                    }
+                    resolve(google.search.cse.element.getElement("site-search"));
+                }
+            };
+            loadScript(`https://cse.google.com/cse.js?cx=${SEARCH_ENGINE_ID}`).catch(reject);
+        });
+        return loading;
+    };
+
+    ["pointerenter", "focusin", "touchstart"].forEach(type =>
+        host.addEventListener(type, () => load().catch(() => {}), {
+            once: true,
+            passive: true
+        })
+    );
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        const query = input.value.trim();
+        load()
+            .then(element => query && element.execute(query))
+            .catch(() => form.submit());
+    });
+}
+
+function applyTheme(isDark) {
+    const root = document.documentElement;
+    root.classList.toggle("dark-mode", isDark);
+    document.body.classList.toggle("dark-mode", isDark);
+    root.style.colorScheme = isDark ? "dark" : "";
+    root.style.backgroundColor = isDark ? "#0d1117" : "";
+}
+
 function main() {
 
     initArticleHeader();
@@ -479,15 +540,12 @@ function main() {
     const darkModeButton = document.getElementById("dark-mode-button");
     darkModeButton.addEventListener("click", () => {
         const isDark = !document.body.classList.contains("dark-mode");
-        document.documentElement.classList.toggle("dark-mode", isDark);
-        document.body.classList.toggle("dark-mode", isDark);
+        applyTheme(isDark);
         setCookie("darkMode", isDark, 365, "Lax");
         checkLogo();
     });
 
-    const isDark = getCookie("darkMode") === "true";
-    document.documentElement.classList.toggle("dark-mode", isDark);
-    document.body.classList.toggle("dark-mode", isDark);
+    applyTheme(getCookie("darkMode") === "true");
     checkLogo();
 
 
@@ -497,6 +555,7 @@ function main() {
 
     initLazyThreeJS();
     initVideoFacades();
+    initLazySearch();
 
 
     const suggestEditButton = document.querySelector('.btn-suggest-edit');

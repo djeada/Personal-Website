@@ -10,6 +10,10 @@ if [[ ! -f "$TEMPLATE" ]]; then
 fi
 
 while IFS= read -r -d '' file; do
+  # Redirect stubs have no page chrome.
+  if grep -q 'http-equiv="refresh"' "$file"; then
+    continue
+  fi
   rel="${file#$ROOT_DIR/src/}"
   dir="$(dirname "$rel")"
   if [[ "$dir" == "." ]]; then

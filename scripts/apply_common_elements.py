@@ -56,8 +56,16 @@ THEME_INIT_BODY_SCRIPT = (
 )
 
 THEME_INIT_SCRIPT = (
-    "if (/(?:^|;\\s*)darkMode=true/.test(document.cookie)) "
-    'document.documentElement.classList.add("dark-mode");'
+    "(function () {"
+    " if (!/(?:^|;\\s*)darkMode=true/.test(document.cookie)) return;"
+    " var root = document.documentElement;"
+    ' root.classList.add("dark-mode");'
+    ' root.style.colorScheme = "dark";'
+    ' root.style.backgroundColor = "#0d1117";'
+    " new MutationObserver(function (changes, observer) {"
+    ' if (document.body) { document.body.classList.add("dark-mode"); observer.disconnect(); }'
+    " }).observe(root, { childList: true });"
+    " })();"
 )
 LAST_MODIFIED_PATTERN = re.compile(
     r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>'
