@@ -56,7 +56,7 @@ for file_type in "${file_types[@]}"; do
             "${JS_BEAUTIFY[@]}" --type "$file_type" -r "${files[@]}"
             files=()
         fi
-    done < <(find "$ROOT_DIR/src" -name "*.$file_type" -print0)
+    done < <(find "$ROOT_DIR/src" -name "*.$file_type" ! -path "$ROOT_DIR/src/resources/style.css" -print0)
 
     if [ ${#files[@]} -gt 0 ]; then
         "${JS_BEAUTIFY[@]}" --type "$file_type" -r "${files[@]}"

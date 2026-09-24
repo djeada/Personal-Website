@@ -138,6 +138,8 @@ def run_all():
         run_script(script, args_list)
     run_script("python3 apply_common_elements.py", [])
     run_script("./format.sh", [])
+    # style.css is generated from the formatted assets; CI checks it matches.
+    run_script("python3 bundle_css.py", [])
     logging.info("All scripts executed successfully.")
 
 
