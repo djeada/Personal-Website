@@ -48,6 +48,17 @@ TITLE_SUFFIX = f" | {SITE_NAME}"
 DESCRIPTION_LENGTH = 155
 ABBREVIATIONS = ("ang.", "np.", "tzw.", "e.g.", "i.e.", "etc.", "vs.", "cf.", "approx.")
 STRUCTURED_DATA_ID = "structured-data"
+THEME_INIT_ID = "theme-init"
+THEME_INIT_BODY_ID = "theme-init-body"
+THEME_INIT_BODY_SCRIPT = (
+    'if (document.documentElement.classList.contains("dark-mode")) '
+    'document.body.classList.add("dark-mode");'
+)
+
+THEME_INIT_SCRIPT = (
+    "if (/(?:^|;\\s*)darkMode=true/.test(document.cookie)) "
+    'document.documentElement.classList.add("dark-mode");'
+)
 LAST_MODIFIED_PATTERN = re.compile(
     r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>'
 )
@@ -368,6 +379,29 @@ def build_structured_data(
     return data
 
 
+def upsert_theme_init(soup: BeautifulSoup) -> None:
+    """Put the dark-mode bootstrap script at the top of <head>."""
+    if not soup.head:
+        return
+    script = soup.find("script", attrs={"id": THEME_INIT_ID})
+    if script is None:
+        script = soup.new_tag("script", id=THEME_INIT_ID)
+    script.string = THEME_INIT_SCRIPT
+    script.extract()
+    charset = soup.head.find("meta", attrs={"charset": True})
+    if charset:
+        charset.insert_after(script)
+    else:
+        soup.head.insert(0, script)
+
+    if soup.body:
+        body_script = soup.find("script", attrs={"id": THEME_INIT_BODY_ID})
+        if body_script is None:
+            body_script = soup.new_tag("script", id=THEME_INIT_BODY_ID)
+        body_script.string = THEME_INIT_BODY_SCRIPT
+        soup.body.insert(0, body_script.extract())
+
+
 def upsert_structured_data(soup: BeautifulSoup, structured_data: dict) -> None:
     """Insert or update JSON-LD structured data in the head."""
     if not soup.head:
@@ -410,6 +444,7 @@ def process_file(
     )
     upsert_structured_data(soup, structured_data)
     upsert_social_tags(soup, canonical_url, category, last_modified)
+    upsert_theme_init(soup)
     html = str(soup)
 
     file_path.write_text(html)
@@ -433,6 +468,7 @@ def process_metadata_file(file_path: Path, page_type: str) -> None:
     )
     upsert_structured_data(soup, structured_data)
     upsert_social_tags(soup, canonical_url, page_type, last_modified)
+    upsert_theme_init(soup)
     file_path.write_text(str(soup))
 
 
