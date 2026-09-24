@@ -2,9 +2,13 @@
 Strips comments from .py, .css, and .js files in the project.
 """
 
+import ast
 import os
 import re
 import logging
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,6 +20,8 @@ logging.basicConfig(
 PROJECT_ROOT = Path(__file__).parent.parent
 SRC_DIR = PROJECT_ROOT / "src"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+
+EXCLUDED_DIRS = {"reels", ".source-cache", "node_modules"}
 
 
 def strip_python_comments(content: str) -> str:
@@ -203,7 +209,38 @@ def find_files(directory: Path, extension: str) -> List[Path]:
     """
     Finds all files with the given extension in the directory recursively.
     """
-    return list(directory.rglob(f"*{extension}"))
+    return [
+        path
+        for path in directory.rglob(f"*{extension}")
+        if not any(part in EXCLUDED_DIRS for part in path.relative_to(directory).parts)
+    ]
+
+
+def is_valid_python(content: str) -> bool:
+    try:
+        ast.parse(content)
+        return True
+    except SyntaxError:
+        return False
+
+
+def is_valid_js(content: str) -> bool:
+    """Checks JS syntax with node, trying both script and module parsing."""
+    if shutil.which("node") is None:
+        return True
+    for suffix in (".js", ".mjs"):
+        with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as tmp:
+            tmp.write(content)
+        try:
+            result = subprocess.run(["node", "--check", tmp.name], capture_output=True)
+        finally:
+            os.unlink(tmp.name)
+        if result.returncode == 0:
+            return True
+    return False
+
+
+VALIDATORS = {".py": is_valid_python, ".js": is_valid_js}
 
 
 def process_file(file_path: Path) -> None:
@@ -222,6 +259,13 @@ def process_file(file_path: Path) -> None:
             processed_content = strip_js_comments(content)
         else:
             logging.warning(f"Unsupported file type: {file_path}")
+            return
+
+        if processed_content == content:
+            return
+        validate = VALIDATORS.get(file_path.suffix)
+        if validate and validate(content) and not validate(processed_content):
+            logging.warning(f"Kept comments in {file_path}: stripping broke its syntax")
             return
 
         file_path.write_text(processed_content, encoding="utf-8")

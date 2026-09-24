@@ -1,72 +1,3 @@
-/*
- * Effective four-level laser rate-equation model for a linear two-mirror cavity.
- *
- * Geometry and conventions (SI units throughout)
- * ----------------------------------------------
- *  - Linear (standing-wave) cavity of optical length L between a high reflector
- *    (power reflectivity R1) and an output coupler (R2). Group index is taken
- *    as 1, so the round-trip time is T_rt = 2L/c.
- *  - A gain medium of length l_g ≤ L sits inside the cavity. The laser mode has
- *    a uniform effective cross-section A along the whole cavity ("mean-field"
- *    or uniform-field approximation: the intracavity field is treated as
- *    uniform along the axis; exact in the limit of small loss per pass).
- *  - g   = single-pass small-signal intensity gain coefficient [1/m] in the gain
- *          medium, g = σ N / (A l_g), with N the number of inverted atoms.
- *  - α   = distributed internal (scattering/absorption) loss coefficient [1/m],
- *          acting over the whole cavity length L.
- *  - Round-trip intensity multiplier:  M = R1 R2 exp(2 g l_g − 2 α L).
- *    For l_g = L this is the textbook M = R1 R2 exp[2(g − α)L].
- *    Threshold M = 1  ⇒  g_th = [2 α L + ln(1/(R1 R2))] / (2 l_g)
- *    (for l_g = L:  g_th = α + ln(1/(R1 R2))/(2L)).
- *
- * Rate equations (ideal four-level system: the pump band and the lower laser
- * level empty instantly, so the inversion equals the upper-level population N)
- * -------------------------------------------------------------------------
- *    dN/dt = Rp − N/τ − G N q
- *    dq/dt = G N q − q/τ_p + β N/τ
- *  with
- *    q      number of photons in the lasing mode (both directions together),
- *    Rp     pump rate into the upper laser level [atoms/s],
- *    τ      upper-state lifetime (assumed radiative),
- *    β      fraction of spontaneous emission that goes into the lasing mode,
- *    G      = c σ / (A L)   stimulated-emission coupling per photon per atom,
- *    τ_p    = T_rt / [ln(1/(R1 R2)) + 2 α L]   photon lifetime.
- *  Consistency: for fixed N the net photon growth rate is
- *    G N − 1/τ_p = ln(M)/T_rt,
- *  i.e. the rate model reproduces the round-trip multiplier exactly, and its
- *  threshold (G N_th = 1/τ_p) is the same as M = 1.
- *  Threshold inversion N_th = 1/(G τ_p); threshold pump Rp_th = N_th/τ
- *  (defined with β → 0, as usual).
- *
- * Output
- * ------
- *  One-way circulating power at the output mirror: Pcirc = q hν / T_rt
- *  (each photon strikes the output coupler once per round trip).
- *  Transmitted output: Pout = T2 · Pcirc, T2 = 1 − R2 (lossless mirror), so a
- *  100 % output mirror gives exactly zero output.
- *  Option outputCoupling = "budget" (exact photon bookkeeping): the photon loss
- *  rate q/τ_p = q δ/T_rt (δ = ln(1/(R1R2)) + 2αL) is split into its channels,
- *  output ln(1/R2)/δ, back mirror ln(1/R1)/δ, internal 2αL/δ, so that
- *  Pout = ln(1/R2) q hν / T_rt and pump = spontaneous + all loss channels
- *  holds exactly in steady state. Both options agree to O(T2²).
- *
- * Above-threshold steady state (β → 0), pump power Pp = Rp hν_p:
- *    q = τ_p (Rp − Rp_th),  Pout = η_s (Pp − Pp_th),
- *    η_s = (λ_p/λ) · T2/δ   (or ln(1/R2)/δ with "budget" bookkeeping).
- *
- * Small-signal relaxation oscillations (linearise about N_th, q0, β → 0; r = Rp/Rp_th):
- *    s² + (r/τ) s + (r − 1)/(τ τ_p) = 0
- *    ⇒ ω_R² = (r − 1)/(τ τ_p) − γ_R²,  γ_R = r/(2τ)  (envelope ∝ e^{−γ_R t}).
- *
- * Passive cavity (link to the Fabry–Pérot tool): FSR = c/(2L) (group index 1),
- * cold-cavity linewidth Δν_c = 1/(2π τ_p), finesse F = FSR/Δν_c = 2π/δ
- * (→ π√ρ/(1−ρ) of the Airy function in the small-loss limit, ρ² = R1R2e^{−2αL}).
- *
- * Numerics
- * --------
- *  Classical fixed-step RK4 in physical time; the default step is a fixed
- *  fraction of the photon lifetime (the fastest time scale).
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -77,25 +8,25 @@
 })(typeof self !== "undefined" ? self : this, function() {
     "use strict";
 
-    const C = 299792458; // m/s
-    const H = 6.62607015e-34; // J s
+    const C = 299792458;
+    const H = 6.62607015e-34;
 
-    // Order-of-magnitude values for a diode-pumped Nd:YAG rod (1064 nm).
+
     const DEFAULTS = Object.freeze({
-        R1: 0.998, // high reflector
-        R2: 0.95, // output coupler
-        L: 0.10, // cavity length [m]
-        gainLength: 0.05, // gain-medium length [m]
-        alpha: 0.2, // internal loss coefficient [1/m]
-        sigma: 2.8e-23, // stimulated-emission cross-section [m^2]
-        tau: 230e-6, // upper-state lifetime [s]
-        area: Math.PI * 0.5e-3 * 0.5e-3, // mode area, w = 0.5 mm [m^2]
-        beta: 1e-9, // spontaneous-emission coupling into the mode
-        wavelength: 1064e-9, // laser wavelength [m]
-        pumpWavelength: 808e-9, // pump wavelength [m] (for pump-power readout)
-        pumpRate: 0, // Rp [atoms/s]
-        gainBandwidth: 120e9, // gain FWHM [Hz] (Nd:YAG ≈ 0.45 nm), for the mode count only
-        outputCoupling: "transmission" // "transmission": Pout = T2·Pcirc; "budget": exact loss-channel share
+        R1: 0.998,
+        R2: 0.95,
+        L: 0.10,
+        gainLength: 0.05,
+        alpha: 0.2,
+        sigma: 2.8e-23,
+        tau: 230e-6,
+        area: Math.PI * 0.5e-3 * 0.5e-3,
+        beta: 1e-9,
+        wavelength: 1064e-9,
+        pumpWavelength: 808e-9,
+        pumpRate: 0,
+        gainBandwidth: 120e9,
+        outputCoupling: "transmission"
     });
 
     function withDefaults(p) {
@@ -122,14 +53,14 @@
         const mirrorLogLoss = Math.log(1 / (p.R1 * p.R2));
         const logLossPerRoundTrip = mirrorLogLoss + 2 * p.alpha * p.L;
         const photonLifetime = roundTripTime / logLossPerRoundTrip;
-        const coupling = C * p.sigma / (p.area * p.L); // G
+        const coupling = C * p.sigma / (p.area * p.L);
         const thresholdInversion = 1 / (coupling * photonLifetime);
         const thresholdPumpRate = thresholdInversion / p.tau;
         const thresholdGain = logLossPerRoundTrip / (2 * p.gainLength);
         const photonEnergy = H * C / p.wavelength;
         const pumpPhotonEnergy = H * C / p.pumpWavelength;
         const outputTransmission = 1 - p.R2;
-        // fraction of the photon loss rate q/τ_p that leaves through the output coupler
+
         const outputFraction = p.outputCoupling === "budget" ?
             Math.log(1 / p.R2) / logLossPerRoundTrip :
             outputTransmission / logLossPerRoundTrip;
@@ -192,16 +123,13 @@
         ];
     }
 
-    /** Default fixed step: 1/10 of the photon lifetime (and ≤ τ/1000). */
+
     function suggestedTimeStep(params, fraction) {
         const d = derived(params);
         return Math.min(d.photonLifetime * (fraction || 0.1), d.params.tau / 1000);
     }
 
-    /**
-     * Integrate from state0 = {N, q} (default: empty, pump switched on at t=0)
-     * over duration tEnd with fixed step dt. onStep(t, state) is optional.
-     */
+
     function integrate(params, options) {
         const opts = options || {};
         const d = derived(params);
@@ -232,13 +160,13 @@
         };
     }
 
-    /** Exact steady state of the rate equations (including β). */
+
     function steadyState(params) {
         const d = derived(params);
         const p = d.params;
         const G = d.coupling;
         const tp = d.photonLifetime;
-        // G q² + q (1/τ − Rp τ_p G) − Rp τ_p β/τ = 0, positive root
+
         const a = G;
         const b = 1 / p.tau - p.pumpRate * tp * G;
         const c = -p.pumpRate * tp * p.beta / p.tau;
@@ -246,7 +174,7 @@
         if (c === 0) q = Math.max(0, -b / a);
         else {
             const disc = Math.sqrt(b * b - 4 * a * c);
-            // numerically stable positive root
+
             q = b >= 0 ? (-2 * c) / (b + disc) : (-b + disc) / (2 * a);
         }
         const N = p.pumpRate / (1 / p.tau + G * q);
@@ -268,11 +196,7 @@
         };
     }
 
-    /**
-     * Exact photon/excitation bookkeeping for state {N, q} [all rates in 1/s].
-     * dE/dt = pump − spontaneous − (output + backMirror + internal) with E = N + q,
-     * where the three loss channels split q/τ_p by ln(1/R2) : ln(1/R1) : 2αL.
-     */
+
     function photonBudget(params, state) {
         const d = derived(params);
         const p = d.params;
@@ -286,35 +210,30 @@
             internal: loss * 2 * p.alpha * p.L / d.logLossPerRoundTrip,
             totalLoss: loss
         };
-        out.storedRate = out.pump - spontaneous - loss; // d(N + q)/dt
+        out.storedRate = out.pump - spontaneous - loss;
         return out;
     }
 
-    // ------------------------------------------------------------ L–I (pump sweep)
-    /** Pump rate [1/s] for an absorbed pump power [W] (unit quantum efficiency). */
+
+
     function pumpRateFromPower(params, pumpPower) {
         return pumpPower / derived(params).pumpPhotonEnergy;
     }
 
-    /** Analytic slope efficiency dPout/dPp above threshold (β → 0). */
+
     function slopeEfficiency(params) {
         const d = derived(params);
         return d.photonEnergy / d.pumpPhotonEnergy * d.outputFraction;
     }
 
-    /** Analytic above-threshold output (β → 0): max(0, η_s (Pp − Pp_th)). */
+
     function analyticOutput(params, pumpPower) {
         const d = derived(params);
         const P = pumpPower == null ? d.pumpPower : pumpPower;
         return Math.max(0, slopeEfficiency(params) * (P - d.thresholdPumpPower));
     }
 
-    /**
-     * Integrate to steady state. Returns {N, q, t, steps, converged}.
-     * opts: { state0 = {N:0,q:0}, dt (default τ_p/2: RK4 fixed points are the exact
-     * equilibria, so a coarse stable step converges to the exact steady state),
-     * tol = 1e-7 (relative rates × τ), maxTime = 40 τ }.
-     */
+
     function settle(params, opts) {
         const o = opts || {};
         const sweep = createSettler(params, o);
@@ -373,7 +292,7 @@
         return api;
     }
 
-    /** Default sweep powers: n points from 0 to maxPower [W]. */
+
     function sweepPowers(maxPower, n) {
         const k = n || 16;
         return Array.from({
@@ -381,11 +300,7 @@
         }, (_, i) => maxPower * i / (k - 1));
     }
 
-    /**
-     * Automated pump sweep (L–I curve). Each pump step starts from the settled state of the
-     * previous one (a slow staircase ramp), integrates the rate equations to steady state and
-     * records the output. Incremental: advance(maxSteps) → done; points holds the finished rows.
-     */
+
     function createPumpSweep(params, pumpPowers, opts) {
         const base = withDefaults(params);
         const points = [];
@@ -449,10 +364,7 @@
         return s.points;
     }
 
-    /**
-     * Least-squares line Pout = slope (Pp − threshold) through sweep points with
-     * pumpRatio ≥ minRatio (default 1.2). Returns {slope, threshold, n, rms} or null.
-     */
+
     function fitLI(points, minRatio) {
         const rmin = minRatio == null ? 1.2 : minRatio;
         const use = points.filter((pt) => pt.pumpRatio >= rmin);
@@ -485,8 +397,8 @@
         };
     }
 
-    // ------------------------------------------------------------ relaxation oscillations
-    /** Analytic small-signal relaxation oscillation (β → 0). null below threshold. */
+
+
     function relaxationAnalytic(params) {
         const d = derived(params);
         const p = d.params;
@@ -509,13 +421,7 @@
         };
     }
 
-    /**
-     * Simulated small-signal response: start at the exact steady state with q kicked by
-     * (1 + kick) and integrate the full nonlinear rate equations. Successive maxima of
-     * q − q_ss give the measured period and the damping rate γ = ln(m_k/m_{k+1})/T.
-     * opts: { kick = 1e-3, periods = 6, dt, samples = 600 }.
-     * Returns { frequency, omega, gamma, period, peaks: [{t, dq}], t: [], dq: [] (relative) } or null.
-     */
+
     function relaxationResponse(params, opts) {
         const o = opts || {};
         const an = relaxationAnalytic(params);
@@ -540,7 +446,7 @@
             state = rk4Step(state, h, d);
             const cur = state[1] - ss.q;
             if (i >= 2 && prev1 > prev2 && prev1 >= cur && prev1 > 0) {
-                // parabolic refinement through the three samples around the maximum
+
                 const den = prev2 - 2 * prev1 + cur;
                 const off = den !== 0 ? 0.5 * (prev2 - cur) / den : 0;
                 peaks.push({
@@ -572,30 +478,30 @@
         };
     }
 
-    /** Analytic small-signal response (q − q_ss)/q_ss for a kick at t = 0 with zero N deviation. */
+
     function relaxationAnalyticCurve(an, kick, t) {
         return kick * Math.exp(-an.gamma * t) * (Math.cos(an.omega * t) + an.gamma / an.omega * Math.sin(an.omega * t));
     }
 
-    // ------------------------------------------------------------ passive cavity (Fabry–Pérot link)
-    /** Longitudinal-mode bookkeeping of the passive (cold) cavity. */
+
+
     function cavityModes(params) {
         const d = derived(params);
         const p = d.params;
         const fsr = C / (2 * p.L);
         const linewidth = 1 / (2 * Math.PI * d.photonLifetime);
-        const rho = Math.sqrt(p.R1 * p.R2 * Math.exp(-2 * p.alpha * p.L)); // round-trip amplitude factor
+        const rho = Math.sqrt(p.R1 * p.R2 * Math.exp(-2 * p.alpha * p.L));
         return {
             fsr,
             linewidth,
-            finesse: fsr / linewidth, // = 2π/δ
+            finesse: fsr / linewidth,
             airyFinesse: Math.PI * Math.sqrt(rho) / (1 - rho),
             modeNumber: Math.round(2 * p.L / p.wavelength),
             modesInGainBandwidth: Math.max(1, Math.floor(p.gainBandwidth / fsr))
         };
     }
 
-    const THRESHOLD_TOLERANCE = 0.01; // |Rp/Rp_th − 1| ≤ 1 % counts as "at threshold"
+    const THRESHOLD_TOLERANCE = 0.01;
 
     function classify(params, tolerance) {
         const tol = tolerance == null ? THRESHOLD_TOLERANCE : tolerance;
@@ -605,7 +511,7 @@
         return "above";
     }
 
-    /** Pump rate for a requested multiple of the model's threshold pump rate. */
+
     function pumpForRatio(params, ratio) {
         return ratio * derived(params).thresholdPumpRate;
     }
@@ -667,7 +573,7 @@
         }
     });
 
-    /** Build preset parameters; the pump is derived from the model's threshold. */
+
     function preset(name, base) {
         const def = PRESETS[name];
         if (!def) throw new RangeError("Unknown preset " + name);

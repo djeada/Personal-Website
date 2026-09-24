@@ -1,7 +1,3 @@
-/*
- * Thin films and multilayer coatings: page glue. Physics lives in ../shared/optics/thinFilms.js.
- * Units: the UI shows nm and degrees; everything passed to the model is SI (m, rad).
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI;
@@ -19,7 +15,7 @@
         p: PAL.series[2]
     };
 
-    // ------------------------------------------------------------------ presets
+
     const QW = (lam, n) => +(lam / (4 * n)).toFixed(3);
     const nV = +(1.38 * Math.sqrt(1.52)).toFixed(4);
     const nIdeal = +Math.sqrt(1.52).toFixed(5);
@@ -264,7 +260,7 @@
     };
 
     let url = null;
-    // ------------------------------------------------------------------ stack state
+
     let stack = JSON.parse(JSON.stringify(PRESETS.mgf2.stack));
 
     const body = $("layerBody");
@@ -306,7 +302,7 @@
     function renderTable() {
         body.textContent = "";
         const ld = ctl ? ctl.get().ld : 550;
-        // incident medium
+
         let tr = document.createElement("tr");
         tr.className = "tf-medium";
         cell(tr, "0");
@@ -451,7 +447,7 @@
         else if (act === "dup") L.splice(i + 1, 0, Object.assign({}, L[i]));
         else if (act === "del") L.splice(i, 1);
         renderTable();
-        // keep keyboard focus on the equivalent control after re-render
+
         const sel = body.querySelector('button[data-action="' + act + '"][data-idx="' + Math.min(act === "up" ? i - 1 : act === "down" ? i + 1 : i, L.length - 1) + '"]');
         if (sel && !sel.disabled) sel.focus();
         else $("addLayerBtn").focus();
@@ -482,7 +478,7 @@
         changed();
     });
 
-    // ------------------------------------------------------------------ controls
+
     UI.enhanceAllSliders(document.querySelector(".options-sidebar"), {
         thetaSlider: {
             unit: "°"
@@ -592,7 +588,7 @@
     $("resetBtn").addEventListener("click", () => applyPreset("mgf2"));
     $("presetNote").textContent = PRESETS.mgf2.note;
 
-    // ------------------------------------------------------------------ computation
+
     let res = null;
 
     function modelStack() {
@@ -664,7 +660,7 @@
         for (const p of pol === "u" ? ["s", "p"] : [pol]) fields[p] = tf.fieldProfile(ms, lam, th, p, {
             samples: 900
         });
-        // thickness scan
+
         let scan = null;
         const li = Number(c.scanL) || 0;
         if (stack.layers.length) {
@@ -710,7 +706,7 @@
                 cur: stack.layers[li] ? stack.layers[li].d : 0
             };
         }
-        // colour of the current stack (unpolarised, at θ0), including the back side when modelled
+
         const colPower = (nmv) => (back ? tf.withBackside(ms, nmv * NM, th, "u", back) : tf.power(ms, nmv * NM, th, "u", {
             method: c.method
         }));
@@ -739,7 +735,7 @@
         };
     }
 
-    // Bragg / quarter-wave stack detection for the stop-band readouts
+
     function detectBragg() {
         const L = stack.layers;
         if (L.length < 3 || L.length % 2 === 0 || L.some((l) => l.k > 0)) return null;
@@ -751,7 +747,7 @@
             if (Math.abs(L[i].n - (i % 2 ? nB : nA)) > 1e-9) return null;
             if (Math.abs(L[i].n * L[i].d - opt) > 1e-3 * opt) return null;
         }
-        const lq = 4 * opt; // nm
+        const lq = 4 * opt;
         let Y = stack.ns;
         for (let i = L.length - 1; i >= 0; i--) Y = L[i].n * L[i].n / Y;
         const Rpk = ((stack.n0 - Y) / (stack.n0 + Y)) ** 2;
@@ -765,7 +761,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ drawing
+
     let specMap = null,
         angMap = null,
         fieldMap = null,
@@ -834,7 +830,7 @@
                     label: "λ₀ " + c.lam + " nm  R " + pct(UI.interpAt(lamNm, R, c.lam))
                 }
             });
-            // visible band strip along the bottom edge of the plot
+
             const P = specMap.plot;
             for (let x = Math.max(P.x, specMap.xToPx(380)); x < Math.min(P.x + P.w, specMap.xToPx(780)); x++) {
                 ctx.fillStyle = UI.wavelengthToCSS(specMap.pxToX(x + 0.5), 0.9);
@@ -953,7 +949,7 @@
                 series: [],
                 legend: false
             }, axes));
-            // layer bands
+
             const P = fieldMap.plot;
             const maxN = Math.max(stack.n0, stack.ns, ...stack.layers.map((l) => l.n));
             ctx.save();
@@ -1108,7 +1104,7 @@
         label: "Reflectance and interference colour against layer thickness"
     });
 
-    // ------------------------------------------------------------------ readouts
+
     const fmtC = (z) => (Number.isFinite(z.re) ? Math.hypot(z.re, z.im).toFixed(4) + " ∠ " + (Math.atan2(z.im, z.re) / DEG).toFixed(1) + "°" : "NaN");
 
     function updateReadouts() {
@@ -1154,7 +1150,7 @@
             }));
             const bl = tf.numericStopband(period, bg.lq * NM);
             $("rdStopBloch").textContent = bl ? (bl.lamShort / NM).toFixed(1) + "–" + (bl.lamLong / NM).toFixed(1) + " nm (Δλ = " + (bl.width / NM).toFixed(1) + " nm)" : "—";
-            // measured: contiguous region around λq where R ≥ ½ R(λq) at θ0 = 0
+
             if (c.th !== 0) $("rdStopMeas").textContent = "set θ₀ = 0° (formula is for normal incidence)";
             else if (bg.lq < res.lmin || bg.lq > res.lmax) $("rdStopMeas").textContent = "λ_q = " + bg.lq.toFixed(0) + " nm outside the plotted range";
             else {
@@ -1184,7 +1180,7 @@
         };
         sw($("swR"), res.cR, $("rdColR"));
         sw($("swT"), res.cT, $("rdColT"));
-        // absorption table
+
         const absBody = $("absBody");
         absBody.textContent = "";
         const fs = res.fields,
@@ -1209,7 +1205,7 @@
         row("Reflected (R)", pct(fr((f) => f.R)), "—");
         stack.layers.forEach((L, j) => row((j + 1) + ": " + (L.name || "layer"), pct(fr((f) => f.absorbed[j])), keys.map((k) => peakIn(fs[k], j + 1).toFixed(3)).join(" / ")));
         row("Transmitted into substrate (T)", pct(fr((f) => f.T)), keys.map((k) => peakIn(fs[k], stack.layers.length + 1).toFixed(3)).join(" / "));
-        // warnings
+
         const warns = [];
         if (res.back && res.back.mode === "coherent") {
             const nsr = stack.ns,
@@ -1220,13 +1216,13 @@
             if (period < 4 * dl) warns.push("Coherent substrate: the fringe period near λ₀ is " + period.toPrecision(2) + " nm but the spectrum is sampled every " + dl.toPrecision(2) + " nm, so the curve is aliased. Real instruments average these fringes, which is the incoherent model.");
         }
         if (!Number.isFinite(films.s.R) || !Number.isFinite(films.p.R)) warns.push("The characteristic-matrix product overflowed (Σ Im δ = " + films.s.sumImDelta.toPrecision(3) + " ≫ 700). Choose Auto or the stable recursion.");
-        const thick = stack.layers.find((l) => l.d > 20000 && 4 * Math.PI * l.k * l.d / c.lam < 20); // opaque layers: back face irrelevant
+        const thick = stack.layers.find((l) => l.d > 20000 && 4 * Math.PI * l.k * l.d / c.lam < 20);
         if (thick) warns.push("“" + (thick.name || "layer") + "” is " + (thick.d / 1000).toPrecision(3) + " µm thick but is treated coherently. That is only valid for a highly coherent source and a perfectly uniform layer. Otherwise model it as an incoherent substrate.");
         if (stack.n0 * Math.sin(c.th * DEG) > stack.ns) warns.push("n₀ sin θ₀ > nₛ: total internal reflection at the substrate. T = 0 and the field is evanescent in the substrate. Any R < 1 is absorption in the films.");
         $("warnBox").hidden = !warns.length;
         $("warnBox").textContent = warns.join(" ");
 
-        // text equivalents for canvases
+
         const {
             lamNm,
             R
@@ -1255,7 +1251,7 @@
         } else dScan.update("No films to scan.");
     }
 
-    // ------------------------------------------------------------------ interaction
+
     let pending = false;
 
     function changed() {

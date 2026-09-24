@@ -1,42 +1,3 @@
-/*
- * Analytic electromagnetic plane waves and energy flow (pure, DOM-free).
- *
- * Browser: load core.js and fresnel.js first, then this file → window.OpticsModels.emWaves
- * Node:    const em = require(".../shared/optics/emWaves.js")
- *
- * Model
- * -----
- *  - Homogeneous, isotropic, lossless, NONMAGNETIC media (μ = μ0, ε = n² ε0, real n ≥ 1 is not
- *    required but n > 0 is). Wave impedance η = μ0 c / n = η0 / n, phase velocity c / n,
- *    medium wavelength λ0 / n.
- *  - Time convention (shared by all optics tools): E(r, t) = Re{ Ẽ exp[i(k·r − ωt)] }.
- *  - Propagation along ±z; fields are transverse (x, y components only).
- *  - Polarisation is a unit Jones vector J = [Jx, Jy] (complex). The complex amplitude of the
- *    incident wave is E0 · J, where E0 = |Ẽ| is the PEAK phasor amplitude in V/m (the shared
- *    optics convention). For linear polarisation E0 is the maximum of |E(t)|; for circular
- *    polarisation |E(t)| = E0/√2 at every instant. The RMS field magnitude is E0/√2 for every
- *    polarisation, so I = E_rms²/η = E0²/(2η).
- *  - Handedness follows polarization.js: S3 = 2 Im(Jx* Jy) > 0 is called right-handed
- *    (IEEE / positive helicity: the field rotates counter-clockwise when viewed facing the source).
- *  - For a wave travelling along direction k̂: H = (1/η) k̂ × E.  Poynting vector S = E × H.
- *    Energy densities u_E = ½ ε |E|², u_H = ½ μ0 |H|² (instantaneous, real fields).
- *    Time averages from phasors: ⟨u_E⟩ = ¼ ε |Ẽ|², ⟨u_H⟩ = ¼ μ0 |H̃|², ⟨S⟩ = ½ Re(Ẽ × H̃*).
- *    Travelling-wave intensity I = ⟨S_z⟩ = n ε0 c E0² / 2 = E0² / (2η).
- *
- * Boundary (optional), normal incidence at the plane z = 0
- * --------------------------------------------------------
- *  - "none":        one travelling wave in medium 1 everywhere.
- *  - "dielectric":  medium 1 for z < 0, medium 2 (index n2) for z ≥ 0. The electric reflection and
- *                   transmission coefficients come from fresnel.js (solve(n1, n2, 0).rs / .ts). At
- *                   normal incidence the s coefficient applies to BOTH lab components Ex and Ey
- *                   (fresnel.js's p basis flips ê_p for the reflected wave, so r_p = −r_s there
- *                   describes the same lab-frame field). r = (n1 − n2)/(n1 + n2), t = 1 + r.
- *  - "pec":         perfect electric conductor filling z ≥ 0: r = −1, t = 0, no fields in z ≥ 0.
- *  Medium 1 fields: Ẽ = E0 J (e^{ik1 z} + r e^{−ik1 z}),  H̃ = (E0/η1) ẑ×J (e^{ik1 z} − r e^{−ik1 z}).
- *  Medium 2 fields: Ẽ = E0 J t e^{ik2 z},                  H̃ = (E0/η2) ẑ×J t e^{ik2 z}.
- *
- * All inputs and outputs are SI (m, s, rad, V/m, A/m, W/m², J/m³).
- */
 (function(root, factory) {
     const m = factory(root);
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -59,8 +20,8 @@
     const eta0 = mu0 * c;
     const C = core.complex;
 
-    // ------------------------------------------------------------------ media
-    /** Properties of a lossless nonmagnetic medium of index n. */
+
+
     function medium(n) {
         if (!(Number.isFinite(n) && n > 0)) throw new RangeError("refractive index must be a positive number");
         return {
@@ -72,17 +33,13 @@
         };
     }
 
-    /** Time-averaged intensity (W/m²) of a travelling plane wave with PEAK field E0 in index n. */
+
     function intensity(n, E0) {
         return 0.5 * n * eps0 * c * E0 * E0;
     }
 
-    // ------------------------------------------------------------------ polarisation
-    /**
-     * Unit Jones vector. spec: { type: "linear", psi } | { type: "rcp" } | { type: "lcp" } |
-     * { type: "elliptical", psi, delta } where psi is the amplitude angle (tan psi = |Jy|/|Jx|)
-     * and delta the phase of Jy relative to Jx (rad). "rcp" has S3 > 0 (right-handed, IEEE).
-     */
+
+
     function jones(spec = {}) {
         const s2 = Math.SQRT1_2;
         switch (spec.type) {
@@ -112,7 +69,7 @@
         }
     }
 
-    /** Normalised Stokes parameters of a Jones vector: {S0, S1, S2, S3}. */
+
     function stokes(J) {
         const S0 = C.abs2(J.x) + C.abs2(J.y);
         const S1 = C.abs2(J.x) - C.abs2(J.y);
@@ -125,17 +82,13 @@
         };
     }
 
-    // ------------------------------------------------------------------ vector helpers
+
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     const norm = (a) => Math.hypot(a[0], a[1], a[2]);
 
-    // ------------------------------------------------------------------ configuration
-    /**
-     * Build a wave configuration.
-     * p: { lambda0 (m), n1, n2, E0 (peak V/m), pol: jones spec or {x,y} Jones vector,
-     *      boundary: "none" | "dielectric" | "pec" }
-     */
+
+
     function setup(p = {}) {
         const lambda0 = p.lambda0 ?? 633e-9;
         if (!(lambda0 > 0)) throw new RangeError("lambda0 must be positive");
@@ -193,22 +146,19 @@
             R,
             T,
             coeffSource: source,
-            I0, // incident time-averaged intensity (W/m²)
-            u0: 0.5 * m1.eps * E0 * E0, // incident time-averaged total energy density ⟨u_E + u_H⟩ (J/m³)
+            I0,
+            u0: 0.5 * m1.eps * E0 * E0,
             swr: R < 1 ? (1 + Math.sqrt(R)) / (1 - Math.sqrt(R)) : Infinity
         };
     }
 
-    /** Which region a point is in: 1 (incident medium), 2 (second medium) or 0 (inside the PEC). */
+
     function region(cfg, z) {
         if (cfg.boundary === "none" || z < 0) return 1;
         return cfg.boundary === "pec" ? 0 : 2;
     }
 
-    /**
-     * Complex phasors at z (time dependence e^{−iωt} removed).
-     * Returns { E: [Ex, Ey] complex, H: [Hx, Hy] complex, Ef, Eb (forward / backward E parts), region }.
-     */
+
     function phasors(cfg, z) {
         const reg = region(cfg, z);
         const Z = C.cx(0, 0);
@@ -236,7 +186,7 @@
         const Ef = [C.mul(J.x, f), C.mul(J.y, f)];
         const Eb = [C.mul(J.x, b), C.mul(J.y, b)];
         const E = [C.add(Ef[0], Eb[0]), C.add(Ef[1], Eb[1])];
-        // ẑ × (ax, ay) = (−ay, ax); forward H = ẑ×Ef/η, backward H = −ẑ×Eb/η
+
         const dx = C.sub(Ef[1], Eb[1]),
             dy = C.sub(Ef[0], Eb[0]);
         const H = [C.scale(dx, -1 / eta), C.scale(dy, 1 / eta)];
@@ -249,16 +199,13 @@
         };
     }
 
-    /** Local permittivity at z (ε of the region; 0 inside the PEC). */
+
     function epsAt(cfg, z) {
         const reg = region(cfg, z);
         return reg === 1 ? cfg.m1.eps : reg === 2 ? cfg.m2.eps : 0;
     }
 
-    /**
-     * Instantaneous real fields at (z, t).
-     * Returns { E: [x,y,z], H: [x,y,z], S: [x,y,z], Ef, Eb (real forward/backward E), uE, uH, u, region }.
-     */
+
     function fields(cfg, z, t) {
         const ph = phasors(cfg, z);
         const e = C.expi(-cfg.omega * t);
@@ -282,13 +229,13 @@
         };
     }
 
-    /** Time averages at z from phasors: { uE, uH, u, Sz, Eamp (|Ẽ| peak envelope), Hamp }. */
+
     function timeAverage(cfg, z) {
         const ph = phasors(cfg, z);
         const E2 = C.abs2(ph.E[0]) + C.abs2(ph.E[1]);
         const H2 = C.abs2(ph.H[0]) + C.abs2(ph.H[1]);
         const eps = epsAt(cfg, z);
-        // ½ Re(Ẽ × H̃*)_z = ½ Re(Ex Hy* − Ey Hx*)
+
         const Sz = 0.5 * (C.mul(ph.E[0], C.conj(ph.H[1])).re - C.mul(ph.E[1], C.conj(ph.H[0])).re);
         const uE = 0.25 * eps * E2,
             uH = ph.region === 0 ? 0 : 0.25 * mu0 * H2;
@@ -302,10 +249,7 @@
         };
     }
 
-    /**
-     * Numerical time average of the instantaneous quantities over one period (midpoint rule with
-     * N samples; exact for trigonometric polynomials of degree < N). Independent check on timeAverage.
-     */
+
     function timeAverageNumeric(cfg, z, N = 64) {
         let uE = 0,
             uH = 0,
@@ -324,11 +268,7 @@
         };
     }
 
-    /**
-     * Poynting's theorem residual ∂u/∂t + ∂S_z/∂z at (z, t) by central differences with steps
-     * dz (m) and dt (s). Returned normalised by ω·u0 (so O(1) terms of the balance are ≈ 1).
-     * Points closer than dz to the interface are skipped by the caller (fields are only piecewise smooth).
-     */
+
     function poyntingResidual(cfg, z, t, dz, dt) {
         dz = dz || cfg.lambda0 * 1e-5;
         dt = dt || cfg.period * 1e-5;
@@ -343,10 +283,7 @@
         };
     }
 
-    /**
-     * Sample instantaneous and time-averaged quantities on a z grid at time t.
-     * Returns arrays keyed by name (all SI).
-     */
+
     function sampleZ(cfg, zs, t) {
         const n = zs.length;
         const out = {
@@ -383,7 +320,7 @@
         return out;
     }
 
-    /** Sample the instantaneous fields at fixed z on a time grid. */
+
     function sampleT(cfg, z, ts) {
         const n = ts.length;
         const out = {
@@ -409,11 +346,7 @@
         return out;
     }
 
-    /**
-     * Positions (z ≤ 0, in medium 1) of the time-averaged electric-energy minima (nodes of the E
-     * envelope when |r| = 1) within [zmin, 0]. Envelope |e^{ikz} + r e^{−ikz}| is smallest where
-     * 2k1 z − arg r = π (mod 2π).
-     */
+
     function eNodes(cfg, zmin) {
         if (cfg.boundary === "none" || cfg.R === 0) return [];
         const phi = C.arg(cfg.r),

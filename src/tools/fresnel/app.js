@@ -1,8 +1,8 @@
 "use strict";
 
-// Fresnel interface coefficients. Physics lives in ../shared/optics/fresnel.js
-// (pure, tested in tests/optics/fresnel.test.js). This file maps one validated
-// state onto the controls, canvases, readouts, URL and exports.
+
+
+
 (function() {
     const Fresnel = window.OpticsModels.fresnel;
     const UI = window.OpticsUI;
@@ -11,7 +11,7 @@
     const DEG = Math.PI / 180;
     const deg = (rad) => rad / DEG;
 
-    // Canvas ink (canvases are dark in both site themes). s/p colours match the HTML legends.
+
     const COL = {
         incident: "#f8d477",
         reflected: "#f187c8",
@@ -40,8 +40,8 @@
         ef: true,
         wf: true
     };
-    const THETA_B_GLASS = +deg(Math.atan(1.5)).toFixed(2); // 56.31
-    const THETA_C_GLASS = +deg(Math.asin(1 / 1.5)).toFixed(2); // 41.81
+    const THETA_B_GLASS = +deg(Math.atan(1.5)).toFixed(2);
+    const THETA_C_GLASS = +deg(Math.asin(1 / 1.5)).toFixed(2);
     const PRESETS = {
         normal: {
             state: {
@@ -102,7 +102,7 @@
     const ZERO_POWER = 1e-3;
     const SWEEP_N = 541;
 
-    // ------------------------------------------------------------------ DOM
+
     const $ = (id) => document.getElementById(id);
     const sidebar = document.querySelector(".options-sidebar");
     const presetNote = $("presetNote");
@@ -143,11 +143,11 @@
         depthBadge: $("depthBadge")
     };
 
-    // ------------------------------------------------------------------ state + model
+
     let st = Object.assign({}, DEFAULTS);
-    let sol = null; // Fresnel.solve result for st
-    let aux = null; // derived angles and sweep
-    let wt = 0; // ωt in radians (display phase)
+    let sol = null;
+    let aux = null;
+    let wt = 0;
     let applyingPreset = false;
     let sweepKey = "",
         sweepCache = null;
@@ -197,8 +197,8 @@
         sol = Fresnel.solve(st.n1, n2Of(st), st.th * DEG, st.lam * 1e-9);
         const absorbing = st.k2 > 0;
         const thB = absorbing ? Fresnel.pseudoBrewster(st.n1, n2Of(st)) : Fresnel.brewsterAngle(st.n1, st.n2);
-        // for a weak absorber, quote the critical angle of the real part (ATR); for a strong
-        // absorber (metal) there is no meaningful critical angle
+
+
         const thC = absorbing && st.k2 > 0.25 * st.n2 ? null : Fresnel.criticalAngle(st.n1, st.n2);
         aux = {
             absorbing,
@@ -208,7 +208,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ formatting
+
     function formatLength(m) {
         if (m === Infinity) return "∞";
         if (!Number.isFinite(m)) return "—";
@@ -220,7 +220,7 @@
 
     function phaseDeg(rad) {
         let d = deg(rad);
-        if (d <= -179.995) d = 180; // a negative real number reads as ∠180°
+        if (d <= -179.995) d = 180;
         return d;
     }
 
@@ -252,7 +252,7 @@
     function polLabel() {
         return st.pol === "both" ? "unpolarized" : st.pol + "-polarized";
     }
-    // θ with the ±180° wrap-aware phase helper for sweep x arrays (degrees)
+
     function sweepThetaWithGaps(ys) {
         const th = aux.sweep.th,
             xs = [];
@@ -264,7 +264,7 @@
         return xs;
     }
 
-    // ------------------------------------------------------------------ readouts
+
     function updateReadouts() {
         const s = sol;
         const Pw = selectedPower();
@@ -322,7 +322,7 @@
         out.depthBadge.textContent = s.tir ? "evanescent" : aux.absorbing ? "absorbed" : "propagating";
     }
 
-    // ------------------------------------------------------------------ geometry canvas
+
     function arrow(ctx, ax, ay, bx, by, color, width, head) {
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
@@ -391,8 +391,8 @@
         const fs = w < 520 ? 12 : 13;
         const ox = w / 2,
             oy = Math.round(h / 2);
-        const scale = Math.max(26, Math.min(64, Math.min(w, h) / 8)); // px per vacuum wavelength
-        const L = Math.min(w * 0.44, oy - 22); // ray length (px), schematic
+        const scale = Math.max(26, Math.min(64, Math.min(w, h) / 8));
+        const L = Math.min(w * 0.44, oy - 22);
         const Llam = L / scale;
 
         ctx.fillStyle = PAL.background;
@@ -402,12 +402,12 @@
         ctx.fillStyle = COL.medium2;
         ctx.fillRect(0, oy, w, h - oy);
 
-        // medium 2 depth handling: magnify z when the decay length is short
-        const kappa = s.kz2.im; // per unit k0
+
+        const kappa = s.kz2.im;
         const decaying = kappa > 0;
-        const dPx = decaying ? scale / (2 * Math.PI * kappa) : Infinity; // 1/e field depth, unmagnified px
+        const dPx = decaying ? scale / (2 * Math.PI * kappa) : Infinity;
         const zoom = decaying && dPx < 40 ? Math.min(400, Math.ceil(40 / dPx)) : 1;
-        const bandMode = s.tir || zoom > 1; // no ray-like transmitted beam to draw
+        const bandMode = s.tir || zoom > 1;
         const dDisp = dPx * zoom;
         const toX = (xl) => ox + xl * scale;
         const toY = (zl) => oy + zl * scale * (zl > 0 ? zoom : 1);
@@ -423,7 +423,7 @@
             ctx.fillRect(0, oy, w, depth);
         }
 
-        // interface and normal
+
         ctx.strokeStyle = COL.interface;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -466,11 +466,11 @@
             x: kT.x / kTn,
             z: kT.z / kTn
         } : null;
-        // near normal incidence the incident and reflected rays coincide: draw them side by side (schematic offset)
-        const sep = st.th < 12 ? Math.round(12 * (1 - st.th / 12)) + 2 : 0;
-        const decayAt = (zl) => Math.exp(-2 * Math.PI * kappa * Math.max(0, zl)); // field factor at depth zl (λ0 units)
 
-        // wavefronts (crests of Re{A exp[i(k·r − ωt)]}); spacing λ0/|Re k|
+        const sep = st.th < 12 ? Math.round(12 * (1 - st.th / 12)) + 2 : 0;
+        const decayAt = (zl) => Math.exp(-2 * Math.PI * kappa * Math.max(0, zl));
+
+
         if (st.wf) {
             ctx.lineWidth = 1.5;
             const crest = (u, kmag, phi0, sMin, sMax, color, alpha, fade, xo = 0) => {
@@ -499,9 +499,9 @@
                 crest(uTr, kTn, C.arg(amps.transmitted), 0, Llam, COL.transmitted, 0.3 + 0.5 * Math.sqrt(Pw.T), (z) => decayAt(z));
             }
             if (bandMode) {
-                // lines of constant phase kx x + Re(kz2) z + arg t − ωt = 2πm in the magnified depth band
+
                 const phi0 = C.arg(amps.transmitted);
-                const depthL = (h - oy) / (scale * zoom); // λ0 units of real depth shown
+                const depthL = (h - oy) / (scale * zoom);
                 ctx.strokeStyle = "rgb(" + COL.band + ")";
                 if (s.kx > 1e-6) {
                     for (let m = -80; m <= 80; m++) {
@@ -539,7 +539,7 @@
             }
         }
 
-        // rays: width and label give the power fraction of the selected polarization
+
         const drawRay = (u, power, color, name, incident, fade, xo = 0) => {
             const sx = (incident ? ox - u.x * L : ox) + xo,
                 sy = incident ? oy - u.z * L : oy;
@@ -548,7 +548,7 @@
             const lx = incident ? sx : ex,
                 ly = incident ? sy : ey;
             const below = ly > oy;
-            // keep the top labels clear of the medium-1 labels (two text rows at the top left)
+
             const topMin = incident && (sep || lx < 8 + 190) ? 3 * fs + 22 : fs + 2;
             const ty = below ? Math.min(h - 8, ly + fs + 4) : Math.max(topMin, ly - 6);
             if (power < ZERO_POWER) {
@@ -592,7 +592,7 @@
         drawRay(uRef, Pw.R, COL.reflected, "R", false, null, sep);
         if (uTr && !bandMode) drawRay(uTr, Pw.T, COL.transmitted, "T", false, decaying ? decayAt : null);
 
-        // angle arcs
+
         const arc = (r, a0, a1, text, color) => {
             if (Math.abs(a1 - a0) < 0.01) return;
             ctx.strokeStyle = color;
@@ -611,7 +611,7 @@
         arc(48, -Math.PI / 2, -Math.PI / 2 + s.theta1, "θ₁", COL.reflected);
         if (uTr && !bandMode) arc(34, Math.PI / 2 - s.theta2, Math.PI / 2, "θ₂", COL.transmitted);
 
-        // electric-field samples from the same boundary solution
+
         if (st.ef) {
             const pols = pol === "both" ? ["s", "p"] : [pol];
             const pScale = 0.36 * scale;
@@ -643,13 +643,13 @@
                         put(wave, u.x * sv, u.z * sv, u.z * sv, perp, xo);
                     });
                 };
-                // near normal incidence the side-by-side rays are too close for markers: separate them further
+
                 const mo = sep ? 3 * sep : 0;
                 along(uInc, waves.incident, -1, -mo);
                 along(uRef, waves.reflected, 1, mo);
                 if (uTr && !bandMode) along(uTr, waves.transmitted, 1);
                 if (bandMode) {
-                    const dL = 1 / (2 * Math.PI * kappa); // 1/e field depth, λ0 units
+                    const dL = 1 / (2 * Math.PI * kappa);
                     [0.5, 1.4, 2.3].forEach((xs) => {
                         const x = ((xs * scale) < w / 2 - 12 ? xs : xs * 0.5) + shift / scale;
                         [0, dL, 2 * dL].forEach((z) => {
@@ -662,7 +662,7 @@
             });
         }
 
-        // Brewster marker
+
         if (Math.abs(st.th * DEG - aux.thB) < 0.003 && !aux.absorbing) {
             ctx.strokeStyle = COL.brewster;
             ctx.lineWidth = 2;
@@ -675,7 +675,7 @@
             }
         }
 
-        // labels: media (top/bottom left), decay annotation, scale bar
+
         const lam0 = st.lam * 1e-9;
         label(ctx, "Medium 1: n₁ = " + st.n1.toFixed(2), 8, fs + 6, PAL.text, "left", w, fs);
         label(ctx, "λ₁ = λ₀/n₁ = " + formatLength(lam0 / st.n1), 8, 2 * fs + 12, PAL.textMuted, "left", w, fs);
@@ -684,7 +684,7 @@
         if (Math.abs(st.th * DEG - aux.thB) < 0.003) {
             label(ctx, aux.absorbing ? "min Rp = " + f3(s.Rp) : "Brewster: Rp = 0", ox + 12, oy - 58, COL.brewster, "left", w, fs);
         }
-        // scale bar (one vacuum wavelength)
+
         const sbx = w - 10 - scale,
             sby = fs + 10;
         ctx.strokeStyle = PAL.text;
@@ -699,7 +699,7 @@
         ctx.stroke();
         label(ctx, "λ₀ = " + st.lam.toFixed(0) + " nm", w - 8, sby + fs + 8, PAL.textMuted, "right", w, fs);
         if (decaying) {
-            // 1/e depth marker at the right edge
+
             const mx = w - 18,
                 my = oy + Math.min(dDisp, h - oy - 30);
             ctx.strokeStyle = PAL.text;
@@ -721,7 +721,7 @@
         geo.dataset.zoom = String(zoom);
     }
 
-    // ------------------------------------------------------------------ plots
+
     let rtMap = null,
         phMap = null,
         depthMap = null;
@@ -939,7 +939,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ descriptions
+
     function describeAll() {
         const s = sol,
             Pw = selectedPower();
@@ -959,7 +959,7 @@
             (s.fieldDecayLength && Number.isFinite(s.fieldDecayLength) ? "it falls to 1/e² of its surface value at depth " + formatLength(s.fieldDecayLength) + "." : "it is constant with depth (lossless propagating wave)."));
     }
 
-    // ------------------------------------------------------------------ render
+
     let renderQueued = false;
 
     function render() {
@@ -980,7 +980,7 @@
         queueMicrotask(render);
     }
 
-    // canvases (declare state before setupCanvas: it draws immediately)
+
     recompute();
     const geoCanvas = UI.setupCanvas($("canvas"), {
         aspect: 1.45,
@@ -1019,7 +1019,7 @@
         label: "Plot of transmitted field intensity versus depth in medium 2"
     });
 
-    // controls
+
     UI.enhanceAllSliders(sidebar, {
         thetaSlider: {
             unit: "°"
@@ -1063,7 +1063,7 @@
         setActivePreset(b.dataset.preset);
     }));
 
-    // plots: drag to set θ1
+
     function bindAngleDrag(handle, getMap) {
         const cv = handle.canvas;
         let dragging = false;
@@ -1097,7 +1097,7 @@
     bindAngleDrag(rtCanvas, () => rtMap);
     bindAngleDrag(phCanvas, () => phMap);
 
-    // animation: ωt advances one optical cycle per 1.6 s of display time
+
     const loop = UI.createLoop((dt) => {
         wt = (wt + 2 * Math.PI * dt / 1.6) % (2 * Math.PI * 1000);
         geoCanvas.redraw();
@@ -1125,7 +1125,7 @@
         scheduleRender();
     });
 
-    // export / share
+
     function csvRows() {
         const n = aux.sweep.th.length;
         const raw = Fresnel.sweep(st.n1, n2Of(st), n, 89.99 * DEG);
@@ -1166,7 +1166,7 @@
             "°, λ0 = " + st.lam + " nm, " + polLabel()
     });
 
-    // first render (URL restore, if any, fires control events → scheduleRender)
+
     render();
     url.ready.then(() => scheduleRender());
 })();

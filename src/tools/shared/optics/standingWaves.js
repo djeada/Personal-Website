@@ -1,40 +1,3 @@
-/*
- * Standing-wave model for a monochromatic plane wave at normal incidence.
- *
- * Pure, DOM-free. SI units: metres, seconds, radians, hertz.
- *
- * Conventions (shared with the page text):
- *   - Time dependence exp(-i omega t); physical field = Re[ E~(x) exp(-i(omega t - phi)) ].
- *   - k = 2 pi n nu / c is the wavenumber in the medium of index n.
- *   - Reflection coefficient r = E_reflected / E_incident, evaluated AT the boundary.
- *
- * Single-boundary mode: the medium fills 0 <= x <= L and the reflector sits at x = L.
- *   s = L - x is the distance in front of the boundary.
- *   E~(x)     = E0 [ exp(-i k s) + r exp(+i k s) ]      (incident travels +x, reflected travels -x)
- *   eta H~(x) = E0 [ exp(-i k s) - r exp(+i k s) ]      (eta = eta0 / n, H along +z for E along +y)
- *
- * Two-boundary resonator: mirrors r1 at x = 0 and r2 at x = L.
- *   E~(x) = E0 [ exp(-i k x) + r1 exp(+i k x) ], which is the same form with s = x.
- *   Self-consistency after one round trip: r1 r2 exp(2 i k L) = 1
- *   => nu_q = (q - (theta1 + theta2) / 2pi) c / (2 n L), q integer, nu_q > 0.
- *   For two perfect electric conductors (theta1 = theta2 = pi) this is nu_m = m c / (2 n L), m = 1, 2, ...
- *
- * Envelope |E~| = E0 sqrt(1 + |r|^2 + 2 |r| cos(2 k s + theta)), so
- *   maxima E0 (1 + |r|) at 2 k s + theta = 2 pi m,
- *   minima E0 (1 - |r|) at 2 k s + theta = (2 m + 1) pi,
- *   SWR = (1 + |r|) / (1 - |r|).
- *
- * Partial mirrors (finite finesse preview, the link to the passive-resonator tool):
- *   lossless mirrors with power reflectances R1, R2 and the same phases theta1, theta2.
- *   Round-trip field factor rho = r1 r2 exp(2 i k L), |rho| = sqrt(R1 R2).
- *   Transmission for a wave incident on mirror 1 (Airy function):
- *     T(nu) = (1 - R1)(1 - R2) / |1 - rho|^2
- *           = (1 - R1)(1 - R2) / [ (1 - sqrt(R1 R2))^2 + 4 sqrt(R1 R2) sin^2(delta / 2) ],
- *     delta = 2 k L + theta1 + theta2, so the peaks sit exactly at the ideal-mirror nu_q.
- *   Finesse F = pi (R1 R2)^(1/4) / (1 - sqrt(R1 R2)); FWHM linewidth = FSR / F (high-F limit;
- *   airyFWHM gives the exact value). Photon lifetime from the round-trip power survival
- *   factor R1 R2: tau = t_rt / (-ln(R1 R2)), t_rt = 2 n L / c; Q = 2 pi nu tau.
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -64,13 +27,13 @@
         return p;
     }
 
-    /** Fresnel amplitude reflection at normal incidence, wave in n1 hitting n2 (lossless, real indices). */
+
     function reflectionFromIndices(n1, n2) {
         const r = (n1 - n2) / (n1 + n2);
         return complexPolar(Math.abs(r), r < 0 ? Math.PI : 0);
     }
 
-    /** Fresnel amplitude transmission at normal incidence (E-field), n1 -> n2. */
+
     function transmissionFromIndices(n1, n2) {
         return 2 * n1 / (n1 + n2);
     }
@@ -103,12 +66,12 @@
         return (1 + rMag) / (1 - rMag);
     }
 
-    /** Net time-averaged power flow toward the boundary, relative to the incident intensity. */
+
     function netPowerFraction(rMag) {
         return 1 - rMag * rMag;
     }
 
-    /** Resonance frequencies of a two-mirror cavity: r1 r2 exp(2ikL) = 1. */
+
     function resonatorFrequency(q, n, L, theta1, theta2) {
         const offset = ((theta1 + theta2) / TWO_PI);
         return (q - offset) * C / (2 * n * L);
@@ -118,10 +81,7 @@
         return C / (2 * n * L);
     }
 
-    /**
-     * Allowed mode frequencies for the cavity, m = 1, 2, ... indexing the positive
-     * solutions in increasing order.
-     */
+
     function resonatorModes(n, L, theta1, theta2, count) {
         const offset = (theta1 + theta2) / TWO_PI;
         const qStart = Math.floor(offset) + 1;
@@ -144,12 +104,7 @@
         return modes[m - 1].nu;
     }
 
-    /**
-     * Build a configuration describing the field in the plotted window 0 <= x <= L.
-     * params: { mode: "single" | "resonator", n, L, nu, r: {mag, phase}, r1, r2 }
-     * Returns the reference reflector r (at x = L for "single", r1 at x = 0 for
-     * "resonator"), the map x -> s (distance from that reflector) and the H sign.
-     */
+
     function describe(params) {
         const n = params.n;
         const L = params.L;
@@ -158,7 +113,7 @@
         let r, sign, sAtX;
         if (params.mode === "resonator") {
             r = params.r1;
-            sign = -1; // "incident" component (exp(-iks)) travels toward x = 0
+            sign = -1;
             sAtX = function(x) {
                 return x;
             };
@@ -182,15 +137,15 @@
         };
     }
 
-    /** Complex phasors at position x (metres). E in units of E0, H multiplied by the medium impedance. */
+
     function phasors(cfg, x) {
         const s = cfg.sAtX(x);
         const ks = cfg.k * s;
         const incRe = Math.cos(ks),
-            incIm = -Math.sin(ks); // exp(-iks)
+            incIm = -Math.sin(ks);
         const a = ks + cfg.r.phase;
         const refRe = cfg.r.mag * Math.cos(a),
-            refIm = cfg.r.mag * Math.sin(a); // r exp(iks)
+            refIm = cfg.r.mag * Math.sin(a);
         return {
             incRe: incRe,
             incIm: incIm,
@@ -203,7 +158,7 @@
         };
     }
 
-    /** Analytic envelope of |E| (in units of E0). */
+
     function envelopeE(cfg, x) {
         const s = cfg.sAtX(x);
         const rho = cfg.r.mag;
@@ -211,7 +166,7 @@
         return Math.sqrt(Math.max(0, v));
     }
 
-    /** Analytic envelope of eta |H| (in units of E0). Complementary to |E|. */
+
     function envelopeH(cfg, x) {
         const s = cfg.sAtX(x);
         const rho = cfg.r.mag;
@@ -219,10 +174,7 @@
         return Math.sqrt(Math.max(0, v));
     }
 
-    /**
-     * Transmitted field phasor a distance d beyond a dielectric interface at x = L:
-     * E~ = t E0 exp(i k2 d), k2 = 2 pi n2 nu / c. Continuity of tangential E at d = 0 means t = 1 + r.
-     */
+
     function transmittedPhasor(nu, n1, n2, d) {
         const t = transmissionFromIndices(n1, n2);
         const a = wavenumber(nu, n2) * d;
@@ -232,13 +184,13 @@
         };
     }
 
-    /** Instantaneous physical field Re[(re + i im) exp(-i(omega t - phi))]. */
+
     function instantaneous(re, im, omegaT, phi) {
         const a = omegaT - phi;
         return re * Math.cos(a) + im * Math.sin(a);
     }
 
-    /** Positions x in [0, L] where 2ks + theta = target + 2 pi m. */
+
     function solvePositions(cfg, target) {
         const out = [];
         if (cfg.r.mag <= 0) return out;
@@ -261,22 +213,22 @@
         return out;
     }
 
-    /** Minima of |E| (true nodes when |r| = 1). */
+
     function eMinima(cfg) {
         return solvePositions(cfg, Math.PI);
     }
 
-    /** Maxima of |E| (antinodes). */
+
     function eMaxima(cfg) {
         return solvePositions(cfg, 0);
     }
 
-    // ---------------------------------------------------------------- partial mirrors
+
     function checkR(R) {
         if (!(R >= 0 && R < 1)) throw new RangeError("power reflectance must satisfy 0 <= R < 1, got " + R);
     }
 
-    /** Coefficient of finesse and finesse for lossless mirrors R1, R2 (0 <= R < 1). */
+
     function finesse(R1, R2) {
         checkR(R1);
         checkR(R2);
@@ -285,16 +237,12 @@
         return Math.PI * Math.sqrt(g) / (1 - g);
     }
 
-    /** Round-trip phase delta = 2kL + theta1 + theta2 (radians, unwrapped). */
+
     function roundTripPhase(nu, n, L, theta1, theta2) {
         return 2 * wavenumber(nu, n) * L + theta1 + theta2;
     }
 
-    /**
-     * Airy transmission of a lossless two-mirror cavity (plane wave, normal incidence),
-     * computed from the geometric round-trip sum 1 / (1 - rho).
-     * params: { n, L, R1, R2, theta1, theta2 }.
-     */
+
     function airyTransmission(nu, params) {
         const R1 = params.R1,
             R2 = params.R2;
@@ -303,24 +251,24 @@
         const g = Math.sqrt(R1 * R2);
         const d = roundTripPhase(nu, params.n, params.L, params.theta1 || 0, params.theta2 || 0);
         const re = 1 - g * Math.cos(d),
-            im = -g * Math.sin(d); // 1 - rho
+            im = -g * Math.sin(d);
         return (1 - R1) * (1 - R2) / (re * re + im * im);
     }
 
-    /** Exact full width at half maximum of an Airy resonance, in hertz. */
+
     function airyFWHM(n, L, R1, R2) {
         checkR(R1);
         checkR(R2);
         const g = Math.sqrt(R1 * R2);
         if (g === 0) return Infinity;
-        // half maximum where 4 g sin^2(delta/2) = (1 - g)^2
+
         const s = (1 - g) / (2 * Math.sqrt(g));
-        if (s >= 1) return Infinity; // resonances too broad to have a half-maximum point
-        const fullDelta = 4 * Math.asin(s); // delta_half = 2 asin(s) on either side of the peak
+        if (s >= 1) return Infinity;
+        const fullDelta = 4 * Math.asin(s);
         return fullDelta / TWO_PI * freeSpectralRange(n, L);
     }
 
-    /** Round-trip time, photon lifetime (from round-trip power survival R1 R2) and Q of mode frequency nu. */
+
     function cavityLifetime(nu, n, L, R1, R2) {
         const tRt = 2 * n * L / C;
         const survive = R1 * R2;
@@ -333,10 +281,7 @@
         };
     }
 
-    /**
-     * Parameter-dependent profile sampled once and cached by the caller.
-     * Returns typed arrays of phasors and envelopes, plus analytic extrema.
-     */
+
     function profile(params, samples) {
         const cfg = describe(params);
         const N = Math.max(2, samples | 0);

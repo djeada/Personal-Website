@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Designing Parallel Programs</title>
+    <title>Designing Parallel Programs | Adam Djellouli</title>
     <meta content="Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs",
             "description": "Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-09-12",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Designing Parallel Programs" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate." property="og:description" />
+    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,105 +80,114 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+    <script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#designing-parallel-programs">Designing Parallel Programs</a>
+                    <li><a href="#partitioning">Partitioning</a>
                         <ol>
-                            <li><a href="#partitioning">Partitioning</a>
+                            <li><a href="#goals">Goals</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#types-of-decomposition">Types of Decomposition</a>
+                        <ol>
+                            <li><a href="#i-domain-decomposition">I. Domain Decomposition</a></li>
+                            <li><a href="#ii-functional-decomposition">II. Functional Decomposition</a></li>
+                            <li><a href="#iii-cyclic-decomposition">III. Cyclic Decomposition</a></li>
+                            <li><a href="#iv-block-decomposition">IV. Block Decomposition</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#communication">Communication</a>
+                        <ol>
+                            <li><a href="#goals-2">Goals</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#types-of-communication">Types of Communication</a>
+                        <ol>
+                            <li><a href="#i-local-communication">I. Local Communication</a></li>
+                            <li><a href="#ii-global-communication">II. Global Communication</a></li>
+                            <li><a href="#iii-point-to-point-communication">III. Point-to-Point Communication</a></li>
+                            <li><a href="#iv-collective-communication">IV. Collective Communication</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#communication-modes">Communication Modes</a>
+                        <ol>
+                            <li><a href="#i-blocking-communication">I. Blocking Communication</a></li>
+                            <li><a href="#ii-nonblocking-communication">II. Nonblocking Communication</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#concepts-in-communication">Concepts in Communication</a>
+                        <ol>
+                            <li><a href="#i-overhead">I. Overhead</a></li>
+                            <li><a href="#ii-latency">II. Latency</a></li>
+                            <li><a href="#iii-bandwidth">III. Bandwidth</a></li>
+                            <li><a href="#iv-contention">IV. Contention</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#agglomeration">Agglomeration</a>
+                        <ol>
+                            <li><a href="#goals-3">Goals</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#granularity">Granularity</a>
+                        <ol>
+                            <li><a href="#fine-grained-parallelism">Fine-Grained Parallelism</a></li>
+                            <li><a href="#coarse-grained-parallelism">Coarse-Grained Parallelism</a></li>
+                            <li><a href="#practical-balance">Practical Balance</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#mapping">Mapping</a>
+                        <ol>
+                            <li><a href="#goals-4">Goals</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#mapping-strategies">Mapping Strategies</a>
+                        <ol>
+                            <li><a href="#i-static-mapping">I. Static Mapping</a></li>
+                            <li><a href="#ii-dynamic-mapping">II. Dynamic Mapping</a></li>
+                            <li><a href="#iii-hierarchical-mapping">III. Hierarchical Mapping</a></li>
+                            <li><a href="#iv-task-clustering">IV. Task Clustering</a></li>
+                            <li><a href="#v-graph-partitioning">V. Graph Partitioning</a>
                                 <ol>
-                                    <li><a href="#goals">Goals</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#types-of-decomposition">Types of Decomposition</a>
-                                <ol>
-                                    <li><a href="#i-domain-decomposition">I. Domain Decomposition</a></li>
-                                    <li><a href="#ii-functional-decomposition">II. Functional Decomposition</a></li>
-                                    <li><a href="#iii-cyclic-decomposition">III. Cyclic Decomposition</a></li>
-                                    <li><a href="#iv-block-decomposition">IV. Block Decomposition</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#communication">Communication</a>
-                                <ol>
-                                    <li><a href="#goals">Goals</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#types-of-communication">Types of Communication</a>
-                                <ol>
-                                    <li><a href="#i-local-communication">I. Local Communication</a></li>
-                                    <li><a href="#ii-global-communication">II. Global Communication</a></li>
-                                    <li><a href="#iii-point-to-point-communication">III. Point-to-Point Communication</a></li>
-                                    <li><a href="#iv-collective-communication">IV. Collective Communication</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#communication-modes">Communication Modes</a>
-                                <ol>
-                                    <li><a href="#i-blocking-communication">I. Blocking Communication</a></li>
-                                    <li><a href="#ii-nonblocking-communication">II. Nonblocking Communication</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#concepts-in-communication">Concepts in Communication</a>
-                                <ol>
-                                    <li><a href="#i-overhead">I. Overhead</a></li>
-                                    <li><a href="#ii-latency">II. Latency</a></li>
-                                    <li><a href="#iii-bandwidth">III. Bandwidth</a></li>
-                                    <li><a href="#iv-contention">IV. Contention</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#agglomeration">Agglomeration</a>
-                                <ol>
-                                    <li><a href="#goals">Goals</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#granularity">Granularity</a>
-                                <ol>
-                                    <li><a href="#fine-grained-parallelism">Fine-Grained Parallelism</a></li>
-                                    <li><a href="#coarse-grained-parallelism">Coarse-Grained Parallelism</a></li>
-                                    <li><a href="#practical-balance">Practical Balance</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#mapping">Mapping</a>
-                                <ol>
-                                    <li><a href="#goals">Goals</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#mapping-strategies">Mapping Strategies</a>
-                                <ol>
-                                    <li><a href="#i-static-mapping">I. Static Mapping</a></li>
-                                    <li><a href="#ii-dynamic-mapping">II. Dynamic Mapping</a></li>
-                                    <li><a href="#iii-hierarchical-mapping">III. Hierarchical Mapping</a></li>
-                                    <li><a href="#iv-task-clustering">IV. Task Clustering</a></li>
-                                    <li><a href="#v-graph-partitioning">V. Graph Partitioning</a></li>
+                                    <li><a href="#example-workflow">Example Workflow</a></li>
                                 </ol>
                             </li>
                         </ol>
                     </li>
-                    <li><a href="#example-workflow">Example Workflow</a>
+                    <li><a href="#2-d-heat-diffusion">2-D Heat Diffusion</a></li>
+                    <li><a href="#what-we-are-designing">What We Are Designing</a></li>
+                    <li><a href="#why-these-tools">Why These Tools</a></li>
+                    <li><a href="#what-done-looks-like">What “Done” Looks Like</a></li>
+                    <li><a href="#i-partitioning-make-work-even-and-predictable">I. Partitioning: Make Work Even and Predictable</a></li>
+                    <li><a href="#ii-communication-keep-it-correct-and-overlapped">II. Communication: Keep It Correct and Overlapped</a></li>
+                    <li><a href="#iii-agglomeration-reduce-rank-count-but-keep-memory-safe">III. Agglomeration: Reduce Rank Count but Keep Memory Safe</a></li>
+                    <li><a href="#iv-mapping-place-work-where-data-moves-least">IV. Mapping: Place Work Where Data Moves Least</a></li>
+                    <li><a href="#runbook">Runbook</a>
                         <ol>
-                            <li><a href="#2-d-heat-diffusion">2-D Heat Diffusion</a></li>
-                            <li><a href="#what-we-are-designing">What We Are Designing</a></li>
-                            <li><a href="#why-these-tools">Why These Tools</a></li>
-                            <li><a href="#what-done-looks-like">What “Done” Looks Like</a></li>
-                            <li><a href="#i-partitioning-make-work-even-and-predictable">I. Partitioning: Make Work Even and Predictable</a></li>
-                            <li><a href="#ii-communication-keep-it-correct-and-overlapped">II. Communication: Keep It Correct and Overlapped</a></li>
-                            <li><a href="#iii-agglomeration-reduce-rank-count-but-keep-memory-safe">III. Agglomeration: Reduce Rank Count but Keep Memory Safe</a></li>
-                            <li><a href="#iv-mapping-place-work-where-data-moves-least">IV. Mapping: Place Work Where Data Moves Least</a></li>
-                            <li><a href="#runbook">Runbook</a>
-                                <ol>
-                                    <li><a href="#build-and-quick-check">Build and Quick Check</a></li>
-                                    <li><a href="#distributed-run">Distributed Run</a></li>
-                                    <li><a href="#full-run-with-threads-and-checkpoints">Full Run with Threads and Checkpoints</a></li>
-                                    <li><a href="#outputs-and-logging">Outputs and Logging</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#design-checklist">Design Checklist</a></li>
-                            <li><a href="#principles">Principles</a></li>
-                            <li><a href="#tools-and-techniques">Tools and Techniques</a></li>
-                            <li><a href="#common-mistakes">Common Mistakes</a></li>
+                            <li><a href="#build-and-quick-check">Build and Quick Check</a></li>
+                            <li><a href="#distributed-run">Distributed Run</a></li>
+                            <li><a href="#full-run-with-threads-and-checkpoints">Full Run with Threads and Checkpoints</a></li>
+                            <li><a href="#outputs-and-logging">Outputs and Logging</a></li>
                         </ol>
                     </li>
+                    <li><a href="#design-checklist">Design Checklist</a></li>
+                    <li><a href="#principles">Principles</a></li>
+                    <li><a href="#tools-and-techniques">Tools and Techniques</a></li>
+                    <li><a href="#common-mistakes">Common Mistakes</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -191,7 +207,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -210,7 +226,7 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="designing-parallel-programs">Designing Parallel Programs</h2>
+            <h1>Designing Parallel Programs</h1>
             <p>Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate. A good design does more than create many tasks: it exposes enough parallelism, keeps processors busy, limits communication and synchronization, preserves data locality, and maps work onto hardware in a way that reduces waiting.</p>
             <p>A useful design framework is <strong>PCAM</strong>, which has four steps.</p>
             <ol>
@@ -341,40 +357,42 @@
             <p>In parallel programming, cyclic decomposition usually means distributing tasks or loop iterations in a <strong>round-robin</strong> pattern across workers.</p>
             <p>Instead of giving each worker one large contiguous block, cyclic decomposition assigns item <code>i</code> to worker <code>i mod P</code>, where <code>P</code> is the number of workers.</p>
             <p>For example, 12 loop iterations can be distributed across 4 workers like this.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Iteration</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>2</td>
-                    <td>3</td>
-                    <td>4</td>
-                    <td>5</td>
-                    <td>6</td>
-                    <td>7</td>
-                    <td>8</td>
-                    <td>9</td>
-                    <td>10</td>
-                    <td>11</td>
-                </tr>
-                <tr>
-                    <td>Worker</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>2</td>
-                    <td>3</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>2</td>
-                    <td>3</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>2</td>
-                    <td>3</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Iteration</th>
+                        <th>0</th>
+                        <th>1</th>
+                        <th>2</th>
+                        <th>3</th>
+                        <th>4</th>
+                        <th>5</th>
+                        <th>6</th>
+                        <th>7</th>
+                        <th>8</th>
+                        <th>9</th>
+                        <th>10</th>
+                        <th>11</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Worker</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <div>
                 <pre><code class="language-shell">Worker 0: iterations 0, 4, 8
 Worker 1: iterations 1, 5, 9
@@ -406,10 +424,10 @@ Worker 3: iterations 3, 7, 11</code></pre>
                 $$</p>
             <p>where</p>
             <p>$$
-                A_{11}=\begin{pmatrix}1 &amp; 2 \ 0 &amp; 3\end{pmatrix}, \quad
-                A_{12}=\begin{pmatrix}9 &amp; 8 \ 7 &amp; 6\end{pmatrix}, \quad
-                A_{21}=\begin{pmatrix}4 &amp; 5 \ 4 &amp; 5\end{pmatrix}, \quad
-                A_{22}=\begin{pmatrix}0 &amp; 0 \ 0 &amp; 0\end{pmatrix}.
+                A_{11}=\begin{pmatrix}1 &amp; 2 \\ 0 &amp; 3\end{pmatrix}, \quad
+                A_{12}=\begin{pmatrix}9 &amp; 8 \\ 7 &amp; 6\end{pmatrix}, \quad
+                A_{21}=\begin{pmatrix}4 &amp; 5 \\ 4 &amp; 5\end{pmatrix}, \quad
+                A_{22}=\begin{pmatrix}0 &amp; 0 \\ 0 &amp; 0\end{pmatrix}.
                 $$</p>
             <p>Block decomposition helps in several ways.</p>
             <ul>
@@ -427,7 +445,7 @@ Worker 3: iterations 3, 7, 11</code></pre>
                 T_{\text{message}} \approx \alpha + \frac{n}{B}
                 $$</p>
             <p>where $\alpha$ is startup latency, $n$ is the number of bytes, and $B$ is the effective bandwidth. This explains why many tiny messages can be expensive even when their total byte count is small, while large messages are often dominated by bandwidth.</p>
-            <h4 id="goals">Goals</h4>
+            <h4 id="goals-2">Goals</h4>
             <p><strong>I. Minimize communication volume and frequency</strong></p>
             <ul>
                 <li>Send less data when possible.</li>
@@ -554,7 +572,7 @@ Result:         22</code></pre>
             <h3 id="agglomeration">Agglomeration</h3>
             <p>Agglomeration combines smaller logical tasks into larger execution units after the initial partitioning step. The purpose is to reduce overhead, improve locality, and create tasks that better match the target hardware.</p>
             <p>Agglomeration is a tradeoff. Larger tasks usually communicate less frequently and reuse data better, but they also reduce the number of independently schedulable units. The design should therefore preserve enough tasks to balance load while making each task large enough to amortize runtime and communication costs.</p>
-            <h4 id="goals">Goals</h4>
+            <h4 id="goals-3">Goals</h4>
             <p><strong>I. Improve computational granularity</strong></p>
             <ul>
                 <li>Larger tasks perform more computation between communication events.</li>
@@ -590,7 +608,7 @@ Result:         22</code></pre>
             <h3 id="mapping">Mapping</h3>
             <p>Mapping assigns agglomerated tasks to hardware resources such as cores, sockets, nodes, or accelerators. Good mapping improves load balance and reduces communication distance. On hierarchical machines, <em>where</em> a task runs affects not only network traffic but also cache sharing, NUMA locality, accelerator access, and memory bandwidth.</p>
             <p>Mapping also interacts with the operating system and runtime. Thread affinity, process pinning, GPU selection, and first-touch memory placement can materially change performance even when the algorithm itself is unchanged.</p>
-            <h4 id="goals">Goals</h4>
+            <h4 id="goals-4">Goals</h4>
             <p><strong>I. Balance computational load across processors</strong></p>
             <ul>
                 <li>Keep all processors busy.</li>
@@ -879,58 +897,60 @@ mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core \
                 <li>achieved updates per second.</li>
             </ul>
             <h3 id="design-checklist">Design Checklist</h3>
-            <p>
             <table>
-                <tr>
-                    <td>Question</td>
-                    <td>Why It Matters</td>
-                </tr>
-                <tr>
-                    <td>Are tasks balanced?</td>
-                    <td>Prevents idle processors.</td>
-                </tr>
-                <tr>
-                    <td>Is there enough parallel work?</td>
-                    <td>Keeps all cores or nodes busy.</td>
-                </tr>
-                <tr>
-                    <td>Are dependencies minimized?</td>
-                    <td>Reduces synchronization and communication.</td>
-                </tr>
-                <tr>
-                    <td>Are messages batched?</td>
-                    <td>Avoids excessive latency overhead.</td>
-                </tr>
-                <tr>
-                    <td>Is communication overlapped with computation?</td>
-                    <td>Hides some communication cost.</td>
-                </tr>
-                <tr>
-                    <td>Are frequently communicating tasks placed close together?</td>
-                    <td>Improves locality and reduces network traffic.</td>
-                </tr>
-                <tr>
-                    <td>Does each task fit memory/cache constraints?</td>
-                    <td>Prevents paging and improves performance.</td>
-                </tr>
-                <tr>
-                    <td>Has the program been profiled?</td>
-                    <td>Confirms bottlenecks instead of guessing.</td>
-                </tr>
-                <tr>
-                    <td>Does strong scaling still improve runtime?</td>
-                    <td>Reveals when communication and synchronization dominate added compute resources.</td>
-                </tr>
-                <tr>
-                    <td>Are rank and thread affinities verified?</td>
-                    <td>Prevents accidental oversubscription or poor NUMA placement.</td>
-                </tr>
-                <tr>
-                    <td>Is I/O architecture consistent with the file system?</td>
-                    <td>Avoids turning checkpoints into the dominant scalability bottleneck.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Why It Matters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Are tasks balanced?</td>
+                        <td>Prevents idle processors.</td>
+                    </tr>
+                    <tr>
+                        <td>Is there enough parallel work?</td>
+                        <td>Keeps all cores or nodes busy.</td>
+                    </tr>
+                    <tr>
+                        <td>Are dependencies minimized?</td>
+                        <td>Reduces synchronization and communication.</td>
+                    </tr>
+                    <tr>
+                        <td>Are messages batched?</td>
+                        <td>Avoids excessive latency overhead.</td>
+                    </tr>
+                    <tr>
+                        <td>Is communication overlapped with computation?</td>
+                        <td>Hides some communication cost.</td>
+                    </tr>
+                    <tr>
+                        <td>Are frequently communicating tasks placed close together?</td>
+                        <td>Improves locality and reduces network traffic.</td>
+                    </tr>
+                    <tr>
+                        <td>Does each task fit memory/cache constraints?</td>
+                        <td>Prevents paging and improves performance.</td>
+                    </tr>
+                    <tr>
+                        <td>Has the program been profiled?</td>
+                        <td>Confirms bottlenecks instead of guessing.</td>
+                    </tr>
+                    <tr>
+                        <td>Does strong scaling still improve runtime?</td>
+                        <td>Reveals when communication and synchronization dominate added compute resources.</td>
+                    </tr>
+                    <tr>
+                        <td>Are rank and thread affinities verified?</td>
+                        <td>Prevents accidental oversubscription or poor NUMA placement.</td>
+                    </tr>
+                    <tr>
+                        <td>Is I/O architecture consistent with the file system?</td>
+                        <td>Avoids turning checkpoints into the dominant scalability bottleneck.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="principles">Principles</h3>
             <ul>
                 <li>Aim for processors to finish their assigned work at roughly the same time; otherwise, faster workers spend time waiting for the slowest ones.</li>
@@ -949,65 +969,67 @@ mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core \
                 <li>Use pinning and affinity controls such as <code>OMP_PLACES</code>, <code>OMP_PROC_BIND</code>, and MPI binding options to keep threads and ranks close to their data.</li>
             </ul>
             <h3 id="common-mistakes">Common Mistakes</h3>
-            <p>
             <table>
-                <tr>
-                    <td>Mistake</td>
-                    <td>Why It Hurts</td>
-                    <td>Better Approach</td>
-                </tr>
-                <tr>
-                    <td>Creating too many tiny tasks</td>
-                    <td>Scheduling and communication overhead dominate</td>
-                    <td>Agglomerate tasks until granularity is reasonable</td>
-                </tr>
-                <tr>
-                    <td>Ignoring halo costs</td>
-                    <td>Boundary communication becomes the bottleneck</td>
-                    <td>Batch halos and overlap communication with interior work</td>
-                </tr>
-                <tr>
-                    <td>Using blocking communication everywhere</td>
-                    <td>Ranks may wait instead of computing</td>
-                    <td>Use nonblocking communication when independent work exists, then verify that overlap actually occurs</td>
-                </tr>
-                <tr>
-                    <td>Mapping ranks without topology awareness</td>
-                    <td>Increases cross-node and NUMA traffic</td>
-                    <td>Use Cartesian layouts and binding options</td>
-                </tr>
-                <tr>
-                    <td>Assuming equal data size means equal work</td>
-                    <td>Some data regions may be more expensive</td>
-                    <td>Measure work or use dynamic scheduling</td>
-                </tr>
-                <tr>
-                    <td>Optimizing before profiling</td>
-                    <td>Time is spent on the wrong bottleneck</td>
-                    <td>Profile computation, communication, and I/O</td>
-                </tr>
-                <tr>
-                    <td>Assuming nonblocking MPI guarantees overlap</td>
-                    <td>Transfers may make little progress during computation</td>
-                    <td>Measure overlap; use appropriate MPI progress settings or communication structure</td>
-                </tr>
-                <tr>
-                    <td>Binding one hybrid rank to one core</td>
-                    <td>OpenMP threads oversubscribe the same CPU set</td>
-                    <td>Reserve the full core set for each rank, e.g. <code>PE=8</code> for eight threads</td>
-                </tr>
-                <tr>
-                    <td>Treating per-rank HDF5 files as Parallel HDF5</td>
-                    <td>File-count and metadata overhead can grow rapidly</td>
-                    <td>Use collective Parallel HDF5 for shared datasets when appropriate</td>
-                </tr>
-                <tr>
-                    <td>Ignoring surface-to-volume ratio</td>
-                    <td>Communication grows too large relative to local stencil work</td>
-                    <td>Use compact subdomains and avoid over-partitioning</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Mistake</th>
+                        <th>Why It Hurts</th>
+                        <th>Better Approach</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Creating too many tiny tasks</td>
+                        <td>Scheduling and communication overhead dominate</td>
+                        <td>Agglomerate tasks until granularity is reasonable</td>
+                    </tr>
+                    <tr>
+                        <td>Ignoring halo costs</td>
+                        <td>Boundary communication becomes the bottleneck</td>
+                        <td>Batch halos and overlap communication with interior work</td>
+                    </tr>
+                    <tr>
+                        <td>Using blocking communication everywhere</td>
+                        <td>Ranks may wait instead of computing</td>
+                        <td>Use nonblocking communication when independent work exists, then verify that overlap actually occurs</td>
+                    </tr>
+                    <tr>
+                        <td>Mapping ranks without topology awareness</td>
+                        <td>Increases cross-node and NUMA traffic</td>
+                        <td>Use Cartesian layouts and binding options</td>
+                    </tr>
+                    <tr>
+                        <td>Assuming equal data size means equal work</td>
+                        <td>Some data regions may be more expensive</td>
+                        <td>Measure work or use dynamic scheduling</td>
+                    </tr>
+                    <tr>
+                        <td>Optimizing before profiling</td>
+                        <td>Time is spent on the wrong bottleneck</td>
+                        <td>Profile computation, communication, and I/O</td>
+                    </tr>
+                    <tr>
+                        <td>Assuming nonblocking MPI guarantees overlap</td>
+                        <td>Transfers may make little progress during computation</td>
+                        <td>Measure overlap; use appropriate MPI progress settings or communication structure</td>
+                    </tr>
+                    <tr>
+                        <td>Binding one hybrid rank to one core</td>
+                        <td>OpenMP threads oversubscribe the same CPU set</td>
+                        <td>Reserve the full core set for each rank, e.g. <code>PE=8</code> for eight threads</td>
+                    </tr>
+                    <tr>
+                        <td>Treating per-rank HDF5 files as Parallel HDF5</td>
+                        <td>File-count and metadata overhead can grow rapidly</td>
+                        <td>Use collective Parallel HDF5 for shared datasets when appropriate</td>
+                    </tr>
+                    <tr>
+                        <td>Ignoring surface-to-volume ratio</td>
+                        <td>Communication grows too large relative to local stencil work</td>
+                        <td>Use compact subdomains and avoid over-partitioning</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
         </article-section>
     </div>
     <footer>
@@ -1033,23 +1055,33 @@ mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core \
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -1066,21 +1098,5 @@ mpirun -n 16 --map-by ppr:4:node:PE=8 --bind-to core \
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

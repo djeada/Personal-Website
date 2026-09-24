@@ -5,19 +5,18 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Handling the Double-Booking Problem in Databases</title>
-    <meta content="The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management." name="description" />
+    <title>Handling the Double-Booking Problem in Databases | Adam Djellouli</title>
+    <meta content="The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory…" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -33,16 +32,24 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem",
-            "description": "The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management.",
-            "dateModified": "2026-09-13"
+            "description": "The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory\u2026",
+            "dateModified": "2025-05-18",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Handling the Double-Booking Problem in Databases" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory…" property="og:description" />
+    <meta content="2025-05-18" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,46 +80,46 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</a>
-                    <ol>
-                        <li><a href="#understanding-the-double-booking-problem">Understanding the Double-Booking Problem</a></li>
-                        <li><a href="#causes-of-the-double-booking-problem">Causes of the Double-Booking Problem</a></li>
-                        <li><a href="#preventing-double-booking">Preventing Double-Booking</a>
-                            <ol>
-                                <li><a href="#use-the-right-lock-for-the-situation">Use the Right Lock for the Situation</a></li>
-                                <li><a href="#pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</a></li>
-                                <li><a href="#optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</a></li>
-                                <li><a href="#pessimistic-lock-first-work-later">Pessimistic Lock First, Work Later</a></li>
-                                <li><a href="#enforce-invariants-with-constraints-indexes">Enforce Invariants with Constraints &amp; Indexes</a></li>
-                                <li><a href="#consistent-lock-ordering-to-avoid-deadlocks">Consistent Lock Ordering to Avoid Deadlocks</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#monitor-tune-locking-in-production">Monitor &amp; Tune Locking in Production</a>
-                            <ol>
-                                <li><a href="#why-you-watch">Why you watch</a></li>
-                                <li><a href="#instant-health-check-queries-engine-specifics-">Instant health-check queries (engine specifics)</a></li>
-                                <li><a href="#alert-thresholds-that-catch-trouble-early-tune-for-your-sla-">Alert thresholds that catch trouble early (tune for your SLA)</a></li>
-                                <li><a href="#when-an-alert-fires-triage-playbook">When an alert fires—triage playbook</a></li>
-                                <li><a href="#automating-the-watch">Automating the watch</a></li>
-                                <li><a href="#continuous-improvement-loop">Continuous improvement loop</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</a>
-                            <ol>
-                                <li><a href="#stack-prerequisites">Stack &amp; prerequisites</a></li>
-                                <li><a href="#build-a-miniature-ticket-system">Build a miniature ticket system</a></li>
-                                <li><a href="#reproduce-the-double-booking-bug">Reproduce the double-booking bug</a></li>
-                                <li><a href="#prevent-it-pessimistic-locking-">Prevent it (pessimistic locking)</a></li>
-                                <li><a href="#at-a-glance-equivalents-in-other-engines">At a glance: equivalents in other engines</a></li>
-                                <li><a href="#alternative-optimistic-locking">Alternative: optimistic locking</a></li>
-                                <li><a href="#quick-checklist-for-your-project">Quick checklist for your project</a></li>
-                            </ol>
-                        </li>
-                    </ol>
+                <ol>
+                    <li><a href="#understanding-the-double-booking-problem">Understanding the Double-Booking Problem</a></li>
+                    <li><a href="#causes-of-the-double-booking-problem">Causes of the Double-Booking Problem</a></li>
+                    <li><a href="#preventing-double-booking">Preventing Double-Booking</a>
+                        <ol>
+                            <li><a href="#use-the-right-lock-for-the-situation">Use the Right Lock for the Situation</a></li>
+                            <li><a href="#pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</a></li>
+                            <li><a href="#optimistic-concurrency-control-occ">Optimistic Concurrency Control (OCC)</a></li>
+                            <li><a href="#pessimistic-lock-first-work-later">Pessimistic Lock First, Work Later</a></li>
+                            <li><a href="#enforce-invariants-with-constraints-indexes">Enforce Invariants with Constraints &amp; Indexes</a></li>
+                            <li><a href="#consistent-lock-ordering-to-avoid-deadlocks">Consistent Lock Ordering to Avoid Deadlocks</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#monitor-tune-locking-in-production">Monitor &amp; Tune Locking in Production</a>
+                        <ol>
+                            <li><a href="#why-you-watch">Why you watch</a></li>
+                            <li><a href="#instant-health-check-queries-engine-specifics">Instant health-check queries (engine specifics)</a></li>
+                            <li><a href="#alert-thresholds-that-catch-trouble-early-tune-for-your-sla">Alert thresholds that catch trouble early (tune for your SLA)</a></li>
+                            <li><a href="#when-an-alert-fires-triage-playbook">When an alert fires—triage playbook</a></li>
+                            <li><a href="#automating-the-watch">Automating the watch</a></li>
+                            <li><a href="#continuous-improvement-loop">Continuous improvement loop</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</a>
+                        <ol>
+                            <li><a href="#stack-prerequisites">Stack &amp; prerequisites</a></li>
+                            <li><a href="#build-a-miniature-ticket-system">Build a miniature ticket system</a></li>
+                            <li><a href="#reproduce-the-double-booking-bug">Reproduce the double-booking bug</a></li>
+                            <li><a href="#prevent-it-pessimistic-locking">Prevent it (pessimistic locking)</a></li>
+                            <li><a href="#at-a-glance-equivalents-in-other-engines">At a glance: equivalents in other engines</a></li>
+                            <li><a href="#alternative-optimistic-locking">Alternative: optimistic locking</a></li>
+                            <li><a href="#quick-checklist-for-your-project">Quick checklist for your project</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -279,7 +286,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -298,7 +305,7 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</h2>
+            <h1>Handling the Double-Booking Problem in Databases</h1>
             <p>The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management. It occurs when multiple transactions simultaneously attempt to reserve or modify the same resource, leading to conflicts and inconsistencies. This can result in overbooked flights, double-sold tickets, or oversold inventory, causing significant problems for both businesses and customers.</p>
             <p>After reading the material, you should be able to answer the following questions:</p>
             <ol>
@@ -340,31 +347,33 @@ T4                                      Book seat (available seats = -1)</code><
             <p>Preventing double-booking is essential for systems where concurrent users compete for limited resources. By implementing proper locking strategies and transaction controls, you can ensure data integrity and provide a reliable user experience even under high concurrency.</p>
             <h4 id="use-the-right-lock-for-the-situation">Use the Right Lock for the Situation</h4>
             <p>Locks allow you to control how multiple transactions interact with the same data. Choosing the right lock type helps balance concurrency and safety: exclusive locks prevent other operations from interfering, while shared locks permit safe reads from multiple transactions.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Lock type</td>
-                    <td>What it does</td>
-                    <td>Works in</td>
-                    <td>Typical syntax</td>
-                    <td>How to verify</td>
-                </tr>
-                <tr>
-                    <td><strong>Exclusive / Write</strong></td>
-                    <td>One writer, no readers.</td>
-                    <td>PostgreSQL, MySQL (InnoDB), SQL Server, Oracle</td>
-                    <td><code>SELECT … FOR UPDATE;</code> (PG/MariaDB)<br /><code>SELECT … LOCK IN SHARE MODE;</code> (MySQL 8.0+)<br /><code>SELECT … WITH (UPDLOCK, HOLDLOCK);</code> (SQL Server)</td>
-                    <td>Open two sessions. In session A run the locking <code>SELECT</code>. In session B run the same statement—observe it block (PG/SQL Server) or return instantly with an error (MySQL w/ NOWAIT).</td>
-                </tr>
-                <tr>
-                    <td><strong>Shared / Read</strong></td>
-                    <td>Many readers, no writers.</td>
-                    <td>Same engines as above</td>
-                    <td><code>SELECT … FOR SHARE;</code> (PG)<br /><code>LOCK TABLE tbl IN SHARE MODE;</code> (MySQL)<br /><code>SELECT … WITH (HOLDLOCK);</code> (SQL Server)</td>
-                    <td>Keep session A busy with <code>SELECT … FOR SHARE</code>, attempt an <code>UPDATE</code> in session B—update waits until session A commits.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Lock type</th>
+                        <th>What it does</th>
+                        <th>Works in</th>
+                        <th>Typical syntax</th>
+                        <th>How to verify</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Exclusive / Write</strong></td>
+                        <td>One writer, no readers.</td>
+                        <td>PostgreSQL, MySQL (InnoDB), SQL Server, Oracle</td>
+                        <td><code>SELECT … FOR UPDATE;</code> (PG/MariaDB)<br /><code>SELECT … LOCK IN SHARE MODE;</code> (MySQL 8.0+)<br /><code>SELECT … WITH (UPDLOCK, HOLDLOCK);</code> (SQL Server)</td>
+                        <td>Open two sessions. In session A run the locking <code>SELECT</code>. In session B run the same statement—observe it block (PG/SQL Server) or return instantly with an error (MySQL w/ NOWAIT).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Shared / Read</strong></td>
+                        <td>Many readers, no writers.</td>
+                        <td>Same engines as above</td>
+                        <td><code>SELECT … FOR SHARE;</code> (PG)<br /><code>LOCK TABLE tbl IN SHARE MODE;</code> (MySQL)<br /><code>SELECT … WITH (HOLDLOCK);</code> (SQL Server)</td>
+                        <td>Keep session A busy with <code>SELECT … FOR SHARE</code>, attempt an <code>UPDATE</code> in session B—update waits until session A commits.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <blockquote>
                 <p><strong>Tip for PostgreSQL:</strong> Inspect current locks with</p>
                 <div>
@@ -375,31 +384,33 @@ T4                                      Book seat (available seats = -1)</code><
             </blockquote>
             <h4 id="pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</h4>
             <p>Isolation levels define how visible changes in one transaction are to others. Stricter levels prevent more anomalies but can reduce performance by increasing locking and blocking. Choose the level that meets your consistency needs without unnecessarily hindering throughput.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Level</td>
-                    <td>Guarantees</td>
-                    <td>Supported by</td>
-                    <td>Set with</td>
-                    <td>Quick test</td>
-                </tr>
-                <tr>
-                    <td><strong>SERIALIZABLE</strong></td>
-                    <td>No dirty, non-repeatable or phantom reads. Behaves as if transactions ran one-after-another.</td>
-                    <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0 (but uses extra locks → lower concurrency)</td>
-                    <td><code>SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;</code></td>
-                    <td>In two sessions insert into the same over-booked seat; one will roll back with <code>SQLSTATE 40001</code> (PG) or <code>ERROR 1213 (MySQL)</code>.</td>
-                </tr>
-                <tr>
-                    <td><strong>REPEATABLE READ</strong></td>
-                    <td>Same row value every time you read it; phantoms still possible (unless engine adds gap locks, e.g. MySQL). Default in MySQL.</td>
-                    <td>PostgreSQL, MySQL (InnoDB), MariaDB, SQL Server (<code>SNAPSHOT</code>)</td>
-                    <td><code>SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</code></td>
-                    <td>Read seat count twice in one Tx while another session inserts a new seat. In MySQL you won’t see new rows (gap locks); in PostgreSQL you will—so use explicit <code>SELECT … FOR KEY SHARE</code> to block.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Guarantees</th>
+                        <th>Supported by</th>
+                        <th>Set with</th>
+                        <th>Quick test</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SERIALIZABLE</strong></td>
+                        <td>No dirty, non-repeatable or phantom reads. Behaves as if transactions ran one-after-another.</td>
+                        <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0 (but uses extra locks → lower concurrency)</td>
+                        <td><code>SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;</code></td>
+                        <td>In two sessions insert into the same over-booked seat; one will roll back with <code>SQLSTATE 40001</code> (PG) or <code>ERROR 1213 (MySQL)</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>REPEATABLE READ</strong></td>
+                        <td>Same row value every time you read it; phantoms still possible (unless engine adds gap locks, e.g. MySQL). Default in MySQL.</td>
+                        <td>PostgreSQL, MySQL (InnoDB), MariaDB, SQL Server (<code>SNAPSHOT</code>)</td>
+                        <td><code>SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</code></td>
+                        <td>Read seat count twice in one Tx while another session inserts a new seat. In MySQL you won’t see new rows (gap locks); in PostgreSQL you will—so use explicit <code>SELECT … FOR KEY SHARE</code> to block.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><em>Verification script for MySQL</em></p>
             <div>
                 <pre><code class="language-sql">-- Session A
@@ -411,7 +422,7 @@ SELECT * FROM seats WHERE seat_id = 42 FOR UPDATE;
 START TRANSACTION;
 UPDATE seats SET user_id = 99 WHERE seat_id = 42;</code></pre>
             </div>
-            <h4 id="optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</h4>
+            <h4 id="optimistic-concurrency-control-occ">Optimistic Concurrency Control (OCC)</h4>
             <p>When conflicts are rare, OCC lets you avoid heavy locking by using a version or timestamp column to detect concurrent updates. If a conflict is detected at commit time, the transaction retries, yielding higher throughput under low contention.</p>
             <div>
                 <pre><code class="language-sql">-- Works in: PostgreSQL, SQL Server (rowversion/timestamp), MySQL (generated col), Oracle
@@ -452,34 +463,36 @@ COMMIT;</code></pre>
             </ul>
             <h4 id="enforce-invariants-with-constraints-indexes">Enforce Invariants with Constraints &amp; Indexes</h4>
             <p>Constraints and indexes enforce business rules at the database level, preventing invalid or conflicting data regardless of application logic. They serve as a final safety net against double-booking and other anomalies.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Technique</td>
-                    <td>Engines</td>
-                    <td>Sample SQL</td>
-                    <td>How to test</td>
-                </tr>
-                <tr>
-                    <td><strong>Unique constraint</strong> on <code>(seat_number, flight_id)</code></td>
-                    <td>All relational DBs; MongoDB via unique index</td>
-                    <td><code>ALTER TABLE bookings ADD CONSTRAINT u_flight_seat UNIQUE(seat_number, flight_id);</code></td>
-                    <td>Insert same seat twice ⇒ expect <code>ERROR: duplicate key value violates unique constraint</code>.</td>
-                </tr>
-                <tr>
-                    <td><strong>Check constraint</strong> to keep counters ≥ 0</td>
-                    <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0+</td>
-                    <td><code>ALTER TABLE flights ADD CONSTRAINT chk_available_seats CHECK (available_seats &gt;= 0);</code></td>
-                    <td>Try manual <code>UPDATE flights SET available_seats = -1</code> ⇒ fails.</td>
-                </tr>
-                <tr>
-                    <td><strong>Partial / filtered unique index</strong> to ignore cancelled tickets</td>
-                    <td>PostgreSQL, SQL Server</td>
-                    <td><code>CREATE UNIQUE INDEX u_active_seat ON bookings(seat,flight_id) WHERE status='CONFIRMED';</code></td>
-                    <td>Insert two rows with <code>status='CONFIRMED'</code> ⇒ second insert fails.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Technique</th>
+                        <th>Engines</th>
+                        <th>Sample SQL</th>
+                        <th>How to test</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Unique constraint</strong> on <code>(seat_number, flight_id)</code></td>
+                        <td>All relational DBs; MongoDB via unique index</td>
+                        <td><code>ALTER TABLE bookings ADD CONSTRAINT u_flight_seat UNIQUE(seat_number, flight_id);</code></td>
+                        <td>Insert same seat twice ⇒ expect <code>ERROR: duplicate key value violates unique constraint</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Check constraint</strong> to keep counters ≥ 0</td>
+                        <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0+</td>
+                        <td><code>ALTER TABLE flights ADD CONSTRAINT chk_available_seats CHECK (available_seats &gt;= 0);</code></td>
+                        <td>Try manual <code>UPDATE flights SET available_seats = -1</code> ⇒ fails.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Partial / filtered unique index</strong> to ignore cancelled tickets</td>
+                        <td>PostgreSQL, SQL Server</td>
+                        <td><code>CREATE UNIQUE INDEX u_active_seat ON bookings(seat,flight_id) WHERE status='CONFIRMED';</code></td>
+                        <td>Insert two rows with <code>status='CONFIRMED'</code> ⇒ second insert fails.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="consistent-lock-ordering-to-avoid-deadlocks">Consistent Lock Ordering to Avoid Deadlocks</h4>
             <p>Deadlocks occur when transactions lock resources in different orders. By enforcing a global lock acquisition order in all your transactions, you eliminate the circular dependencies that lead to deadlocks.</p>
             <ol>
@@ -490,108 +503,114 @@ COMMIT;</code></pre>
             <h3 id="monitor-tune-locking-in-production">Monitor &amp; Tune Locking in Production</h3>
             <p><em>Proactive, continuous monitoring is the cheapest insurance you can buy against “everything-is-stuck” incidents. The goal is to notice lock contention </em><em>while it is still a warning sign</em><em>—long before users start calling, background jobs fall behind, or an outage page lights up.</em></p>
             <h4 id="why-you-watch">Why you watch</h4>
-            <p>
             <table>
-                <tr>
-                    <td>What you’re looking for</td>
-                    <td>Why it matters</td>
-                    <td>Typical symptom in the app</td>
-                </tr>
-                <tr>
-                    <td><strong>Long-running transactions</strong></td>
-                    <td>They hold locks far beyond the “polite” window, slowing everyone else.</td>
-                    <td>Pages hang, batch jobs back up.</td>
-                </tr>
-                <tr>
-                    <td><strong>Lock-wait time &amp; blocked sessions</strong></td>
-                    <td>Indicates immediate pain and the exact sessions involved.</td>
-                    <td>Sudden latency spikes.</td>
-                </tr>
-                <tr>
-                    <td><strong>Deadlocks</strong></td>
-                    <td>Proof the workload has crossed a concurrency threshold where simple waiting will never resolve.</td>
-                    <td>Intermittent 400/500 errors, rolled-back work.</td>
-                </tr>
-                <tr>
-                    <td><strong>Changing hotspot objects</strong></td>
-                    <td>Which tables/rows/indexes get hotter over time?</td>
-                    <td>Emerging scalability bottlenecks.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>What you’re looking for</th>
+                        <th>Why it matters</th>
+                        <th>Typical symptom in the app</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Long-running transactions</strong></td>
+                        <td>They hold locks far beyond the “polite” window, slowing everyone else.</td>
+                        <td>Pages hang, batch jobs back up.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock-wait time &amp; blocked sessions</strong></td>
+                        <td>Indicates immediate pain and the exact sessions involved.</td>
+                        <td>Sudden latency spikes.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deadlocks</strong></td>
+                        <td>Proof the workload has crossed a concurrency threshold where simple waiting will never resolve.</td>
+                        <td>Intermittent 400/500 errors, rolled-back work.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Changing hotspot objects</strong></td>
+                        <td>Which tables/rows/indexes get hotter over time?</td>
+                        <td>Emerging scalability bottlenecks.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
-            <h4 id="instant-health-check-queries-engine-specifics-">Instant health-check queries (engine specifics)</h4>
-            <p>
+            <h4 id="instant-health-check-queries-engine-specifics">Instant health-check queries (engine specifics)</h4>
             <table>
-                <tr>
-                    <td>Engine</td>
-                    <td>Handy views / commands</td>
-                    <td>What to keep on the big screen</td>
-                    <td>Sample “grab-it-now” query</td>
-                </tr>
-                <tr>
-                    <td><strong>PostgreSQL</strong></td>
-                    <td><code>pg_stat_activity</code>, <code>pg_locks</code>, <code>pg_blocking_pids()</code></td>
-                    <td>• Active vs idle in txn<br />• <code>wait_event = lock</code> count<br />• Blocking tree</td>
-                    <td><code>SELECT pid, state, now() - xact_start AS age, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state = 'active' AND now() - xact_start &gt; interval '30s';</code></td>
-                </tr>
-                <tr>
-                    <td><strong>SQL Server</strong></td>
-                    <td><code>sys.dm_exec_sessions</code>, <code>sys.dm_exec_requests</code>, <code>sys.dm_tran_locks</code>, <code>sys.dm_os_waiting_tasks</code></td>
-                    <td>• <code>waiting_tasks_count</code> on <strong>LCK_</strong>* waits<br />• Top blockers from <code>sys.dm_exec_sessions</code></td>
-                    <td><code>SELECT TOP 10 blocking_session_id, wait_time_ms, wait_type, [text] FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(sql_handle) WHERE blocking_session_id &lt;&gt; 0 ORDER BY wait_time_ms DESC;</code></td>
-                </tr>
-                <tr>
-                    <td><strong>MySQL / InnoDB</strong></td>
-                    <td><code>SHOW ENGINE INNODB STATUS\G</code>, <code>information_schema.innodb_trx</code> / <code>innodb_locks</code> / <code>innodb_lock_waits</code>, Performance Schema</td>
-                    <td>• “LATEST DETECTED DEADLOCK” section<br />• <code>trx_wait_started</code> age</td>
-                    <td><code>SELECT waiting_trx_id, waiting_pid, blocking_pid, waiting_query FROM information_schema.innodb_lock_waits;</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Oracle</strong></td>
-                    <td><code>V$LOCK</code>, <code>V$SESSION</code>, <code>DBA_BLOCKERS</code>, <code>DBA_WAITERS</code>, <code>V$ASH</code></td>
-                    <td>• <code>BLOCKING_SESSION_STATUS = 'VALID'</code> count<br />• Session trees from <code>DBA_BLOCKERS</code></td>
-                    <td><code>SELECT s.sid, s.serial#, l.id1 AS resource1, l.id2 AS resource2, s.seconds_in_wait FROM v$session s JOIN v$lock l ON s.sid = l.sid WHERE l.block = 1;</code></td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Engine</th>
+                        <th>Handy views / commands</th>
+                        <th>What to keep on the big screen</th>
+                        <th>Sample “grab-it-now” query</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>PostgreSQL</strong></td>
+                        <td><code>pg_stat_activity</code>, <code>pg_locks</code>, <code>pg_blocking_pids()</code></td>
+                        <td>• Active vs idle in txn<br />• <code>wait_event = lock</code> count<br />• Blocking tree</td>
+                        <td><code>SELECT pid, state, now() - xact_start AS age, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state = 'active' AND now() - xact_start &gt; interval '30s';</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Server</strong></td>
+                        <td><code>sys.dm_exec_sessions</code>, <code>sys.dm_exec_requests</code>, <code>sys.dm_tran_locks</code>, <code>sys.dm_os_waiting_tasks</code></td>
+                        <td>• <code>waiting_tasks_count</code> on <strong>LCK_</strong>* waits<br />• Top blockers from <code>sys.dm_exec_sessions</code></td>
+                        <td><code>SELECT TOP 10 blocking_session_id, wait_time_ms, wait_type, [text] FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(sql_handle) WHERE blocking_session_id &lt;&gt; 0 ORDER BY wait_time_ms DESC;</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>MySQL / InnoDB</strong></td>
+                        <td><code>SHOW ENGINE INNODB STATUS\G</code>, <code>information_schema.innodb_trx</code> / <code>innodb_locks</code> / <code>innodb_lock_waits</code>, Performance Schema</td>
+                        <td>• “LATEST DETECTED DEADLOCK” section<br />• <code>trx_wait_started</code> age</td>
+                        <td><code>SELECT waiting_trx_id, waiting_pid, blocking_pid, waiting_query FROM information_schema.innodb_lock_waits;</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Oracle</strong></td>
+                        <td><code>V$LOCK</code>, <code>V$SESSION</code>, <code>DBA_BLOCKERS</code>, <code>DBA_WAITERS</code>, <code>V$ASH</code></td>
+                        <td>• <code>BLOCKING_SESSION_STATUS = 'VALID'</code> count<br />• Session trees from <code>DBA_BLOCKERS</code></td>
+                        <td><code>SELECT s.sid, s.serial#, l.id1 AS resource1, l.id2 AS resource2, s.seconds_in_wait FROM v$session s JOIN v$lock l ON s.sid = l.sid WHERE l.block = 1;</code></td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <blockquote>
                 <p><strong>Tip</strong> Save each snippet in a “first-aid” script kit (one per engine) so on-call staff can paste-and-go.</p>
             </blockquote>
-            <h4 id="alert-thresholds-that-catch-trouble-early-tune-for-your-sla-">Alert thresholds that catch trouble early (<em>tune for your SLA</em>)</h4>
-            <p>
+            <h4 id="alert-thresholds-that-catch-trouble-early-tune-for-your-sla">Alert thresholds that catch trouble early (<em>tune for your SLA</em>)</h4>
             <table>
-                <tr>
-                    <td>Symptom</td>
-                    <td>OLTP starting point</td>
-                    <td>Analytic/ETL starting point</td>
-                    <td>How to alert</td>
-                </tr>
-                <tr>
-                    <td><strong>Transaction age</strong></td>
-                    <td>30 s</td>
-                    <td>5 min</td>
-                    <td>gauge, page on P95&gt;threshold for 10 min</td>
-                </tr>
-                <tr>
-                    <td><strong>Lock wait</strong></td>
-                    <td>2 s</td>
-                    <td>30 s</td>
-                    <td>histogram + alert on &gt;N waits &gt; threshold / min</td>
-                </tr>
-                <tr>
-                    <td><strong>Deadlocks</strong></td>
-                    <td>1/min</td>
-                    <td>5/min</td>
-                    <td>count(*) from deadlock view over 5 min window</td>
-                </tr>
-                <tr>
-                    <td><strong>% time spent waiting on locks</strong></td>
-                    <td>5 %</td>
-                    <td>15 %</td>
-                    <td>ratio of lock-wait time to total session time</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Symptom</th>
+                        <th>OLTP starting point</th>
+                        <th>Analytic/ETL starting point</th>
+                        <th>How to alert</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Transaction age</strong></td>
+                        <td>30 s</td>
+                        <td>5 min</td>
+                        <td>gauge, page on P95&gt;threshold for 10 min</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock wait</strong></td>
+                        <td>2 s</td>
+                        <td>30 s</td>
+                        <td>histogram + alert on &gt;N waits &gt; threshold / min</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deadlocks</strong></td>
+                        <td>1/min</td>
+                        <td>5/min</td>
+                        <td>count(*) from deadlock view over 5 min window</td>
+                    </tr>
+                    <tr>
+                        <td><strong>% time spent waiting on locks</strong></td>
+                        <td>5 %</td>
+                        <td>15 %</td>
+                        <td>ratio of lock-wait time to total session time</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>A good rule of thumb: <strong>alert on a trend, not a single incident</strong>—except for deadlocks, which deserve immediate attention because they roll back user work.</p>
             <h4 id="when-an-alert-fires-triage-playbook">When an alert fires—triage playbook</h4>
             <p>I. <strong>Grab blocker details</strong> (queries above) and write them to an incident doc.</p>
@@ -615,30 +634,32 @@ COMMIT;</code></pre>
                 <li>Consider optimistic isolation (PostgreSQL <code>READ COMMITTED</code> + <code>statement_timeout</code>, SQL Server <code>READ_COMMITTED_SNAPSHOT</code>, Oracle <code>FOR UPDATE SKIP LOCKED</code>).</li>
             </ul>
             <h4 id="automating-the-watch">Automating the watch</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Layer</td>
-                    <td>Tooling ideas</td>
-                    <td>Notes &amp; nice-to-haves</td>
-                </tr>
-                <tr>
-                    <td><strong>DB native</strong></td>
-                    <td>PostgreSQL <code>pg_stat_statements</code>, <code>pgwatch2</code>; SQL Server Agent alerts + Query Store; MySQL Performance Schema; Oracle Enterprise Manager</td>
-                    <td>Fire alerts directly from the database when possible—latency-free and resilient to network loss.</td>
-                </tr>
-                <tr>
-                    <td><strong>Metrics/time-series</strong></td>
-                    <td>Prometheus + Grafana, Datadog DBM, New Relic, AWS CloudWatch RDS metrics</td>
-                    <td>Export <code>lock_wait_time</code>, <code>deadlocks_total</code>, <code>xact_age_seconds</code> as counters/gauges. Grafana’s state-timeline panel is perfect for showing blockers over time.</td>
-                </tr>
-                <tr>
-                    <td><strong>Notification</strong></td>
-                    <td>PagerDuty, Opsgenie, Slack/Teams webhook</td>
-                    <td>Include the SQL text &amp; locks held so the first responder can act without shell access.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Tooling ideas</th>
+                        <th>Notes &amp; nice-to-haves</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>DB native</strong></td>
+                        <td>PostgreSQL <code>pg_stat_statements</code>, <code>pgwatch2</code>; SQL Server Agent alerts + Query Store; MySQL Performance Schema; Oracle Enterprise Manager</td>
+                        <td>Fire alerts directly from the database when possible—latency-free and resilient to network loss.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Metrics/time-series</strong></td>
+                        <td>Prometheus + Grafana, Datadog DBM, New Relic, AWS CloudWatch RDS metrics</td>
+                        <td>Export <code>lock_wait_time</code>, <code>deadlocks_total</code>, <code>xact_age_seconds</code> as counters/gauges. Grafana’s state-timeline panel is perfect for showing blockers over time.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Notification</strong></td>
+                        <td>PagerDuty, Opsgenie, Slack/Teams webhook</td>
+                        <td>Include the SQL text &amp; locks held so the first responder can act without shell access.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="continuous-improvement-loop">Continuous improvement loop</h4>
             <ol>
                 <li><strong>Review weekly</strong> the “top ten longest blockers” list.</li>
@@ -652,35 +673,37 @@ COMMIT;</code></pre>
             <h3 id="real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</h3>
             <p>Below is a self-contained, “copy-paste-ready” walk-through you can run on your laptop to <strong>see the double-booking bug happen, then fix it, and finally prove the fix works</strong>.</p>
             <h4 id="stack-prerequisites">Stack &amp; prerequisites</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Layer</td>
-                    <td>Why we pick it</td>
-                    <td>Other options</td>
-                </tr>
-                <tr>
-                    <td><strong>PostgreSQL ≥ 10</strong></td>
-                    <td>Mature row-level locks (<code>SELECT … FOR UPDATE</code>) and full ACID isolation levels.</td>
-                    <td>MySQL (InnoDB), SQL Server (<code>WITH (UPDLOCK)</code>), Oracle (<code>SELECT … FOR UPDATE</code>), MariaDB, CockroachDB, YugabyteDB</td>
-                </tr>
-                <tr>
-                    <td><strong>Python 3.9+</strong></td>
-                    <td>Quick to script concurrent threads; <code>psycopg2-binary</code> client is ubiquitous.</td>
-                    <td>Node.js + pg, Java + JDBC, Go + pgx</td>
-                </tr>
-                <tr>
-                    <td><strong>psycopg2-binary</strong></td>
-                    <td>PostgreSQL driver.</td>
-                    <td>pg-8000, asyncpg</td>
-                </tr>
-                <tr>
-                    <td><strong>Threading</strong> (not asyncio)</td>
-                    <td>Easiest to show true race with two parallel transactions in separate connections.</td>
-                    <td>multiprocessing, separate psql shells</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Why we pick it</th>
+                        <th>Other options</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>PostgreSQL ≥ 10</strong></td>
+                        <td>Mature row-level locks (<code>SELECT … FOR UPDATE</code>) and full ACID isolation levels.</td>
+                        <td>MySQL (InnoDB), SQL Server (<code>WITH (UPDLOCK)</code>), Oracle (<code>SELECT … FOR UPDATE</code>), MariaDB, CockroachDB, YugabyteDB</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Python 3.9+</strong></td>
+                        <td>Quick to script concurrent threads; <code>psycopg2-binary</code> client is ubiquitous.</td>
+                        <td>Node.js + pg, Java + JDBC, Go + pgx</td>
+                    </tr>
+                    <tr>
+                        <td><strong>psycopg2-binary</strong></td>
+                        <td>PostgreSQL driver.</td>
+                        <td>pg-8000, asyncpg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Threading</strong> (not asyncio)</td>
+                        <td>Easiest to show true race with two parallel transactions in separate connections.</td>
+                        <td>multiprocessing, separate psql shells</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <blockquote>
                 <p><strong>Install once</strong></p>
                 <div>
@@ -761,7 +784,7 @@ User2: bought the ticket!
 After race, tickets_left = -1        &lt;-- Over-sale!</code></pre>
             </div>
             <p>Both threads decremented the same row because they <strong>read before each other updated</strong>, demonstrating a real-world overbooking.</p>
-            <h4 id="prevent-it-pessimistic-locking-">Prevent it (pessimistic locking)</h4>
+            <h4 id="prevent-it-pessimistic-locking">Prevent it (pessimistic locking)</h4>
             <p>Patch the critical section with <code>SELECT … FOR UPDATE</code>:</p>
             <div>
                 <pre><code class="language-python"># ---------- only the changed part ----------
@@ -792,45 +815,47 @@ After race, tickets_left = 0         &lt;-- Correct</code></pre>
                 <li>Once User 2 enters, the row value is <strong>already updated</strong>, so it sees <code>0</code> and aborts its purchase path.</li>
             </ul>
             <h4 id="at-a-glance-equivalents-in-other-engines">At a glance: equivalents in other engines</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Engine</td>
-                    <td>Pessimistic lock syntax</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td>PostgreSQL</td>
-                    <td><code>SELECT … FOR UPDATE</code></td>
-                    <td>Recommended. Use <code>FOR NO KEY UPDATE</code> if only updating non-key cols.</td>
-                </tr>
-                <tr>
-                    <td>MySQL (InnoDB)</td>
-                    <td><code>SELECT … FOR UPDATE</code></td>
-                    <td>Works only in a transaction; default isolation <code>REPEATABLE READ</code>.</td>
-                </tr>
-                <tr>
-                    <td>SQL Server</td>
-                    <td><code>SELECT … WITH (UPDLOCK, ROWLOCK)</code></td>
-                    <td>Or table hint in <code>UPDATE …</code>.</td>
-                </tr>
-                <tr>
-                    <td>Oracle</td>
-                    <td><code>SELECT … FOR UPDATE</code></td>
-                    <td>Same behavior as Postgres.</td>
-                </tr>
-                <tr>
-                    <td>MongoDB</td>
-                    <td>Use a <strong>transaction</strong> plus an <code>$inc</code> with <code>$cond</code> or <code>findAndModify</code></td>
-                    <td>Replica sets/sharded clusters only.</td>
-                </tr>
-                <tr>
-                    <td>Redis</td>
-                    <td><code>EVAL</code> Lua script implementing <code>GET tickets; DECR ticket</code> atomically</td>
-                    <td>Single-threaded nature keeps atomicity.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Engine</th>
+                        <th>Pessimistic lock syntax</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td><code>SELECT … FOR UPDATE</code></td>
+                        <td>Recommended. Use <code>FOR NO KEY UPDATE</code> if only updating non-key cols.</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL (InnoDB)</td>
+                        <td><code>SELECT … FOR UPDATE</code></td>
+                        <td>Works only in a transaction; default isolation <code>REPEATABLE READ</code>.</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server</td>
+                        <td><code>SELECT … WITH (UPDLOCK, ROWLOCK)</code></td>
+                        <td>Or table hint in <code>UPDATE …</code>.</td>
+                    </tr>
+                    <tr>
+                        <td>Oracle</td>
+                        <td><code>SELECT … FOR UPDATE</code></td>
+                        <td>Same behavior as Postgres.</td>
+                    </tr>
+                    <tr>
+                        <td>MongoDB</td>
+                        <td>Use a <strong>transaction</strong> plus an <code>$inc</code> with <code>$cond</code> or <code>findAndModify</code></td>
+                        <td>Replica sets/sharded clusters only.</td>
+                    </tr>
+                    <tr>
+                        <td>Redis</td>
+                        <td><code>EVAL</code> Lua script implementing <code>GET tickets; DECR ticket</code> atomically</td>
+                        <td>Single-threaded nature keeps atomicity.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="alternative-optimistic-locking">Alternative: optimistic locking</h4>
             <p>If you dislike blocking, add a <strong>version column</strong>:</p>
             <div>
@@ -887,23 +912,33 @@ After race, tickets_left = 0         &lt;-- Correct</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -920,21 +955,5 @@ After race, tickets_left = 0         &lt;-- Correct</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

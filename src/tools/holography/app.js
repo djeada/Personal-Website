@@ -1,4 +1,3 @@
-/* Digital holography and phase retrieval: page glue (model: ../shared/optics/holography.js). */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -17,7 +16,7 @@
         if (el) el.textContent = t;
     };
 
-    // ------------------------------------------------------------------ state (UI units)
+
     const DEFAULTS = Object.freeze({
         obj: "letters",
         phi: 1.5,
@@ -232,13 +231,13 @@
         };
     }
 
-    // ------------------------------------------------------------------ compute
+
     let res = null,
         prep = null,
         lastMs = 0;
     let gs = null,
         gsKey = "";
-    let cutRow = -1; // row index of the line cut (−1 → centre)
+    let cutRow = -1;
     let pending = 0;
 
     function schedule() {
@@ -273,7 +272,7 @@
         setText("computeStatus", "Computed in " + Math.round(lastMs) + " ms on a " + p.N + " × " + p.N + " sensor.");
     }
 
-    // ------------------------------------------------------------------ Gerchberg–Saxton loop
+
     function resetGS(p) {
         const was = loop.running;
         loop.stop();
@@ -345,7 +344,7 @@
         gsChanged();
     });
 
-    // ------------------------------------------------------------------ drawing helpers
+
     const cv = {},
         maps = {};
     let descs = {};
@@ -363,7 +362,7 @@
         for (const k in cv) cv[k].redraw();
     }
 
-    /** Square image with axes and a vertical colour bar. Returns the plot mapping. */
+
     function drawMap(ctx, w, h, o) {
         const l = FS * 4.2,
             rr = 74,
@@ -471,27 +470,25 @@
     }
 
     function mapOpts(mode, amax) {
-        return mode === "phase" ?
-            {
-                cmap: "twilight",
-                norm: {
-                    min: -Math.PI,
-                    max: Math.PI
-                },
-                cb: {
-                    ticks: [-Math.PI, 0, Math.PI],
-                    format: (v) => (v === 0 ? "0" : (v > 0 ? "π" : "−π"))
-                },
-                cbLabel: "arg u (rad)"
-            } :
-            {
-                cmap: "viridis",
-                norm: {
-                    min: 0,
-                    max: amax
-                },
-                cbLabel: "|u| (illum.)"
-            };
+        return mode === "phase" ? {
+            cmap: "twilight",
+            norm: {
+                min: -Math.PI,
+                max: Math.PI
+            },
+            cb: {
+                ticks: [-Math.PI, 0, Math.PI],
+                format: (v) => (v === 0 ? "0" : (v > 0 ? "π" : "−π"))
+            },
+            cbLabel: "arg u (rad)"
+        } : {
+            cmap: "viridis",
+            norm: {
+                min: 0,
+                max: amax
+            },
+            cbLabel: "|u| (illum.)"
+        };
     }
 
     function cutOverlay(ctx, map) {
@@ -507,7 +504,7 @@
         ctx.setLineDash([]);
     }
 
-    /** Reconstruction shown in panel 4 (object plane at z_r) and the truth at the same plane. */
+
     function currentRecon() {
         if (!res) return null;
         if (res.params.method === "gs") {
@@ -528,7 +525,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ panels
+
     function drawObject(ctx, w, h) {
         if (!res) return;
         const g = res.grid,
@@ -844,7 +841,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ text, readouts, table
+
     const readoutEl = $("readouts");
 
     function updateStatsRho() {
@@ -973,7 +970,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ init
+
     compute();
     setup("objCanvas", "obj", 1.08, drawObject);
     setup("holoCanvas", "holo", 1.08, drawHolo);
@@ -1008,7 +1005,7 @@
     if (res) updateText(ctl.get(), toParams(ctl.get()));
     updateGSText();
 
-    // cut row: click or arrow keys on either map
+
     for (const key of ["obj", "rec"]) {
         const el = cv[key].canvas;
         el.addEventListener("click", (e) => {
@@ -1034,7 +1031,7 @@
             cv.cut.redraw();
         });
     }
-    // reference angle from the sweep plot
+
     const sweepEl = cv.sweep.canvas;
     const setTheta = (deg) => {
         const th = $("thSlider");
@@ -1066,7 +1063,7 @@
         document.querySelectorAll("[data-preset]").forEach((b) => b.classList.toggle("active", b.dataset.preset === name));
         setText("presetNote", pr.note);
         if (pr.v.meth === "gs") {
-            // recompute now so the GS state matches, then run unless reduced motion is requested
+
             if (pending) {
                 cancelAnimationFrame(pending);
                 pending = 0;

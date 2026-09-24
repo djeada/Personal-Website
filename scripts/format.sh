@@ -42,6 +42,12 @@ file_types=( "html" "css" "js" )
 # Format python files with black
 black "$SCRIPT_DIR"
 
+# js-beautify can mangle nested template literals, so keep a copy of every JS
+# file and put back any file whose syntax it breaks.
+JS_BACKUP="$(mktemp -d)"
+trap 'rm -rf "$JS_BACKUP"' EXIT
+(cd "$ROOT_DIR/src" && find . -name "*.js" -print0 | cpio -0pdm --quiet "$JS_BACKUP")
+
 for file_type in "${file_types[@]}"; do
     files=()
     while IFS= read -r -d '' file_path; do
@@ -50,9 +56,11 @@ for file_type in "${file_types[@]}"; do
             "${JS_BEAUTIFY[@]}" --type "$file_type" -r "${files[@]}"
             files=()
         fi
-    done < <(find "$ROOT_DIR/src" -name "*.$file_type" -print0)
+    done < <(find "$ROOT_DIR/src" -name "*.$file_type" ! -path "$ROOT_DIR/src/resources/style.css" -print0)
 
     if [ ${#files[@]} -gt 0 ]; then
         "${JS_BEAUTIFY[@]}" --type "$file_type" -r "${files[@]}"
     fi
 done
+
+python3 "$SCRIPT_DIR/restore_broken_js.py" "$JS_BACKUP" "$ROOT_DIR/src"

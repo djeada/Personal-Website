@@ -1,14 +1,3 @@
-/*
- * Shared browser UI helpers for the optics tools (no framework, no dependencies).
- *
- * Browser: <script src="../shared/optics/ui.js"></script> → window.OpticsUI
- * Node:    require(".../ui.js") works for the pure helpers (niceTicks, colormaps, wavelengthToRGB,
- *          encodeState/decodeState, csvString); DOM helpers throw only when called without a DOM.
- *
- * Canvas drawing convention: every draw callback receives a context whose transform is already
- * scaled by devicePixelRatio, so coordinates, line widths and font sizes are CSS pixels.
- * Canvases in the optics theme are ALWAYS dark (both site themes); draw with palette().canvas.
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -20,22 +9,22 @@
     const FONT_FAMILY = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
     const MONO_FAMILY = "ui-monospace, SFMono-Regular, Consolas, monospace";
 
-    // =================================================================== palette / theme
-    /** Fixed palette for the dark canvas surfaces (identical in light and dark site themes). */
+
+
     const CANVAS_PALETTE = Object.freeze({
         background: "#07070d",
         panel: "#0d0d18",
         grid: "rgba(184, 178, 207, 0.13)",
         gridStrong: "rgba(184, 178, 207, 0.28)",
         axis: "#8f89a8",
-        text: "#ece9f8", // ≥ 15:1 on background
-        textMuted: "#b8b2cf", // ≈ 10:1 on background
+        text: "#ece9f8",
+        textMuted: "#b8b2cf",
         cursor: "#ffffff",
         marker: "#f8d477",
         warning: "#ffb86b",
         font: FONT_FAMILY,
         mono: MONO_FAMILY,
-        // categorical series colours, distinguishable on the dark surface; pair with dashes
+
         series: ["#69f5e7", "#f8d477", "#f187c8", "#a78bfa", "#7ee787", "#ff9f6b", "#8ab4ff"],
         dashes: [
             [],
@@ -80,16 +69,12 @@
 
     function readToken(name) {
         if (!hasDOM) return "";
-        // tool pages put their tokens on <body>; site-wide tokens live on :root
+
         const fromBody = document.body ? getComputedStyle(document.body).getPropertyValue(name).trim() : "";
         return fromBody || getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
 
-    /**
-     * Current theme colours for DOM-adjacent drawing plus the fixed canvas palette.
-     * { isDark, text, textSecondary, textMuted, surface, surfaceElevated, border, primary, accent,
-     *   spectrum: {cyan, violet, rose, gold}, canvas: CANVAS_PALETTE }
-     */
+
     function palette() {
         const dark = isDarkTheme();
         const fb = dark ? DARK_FALLBACK : LIGHT_FALLBACK;
@@ -114,7 +99,7 @@
         };
     }
 
-    /** Call cb(palette()) whenever the site theme changes (body/html class or data-theme, OS scheme). Returns unsubscribe. */
+
     function onThemeChange(cb) {
         if (!hasDOM) return () => {};
         let last = isDarkTheme(),
@@ -150,14 +135,8 @@
         return hasDOM && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
 
-    // =================================================================== canvas sizing
-    /**
-     * Size a canvas to its CSS width with a devicePixelRatio backing store and redraw on resize.
-     * opts: { aspect = 16/9 (width/height), height (fixed CSS px, overrides aspect), minHeight = 180,
-     *         maxHeight = 560, draw(ctx, w, h, info) }
-     * Returns { canvas, ctx, width, height, dpr, redraw(), resize(), destroy() }.
-     * The canvas width comes from CSS (e.g. width: 100%); height is set inline from the aspect.
-     */
+
+
     function setupCanvas(canvas, opts = {}) {
         const {
             aspect = 16 / 9, minHeight = 180, maxHeight = 560
@@ -246,13 +225,8 @@
         return handle;
     }
 
-    // =================================================================== animation loop
-    /**
-     * One cancellable requestAnimationFrame loop. step(dt, elapsed, now) with dt in seconds,
-     * clamped to maxDt (default 0.1 s) so a background tab cannot produce a huge jump.
-     * The loop pauses while document.hidden and resumes when visible (if it was running).
-     * opts: { maxDt = 0.1, onChange(running) }
-     */
+
+
     function createLoop(step, opts = {}) {
         const maxDt = opts.maxDt || 0.1;
         let wanted = false,
@@ -308,7 +282,7 @@
                 return wanted;
             },
             isRunning: () => wanted,
-            /** advance manually by dt seconds (single-step button); works while stopped */
+
             stepOnce(dt = 1 / 60) {
                 elapsed += dt;
                 step(dt, elapsed, hasDOM ? performance.now() : 0);
@@ -327,8 +301,8 @@
         return loop;
     }
 
-    // =================================================================== ticks & formatting
-    /** 1-2-5 step giving about n intervals over range. */
+
+
     function niceStep(range, n = 5) {
         if (!(range > 0) || !Number.isFinite(range)) return 1;
         const raw = range / Math.max(1, n);
@@ -337,7 +311,7 @@
         return (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10) * mag;
     }
 
-    /** Tick values (multiples of a 1-2-5 step) inside [min, max]. Returned array has a .step property. */
+
     function niceTicks(min, max, n = 5) {
         if (min > max)[min, max] = [max, min];
         if (!(Number.isFinite(min) && Number.isFinite(max))) return Object.assign([], {
@@ -358,7 +332,7 @@
         });
     }
 
-    /** Decade ticks for a log axis (adds 2 and 5 when the span is under three decades). */
+
     function logTicks(min, max) {
         const out = [];
         if (!(min > 0 && max > min)) return out;
@@ -373,7 +347,7 @@
         return out;
     }
 
-    /** Tick label with just enough decimals for the step; exponent form for extreme magnitudes. */
+
     function formatTick(v, step) {
         if (v === 0) return "0";
         const av = Math.abs(v);
@@ -381,12 +355,12 @@
             const s = v.toExponential(2).replace(/\.?0+e/, "e").replace("e+", "e");
             return s.replace("-", "−");
         }
-        if (!(step > 0)) return String(Number(v.toPrecision(3))).replace("-", "−"); // log axes / free ticks
+        if (!(step > 0)) return String(Number(v.toPrecision(3))).replace("-", "−");
         const dec = Math.max(0, Math.min(6, -Math.floor(Math.log10(step) + 1e-9)));
         return v.toFixed(dec).replace("-", "−");
     }
 
-    // =================================================================== plot
+
     function seriesPoints(s) {
         if (s.data) return {
             n: s.data.length,
@@ -400,7 +374,7 @@
         };
     }
 
-    /** Data range of series along "x" or "y" (finite values only; log axes skip ≤ 0). */
+
     function dataRange(series, which, log) {
         let lo = Infinity,
             hi = -Infinity;
@@ -420,19 +394,7 @@
         return (a.label || "") + (a.unit ? " (" + a.unit + ")" : "");
     }
 
-    /**
-     * Draw a line plot in rect {x, y, w, h} (CSS px, whole panel incl. margins).
-     * opts: {
-     *   x: {min, max, label, unit, log, ticks, format(v), grid = true},
-     *   y: {..., same; min/max omitted → auto from data with 5 % padding},
-     *   series: [{xs, ys} | {data: [[x, y], …]}, color, dash: [..], width = 2, label, fill, points}],
-     *   cursor: {x, label, color}, markers: [{x, label, color, dash}], hlines: [{y, label, color}],
-     *   legend = true (or "outside" to skip), title, theme (default palette().canvas), fontSize = 12,
-     *   margin: {l, r, t, b} overrides, background: true
-     * }
-     * NaN / non-finite y breaks the line. Returns a mapping
-     * { plot: {x, y, w, h}, xToPx, yToPx, pxToX, pxToY, toPx(x, y), fromPx(px, py), contains(px, py), x: {min,max,log}, y: {...} }.
-     */
+
     function plot(ctx, rect, opts) {
         const th = opts.theme || CANVAS_PALETTE;
         const fs = Math.max(11, opts.fontSize || 12);
@@ -516,7 +478,7 @@
             ctx.fillStyle = th.panel || th.background;
             ctx.fillRect(P.x, P.y, P.w, P.h);
         }
-        // ticks + grid
+
         const xt = ax.ticks || (ax.log ? logTicks(ax.min, ax.max) : niceTicks(ax.min, ax.max, Math.max(2, Math.round(P.w / (fs * 7)))));
         const yt = ay.ticks || (ay.log ? logTicks(ay.min, ay.max) : niceTicks(ay.min, ay.max, Math.max(2, Math.round(P.h / (fs * 3.5)))));
         const fmtX = ax.format || ((v) => formatTick(v, xt.step));
@@ -562,10 +524,10 @@
             ctx.fillStyle = th.textMuted;
             ctx.fillText(fmtY(v), P.x - 6, py);
         }
-        // frame
+
         ctx.strokeStyle = th.axis;
         ctx.strokeRect(P.x + 0.5, P.y + 0.5, P.w - 1, P.h - 1);
-        // axis labels
+
         ctx.fillStyle = th.text;
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
@@ -585,7 +547,7 @@
             ctx.fillText(opts.title, P.x, rect.y + fs * 0.35);
             ctx.font = fs + "px " + (th.font || FONT_FAMILY);
         }
-        // data
+
         ctx.save();
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
@@ -636,7 +598,7 @@
                 ctx.fillStyle = s.fill === true ? color : s.fill;
                 ctx.fill();
                 ctx.restore();
-                // re-stroke without the closing segments
+
                 ctx.beginPath();
                 pen = false;
                 for (let i = 0; i < p.n; i++) {
@@ -666,8 +628,8 @@
             }
         });
         ctx.setLineDash([]);
-        ctx.restore(); // clip
-        // markers (vertical reference lines with labels)
+        ctx.restore();
+
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         let labelRow = 0;
@@ -689,7 +651,7 @@
                 ctx.fillText(mk.label, lx, P.y + 4 + (labelRow++ % 3) * (fs + 3));
             }
         }
-        // cursor
+
         if (opts.cursor && Number.isFinite(opts.cursor.x)) {
             const px = xToPx(opts.cursor.x);
             if (px >= P.x && px <= P.x + P.w) {
@@ -712,7 +674,7 @@
                 }
             }
         }
-        // legend (line sample shows the dash pattern: non-colour cue)
+
         const labelled = series.map((s, i) => ({
             s,
             i
@@ -751,7 +713,7 @@
         return map;
     }
 
-    /** Linear interpolation of a series (xs ascending) at x; NaN outside. Handy for cursor readouts. */
+
     function interpAt(xs, ys, x) {
         const n = xs.length;
         if (!n || x < xs[0] || x > xs[n - 1]) return NaN;
@@ -766,16 +728,16 @@
         return ys[lo] + t * (ys[hi] - ys[lo]);
     }
 
-    // =================================================================== colormaps
+
     const CMAP_STOPS = {
-        // matplotlib viridis / inferno sampled at deciles (perceptually uniform, sequential)
+
         viridis: ["#440154", "#482475", "#414487", "#355f8d", "#2a788e", "#21918c", "#22a884", "#44bf70", "#7ad151", "#bddf26", "#fde725"],
         inferno: ["#000004", "#160b39", "#420a68", "#6a176e", "#932667", "#bc3754", "#dd513a", "#f37819", "#fca50a", "#f6d746", "#fcffa4"],
-        // diverging blue–white–red (ColorBrewer RdBu reversed): signed fields, zero = white
+
         diverging: ["#053061", "#2166ac", "#4393c3", "#92c5de", "#d1e5f0", "#f7f7f7", "#fddbc7", "#f4a582", "#d6604d", "#b2182b", "#67001f"],
-        // twilight-like cyclic map (ends match): phase in (−π, π]
+
         twilight: ["#e2d9e2", "#a8bfd3", "#6d8fc5", "#5a5fb3", "#4a2f84", "#2f1436", "#5c1f4d", "#8f3a4d", "#b8684e", "#d2a384", "#e2d9e2"],
-        // classic HSV hue wheel (cyclic)
+
         hsv: ["#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff", "#ff0000"],
         gray: ["#000000", "#ffffff"]
     };
@@ -795,11 +757,7 @@
     const hexToRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
     const cmapCache = {};
 
-    /**
-     * Colormap object: { name, kind: "sequential"|"diverging"|"cyclic", lut: Uint8ClampedArray(256·3),
-     * rgb(t) → [r, g, b] (t ∈ [0, 1], clamped; cyclic maps wrap), css(t) → "rgb(...)" }.
-     * Names: viridis, inferno, gray (sequential); diverging | bwr; twilight | phase, hsv (cyclic).
-     */
+
     function colormap(name = "viridis") {
         if (typeof name === "object" && name.lut) return name;
         if (cmapCache[name]) return cmapCache[name];
@@ -838,11 +796,7 @@
     }
     const colormapNames = Object.keys(CMAP_STOPS);
 
-    /**
-     * Normaliser value → t ∈ [0, 1] shared by images and colourbars.
-     * opts: {min, max, log, floor}. Log: t = log10(v/min)/log10(max/min), values ≤ floor (default
-     * max·1e-4 when min is not given) clamp to 0. Returns {t(v), min, max, log}.
-     */
+
     function makeNorm(opts, dataMin, dataMax) {
         const log = !!opts.log;
         let max = opts.max != null ? opts.max : dataMax;
@@ -868,12 +822,7 @@
         };
     }
 
-    /**
-     * Draw a scalar grid as an image. data is row-major (index iy·nx + ix). By default iy = 0 is
-     * the BOTTOM row (physics y-up); pass origin: "upper" for image convention. NaN → transparent
-     * (use it to mask undefined phase). opts: {min, max, log, floor, origin, smooth = false,
-     * alpha(ix, iy, v) optional per-pixel alpha 0..1 }. Returns the norm {min, max, log} used.
-     */
+
     function imageFromArray(ctx, data, nx, ny, rect, cmap = "viridis", opts = {}) {
         const cm = colormap(cmap);
         let dmin = Infinity,
@@ -924,11 +873,7 @@
         };
     }
 
-    /**
-     * Colour bar with ticks. opts: {min, max, log, label, unit, orientation = "vertical", theme,
-     * fontSize = 11, ticks, format}. For cyclic phase maps pass ticks like [-Math.PI, 0, Math.PI]
-     * with a format function.
-     */
+
     function drawColorbar(ctx, rect, cmap, opts = {}) {
         const cm = colormap(cmap),
             th = opts.theme || CANVAS_PALETTE;
@@ -996,11 +941,7 @@
         }
     }
 
-    /**
-     * Approximate sRGB colour of monochromatic light (Bruton's piecewise model with edge fall-off).
-     * Returns [r, g, b] in 0..255; outside 380–780 nm returns black. This is a display aid, not
-     * colorimetry.
-     */
+
     function wavelengthToRGB(nm, gamma = 0.8) {
         let r = 0,
             g = 0,
@@ -1036,7 +977,7 @@
         return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
     }
 
-    // =================================================================== controls
+
     function labelFor(input) {
         if (input.getAttribute("aria-label")) return input.getAttribute("aria-label");
         if (input.id) {
@@ -1053,18 +994,11 @@
 
     const nativeValue = hasDOM ? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value") : null;
 
-    /**
-     * Pair a range slider with a keyboard-editable <input type="number" class="optics-num-input">.
-     * opts: { format(sliderValue) → displayed number, parse(displayed) → slider value (defaults:
-     * identity), label, unit (visible suffix), container (where to insert; default right after
-     * the slider) }. Typing a value + Enter/blur clamps to [min, max], snaps to step, and
-     * dispatches "input" and "change" on the slider so existing listeners run. Programmatic
-     * `slider.value = x` also updates the number box. Returns { input, sync(), destroy() }.
-     */
+
     function enhanceSlider(range, opts = {}) {
         if (range.__opticsNum) return range.__opticsNum;
         const format = opts.format || ((v) => v);
-        // Formatted values keep 6 significant digits so tiny/huge physical values never display as 0.
+
         const displayNum = (v) => String(Number(opts.format ? v.toPrecision(6) : v.toFixed(decimals)));
         const parse = opts.parse || ((v) => v);
         const label = opts.label || labelFor(range);
@@ -1135,7 +1069,7 @@
         input.addEventListener("blur", sync);
         range.addEventListener("input", sync);
         range.addEventListener("change", sync);
-        // observe programmatic slider.value = x (presets/reset/URL restore)
+
         try {
             Object.defineProperty(range, "value", {
                 configurable: true,
@@ -1148,7 +1082,8 @@
                 }
             });
         } catch (e) {
-            /* non-configurable in exotic environments: call sync() manually */ }
+
+        }
         sync();
         const handle = {
             input,
@@ -1163,18 +1098,13 @@
         return handle;
     }
 
-    /** Enhance every input[type=range] under root (skips ones with data-no-number). */
+
     function enhanceAllSliders(root = document, optsById = {}) {
         return Array.from(root.querySelectorAll('input[type="range"]:not([data-no-number])'))
             .map((r) => enhanceSlider(r, optsById[r.id] || {}));
     }
 
-    /**
-     * Two-way binding between named controls and a plain object (pairs with urlState).
-     * map: { key: element | "#selector" }. Checkbox → boolean, range/number → number,
-     * everything else → string; a NodeList/array of radios → the checked value.
-     * Returns { get() → obj, set(obj) (fires input/change events), elements }.
-     */
+
     function bindControls(map, onChange) {
         const els = {};
         for (const [k, v] of Object.entries(map)) {
@@ -1231,11 +1161,8 @@
         return api;
     }
 
-    // =================================================================== state (URL / export)
-    /**
-     * Encode a flat-ish object as "k=v&k2=v2". Numbers use up to 10 significant digits,
-     * booleans 1/0, objects/arrays JSON. Pure (usable in node).
-     */
+
+
     function encodeState(obj) {
         const parts = [];
         for (const [k, v] of Object.entries(obj)) {
@@ -1250,10 +1177,7 @@
         return parts.join("&");
     }
 
-    /**
-     * Decode "k=v&…" using template (usually the current state) to restore types; keys absent from
-     * the template are ignored, malformed values are skipped. Pure (usable in node).
-     */
+
     function decodeState(str, template) {
         const out = {};
         const s = String(str || "").replace(/^[#?]/, "");
@@ -1278,20 +1202,14 @@
                 try {
                     out[k] = JSON.parse(raw);
                 } catch (e) {
-                    /* skip */ }
+
+                }
             } else out[k] = raw;
         }
         return out;
     }
 
-    /**
-     * Keep tool state in the URL (query string by default, so in-page #anchors keep working).
-     * cfg: { get: () => obj, set: (partialObj) => void, mode: "query" | "hash", debounce = 300,
-     *        restore = true }. On creation the URL state (if any) is decoded against get() and
-     * passed to set(). Call update() after every state change (debounced history.replaceState).
-     * Unknown query params are preserved. Returns { update(), flush(), url() → share URL, load(), clear(),
-     * ready: Promise<restoredObj|null> } — restoring happens in a microtask right after creation.
-     */
+
     function urlState(cfg) {
         const mode = cfg.mode || "query";
         const delay = cfg.debounce == null ? 300 : cfg.debounce;
@@ -1320,7 +1238,8 @@
             try {
                 history.replaceState(history.state, "", buildURL());
             } catch (e) {
-                /* file:// or sandbox */ }
+
+            }
         }
 
         function load() {
@@ -1346,8 +1265,8 @@
                 history.replaceState(history.state, "", u.toString());
             }
         };
-        // Restore in a microtask (still before first paint) so that set() → control events →
-        // `url.update()` in the caller does not hit the TDZ of `const url = urlState(...)`.
+
+
         api.ready = new Promise((resolve) => {
             queueMicrotask(() => {
                 let s = null;
@@ -1381,7 +1300,7 @@
         }));
     }
 
-    /** RFC-4180 CSV text (numbers written with full precision). Pure. */
+
     function csvString(headers, rows) {
         const cell = (v) => {
             if (v === null || v === undefined) return "";
@@ -1433,7 +1352,8 @@
                 return true;
             }
         } catch (e) {
-            /* fall through */ }
+            /* fall through */
+        }
         const ta = document.createElement("textarea");
         ta.value = text;
         ta.setAttribute("readonly", "");

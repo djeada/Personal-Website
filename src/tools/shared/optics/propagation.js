@@ -1,34 +1,3 @@
-/*
- * Scalar aperture propagation (near and far field) on sampled 2D grids. Pure, DOM-free, SI units.
- *
- * Browser / worker: load core.js first → self.OpticsModels.propagation
- * Node:             const prop = require(".../shared/optics/propagation.js")
- *
- * Field conventions
- *   U(x, y; z) is the complex scalar field (peak phasor, time convention exp(−iωt)) of a
- *   monochromatic wave of vacuum wavelength λ in a homogeneous medium of index 1.
- *   The incident wave is a unit-amplitude plane wave (I0 = |U|² = 1) or a Gaussian beam with
- *   unit peak amplitude, multiplied by the complex aperture transmittance t(x, y).
- *   Returned fields are REDUCED fields: the carrier exp(ikz) is removed, so U(z = 0) = U0 and
- *   phase plots show only the diffraction phase. |U|² is intensity in units of I0 (never
- *   renormalised); power is Σ|U|² Δx² in units of I0·m².
- *
- * Grids
- *   N × N samples, pitch Δx, extent L = NΔx, coordinates x_i = (i − N/2)Δx (index N/2 is the
- *   optical axis). Arrays are row-major, a[iy·N + ix]. Padding embeds the N×N window in the
- *   centre of an Np × Np grid (Np = pad·N) to push periodic copies further away.
- *
- * Methods (propagate(..., {method}))
- *   "asm"         angular spectrum, H = exp[i 2π z (√(1/λ² − f²) − 1/λ)]; evanescent
- *                 frequencies (f > 1/λ) are dropped (H = 0) or decay as exp(−2π z √(f² − 1/λ²)).
- *                 Optional Matsushima–Shimobaba band limit |fx|,|fy| ≤ 1/(λ√((2z/Lp)² + 1)).
- *   "tf"          paraxial Fresnel transfer function H = exp(−iπλz f²) (optional band limit
- *                 |fx|,|fy| ≤ Lp/(2λz)); accurate for z ≤ zc = Lp Δx/λ.
- *   "ir"          paraxial Fresnel impulse response h = exp(iπ r²/(λz))/(iλz), FFT-convolved;
- *                 accurate for z ≥ zc.
- *   "fresnel"     single-FFT Fresnel transform; output pitch Δx₂ = λz/(Np Δx), extent λz/Δx.
- *   "fraunhofer"  same without the input chirp (far field, valid for N_F = a²/(λz) ≪ 1).
- */
 (function(root, factory) {
     const core = (typeof require === "function" && typeof module === "object") ? require("./core.js") : root.OpticsModels.core;
     const m = factory(core);
@@ -59,7 +28,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ apertures
+
     const DEFAULT_SPEC = Object.freeze({
         shape: "circle",
         a: 1e-3,
@@ -75,12 +44,7 @@
         strokes: []
     });
 
-    /**
-     * Transmittance t(x, y) of the preset shape as a real-valued function (before strokes
-     * and illumination). a: slit/rect width or circle/annulus/disk diameter; b: slit length or rect
-     * height; d: double-slit centre separation; eps: annulus inner/outer diameter ratio;
-     * f, zones: Fresnel zone plate focal length at spec.lambda and number of zones.
-     */
+
     function shapeFn(spec) {
         const s = Object.assign({}, DEFAULT_SPEC, spec);
         const ha = s.a / 2,
@@ -107,12 +71,12 @@
             case "zonePlate": {
                 const lf = s.lambda * s.f,
                     rMax2 = s.zones * lf;
-                // zone n (0-based) spans nλf ≤ r² < (n+1)λf; even zones (incl. the centre) are open
+
                 return (x, y) => {
                     const r2 = x * x + y * y;
                     if (r2 >= rMax2) return 0;
                     const odd = Math.floor(r2 / lf) % 2 === 1;
-                    if (s.zpPhase) return odd ? -1 : 1; // binary π-phase plate: exp(iπ) = −1
+                    if (s.zpPhase) return odd ? -1 : 1;
                     return odd ? 0 : 1;
                 };
             }
@@ -123,7 +87,7 @@
         }
     }
 
-    /** Aperture half-extent used for the Fresnel number (m); NaN when unbounded (edge). */
+
     function apertureHalfWidth(spec) {
         const s = Object.assign({}, DEFAULT_SPEC, spec);
         switch (s.shape) {
@@ -144,7 +108,7 @@
         }
     }
 
-    /** Smallest feature that must be resolved by the grid (m). */
+
     function smallestFeature(spec) {
         const s = Object.assign({}, DEFAULT_SPEC, spec);
         switch (s.shape) {
@@ -167,13 +131,7 @@
         }
     }
 
-    /**
-     * Sample the incident field × aperture on the grid. Each pixel is the area average of the
-     * transmittance over ss × ss sub-samples (anti-aliased edges converge faster with N).
-     * Strokes (editor brush) are applied in order: {x, y, r (m), mode: "paint"|"erase", t, p}
-     * sets the transmittance inside the disc to t·exp(ip) (paint) or 0 (erase), blended by
-     * sub-pixel coverage. Returns {re, im} Float64Arrays of length N².
-     */
+
     function buildAperture(spec, grid, opts = {}) {
         const s = Object.assign({}, DEFAULT_SPEC, spec);
         const {
@@ -248,7 +206,7 @@
             }
     }
 
-    // ------------------------------------------------------------------ helpers
+
     function power(re, im, dx) {
         let s = 0;
         for (let i = 0; i < re.length; i++) s += re[i] * re[i] + im[i] * im[i];
@@ -271,28 +229,20 @@
         };
     }
 
-    /** exp(i 2π z (√(1/λ² − f²) − 1/λ)) with the difference evaluated without cancellation. */
+
     function asmPhase(z, invL, f2) {
         const s = invL * invL - f2;
         const root = Math.sqrt(s);
         return TWO_PI * z * (-f2 / (root + invL));
     }
 
-    /** Fresnel critical distance zc = Lp Δx / λ separating TF (z < zc) and IR (z > zc) regimes. */
+
     const criticalDistance = (Lp, dx, lambda) => Lp * dx / lambda;
 
-    /** Matsushima–Shimobaba band limit for the ASM transfer function on a padded window Lp. */
+
     const asmBandLimit = (lambda, z, Lp) => 1 / (lambda * Math.sqrt(Math.pow(2 * z / Lp, 2) + 1));
 
-    /**
-     * Propagate field (re, im on grid) a distance z ≥ 0.
-     * params: {lambda, z, method = "asm", pad = 2, evanescent = "drop"|"decay", bandLimit = true}
-     * Returns {re, im, n, dx, crop: {off, size} (the detector window inside the output grid),
-     *          power: {input, output, removed, detector, outside, edge, evanescentFraction},
-     *          method, pad, bandLimit: {fx (cycles/m) | Infinity}}.
-     * No renormalisation is applied: power removed by evanescent decay/dropping or the band limit
-     * and power falling outside the detector window are reported separately.
-     */
+
     function propagate(field, grid, params) {
         const p = Object.assign({
             method: "asm",
@@ -328,16 +278,16 @@
             const invL = 1 / lambda;
             let Hre, Him;
             if (p.method === "ir" && z > 0) {
-                // sampled impulse response, origin at index 0, → transfer function by FFT
+
                 Hre = new Float64Array(Np * Np);
                 Him = new Float64Array(Np * Np);
-                const scale = dx * dx / (lambda * z); // h·Δx², with 1/(iλz) → −i/(λz)
+                const scale = dx * dx / (lambda * z);
                 for (let iy = 0; iy < Np; iy++) {
                     const yy = (iy < Np / 2 ? iy : iy - Np) * dx;
                     for (let ix = 0; ix < Np; ix++) {
                         const xx = (ix < Np / 2 ? ix : ix - Np) * dx;
                         const ph = Math.PI * (xx * xx + yy * yy) / (lambda * z);
-                        // −i·exp(iφ) = sin φ − i cos φ
+
                         Hre[iy * Np + ix] = scale * Math.sin(ph);
                         Him[iy * Np + ix] = -scale * Math.cos(ph);
                     }
@@ -402,7 +352,7 @@
             removed = specTotal > 0 ? pin * specRemoved / specTotal : 0;
             evanescentFraction = specTotal > 0 ? specEvan / specTotal : 0;
         } else {
-            // single-FFT Fresnel / Fraunhofer: U2(x2) = e^{iπ x2²/(λz)}/(iλz) Δx² FFT[U1 e^{iπ x1²/(λz)}]
+
             if (!(z > 0)) throw new RangeError("single-FFT transforms need z > 0");
             const chirp = p.method === "fresnel";
             const c1 = Math.PI / (lambda * z);
@@ -434,7 +384,7 @@
                 for (let ix = 0; ix < Np; ix++) {
                     const xx = (ix - Np / 2) * outDx,
                         k = iy * Np + ix;
-                    // multiply by scale·(−i)·exp(iπ r²/(λz))
+
                     const ph = c1 * (xx * xx + yy * yy) - Math.PI / 2;
                     const c = scale * Math.cos(ph),
                         s = scale * Math.sin(ph);
@@ -461,7 +411,7 @@
                 pdet += e.re[k] * e.re[k] + e.im[k] * e.im[k];
             }
         pdet *= outDx * outDx;
-        // power in the outer band of the computational grid: a wraparound (periodic copy) indicator
+
         const band = Math.max(2, Math.round(Np / 32));
         let pedge = 0;
         for (let iy = 0; iy < Np; iy++)
@@ -492,15 +442,11 @@
         };
     }
 
-    // ------------------------------------------------------------------ analytic references
-    const sinc = (u) => (Math.abs(u) < 1e-8 ? 1 - u * u * Math.PI * Math.PI / 6 : Math.sin(Math.PI * u) / (Math.PI * u)); // normalised sinc(u) = sin(πu)/(πu)
-    const jinc = (v) => (Math.abs(v) < 1e-8 ? 1 - v * v / 8 : 2 * core.besselJ1(v) / v); // 2J1(v)/v
 
-    /**
-     * Paraxial Fraunhofer intensity |U(x, y; z)|² (units of I0) for a unit plane wave through the
-     * preset aperture, U = e^{ikz} e^{iπr²/(λz)}/(iλz) · T(x/(λz), y/(λz)). Returns null when no
-     * closed form applies (edge, disk, zone plate, strokes, Gaussian illumination).
-     */
+    const sinc = (u) => (Math.abs(u) < 1e-8 ? 1 - u * u * Math.PI * Math.PI / 6 : Math.sin(Math.PI * u) / (Math.PI * u));
+    const jinc = (v) => (Math.abs(v) < 1e-8 ? 1 - v * v / 8 : 2 * core.besselJ1(v) / v);
+
+
     function fraunhoferAnalytic(spec, lambda, z) {
         const s = Object.assign({}, DEFAULT_SPEC, spec);
         if ((s.strokes && s.strokes.length) || s.illum !== "plane") return null;
@@ -532,17 +478,11 @@
         }
     }
 
-    /**
-     * Exact on-axis field of a uniformly illuminated circular aperture of radius a (first
-     * Rayleigh–Sommerfeld solution, which the angular-spectrum method reproduces):
-     *   U(0, z) = e^{ikz} − z/√(z² + a²) · e^{ik√(z² + a²)}.
-     * The opaque disk (Babinet complement) gives U = z/√(z²+a²) e^{ik√(z²+a²)} — the Poisson spot.
-     * Returns intensities {aperture, disk} in units of I0.
-     */
+
     function onAxisCircle(lambda, z, a) {
         const R = Math.hypot(z, a),
             q = z / R;
-        // phase difference k(R − z) computed without cancellation
+
         const dphi = TWO_PI / lambda * (a * a / (R + z));
         const re = 1 - q * Math.cos(dphi),
             im = -q * Math.sin(dphi);
@@ -552,16 +492,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ sampling diagnostics
-    /**
-     * Grid and regime diagnostics for the chosen method. Returns
-     * {dx, L, N, Np, Lp, NF, zc, outDx, outL, fMax, bandLimit, bandFraction, pxPerFeature,
-     *  resolvesEvanescent, paraxialAngle, warnings: [{level: "warn"|"info", text}]}.
-     * Rules: TF needs Δx ≥ λz/Lp (z ≤ zc); IR and single-FFT Fresnel need z ≥ zc;
-     * Fraunhofer needs N_F = a²/(λz) ≪ 1 (warn above 0.1); features need ≥ 4 samples;
-     * paraxial methods need small angles, θ = atan(ρ/z) ≲ 0.14 rad (ρ = a + observed half-width,
-     * the latter capped at five diffraction widths 5λz/feature).
-     */
+
+
     function samplingInfo(spec, grid, params) {
         const p = Object.assign({
             method: "asm",
@@ -592,9 +524,9 @@
         const bandFraction = Math.min(1, bandLimit / Math.min(fMax, p.method === "asm" ? 1 / lambda : Infinity));
         const feat = smallestFeature(spec);
         const pxPerFeature = feat / dx;
-        // Paraxial check: largest angle between an aperture point and an observed point, with the
-        // observed half-width capped at five diffraction widths 5λz/feature (beyond which a
-        // well-sampled pattern carries negligible power). sinθ ≈ tanθ to 1 % (1/cosθ − 1 ≈ θ²/2) needs θ ≲ 0.14 rad.
+
+
+
         const featR = Number.isFinite(feat) ? feat : (Number.isFinite(a) ? a : L);
         const rho = (Number.isFinite(a) ? a : L / 2) + Math.min(outL / 2, Math.max(L / 2, 5 * lambda * z / featR));
         const paraxialAngle = z > 0 ? Math.atan(rho / z) : Math.PI / 2;
@@ -629,7 +561,7 @@
             text: "Rays reach θ ≈ " + (paraxialAngle * 180 / Math.PI).toFixed(1) + "° from the axis: the paraxial (Fresnel/Fraunhofer) approximation sinθ ≈ tanθ = ρ/z (spatial frequency ≈ x/(λz)) is off by about 1 % or more. Use the angular-spectrum method."
         });
         if (!direct && z > 0 && Number.isFinite(a)) {
-            // geometric + diffraction spread of the beam compared with the padded window
+
             const spread = a + z * Math.tan(Math.asin(Math.min(0.99, lambda / Math.max(feat || a, lambda))));
             if (spread > Lp / 2) warnings.push({
                 level: "info",
@@ -661,7 +593,7 @@
         };
     }
 
-    /** Intensity and phase (NaN where |U|² < maskRel·max) of a square sub-window of a result. */
+
     function extractView(res, opts = {}) {
         const {
             off,

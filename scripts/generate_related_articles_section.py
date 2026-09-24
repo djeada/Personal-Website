@@ -246,10 +246,12 @@ def main():
             )
             with ThreadPoolExecutor() as executor:
 
-                executor.map(
-                    process_file,
-                    ordered_articles,
-                    [ordered_articles] * len(ordered_articles),
+                list(
+                    executor.map(
+                        process_file,
+                        ordered_articles,
+                        [ordered_articles] * len(ordered_articles),
+                    )
                 )
 
 

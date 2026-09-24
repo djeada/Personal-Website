@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-import requests
 from bs4 import BeautifulSoup
 import string
 import math
@@ -151,8 +150,6 @@ def get_category_url(file_path: Path) -> str:
 def get_current_date(
     file_path: Path, start_date: Optional[datetime.datetime] = None
 ) -> datetime.datetime:
-    remote_date = None
-
     if RANDOM_DATE_RANGE:
         random_date = date_utils.get_random_date_for_path(
             file_path, RANDOM_DATE_START, RANDOM_DATE_END, RANDOM_DATE_SEED
@@ -174,70 +171,13 @@ def get_current_date(
         logging.info(f"Set random date for {file_path}: {rand_date}")
         return rand_date
 
-    try:
-
-        relative = file_path.relative_to("../src").with_suffix("")
-        url = f"https://adamdjellouli.com/{relative}"
-
-        resp = requests.get(url)
-        resp.raise_for_status()
-        remote_soup = BeautifulSoup(resp.text, "html.parser")
-        remote_sec = remote_soup.find(id="article-body")
-        if remote_sec is None:
-            logging.error(f"{url}: 'article-body' not found.")
-            return datetime.datetime.now()
-
-        html = file_path.read_text(encoding="utf-8")
-        local_soup = BeautifulSoup(html, "html.parser")
-        local_sec = local_soup.find(id="article-body")
-        if local_sec is None:
-            logging.error(f"{file_path}: 'article-body' not found locally.")
-            return datetime.datetime.now()
-
-        def extract_date(soup_obj):
-            p = soup_obj.find("p", style="text-align: right;")
-            if not p:
-                return None
-            m = re.search(r"Last modified: (\w+ \d+, \d+)", p.get_text())
-            return datetime.datetime.strptime(m.group(1), "%B %d, %Y") if m else None
-
-        remote_date = extract_date(remote_soup)
-        local_date = extract_date(local_soup)
-
-        def strip_date(html_str):
-
-            soup = BeautifulSoup(html_str, "html.parser")
-
-            for div in soup.select("div.article-action-buttons"):
-                div.decompose()
-
-            for p in soup.find_all("p"):
-                text = p.get_text(strip=True)
-                if re.match(r"^(Last modified:|This article is written in:)", text):
-                    p.decompose()
-
-            return "".join(str(elem) for elem in soup.contents).strip()
-
-        if strip_date(remote_sec.decode_contents()) == strip_date(
-            local_sec.decode_contents()
-        ):
-            if remote_date:
-                set_last_modified_date(file_path, date_utils.format_date(remote_date))
-                logging.info(f"Updated date for {file_path}")
-                return remote_date
-
-        if local_date:
-            return local_date
-
-        logging.error(f"{url}: date not found or content mismatch.")
-        return datetime.datetime.now()
-
-    except requests.RequestException as e:
-        logging.error(f"Error fetching {url}: {e}")
-        return datetime.datetime.now() if not remote_date else remote_date
-    except Exception as e:
-        logging.error(f"Error processing {file_path}: {e}")
-        return datetime.datetime.now() if not remote_date else remote_date
+    match = re.search(
+        r"Last modified: (\w+ \d+, \d+)", file_path.read_text(encoding="utf-8")
+    )
+    if match:
+        return datetime.datetime.strptime(match.group(1), "%B %d, %Y")
+    logging.warning(f"{file_path}: no Last modified date, using today")
+    return datetime.datetime.now()
 
 
 def set_last_modified_date(file_path: Path, date_str: str) -> None:

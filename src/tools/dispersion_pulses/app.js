@@ -1,10 +1,6 @@
 "use strict";
 
-/*
- * Dispersion & ultrashort pulses UI. All physics lives in ../shared/optics/dispersion.js
- * (window.OpticsModels.dispersion). Controls are in nm, fs, fs², mm, cm and degrees and are converted to
- * SI here; plots use fs, nm and fs²/mm. One compute() per state change feeds every view.
- */
+
 (function() {
     const UI = window.OpticsUI;
     const core = window.OpticsModels.core;
@@ -15,9 +11,9 @@
     const FS = 1e-15;
     const B1 = 1e12,
         B2 = 1e27,
-        B3 = 1e42; // s/m → fs/mm, s²/m → fs²/mm, s³/m → fs³/mm
+        B3 = 1e42;
 
-    // ------------------------------------------------------------------ presets (reproducible experiments)
+
     const DEFAULT_STATE = {
         mat: "bk7",
         nc: 1.5,
@@ -109,7 +105,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     UI.enhanceAllSliders(document.querySelector(".options-sidebar"), {
         nConst: {
             format: (v) => Number(v).toFixed(3)
@@ -140,10 +136,10 @@
         }
     });
 
-    let S = null; // latest computed state
+    let S = null;
     let renderQueued = false;
-    let lamCursor = NaN; // material-plot cursor (nm)
-    let tauCursor = NaN; // time-plot cursor (fs)
+    let lamCursor = NaN;
+    let tauCursor = NaN;
 
     const ctl = UI.bindControls({
         mat: "#material",
@@ -170,7 +166,7 @@
         requestRender();
     });
 
-    // ------------------------------------------------------------------ helpers
+
     const fmt = (v, d = 4) => Number.isFinite(v) ? Number(v.toPrecision(d)).toString() : "—";
     const fmtFixed = (v, d) => Number.isFinite(v) ? v.toFixed(d) : "—";
     const fmtFs = (t) => {
@@ -210,7 +206,7 @@
         return [lo - pad, hi + pad];
     }
 
-    // ------------------------------------------------------------------ cached material curves
+
     let curveCache = {
         key: "",
         data: null
@@ -251,7 +247,7 @@
             b2.push(d.beta2 * B2);
             kap.push(d.kappa);
         }
-        // zero-GVD wavelengths: exact root search for Sellmeier, sampled sign changes otherwise
+
         let zdw = [];
         if (mat.kind === "sellmeier") zdw = Model.zeroGVD(mat).map((x) => x * 1e9);
         else if (mat.kind === "lorentz") {
@@ -261,7 +257,7 @@
                 }
             }
         }
-        // Kramers–Kronig reconstruction of n from κ (Lorentz only)
+
         let kk = null;
         if (mat.kind === "lorentz") {
             const K = 110,
@@ -303,7 +299,7 @@
         return data;
     }
 
-    // ------------------------------------------------------------------ compute
+
     function compute() {
         const s = ctl.get();
         const spec = materialSpec(s);
@@ -413,7 +409,7 @@
             const a = Math.hypot(eo.re[i], eo.im[i]) * scale;
             envOut.push(a);
             envNeg.push(-a);
-            // Re{A e^{−iω0τ}} = Re A cos ω0τ + Im A sin ω0τ
+
             field.push(carrier ? (eo.re[i] * Math.cos(w0 * taus[i]) + eo.im[i] * Math.sin(w0 * taus[i])) * scale : NaN);
             if (ei) {
                 const b = Math.hypot(ei.re[i], ei.im[i]);
@@ -457,7 +453,7 @@
         const r = o.res;
         const N = r.N;
         const w0 = r.disp.omega0;
-        // centre sample (ω = ω0) and slope for removing constant + linear phase
+
         let j0 = 0;
         for (let j = 0; j < N; j++)
             if (Math.abs(r.omega[j] - w0) < Math.abs(r.omega[j0] - w0)) j0 = j;
@@ -480,7 +476,7 @@
                 jh = Math.max(jh, j);
             }
         const stride = Math.max(1, Math.ceil((jh - jl + 1) / 1500));
-        for (let j = jh; j >= jl; j -= stride) { // descending ω = ascending λ
+        for (let j = jh; j >= jl; j -= stride) {
             const w = r.omega[j];
             const Om = w - w0;
             lam.push(2 * Math.PI * c0 / w * 1e9);
@@ -493,7 +489,7 @@
             gd.push(strong ? g / FS : NaN);
             gdIn.push(strong ? gdd0 * Om / FS : NaN);
         }
-        // spectral edges at 1 % intensity (for the prism rays)
+
         const dOm = Math.sqrt(Math.log(100)) / r.tau0;
         return {
             lam,
@@ -555,7 +551,7 @@
         return (m >= 5 ? 5 : m >= 2 ? 2 : 1) * p;
     }
 
-    // ------------------------------------------------------------------ drawing
+
     let timeMap = null,
         specMap = null,
         phaseMap = null,
@@ -900,7 +896,7 @@
             pointRadius: 2.2,
             label: "n from KK(κ)"
         });
-        // y range from n (and n_g only where it stays near n) so resonance spikes of n_g do not flatten n
+
         const nf = C.n.filter(Number.isFinite);
         const nlo = Math.min(...nf),
             nhi = Math.max(...nf);
@@ -1031,8 +1027,8 @@
         if (!S) return;
         const Pd = S.prism;
         const A = Pd.A;
-        // prism: apex up, base horizontal; side length L in px
-        const apexY = 84; // leave room for the legend
+
+        const apexY = 84;
         const Lside = Math.max(40, Math.min(w * 0.38, (h - apexY - 50) / Math.cos(A / 2)));
         const cx = w * 0.42;
         const apex = {
@@ -1068,7 +1064,7 @@
             ctx.fillText(Pd.n0 * Math.sin(A / 2) >= 1 ? "n sin(A/2) ≥ 1: no ray can leave (total internal reflection)" : "Index undefined here", w / 2, h * 0.9);
             return;
         }
-        // entry point: middle of the left face; inside the ray is parallel to the base
+
         const t = 0.5;
         const pin = {
             x: apex.x + (bl.x - apex.x) * t,
@@ -1078,16 +1074,16 @@
             x: apex.x + (br.x - apex.x) * t,
             y: pin.y
         };
-        // left face outward normal points up-left; incident direction makes θ1 with the inward normal
+
         const nIn = {
             x: Math.cos(A / 2),
             y: Math.sin(A / 2)
-        }; // inward normal of left face (pointing into the prism, screen coords)
+        };
         const rot = (v, a) => ({
             x: v.x * Math.cos(a) - v.y * Math.sin(a),
             y: v.x * Math.sin(a) + v.y * Math.cos(a)
         });
-        const dIn = rot(nIn, -Pd.g.theta1); // incoming direction, tilted downward-to-right
+        const dIn = rot(nIn, -Pd.g.theta1);
         const L1 = w * 0.3;
         ctx.strokeStyle = "#f5f3ff";
         ctx.lineWidth = 2.4;
@@ -1096,9 +1092,9 @@
         ctx.lineTo(pin.x, pin.y);
         ctx.lineTo(pout.x, pout.y);
         ctx.stroke();
-        // output rays: deviation δ(λ) relative to the incident direction, spread magnified by factor
+
         const L2 = w * 0.36;
-        // ray order: blue edge (higher ω), carrier, red edge; semantic colours + dashes, legend top-right
+
         const style = (r, i) => {
             if (r.lambda === S.lambda0) return {
                 color: PAL.marker,
@@ -1165,7 +1161,7 @@
         ctx.fillText(Pd.factor > 1 ? "angular spread × " + Pd.factor + " (schematic)" : "angles to scale", 8, h - 19);
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const cv = {
         time: $("timeCanvas"),
         spec: $("specCanvas"),
@@ -1253,7 +1249,7 @@
         })
     };
 
-    // ------------------------------------------------------------------ interaction
+
     const lamSlider = $("lambda0");
 
     function setLambda(nm) {
@@ -1344,16 +1340,16 @@
         } else $("rCursor").textContent = "hover a material plot";
     }
 
-    // ------------------------------------------------------------------ DOM
+
     function updateDom() {
         const s = S.s,
             d = S.disp,
             mat = S.mat;
-        // visibility of material-specific controls
+
         $("grpConst").hidden = s.mat !== "constant";
         $("grpLorentz").hidden = s.mat !== "lorentz";
         $("taylorTerms").disabled = s.mode !== "taylor";
-        // slider value labels
+
         $("ncValue").textContent = s.nc.toFixed(3);
         $("lrValue").textContent = s.lr + " nm";
         $("lgValue").textContent = String(s.lg);
@@ -1365,7 +1361,7 @@
         $("zValue").textContent = (s.z < 1 ? fmt(s.z * 1000, 4) + " µm" : fmt(s.z, 5) + " mm");
         $("apexValue").textContent = s.A + "°";
         $("lpValue").textContent = s.Lp + " cm";
-        // material info
+
         if (mat.kind === "sellmeier") {
             $("materialInfo").innerHTML = "Sellmeier, λ in µm, C<sub>i</sub> in µm². Valid " + (mat.range[0] * 1e6).toFixed(3) + "–" + (mat.range[1] * 1e6).toFixed(3) + " µm, " + mat.temperature + ". Source: " + mat.ref + ".";
             $("nBadge").textContent = "Sellmeier";
@@ -1379,7 +1375,7 @@
         $("kBadge").textContent = mat.kind === "lorentz" ? "κ = Im ñ (Lorentz)" : "κ = Im ñ (lossless model)";
         $("nCaption").innerHTML = "Solid: n(λ); dashed: n<sub>g</sub> = n − λ dn/dλ." + (mat.kind === "lorentz" ? " Dots: n rebuilt from κ alone with the Kramers–Kronig integral (n<sub>∞</sub> = √ε<sub>∞</sub>)." : "") + " Vertical line: carrier λ₀. Click to set λ₀." + (mat.kind === "sellmeier" ? " Hatched: outside the fitted range." : "");
 
-        // material readouts
+
         $("rN").textContent = fmt(d.n, 6) + (mat.kind === "lorentz" ? " / κ = " + fmt(d.kappa, 3) : " / κ = 0");
         $("rNg").textContent = fmt(d.ng, 6);
         $("rV").textContent = "v_p = " + fmt(1 / d.n, 5) + " c, v_g = " + fmt(1 / d.ng, 5) + " c";
@@ -1392,7 +1388,7 @@
         $("stat-ng").textContent = fmt(d.ng, 5);
         $("stat-b2").textContent = fmt(d.beta2 * B2, 4);
 
-        // prism
+
         const Pd = S.prism;
         if (Number.isFinite(Pd.g.deltaMin)) {
             $("rDelta").textContent = fmt(Pd.g.deltaMin * 180 / Math.PI, 5) + "° at θ₁ = " + fmt(Pd.g.theta1 * 180 / Math.PI, 5) + "°";
@@ -1409,7 +1405,7 @@
         $("prismBadge").textContent = Pd.factor > 1 ? "angular spread ×" + Pd.factor : "to scale";
         $("prismCaption").textContent = "Prism of " + (mat.name || "the selected medium") + " with apex A = " + s.A + "°; the incident beam is at minimum deviation for λ₀. Output rays for the blue and red edges of the pulse spectrum (|Ã|² = 1 %) are drawn" + (Pd.factor > 1 ? " with their angular separation magnified " + Pd.factor + "×." : " to scale.");
 
-        // material comparison table
+
         const rows = Object.values(Model.MATERIALS).map((m) => {
             const dd = Model.dispersionAt(m, S.lambda0);
             const ok = Model.inRange(m, S.lambda0);
@@ -1419,7 +1415,7 @@
         const anyOut = Object.values(Model.MATERIALS).some((m) => !Model.inRange(m, S.lambda0));
         $("matTable").querySelector("tbody").innerHTML = rows.join("") + (anyOut ? '<tr><td colspan="7">* λ₀ is outside this dataset’s validity interval: value extrapolated, do not trust it.</td></tr>' : "");
 
-        // warnings
+
         const warns = [];
         if (!S.idx.valid && mat.kind === "sellmeier") warns.push("Carrier λ₀ = " + s.lam + " nm lies outside the " + mat.name + " data interval (" + (mat.range[0] * 1e6).toFixed(3) + "–" + (mat.range[1] * 1e6).toFixed(3) + " µm). The Sellmeier formula is being extrapolated" + (S.refused ? " and gives n² ≤ 0 here, so the tool refuses to propagate." : ": treat every number as unreliable."));
         if (!S.refused) {
@@ -1445,7 +1441,7 @@
             wb.innerHTML = "";
         }
 
-        // pulse readouts
+
         if (S.refused) {
             ["rPhaseDelay", "rGroupDelay", "rCEP", "rGDD", "rTOD", "rLD", "rFwIn", "rFwOut", "rFwGauss", "rPeak", "rTrans", "rResid", "rOutside", "rGrid", "rBack"].forEach((id) => {
                 $(id).textContent = "—";
@@ -1484,7 +1480,7 @@
         $("stat-fwhm").textContent = fmt(mo.fwhm / FS, 4) + " fs";
         $("stat-trans").textContent = fmt(100 * r.transmission, 4) + " %";
 
-        // text equivalents
+
         const T = S.time;
         desc.time.update("Retarded time " + fmt(T.lo, 4) + " to " + fmt(T.hi, 4) + " fs (" + s.frame + " frame). Input FWHM " + fmt(mi.fwhm / FS, 4) + " fs centred at " + fmt(mi.centroid / FS, 4) +
             " fs; output FWHM " + fmt(mo.fwhm / FS, 4) + " fs centred at " + fmt(mo.centroid / FS, 4) + " fs, peak intensity " + fmt(mo.peak / mi.peak, 3) + " of the input. " +
@@ -1500,7 +1496,7 @@
         desc.prism.update("Prism A = " + s.A + "°, minimum deviation " + $("rDelta").textContent + ", angular dispersion " + $("rDdl").textContent + ".");
     }
 
-    // ------------------------------------------------------------------ render scheduling
+
     function redrawAll() {
         Object.values(H).forEach((h) => h.redraw());
         updateDom();
@@ -1519,7 +1515,7 @@
         requestAnimationFrame(renderNow);
     }
 
-    // ------------------------------------------------------------------ presets / reset
+
     function applyPreset(name) {
         const p = PRESETS[name] || PRESETS.bk7;
         lamCursor = NaN;
@@ -1547,7 +1543,7 @@
     }));
     $("resetBtn").addEventListener("click", () => applyPreset("bk7"));
 
-    // ------------------------------------------------------------------ URL state + export
+
     const url = UI.urlState({
         get: ctl.get,
         set: ctl.set
@@ -1615,7 +1611,7 @@
         caption: () => S ? (S.mat.name + ", λ0 = " + S.s.lam + " nm, FWHM0 = " + S.s.fw + " fs, input GDD = " + S.s.gdd + " fs², z = " + S.s.z + " mm, " + S.s.mode + " k(ω), " + S.s.frame + " frame") : ""
     });
 
-    // ------------------------------------------------------------------ start
+
     $("presetNote").textContent = PRESETS.bk7.note;
     url.ready.then((restored) => {
         if (restored) {

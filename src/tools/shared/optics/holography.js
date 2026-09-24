@@ -1,48 +1,3 @@
-/*
- * Digital holography and phase retrieval (P4 specialist extension). Pure, DOM-free, SI units.
- *
- * Browser: load core.js, propagation.js (N5) and fourierOptics.js (N6) first
- *          → self.OpticsModels.holography
- * Node:    const holo = require(".../shared/optics/holography.js")
- *
- * Model
- * -----
- *  Object plane z = 0: a thin complex transmittance o(x, y) under unit plane-wave illumination
- *  (amplitude letters, point scatterers, or a pure-phase object inside a circular illuminated
- *  support). The object wave is BAND-LIMITED to |f| ≤ B = NA_o/λ (NA_o: numerical aperture of the
- *  object beam). The band-limited object is the ground truth.
- *  Sensor plane z: object wave O = ASM-propagate(o, z) with propagation.js (pad 1, no band limit —
- *  the transfer function is a pure phase on the band-limited spectrum, so the map is unitary and
- *  exactly invertible; periodic N×N window).
- *  Reference: R_n = A e^{iψ} exp(−2πi c·n/N) with integer carrier bins c = (cx, cy) (the tilt is
- *  snapped to the nearest DFT bin, so fringes are periodic on the sensor; phase origin at pixel
- *  (0, 0)). Its transverse spatial frequency is −f_c with f_c = c/(NΔx), sinθ = λ|f_c|. With this
- *  sign the object-carrying term O·R* ("+1 order") sits at +f_c in the hologram spectrum and the
- *  conjugate (twin) term O*·R ("−1 order") at −f_c. In-line (Gabor) geometry: c = 0.
- *  Beam ratio β = A²/⟨|O|²⟩ (mean over the sensor).
- *
- *  Recording (the sensor measures INTENSITY, never amplitude):
- *    H = |O + R|² = A² + |O|² + O R* + O* R,
- *  integrated over a square pixel of active width a = FF·Δx (FF = linear fill factor; FF = 0 is
- *  ideal point sampling). Integration multiplies each term's continuous spectrum by
- *  sinc(f_x a) sinc(f_y a) evaluated at its PHYSICAL (unaliased) frequency, then the sampled
- *  spectrum wraps modulo 1/Δx (aliasing). Optional b-bit quantisation with automatic exposure
- *  (brightest pixel = full scale, no clipping).
- *
- *  Reconstruction: illuminate the hologram with the (digital) reference and back-propagate:
- *    U_s = (H − A²) · R / A²  = O + O* R²/A² + |O|² R/A²,
- *  optionally keep only |f| ≤ r_w in the spectrum of U_s (Fourier filtering of the +1 order after
- *  recentring), then propagate by −z_r (default z_r = z). Back-propagation uses
- *  U(−z) = conj(P_z[conj U]) because propagation.js only propagates forward.
- *  Phase shifting (4 steps, reference phases ψ + kπ/2 [+ k·ε error]):  O = Σ H_k e^{ikπ/2} R_0/(4A²).
- *  Intensity only: back-propagate √|O|² with zero phase (what a camera without reference records).
- *  Gerchberg–Saxton (error reduction): alternate between the object-plane amplitude |o| and the
- *  measured amplitude √I in the sensor plane (Fresnel, ASM over z) or a Fourier plane (unitary
- *  FFT). With unitary transforms the measurement-plane error is non-increasing (Fienup 1982).
- *
- *  Grids: N × N, pitch Δx (= sensor pixel pitch), extent L = NΔx, x_i = (i − N/2)Δx, row-major
- *  a[iy·N + ix]. Spectra are in unshifted FFT order unless stated.
- */
 (function(root, factory) {
     const node = typeof require === "function" && typeof module === "object";
     const core = node ? require("./core.js") : root.OpticsModels.core;
@@ -86,7 +41,7 @@
         gsStart: "flat"
     });
 
-    // ------------------------------------------------------------------ grid and FFT helpers
+
     function makeGrid(N, dx) {
         if (!core.isPow2(N) || N < 16) throw new RangeError("N must be a power of two ≥ 16");
         if (!(dx > 0)) throw new RangeError("pixel pitch must be > 0");
@@ -118,16 +73,16 @@
         return v;
     }
     const wrap = (k, N) => ((k % N) + N) % N;
-    /** Signed bin in [−N/2, N/2). */
+
     const signedBin = (k, N) => {
         const w = wrap(k, N);
         return w >= N / 2 ? w - N : w;
     };
     const sinc = (u) => (Math.abs(u) < 1e-9 ? 1 : Math.sin(Math.PI * u) / (Math.PI * u));
-    /** Pixel-integration transfer function at physical frequency (fx, fy) for active width a. */
+
     const pixelMTF = (fx, fy, a) => (a > 0 ? sinc(fx * a) * sinc(fy * a) : 1);
 
-    /** Keep spectral bins with |f| ≤ radius (cycles/m) of a spatial field. Returns a new field. */
+
     function lowpass(u, grid, radius) {
         const {
             N,
@@ -145,10 +100,7 @@
         return s;
     }
 
-    /**
-     * Scalar propagation by a signed distance z with the N5 angular-spectrum solver (pad 1, no band
-     * limit: unitary on the sampled propagating spectrum). Negative z uses U(−z) = conj(P_z[conj U]).
-     */
+
     function propagateField(u, grid, lambda, z) {
         if (z === 0) return copy(u);
         const back = z < 0;
@@ -173,11 +125,8 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ object
-    /**
-     * Band-limited object transmittance. params: {object, NAo, lambda, phi, text}.
-     * Returns {re, im, raw, B, support (Float64Array 0..1), halfSize (m), info}.
-     */
+
+
     function makeObject(grid, params) {
         const p = Object.assign({}, DEFAULTS, params);
         const {
@@ -189,7 +138,7 @@
         let raw, info, halfSize, support = null;
         if (p.object === "letters") {
             const text = String(p.text || "HOLO").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6) || "HOLO";
-            // stroke chosen so the word spans ≈ 60 % of the window
+
             const s = 0.6 * L / (6 * text.length - 1);
             const o = fo.makeObject(fg, {
                 type: "letters",
@@ -203,7 +152,7 @@
             halfSize = 0.3 * L;
             info = "amplitude letters \"" + text + "\" (transmitting strokes on an opaque mask), stroke " + core.formatSI(s, "m");
         } else if (p.object === "points") {
-            // band-limited point scatterers: spectrum Σ a_j exp(−2πi f·r_j) inside |f| ≤ B
+
             const pts = [{
                     x: -0.18,
                     y: 0.12,
@@ -244,7 +193,7 @@
                     if (f[ix] * f[ix] + f[iy] * f[iy] > B * B) continue;
                     const k = iy * N + ix;
                     for (const q of pts) {
-                        // x_i = (i − N/2)Δx: a point at (x, y) sits at index offset x/Δx + N/2
+
                         const ph = q.ph - TAU * (f[ix] * (q.x + L / 2) + f[iy] * (q.y + L / 2));
                         s.re[k] += q.a * Math.cos(ph);
                         s.im[k] += q.a * Math.sin(ph);
@@ -312,11 +261,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ reference and order layout
-    /**
-     * Reference carrier for tilt θ (rad) along azimuth α (rad) snapped to integer DFT bins.
-     * Returns {c: [cx, cy], fc: [fx, fy] (cycles/m, physical), fcAbs, sinTheta, theta, snapped}.
-     */
+
+
     function carrier(grid, lambda, theta, azimuth = 0) {
         const s = Math.sin(Math.abs(theta));
         const fr = s / lambda;
@@ -336,11 +282,7 @@
         };
     }
 
-    /**
-     * Where the orders land in the sampled hologram spectrum and whether they overlap.
-     * DC term |O|² has half-width 2B; the ±1 orders have half-width B around ±alias(c).
-     * Distances are periodic (the sampled spectrum is periodic with period 1/Δx).
-     */
+
     function orderLayout(grid, lambda, car, B) {
         const {
             N,
@@ -362,15 +304,15 @@
         const inline = cx === 0 && cy === 0;
         const overlapDC = dDC < 3 * B - 1e-12 * B;
         const overlapTwin = dTwin < 2 * B - 1e-12 * B;
-        // per-axis fringe period in pixels (Infinity when that component is zero)
+
         const periodPx = car.fcAbs > 0 ? 1 / (car.fcAbs * dx) : Infinity;
         const periodPxAxis = Math.min(cx ? N / Math.abs(cx) : Infinity, cy ? N / Math.abs(cy) : Infinity);
-        // limits along the chosen azimuth direction u = (cos α, sin α)
+
         const ux = car.fcAbs > 0 ? Math.abs(car.fc[0]) / car.fcAbs : 1,
             uy = car.fcAbs > 0 ? Math.abs(car.fc[1]) / car.fcAbs : 0;
         const umax = Math.max(ux, uy, 1e-12);
-        const fNyqDir = fN / umax; // carrier magnitude where the larger component reaches Nyquist
-        const fCleanDir = (fN - B) / umax; // +1 order still fully inside the baseband square
+        const fNyqDir = fN / umax;
+        const fCleanDir = (fN - B) / umax;
         const asinL = (f) => (lambda * f <= 1 ? Math.asin(lambda * f) : NaN);
         return {
             inline,
@@ -399,7 +341,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ recording
+
     function referenceField(grid, ref) {
         const {
             N
@@ -414,7 +356,7 @@
         return R;
     }
 
-    /** b-bit quantisation with full scale Hs (values clipped to [0, Hs]). Returns a new array. */
+
     function quantize(H, bits, Hs) {
         if (!(bits > 0)) return Float64Array.from(H);
         const levels = Math.pow(2, bits) - 1,
@@ -423,10 +365,7 @@
         return q;
     }
 
-    /**
-     * Spectra of the object wave reused by every exposure: Ô = FFT(O), Ŝ = FFT(|O|²) and the list of
-     * bins where Ô is non-negligible (the band-limited support).
-     */
+
     function objectSpectra(O, grid) {
         const N = grid.N,
             n = N * N;
@@ -447,13 +386,7 @@
         };
     }
 
-    /**
-     * Recorded intensity |O + R|² integrated over pixels of active width fill·Δx.
-     * ref: {A, psi, c: [cx, cy]} (A = 0 records |O|² alone). opts: {fill = 0, spectra}.
-     * Terms are assembled in the spectral domain so that pixel integration acts at each term's
-     * physical frequency and the sampled result aliases correctly. Returns Float64Array (real; the
-     * pixel filter can leave tiny negative ringing). Quantisation is applied separately (quantize).
-     */
+
     function record(O, grid, ref, opts = {}) {
         const {
             N,
@@ -464,7 +397,7 @@
             a = fill * grid.dx;
         const sp = opts.spectra || objectSpectra(O, grid);
         const [cx, cy] = ref.c, A = ref.A || 0;
-        // |O|² (sampled product; its spectrum is unaliased while 2B ≤ f_N), pixel-filtered
+
         let S2p = sp.pixCache.get(fill);
         if (!S2p) {
             S2p = copy(sp.S2);
@@ -484,7 +417,7 @@
             const cr = A * Math.cos(-ref.psi),
                 ci = A * Math.sin(-ref.psi),
                 Oh = sp.Oh;
-            // + O R*: bin k of Ô (physical f_k) moves to bin k + c at physical frequency f_k + c·df
+
             for (let q = 0; q < sp.band.length; q++) {
                 const k = sp.band[q],
                     kx = k % N,
@@ -497,7 +430,7 @@
                 const j = wrap(ky + cy, N) * N + wrap(kx + cx, N);
                 S.re[j] += tr;
                 S.im[j] += ti;
-                // + O* R: the Hermitian mirror of the same component, at bin −(k + c)
+
                 const jm = wrap(-(ky + cy), N) * N + wrap(-(kx + cx), N);
                 S.re[jm] += tr;
                 S.im[jm] -= ti;
@@ -507,14 +440,14 @@
         return S.re;
     }
 
-    // ------------------------------------------------------------------ reconstruction
-    /** Keep |f| ≤ r in the spectrum of u (in place on a copy); r = Infinity keeps all. */
+
+
     function windowField(u, grid, r) {
         if (!Number.isFinite(r)) return copy(u);
         return lowpass(u, grid, r);
     }
 
-    /** U_s = (H − A²)·R/A²: the hologram illuminated by the (digital) reference, DC-subtracted. */
+
     function illuminate(H, grid, ref) {
         const R = referenceField(grid, ref),
             A2 = ref.A * ref.A,
@@ -528,7 +461,7 @@
         return U;
     }
 
-    /** 4-step phase shifting: O = Σ_k H_k e^{ikπ/2} · R_0 / (4A²) (nominal steps). */
+
     function phaseShift4(Hs, grid, ref) {
         const n = Hs[0].length,
             S = cplx(n);
@@ -553,7 +486,7 @@
         return U;
     }
 
-    /** Normalised correlation ρ = |⟨a, b⟩|/(‖a‖‖b‖) and residual after optimal complex scaling √(1 − ρ²). */
+
     function correlation(a, b) {
         let sr = 0,
             si = 0,
@@ -572,7 +505,7 @@
             phase: Math.atan2(si, sr)
         };
     }
-    /** Multiply u by e^{−iφ} (remove a global phase). */
+
     function dephase(u, phi) {
         const c = Math.cos(phi),
             s = Math.sin(phi),
@@ -584,12 +517,8 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ angle sweep (spectral, exact without quantisation)
-    /**
-     * Correlation of the Fourier-filtered off-axis reconstruction with the windowed truth for each
-     * reference angle. Uses Û[j] = S2[j+c]·m/A + Ô[j]·m + conj(Ô[−j−2c])·m (A = reference amplitude,
-     * ψ = 0), exactly what record() → illuminate() → window produces without quantisation.
-     */
+
+
     function angleSweep(O, grid, opts) {
         const {
             N,
@@ -648,12 +577,8 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ Gerchberg–Saxton
-    /**
-     * Error-reduction (Gerchberg–Saxton) phase retrieval between the object plane (amplitude ampObj)
-     * and a measurement plane (amplitude ampMeas) reached by `plane`: "fresnel" (ASM over z) or
-     * "fourier" (unitary FFT). Returns a state; advance it with gsStep.
-     */
+
+
     function gsInit(opts) {
         const {
             grid,
@@ -722,7 +647,7 @@
         }
         return propagateField(u, st.grid, st.lambda, -st.z);
     }
-    /** Run n error-reduction iterations. truth (optional object-plane field) records √(1 − ρ²). */
+
     function gsStep(st, n = 1, truth = null) {
         const len = st.g.re.length;
         for (let it = 0; it < n; it++) {
@@ -765,7 +690,7 @@
         return st;
     }
 
-    // ------------------------------------------------------------------ full experiment
+
     function normalizeParams(params) {
         const p = Object.assign({}, DEFAULTS, params);
         if (!OBJECTS.includes(p.object)) throw new RangeError("unknown object " + p.object);
@@ -775,9 +700,7 @@
         return p;
     }
 
-    /**
-     * Object and sensor-plane object wave for params (cacheable: depends on N, dx, λ, z, object, NAo, phi, text).
-     */
+
     function prepare(params) {
         const p = normalizeParams(params);
         const grid = makeGrid(p.N, p.dx);
@@ -797,7 +720,7 @@
     }
     const prepKey = (p) => [p.N, p.dx, p.lambda, p.z, p.object, p.NAo, p.phi, p.text].join("|");
 
-    /** Keep |f| ≤ r of a field given by its (unshifted) spectrum; returns the spatial field. */
+
     function fromSpectrumWindow(spec, grid, r) {
         const {
             N,
@@ -822,7 +745,7 @@
         return mx;
     };
 
-    /** Sensor-plane reconstruction for one method (not GS). Returns {sensor, truth}. */
+
     function reconstructMethod(method, ctx) {
         const {
             p,
@@ -850,7 +773,7 @@
                 psi: p.psi + k * Math.PI / 2 + k * p.psError,
                 c: ref.c
             }, recOpts));
-            const Hs = Math.max(...raws.map(maxOf)); // one exposure setting for all four frames
+            const Hs = Math.max(...raws.map(maxOf));
             return {
                 sensor: phaseShift4(raws.map((r) => quantize(r, p.bits, Hs)), grid, ref),
                 truth: O
@@ -879,13 +802,7 @@
         throw new RangeError("no direct reconstruction for method " + method);
     }
 
-    /**
-     * Record and reconstruct. opts: {table = true, sweep = true, objectPlane = true}. Returns
-     * { params, grid, obj, O, meanI, A, ref, car, layout, rw, H (recorded, quantised), Hs (full
-     *   scale), Iobj (|O|² recorded without reference), spectrum (|FFT H|, centred), recon:
-     *   {method, sensor, truth, corr, object, truthObject} (null for "gs"), table, sweep, warnings }.
-     * `prep` (from prepare) is reused when its key matches.
-     */
+
     function simulate(params, prep, opts = {}) {
         const o = Object.assign({
             table: true,
@@ -1044,12 +961,12 @@
         };
     }
 
-    /** Back-propagate a sensor-plane field to the object plane at distance zr (signed). */
+
     function toObjectPlane(u, grid, lambda, zr) {
         return propagateField(u, grid, lambda, -zr);
     }
 
-    /** GS set-up for simulate()-style params: object-plane amplitude |o| and the recorded √I. */
+
     function gsFromParams(params, prep) {
         const p = normalizeParams(params);
         if (!prep || prep.key !== prepKey(p)) prep = prepare(p);

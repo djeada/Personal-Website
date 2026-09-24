@@ -1,35 +1,3 @@
-/*
- * Fourier optics, imaging and resolution (N6): pure scalar imaging model, DOM-free.
- *
- * Browser: <script src="../shared/optics/fourierOptics.js"></script> → window.OpticsModels.fourierOptics
- * Node:    const fo = require(".../shared/optics/fourierOptics.js")
- *
- * Model (scalar, paraxial-in-magnification, unit magnification, space-invariant)
- * ------------------------------------------------------------------------------
- *  - Object: complex amplitude transmittance t(x, y) illuminated by an on-axis unit plane wave.
- *    Object coordinates are referred to image space (magnification 1), so NA is the image-side
- *    numerical aperture in air and all lengths are metres.
- *  - Pupil (Fourier plane of a 4f system): P(f) = A(f) · F(f) · exp[i Φ(f)], with
- *        A = circ(|f| / fc),  fc = NA / λ0  (coherent amplitude cutoff),
- *        F = optional Fourier-plane filter (low/high/band-pass, knife edge, dark-field stop,
- *            π/2 phase dot for Zernike phase contrast),
- *        Φ = 2π Σ_j c_j Z_j(ρ, θ) + defocus phase,  ρ = |f|/fc, θ = atan2(fy, fx).
- *    Zernike polynomials use the NOLL index and normalisation: each Z_j has unit RMS over the unit
- *    disk, so c_j is directly the RMS wavefront error of that term in waves.
- *    Defocus Δz uses the exact scalar angular-spectrum phase 2πΔz(√(1/λ² − f²) − 1/λ).
- *    A Fourier-plane point at spatial frequency f sits at u = λ0 f_lens · f (lens focal length f_lens).
- *  - Coherent imaging (complex amplitude):   U_img = IFFT{ FFT(t) · P },  I = |U_img|².
- *  - Incoherent imaging (intensity):          I_img = I_obj ⊛ |h|²,  h = IFFT(P),
- *        i.e. Ĩ_img = Ĩ_obj · OTF, OTF = FT|h|² / ∫|h|² = normalised autocorrelation of P.
- *    The incoherent image is scaled by the collected fraction ∫|P|² / ∫|A|² so that a uniform
- *    object with an unfiltered pupil gives I = 1 in both modes (units: illumination intensity).
- *    The two operations are never mixed: `mode` selects one explicitly.
- *  - Grids: N × N (power of two), sample spacing dx = fov/N, frequency spacing df = 1/fov.
- *    Storage is CENTRED: index N/2 is x = 0 (or f = 0). Row-major a[iy*N + ix]. FFTs use core.fft2
- *    (numpy convention) with quadrant swaps around them. The field is periodic with period fov.
- *
- * Main entry: simulate(params) → { grid, object, pupil, psf, otf, image, cuts, readouts, warnings }.
- */
 (function(root, factory) {
     const core = (typeof require === "function" && typeof module === "object") ? require("./core.js") : root.OpticsModels.core;
     const m = factory(core);
@@ -42,35 +10,35 @@
     "use strict";
 
     const TAU = 2 * Math.PI;
-    /** First zero of J1 divided by π: Airy first dark ring at RAYLEIGH_K · λ/NA. */
-    const RAYLEIGH_K = core.besselJZero(1, 1) / (2 * Math.PI); // 0.6098…
 
-    // ------------------------------------------------------------------ analytic references
-    /** Airy intensity [2 J1(v)/v]², v = 2π NA r / λ. Peak-normalised. */
+    const RAYLEIGH_K = core.besselJZero(1, 1) / (2 * Math.PI);
+
+
+
     function airy(r, lambda, NA) {
         const v = TAU * NA * r / lambda;
         if (Math.abs(v) < 1e-9) return 1;
         const a = 2 * core.besselJ1(v) / v;
         return a * a;
     }
-    /** Diffraction-limited incoherent MTF of a circular pupil; f in cycles/m, cutoff 2NA/λ. */
+
     function mtfCircular(f, lambda, NA) {
         const v = Math.abs(f) / (2 * NA / lambda);
         if (v >= 1) return 0;
         return (2 / Math.PI) * (Math.acos(v) - v * Math.sqrt(1 - v * v));
     }
-    /** Coherent transfer function of an unaberrated circular pupil (amplitude): 1 inside NA/λ. */
+
     const ctfCircular = (f, lambda, NA) => (Math.abs(f) <= NA / lambda ? 1 : 0);
     const rayleigh = (lambda, NA) => RAYLEIGH_K * lambda / NA;
-    /** Abbe coherent period limit λ/NA (on-axis illumination). */
+
     const abbeCoherent = (lambda, NA) => lambda / NA;
-    /** Conventional depth of focus ±λ/(2NA²), i.e. full width λ/NA² (quarter-wave defocus criterion). */
+
     const depthOfFocus = (lambda, NA) => lambda / (NA * NA);
-    /** Fraction of power from an isotropic point emitter collected by a cone of half-angle asin(NA) in air. */
+
     const collectedFraction = (NA) => (1 - Math.sqrt(Math.max(0, 1 - NA * NA))) / 2;
-    /** Maréchal approximation of the Strehl ratio for RMS wavefront error ω (waves). */
+
     const marechal = (rmsWaves) => Math.exp(-Math.pow(TAU * rmsWaves, 2));
-    /** Paraxial on-axis intensity versus defocus for a uniform circular pupil: sinc²(πΔz NA²/(2λ)). */
+
     function axialIntensityParaxial(dz, lambda, NA) {
         const x = Math.PI * dz * NA * NA / (2 * lambda);
         if (Math.abs(x) < 1e-12) return 1;
@@ -78,14 +46,14 @@
         return s * s;
     }
 
-    // ------------------------------------------------------------------ Zernike (Noll)
-    /** Noll index j (≥1) → radial order n and signed azimuthal order m (m > 0 cos, m < 0 sin). */
+
+
     function nollToNM(j) {
         if (!(j >= 1) || j !== Math.floor(j)) throw new RangeError("Noll index must be a positive integer");
         let n = 0;
         while ((n + 1) * (n + 2) / 2 < j) n++;
-        const k = j - n * (n + 1) / 2 - 1; // 0..n position in the row
-        // |m| values in row n in Noll order: (n%2 ? 1,1,3,3,… : 0,2,2,4,4,…)
+        const k = j - n * (n + 1) / 2 - 1;
+
         let am;
         if (n % 2 === 0) am = 2 * Math.floor((k + 1) / 2);
         else am = 2 * Math.floor(k / 2) + 1;
@@ -110,7 +78,7 @@
         }
         return s;
     }
-    /** Noll-normalised Zernike Z_j(ρ, θ) (unit RMS over the unit disk). */
+
     function zernike(j, rho, theta) {
         const {
             n,
@@ -133,7 +101,7 @@
         11: "primary spherical"
     };
 
-    // ------------------------------------------------------------------ grids and FFT helpers
+
     function makeGrid(N, fov) {
         if (!core.isPow2(N) || N < 16) throw new RangeError("grid size must be a power of two ≥ 16");
         const dx = fov / N,
@@ -154,7 +122,7 @@
             fNyquist: 1 / (2 * dx)
         };
     }
-    /** In-place quadrant swap (fftshift2 = ifftshift2 for even N). */
+
     function swapQuadrants(a, N) {
         const h = N / 2;
         for (let y = 0; y < h; y++) {
@@ -168,7 +136,7 @@
         }
         return a;
     }
-    /** Centred 2D FFT (forward: X = Σ x e^{−2πi(fx x + fy y)}). Returns new arrays. */
+
     function fftCentered(re, im, N, inverse = false) {
         const r = Float64Array.from(re),
             i = Float64Array.from(im);
@@ -183,8 +151,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ objects
-    // 5 × 7 bitmap font (rows top→bottom, '#' = opaque stroke cell).
+
+
     const FONT = {
         A: [" ### ", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"],
         B: ["#### ", "#   #", "#   #", "#### ", "#   #", "#   #", "#### "],
@@ -215,12 +183,7 @@
     };
     const OBJECT_TYPES = ["point", "twoPoints", "sinusoid", "bars", "edge", "phase", "letters"];
 
-    /**
-     * Build the object. params: { type, sep (m), nu (cycles/m), phi (rad), pointPhase (rad), text }.
-     * Returns { re, im, intensity, points?, ampSpec?, intSpec?, nuEff?, stroke?, info }.
-     * Point objects carry analytic (band-limited, sub-pixel exact) spectra; their spatial arrays
-     * are nearest-pixel deltas for display only.
-     */
+
     function makeObject(grid, params = {}) {
         const {
             N,
@@ -241,28 +204,27 @@
             const sep = type === "point" ? 0 : Math.max(0, params.sep || 0);
             const psi = type === "point" ? 0 : (params.pointPhase || 0);
             const pts = type === "point" ? [{
-                    x: 0,
-                    y: 0,
-                    a: {
-                        re: 1,
-                        im: 0
-                    }
-                }] :
-                [{
-                    x: -sep / 2,
-                    y: 0,
-                    a: {
-                        re: 1,
-                        im: 0
-                    }
-                }, {
-                    x: sep / 2,
-                    y: 0,
-                    a: {
-                        re: Math.cos(psi),
-                        im: Math.sin(psi)
-                    }
-                }];
+                x: 0,
+                y: 0,
+                a: {
+                    re: 1,
+                    im: 0
+                }
+            }] : [{
+                x: -sep / 2,
+                y: 0,
+                a: {
+                    re: 1,
+                    im: 0
+                }
+            }, {
+                x: sep / 2,
+                y: 0,
+                a: {
+                    re: Math.cos(psi),
+                    im: Math.sin(psi)
+                }
+            }];
             out.points = pts;
             const aR = new Float64Array(N * N),
                 aI = new Float64Array(N * N);
@@ -278,7 +240,7 @@
                         aR[k] += p.a.re * c - p.a.im * s;
                         aI[k] += p.a.re * s + p.a.im * c;
                         iR[k] += c;
-                        iI[k] += s; // |a|² = 1 for every point
+                        iI[k] += s;
                     }
                 }
             }
@@ -300,7 +262,7 @@
             }
             out.info = type === "point" ? "single point (band-limited delta)" : "two points, separation " + core.formatSI(sep, "m");
         } else if (type === "sinusoid") {
-            // intensity transmittance I = ½[1 + cos(2πνx)], amplitude t = √I (non-negative)
+
             const cycles = Math.max(1, Math.round(nu * grid.fov));
             const nuEff = cycles / grid.fov;
             out.nuEff = nuEff;
@@ -313,7 +275,7 @@
             const p = 1 / nu,
                 w = p / 2;
             out.period = p;
-            // group V: vertical bars (vary along x), group H: horizontal bars (vary along y)
+
             const inV = (X, Y) => {
                 if (Y < -1.25 * p || Y >= 1.25 * p) return false;
                 for (let k = 0; k < 3; k++) {
@@ -337,7 +299,7 @@
                 for (let ix = 0; ix < N; ix++) re[iy * N + ix] = ix > N / 2 ? 1 : ix === N / 2 ? 0.5 : 0;
             out.info = "knife edge at x = 0 (periodic field: a second edge sits at x = ±fov/2)";
         } else if (type === "phase") {
-            // transparent "cell": disk radius 0.28·fov with phase φ, nucleus radius 0.09·fov with extra φ, small granule
+
             const L = grid.fov,
                 phi = params.phi == null ? 0.3 : params.phi;
             const phase = new Float64Array(N * N);
@@ -357,7 +319,7 @@
             out.info = "pure phase object (|t| = 1), steps of φ = " + phi.toFixed(3) + " rad";
         } else if (type === "letters") {
             const text = String(params.text || "OPTICS").toUpperCase().slice(0, 8);
-            const s = 1 / (2 * nu); // stroke = half-period
+            const s = 1 / (2 * nu);
             const n = text.length,
                 width = (6 * n - 1) * s,
                 height = 7 * s;
@@ -383,7 +345,7 @@
         out.intensity = intensity;
         return out;
     }
-    /** Area-average an indicator/scalar function over each pixel (4 × 4 sub-samples). y increases with iy. */
+
     function fillSupersampled(grid, arr, fn) {
         const {
             N,
@@ -402,13 +364,13 @@
         }
     }
 
-    // ------------------------------------------------------------------ pupil and filters
+
     const FILTER_TYPES = ["none", "lowpass", "highpass", "bandpass", "knife", "darkfield", "phasecontrast"];
 
-    /** Complex Fourier-plane filter value at (fx, fy); r1, r2 are radii as fractions of fc. */
+
     function filterValue(type, fx, fy, fc, r1, r2, df) {
         const r = Math.hypot(fx, fy);
-        const stopR = Math.max(0.51 * df, r1 * fc); // central stops cover at least the DC sample
+        const stopR = Math.max(0.51 * df, r1 * fc);
         switch (type) {
             case "lowpass":
                 return {
@@ -437,7 +399,7 @@
                 } : {
                     re: 1,
                     im: 0
-                }; // +π/2 on the undiffracted light
+                };
             default:
                 return {
                     re: 1, im: 0
@@ -445,12 +407,7 @@
         }
     }
 
-    /**
-     * Build pupil arrays (centred). params: { lambda, NA, zernike: {j: c_waves}, dz (m),
-     * filter: {type, r1, r2} }. Aperture edge pixels are area-weighted (4 × 4 sub-samples).
-     * Returns { aperture (A), phase Φ (rad, 0 outside), W (waves, NaN outside), filterRe/Im,
-     *   ab: {re, im} = A e^{iΦ}, sys: {re, im} = A F e^{iΦ}, fc, rmsWaves, pvWaves, radiusPx, maxPhaseStep }.
-     */
+
     function makePupil(grid, params) {
         const {
             N,
@@ -562,8 +519,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ PSF / OTF / images
-    /** Amplitude PSF h = IFFT(P) (centred) and intensity PSF |h|². */
+
+
     function psfFromPupil(grid, P) {
         const h = fftCentered(P.re, P.im, grid.N, true);
         const I = new Float64Array(grid.N * grid.N);
@@ -573,7 +530,7 @@
             I
         };
     }
-    /** Normalised OTF = FT{|h|²}/∫|h|² (centred, OTF(0) = 1). */
+
     function otfFromPsf(grid, psfI) {
         let sum = 0;
         for (let k = 0; k < psfI.length; k++) sum += psfI[k];
@@ -589,7 +546,7 @@
         return fftCentered(re, im, grid.N, false);
     }
 
-    /** Coherent image: U = IFFT(Õ · P), I = |U|². */
+
     function imageCoherent(grid, ampSpec, P) {
         const n = grid.N * grid.N,
             r = new Float64Array(n),
@@ -610,7 +567,7 @@
             }
         };
     }
-    /** Incoherent image: Ĩ_img = Ĩ_obj · OTF, scaled by `gain` (collected fraction). */
+
     function imageIncoherent(grid, intSpec, otf, gain = 1) {
         const n = grid.N * grid.N,
             r = new Float64Array(n),
@@ -621,7 +578,7 @@
         }
         const U = fftCentered(r, i, grid.N, true);
         const I = new Float64Array(n);
-        for (let k = 0; k < n; k++) I[k] = Math.max(0, U.re[k]) * gain; // imaginary part is round-off
+        for (let k = 0; k < n; k++) I[k] = Math.max(0, U.re[k]) * gain;
         return {
             I,
             filteredSpec: {
@@ -631,8 +588,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ measurements
-    /** First local minimum of ys (after index start) refined by a parabola; returns fractional index or NaN. */
+
+
     function firstMinimumIndex(ys, start = 1) {
         for (let i = Math.max(1, start); i < ys.length - 1; i++) {
             if (ys[i] <= ys[i - 1] && ys[i] < ys[i + 1]) {
@@ -645,14 +602,14 @@
         }
         return NaN;
     }
-    /** Index where ys first falls to ≤ level (linear interpolation), scanning from start. */
+
     function firstCrossingBelow(ys, level, start = 0) {
         for (let i = Math.max(1, start); i < ys.length; i++) {
             if (ys[i] <= level && ys[i - 1] > level) return i - 1 + (ys[i - 1] - level) / (ys[i - 1] - ys[i]);
         }
         return NaN;
     }
-    /** Michelson modulation (max − min)/(max + min) of values in [i0, i1). */
+
     function modulation(ys, i0 = 0, i1 = ys.length) {
         let lo = Infinity,
             hi = -Infinity;
@@ -662,7 +619,7 @@
         }
         return hi + lo > 0 ? (hi - lo) / (hi + lo) : 0;
     }
-    /** Row iy of a centred array. */
+
     function row(a, N, iy = N / 2) {
         return a.slice(iy * N, iy * N + N);
     }
@@ -673,7 +630,7 @@
         return c;
     }
 
-    /** Linear interpolation in a centred row sampled at xs. */
+
     function sampleAt(xs, ys, x) {
         const dx = xs[1] - xs[0];
         const t = (x - xs[0]) / dx,
@@ -682,10 +639,7 @@
         return ys[i] + (t - i) * (ys[i + 1] - ys[i]);
     }
 
-    /**
-     * On-axis (x = 0) intensity versus extra defocus, from the pupil directly (no FFT):
-     * I(z)/I₀ = |Σ A e^{iΦ} e^{iφ_z}|² / (Σ A)². Uses the exact angular-spectrum defocus phase.
-     */
+
     function throughFocus(grid, pupil, lambda, dzs) {
         const {
             N,
@@ -721,7 +675,7 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ full simulation
+
     const DEFAULTS = Object.freeze({
         N: 256,
         fov: 16e-6,
@@ -769,7 +723,7 @@
         });
         const filtered = p.filter !== "none";
 
-        // reference: unaberrated, unfiltered aperture → peak |h0|² = (ΣA/N²)² at x = 0
+
         let sumA = 0,
             sumA2 = 0,
             sumSys2 = 0;
@@ -791,7 +745,7 @@
             }
         const strehl = peakAb / refPeak;
         const strehlOnAxis = psfAb.I[(N / 2) * N + N / 2] / refPeak;
-        const psfNorm = new Float64Array(n); // system intensity PSF relative to the unaberrated peak
+        const psfNorm = new Float64Array(n);
         for (let k = 0; k < n; k++) psfNorm[k] = psfSys.I[k] / refPeak;
 
         const otf = otfFromPsf(grid, psfSys.I);
@@ -808,10 +762,10 @@
         } else {
             const ints = obj.intSpec || spectrum(grid, obj.intensity, new Float64Array(n));
             image = imageIncoherent(grid, ints, otf, collected);
-            fourierSpec = ints; // incoherent: what the OTF filters is the intensity spectrum
+            fourierSpec = ints;
         }
 
-        // ---------- cuts
+
         const c = N / 2;
         const xs = grid.x,
             fs = grid.f;
@@ -824,8 +778,8 @@
         for (let i = 0; i < N; i++) ctfRow[i] = Math.hypot(pupil.sys.re[c * N + i], pupil.sys.im[c * N + i]);
         const apRow = row(pupil.aperture, N, c);
 
-        // ---------- measurements
-        const half = psfRow.slice(c); // r ≥ 0 along +x
+
+        const half = psfRow.slice(c);
         const iMin = firstMinimumIndex(half, 1);
         const psfFirstZero = Number.isFinite(iMin) ? iMin * grid.dx : NaN;
         const mtfHalf = mtfRow.slice(c);
@@ -858,13 +812,13 @@
             marechal: marechal(pupil.rmsWaves),
             pupilThroughput: collected,
             pupilRadiusPx: pupil.radiusPx,
-            fourierPlaneRadius: p.lambda * p.fLens * pupil.fc, // = NA · f_lens (paraxial)
+            fourierPlaneRadius: p.lambda * p.fLens * pupil.fc,
             dx: grid.dx,
             df: grid.df,
-            // peak image intensity of ONE ideal on-axis point in this mode (normalises point images)
+
             pointNorm: p.mode === "coherent" ? refPeak : refPeak * n / sumA2
         };
-        // object-specific
+
         if (p.object === "twoPoints" || p.object === "point") {
             const sep = p.object === "point" ? 0 : p.sep;
             const a = sampleAt(xs, imgRow, -sep / 2),
@@ -882,7 +836,7 @@
         }
         if (p.object === "sinusoid" || p.object === "bars") {
             const nuEff = obj.nuEff || p.nu;
-            // central window: for the sinusoid the whole row; for bars the vertical group
+
             let i0 = 0,
                 i1 = N;
             if (p.object === "bars") {
@@ -916,7 +870,7 @@
             contrast: imgMax + imgMin > 0 ? (imgMax - imgMin) / (imgMax + imgMin) : 0
         };
 
-        // ---------- warnings (sampling / validity)
+
         const warnings = [];
         if (pupil.radiusPx < 4) warnings.push("Pupil spans only " + pupil.radiusPx.toFixed(1) + " frequency samples (NA·fov/λ < 4): the PSF is wider than the field; increase the field of view or NA.");
         if (p.mode === "incoherent" && 2 * pupil.fc > grid.fNyquist) warnings.push("Incoherent cutoff 2NA/λ exceeds the sampling Nyquist frequency 1/(2dx): the OTF is aliased. Reduce the field of view or increase N.");

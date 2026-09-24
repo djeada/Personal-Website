@@ -422,9 +422,9 @@ function isNumeric(value) {
     return text !== "" && Number.isFinite(Number(text));
 }
 
-// Ordering used by the BST and the heap. Two numbers compare numerically, anything
-// else compares as text, so mixed data still gets a total, stable order instead of
-// being reduced to its first character code.
+
+
+
 function compareValues(a, b) {
     if (isNumeric(a) && isNumeric(b)) {
         const difference = Number(a) - Number(b);
@@ -555,8 +555,8 @@ function distinctRandom(count, make) {
     return Array.from(seen);
 }
 
-// Randomize should give a genuinely different dataset each click, and one that suits
-// the structure: numbers where ordering is the point, words where prefixes are.
+
+
 function randomDataset(key) {
     const config = STRUCTURES[key];
     const count = randomInt(5, 8);
@@ -564,8 +564,8 @@ function randomDataset(key) {
         const vertices = Array.from({
             length: randomInt(5, 7)
         }, (unused, index) => String.fromCharCode(65 + index));
-        // Start from a random spanning tree so the graph is always connected, then add
-        // a couple of extra edges for cycles.
+        
+        
         const edges = vertices.slice(1).map((vertex, index) => [vertices[randomInt(0, index)], vertex]);
         for (let extra = randomInt(1, 2); extra > 0; extra -= 1) {
             const a = vertices[randomInt(0, vertices.length - 1)];
@@ -584,7 +584,7 @@ function randomDataset(key) {
         }));
     }
     if (key === "trie") {
-        // Share stems so the tree actually branches instead of becoming a row of chains.
+        
         const stems = shuffled(TRIE_STEMS).slice(0, randomInt(2, 3));
         return distinctRandom(count, () => stems[randomInt(0, stems.length - 1)] + TRIE_TAILS[randomInt(0, TRIE_TAILS.length - 1)]);
     }
@@ -1043,8 +1043,8 @@ function animationTargets() {
             return index < 0 ? null : remaining.splice(index, 1)[0];
         }).filter(Boolean).slice(0, Math.max(1, lastMetrics.touched));
     }
-    // A freshly inserted value is not on screen yet, so matching it against the
-    // pre-insert render would light up an unrelated duplicate.
+    
+    
     if (highlight.mode === "new") return [];
     return selectable.filter((node) => {
         if (highlight.index !== undefined && Number(node.dataset.index) === highlight.index) return true;
@@ -1214,8 +1214,8 @@ function performBSTOperation(operation) {
     const value = getPrimaryValue();
     const walk = bstPath(value);
     const path = walk.path;
-    // Membership is decided by the search walk itself, so the reported result always
-    // agrees with the highlighted path instead of with a separate array lookup.
+    
+    
     const exists = walk.found;
 
     if (operation === "add") {
@@ -1313,8 +1313,8 @@ function performLinearOperation(operation) {
     }
 
     if (operation === "search") {
-        // A stack can only be examined from the top, so its scan runs in reverse to
-        // match both the rendered column and the real access pattern.
+        
+        
         const probeOrder = state.map((unused, index) => index);
         if (currentKey === "stack") probeOrder.reverse();
         const position = probeOrder.findIndex((index) => String(state[index]) === value);
@@ -1438,8 +1438,8 @@ function performHashSetOperation(operation) {
     const bucketCount = bucketCountFor(currentKey);
     const bucket = hashValue(value, bucketCount);
     const bucketEntries = state.filter((item) => hashValue(entryKey(item), bucketCount) === bucket).map((item) => String(item));
-    // Only the chain in the target bucket is inspected; an empty bucket still costs the
-    // one hash computation, hence the floor of 1.
+    
+    
     const probes = Math.max(1, exists ? bucketEntries.indexOf(value) + 1 : bucketEntries.length);
     const hashNote = hashExplanation(value, bucketCount);
 
@@ -1743,8 +1743,8 @@ function performGraphOperation(operation) {
             touched: Math.max(1, order.length)
         });
     } else if (operation === "remove") {
-        // Counted before the mutation: deletion inspects every vertex and every edge
-        // that existed when the operation started.
+        
+        
         const inspected = state.nodes.length + state.edges.length;
         const incident = state.edges.filter((edge) => edge[0] === value || edge[1] === value).length;
         state.nodes = state.nodes.filter((node) => node !== value);
@@ -1956,8 +1956,8 @@ function render() {
     fitStageContent();
 }
 
-// Renderers size themselves to the stage, so anything still wider than it is genuinely
-// too dense to shrink further; centre the scroll on it rather than starting at its edge.
+
+
 function fitStageContent() {
     const overflow = visual.scrollWidth - visualStage.clientWidth;
     visualStage.scrollLeft = overflow > 0 ? overflow / 2 : 0;
@@ -2107,16 +2107,16 @@ const TREE_NODE_HEIGHT = 74;
 const TREE_SLOT = 104;
 const TREE_LEVEL = 116;
 
-// Horizontal room the stage can give a drawing before it has to scroll.
+
 function availableStageWidth() {
     return Math.max(280, visualStage.clientWidth - 44);
 }
 
 const CANVAS_PAD = 14;
 
-// Shrink the per-column pitch (and with it the node box) until the drawing fits the
-// stage, but never past the point where the labels stop being readable; anything
-// still wider than that scrolls.
+
+
+
 function columnMetrics(columns, naturalSlot, minSlot) {
     const usable = availableStageWidth() - CANVAS_PAD * 2;
     const slot = Math.max(minSlot, Math.min(naturalSlot, usable / Math.max(1, columns)));
@@ -2126,11 +2126,11 @@ function columnMetrics(columns, naturalSlot, minSlot) {
     };
 }
 
-// The same idea vertically: a degenerate tree is one node per level, so tighten the
-// level spacing before letting it grow into a very tall scroll. The budget follows the
-// stage's own max-height rule rather than its measured height, which would otherwise
-// shrink on every re-render. `reserve` is room kept for anything drawn below the
-// canvas, such as a heap's backing array.
+
+
+
+
+
 function levelHeight(levels, naturalLevel, minLevel, ratio, reserve = 0) {
     const maxStage = Math.min(window.innerHeight * 0.78, 860);
     const budget = Math.max(240, maxStage - 56 - reserve);
@@ -2143,9 +2143,9 @@ function renderTree(root, includeArray) {
     let maxDepth = 0;
 
     if (includeArray) {
-        // A heap is always a complete tree, so its nodes can be laid out straight from
-        // their array indices; that keeps the picture symmetric and lined up with the
-        // backing array underneath it.
+        
+        
+        
         (function collect(node, index) {
             if (!node) return;
             const depth = Math.floor(Math.log2(index + 1));
@@ -2164,9 +2164,9 @@ function renderTree(root, includeArray) {
             entry.column = ((entry.index + 1 - slotsInLevel) + 0.5) * (column / slotsInLevel);
         });
     } else {
-        // In-order column assignment: every node gets its own vertical lane, so a deep
-        // or lopsided tree can never stack two nodes on the same pixel the way the old
-        // "split the canvas in half per level" layout did.
+        
+        
+        
         (function place(node, depth, parent) {
             if (!node) return;
             maxDepth = Math.max(maxDepth, depth);
@@ -2232,9 +2232,9 @@ const GRAPH_NODE_RADIUS = 34;
 
 function renderGraph() {
     const count = state.nodes.length;
-    // The ring has to grow with the vertex count, otherwise vertices overlap as soon
-    // as a few are added; if that no longer fits the stage, shrink ring and vertices
-    // together instead of letting the drawing run off the edge.
+    
+    
+    
     const naturalRing = Math.max(150, (GRAPH_NODE_RADIUS + 26) / Math.sin(Math.PI / Math.max(3, count)));
     const naturalSize = (naturalRing + GRAPH_NODE_RADIUS + 20) * 2;
     const ratio = Math.max(0.6, Math.min(1, availableStageWidth() / naturalSize));

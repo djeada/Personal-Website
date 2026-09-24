@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Production frame flow</title>
+    <title>Rendering Architecture | Adam Djellouli</title>
     <meta content="Standard of Iron renders from published simulation snapshots." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,17 +13,16 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Production frame flow",
+            "headline": "Rendering Architecture",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture",
             "description": "Standard of Iron renders from published simulation snapshots.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-09-24",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Rendering Architecture" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Standard of Iron renders from published simulation snapshots." property="og:description" />
+    <meta content="2026-09-24" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,6 +80,8 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
@@ -89,6 +98,7 @@
                         </ol>
                     </li>
                     <li><a href="#simulation-thread-and-render-thread">Simulation thread and render thread</a></li>
+                    <li><a href="#qsg-render-thread-stages">QSG render-thread stages</a></li>
                     <li><a href="#scene-walk">Scene walk</a></li>
                     <li><a href="#draw-queue">Draw queue</a></li>
                     <li><a href="#backend-interface">Backend interface</a></li>
@@ -99,14 +109,29 @@
                         </ol>
                     </li>
                     <li><a href="#graphics-profile-contract">Graphics profile contract</a></li>
-                    <li><a href="#low-profile">Low profile</a></li>
+                    <li><a href="#low-profile">Low profile</a>
+                        <ol>
+                            <li><a href="#low-on-an-old-or-software-gpu">Low on an old or software GPU</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#medium-profile">Medium profile</a></li>
                     <li><a href="#high-profile">High profile</a></li>
                     <li><a href="#ultra-profile">Ultra profile</a></li>
-                    <li><a href="#creature-rendering">Creature rendering</a></li>
+                    <li><a href="#creature-rendering">Creature rendering</a>
+                        <ol>
+                            <li><a href="#minimal-lod-and-the-prebaked-snapshot-blob">Minimal LOD and the prebaked snapshot blob</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#animation-ownership">Animation ownership</a></li>
                     <li><a href="#soldier-level-anchors">Soldier-level anchors</a></li>
-                    <li><a href="#terrain-and-world-geometry">Terrain and world geometry</a></li>
+                    <li><a href="#terrain-and-world-geometry">Terrain and world geometry</a>
+                        <ol>
+                            <li><a href="#terrain-contact">Terrain contact</a></li>
+                            <li><a href="#ground-plane-draws-after-the-terrain">Ground plane draws after the terrain</a></li>
+                            <li><a href="#baked-terrain-shader-variant">Baked terrain shader variant</a></li>
+                            <li><a href="#weapon-rack-carries-a-per-vertex-surface-stream">Weapon rack carries a per-vertex surface stream</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#terrain-scatter-readiness">Terrain scatter readiness</a></li>
                     <li><a href="#environment-lighting">Environment lighting</a></li>
                     <li><a href="#directional-shadows">Directional shadows</a></li>
@@ -116,7 +141,12 @@
                     <li><a href="#grass-and-environmental-density">Grass and environmental density</a></li>
                     <li><a href="#nation-and-equipment-appearance">Nation and equipment appearance</a></li>
                     <li><a href="#shader-system">Shader system</a></li>
-                    <li><a href="#opengl-backend">OpenGL backend</a></li>
+                    <li><a href="#opengl-backend">OpenGL backend</a>
+                        <ol>
+                            <li><a href="#gl-object-lifetime">GL object lifetime</a></li>
+                            <li><a href="#renderer-scoped-state">Renderer-scoped state</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#software-backend">Software backend</a></li>
                     <li><a href="#minimap-and-secondary-presentation-consumers">Minimap and secondary presentation consumers</a></li>
                     <li><a href="#resource-generation-and-quality-changes">Resource generation and quality changes</a></li>
@@ -145,6 +175,8 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_licenses.html">Audio Licenses</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_system.html">Audio System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
@@ -152,6 +184,7 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/difficulty.html">Difficulty</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
@@ -175,12 +208,16 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/farm_activity.html">Farm Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/home_activity.html">Home Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/marketplace.html">Marketplace</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/siege_presentation.html">Siege Presentation</a></li>
                 </ol>
             </div>
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 24, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -199,7 +236,7 @@
                         </svg>
                     </button></div>
             </div>
-            <header>Rendering Architecture</header>
+            <h1>Rendering Architecture</h1>
             <p>Standard of Iron renders from published simulation snapshots. Gameplay state belongs to the simulation; the renderer receives a detached view of that state, resolves visibility and presentation, records draw work, and submits the result through a backend boundary.</p>
             <p>That ownership model is the central rendering invariant. The renderer can cache meshes, shaders, animation presentation, GPU resources, and frame-local visibility decisions, but it does not become the authority for unit position, ownership, health, combat state, economy, or mission state.</p>
             <p><code>render_gl</code> links the simulation kernel (<code>game_sim</code>) so it can consume production simulation data. The simulation layer does not link renderer implementation.</p>
@@ -271,6 +308,15 @@ IRenderBackend
             </ul>
             <p>The live-state parts of simulation/presentation coordination use the game-engine frame lock, but the renderer does not keep the mutable world locked throughout the entire draw.</p>
             <p>A <code>WorldFreeze</code> coordinates destructive world replacement or rebuild operations so simulation and presentation do not continue through a load/reset boundary.</p>
+            <h2 id="qsg-render-thread-stages">QSG render-thread stages</h2>
+            <p><code>ui/gl_view.cpp</code> owns the frame callback through <code>GLView::GLRenderer::render()</code>, which Qt runs on the QSG render thread with the FBO OpenGL context current. The simulation does not run inside that callback:</p>
+            <ol>
+                <li><code>GameEngine::simulate(dt)</code> runs at a fixed cadence on its own <code>QThread</code> (<code>SoISimulation</code>), started by the first successful <code>GLRenderer::render()</code> through <code>GameEngine::start_simulation_thread()</code>. <code>GameEngine::update(dt)</code> remains as <code>simulate</code> plus <code>update_presentation</code> for single-threaded callers.</li>
+                <li><code>GameEngine::update_presentation(dt)</code> runs on the render thread at the top of every frame: camera follow, order markers, renderer animation time, visibility, minimap and view-model synchronization.</li>
+                <li><code>GameEngine::render(width, height)</code> configures the per-frame camera copy (<code>m_render_camera</code>), submits terrain, and calls <code>Renderer::render_world(world)</code> against the published snapshot without holding <code>GameEngine::m_frame_mutex</code>. It then takes the frame lock with a bounded wait for the live-state effects pass (<code>FrameUiCoordinator::render_effects</code>).</li>
+                <li><code>Renderer::end_frame()</code> sorts the <code>DrawQueue</code>, and <code>Backend::execute(...)</code> performs OpenGL playback.</li>
+            </ol>
+            <p><code>simulate</code>, <code>update_presentation</code>, and GUI-thread input serialise on the frame lock; scene walk and backend playback overlap the simulation tick. Frame phases are logged through <code>Render::Profiling::global_profile()</code>, and a GUI handler holding the frame lock must never wait on the render thread.</p>
             <h2 id="scene-walk">Scene walk</h2>
             <p><code>render/scene_walk.cpp</code> is the main bridge between snapshot data and renderer submission.</p>
             <p>The scene walk is responsible for consuming the published world state and deciding which renderer paths receive which entities/environment elements.</p>
@@ -301,7 +347,7 @@ world props      ┘</code></pre>
             <h2 id="backend-interface">Backend interface</h2>
             <p><code>Render::GL::IRenderBackend</code> defines the execution boundary:</p>
             <div>
-                <pre><code class="language-clike">initialize()
+                <pre><code class="language-cpp">initialize()
 begin_frame()
 execute(const DrawQueue&amp;, const Camera&amp;)
 set_viewport(...)
@@ -368,6 +414,28 @@ set_frame_budget(...)</code></pre>
                 <li>grass density <code>0.30</code>.</li>
             </ul>
             <p>Low is therefore not merely “High with smaller textures.” It changes several rendering features and content densities together.</p>
+            <h3 id="low-on-an-old-or-software-gpu">Low on an old or software GPU</h3>
+            <p>Low is the preset that has to run on a GL 3.3 Core driver with no 4.x features. That covers old Intel and AMD integrated GPUs, and Mesa llvmpipe.</p>
+            <ul>
+                <li><strong>First run picks Low on weak adapters.</strong> If no graphics preset has been saved, <code>RenderBootstrap::initialize</code> switches to Low when the adapter is a software renderer (llvmpipe, softpipe, swrast, SwiftShader, Microsoft Basic Render, GDI Generic, Apple Software Renderer), or, except on macOS, when the context is below GL 4.3. macOS caps OpenGL at 4.1 on every GPU, so the version says nothing about a Mac's speed. <code>GraphicsSettings::quality_chosen_by_user()</code> stops a saved choice from being overridden.</li>
+                <li><strong>Context.</strong> The entry point still asks for 4.5 Core. On Linux, Qt falls back to what the driver grants, so a 3.3-only Mesa driver still gets a 3.3 Core context. Do not request 3.3 on Linux: the NVIDIA driver then returns exactly 3.3 and the GPU culling path turns off on capable hardware.</li>
+                <li><strong>4.x features stay behind probes.</strong> The only callers of compute, indirect draw, immutable storage and SSBO entry points are <code>rigged_cull_pipeline.cpp</code> and <code>platform_gl.h</code>, and 4.30 GLSL includes are used only by the optional 4.30 shaders. <code>scripts/validate_opengl_requirements.py</code> check 5 enforces both.</li>
+                <li><strong>Cheaper Low tier.</strong>
+                    <ul>
+                        <li>The post-process scene target is packed <code>R11F_G11F_B10F</code> when bloom, god rays and FXAA are all off. It keeps HDR range at half the bandwidth of RGBA16F.</li>
+                        <li>Local lights are capped at four per pixel, and local specular is skipped.</li>
+                        <li>The terrain noise atlas is capped at 2048² and the microdetail texture is 512².</li>
+                    </ul>
+                </li>
+                <li><strong>Rigged creatures without GL 4.3</strong> draw one command each through <code>RiggedCharacterPipeline</code>. Its bone-palette ring has 1024 slots, so it orphans the buffer about twice per frame at two thousand creatures instead of about thirty. When there is no persistent mapping, the fallback streaming ring maps unsynchronised because each slot is already fenced.</li>
+            </ul>
+            <p>To reproduce locally on an NVIDIA machine, force Mesa and cap it at 3.3:</p>
+            <div>
+                <pre><code class="language-shell">__GLX_VENDOR_LIBRARY_NAME=mesa LIBGL_ALWAYS_SOFTWARE=1 \
+MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
+  build/bin/standard_of_iron --renderer-self-test</code></pre>
+            </div>
+            <p>Point <code>XDG_CONFIG_HOME</code> at an empty directory to see the first-run Low selection.</p>
             <h2 id="medium-profile">Medium profile</h2>
             <p>Current Medium settings include:</p>
             <ul>
@@ -417,7 +485,10 @@ set_frame_budget(...)</code></pre>
             <p>Gameplay and presentation state select the current action/clip/phase. The renderer then evaluates the appropriate rigged/snapshot path for the species and active graphics profile.</p>
             <p>The current creature detail model distinguishes full-detail and reduced/snapshot presentation, with a separate culled state when the active profile permits distance culling.</p>
             <p>High and Ultra currently disable creature LOD in their profile definition.</p>
-            <p>See <a href="CREATURE_BPAT_FORMAT.md">CREATURE_BPAT_FORMAT.md</a> for the baked format and <a href="HORSE_MODEL_ARCHITECTURE.md">HORSE_MODEL_ARCHITECTURE.md</a> for mounted creature asset structure.</p>
+            <h3 id="minimal-lod-and-the-prebaked-snapshot-blob">Minimal LOD and the prebaked snapshot blob</h3>
+            <p>Species that ship a <code>*_minimal.bpsm</code> (horse, elephant, sheep, wolf) and carry no static attachments are marked <code>requires_prebaked_minimal_snapshot</code>: at the Minimal LOD they are only ever drawn from that blob, never skinned at runtime, so a distant herd costs one static mesh per body. The blob is baked from <strong>every</strong> clip in the species recipe, so any state can be served from it. The decision lives in <code>snapshot_mesh_serves_request()</code> (<code>render/creature/pipeline/lod_decision.h</code>): a prebaked Minimal request always takes the snapshot path; only the opt-in runtime-baked snapshot path (<code>creature_lod.snapshot_meshes</code>, off in every shipped profile) is restricted to states whose manifest <code>snapshot</code> flag is set.</p>
+            <p>It used to require the <code>snapshot</code> flag in both cases, and the clip manifest clears that flag for <code>Die</code> because a humanoid's runtime-baked fall would cost a mesh per frame. The prebaked species inherited the exclusion by accident, and the pipeline's answer for a non-snapshot state at a prebaked Minimal LOD was to submit nothing: a sheep or horse dying more than 20 m from the camera (12 m on Low) vanished for the whole fall and reappeared as a settled corpse. Measured in <code>wildlife_pack_takedown</code> at <code>--graphics-quality low</code>, all 144 <code>Die</code> submissions for the two sheep were dropped while the 122 <code>Dead</code> submissions were drawn. Humanoids were never affected: they have no <code>.bpsm</code>, so their Minimal LOD falls through to the rigged path in both states.</p>
+            <p>See <a href="creature_bpat_format.html">CREATURE_BPAT_FORMAT.md</a> for the baked format and <a href="horse_model_architecture.html">HORSE_MODEL_ARCHITECTURE.md</a> for mounted creature asset structure.</p>
             <h2 id="animation-ownership">Animation ownership</h2>
             <p>Authoritative gameplay state does not depend on the renderer's interpolation or pose cache.</p>
             <p>The simulation determines things such as:</p>
@@ -433,14 +504,90 @@ set_frame_budget(...)</code></pre>
             <h2 id="soldier-level-anchors">Soldier-level anchors</h2>
             <p>Formation and combat systems can publish soldier-level presentation anchors. The renderer reads those published anchors rather than running its own independent positional simulation for each soldier.</p>
             <p>That rule is especially important during traversal and combat, where presentation may need to show soldiers reflowing inside a unit while the authoritative troop root follows navigation.</p>
-            <p>The formation article documents the shared anchor precedence in detail: <a href="FORMATION_ARCHITECTURE.md">FORMATION_ARCHITECTURE.md</a>.</p>
+            <p>The formation article documents the shared anchor precedence in detail: <a href="formation_architecture.html">FORMATION_ARCHITECTURE.md</a>.</p>
             <h2 id="terrain-and-world-geometry">Terrain and world geometry</h2>
             <p>Terrain, scatter, authored props, buildings, walls, and other world geometry feed the same queue/backend model as dynamic entities.</p>
             <p>Terrain/world-prop positions are resolved from authored map/grid space through the terrain/map services before rendering. Renderer code should not invent a second coordinate convention for map objects.</p>
-            <p>See <a href="MAP_OBJECT_PLACEMENT.md">MAP_OBJECT_PLACEMENT.md</a> for the placement contract.</p>
+            <p>See <a href="map_object_placement.html">MAP_OBJECT_PLACEMENT.md</a> for the placement contract.</p>
+            <h3 id="terrain-contact">Terrain contact</h3>
+            <p>Everything that stands on the ground samples one surface, and it is the surface on screen.</p>
+            <ul>
+                <li><strong>One height function.</strong> The terrain mesh splits every grid quad along its
+                    (x+1, z)-(x, z+1) diagonal, and subdivided quads place their extra vertices on those same
+                    triangles. <code>Game::Map::sample_triangulated_height</code> (<code>game/map/terrain_surface.h</code>) returns
+                    exactly that height. <code>TerrainHeightMap::get_base_height_at</code>, <code>TerrainField</code>, the scatter
+                    spawn cache, stone ground fit, riverbank dressing, linear features, roads and the
+                    <code>ground_marker</code> shader (via <code>texelFetch</code>) all go through it. A bilinear patch can sit up
+                    to a quarter of the quad's twist away from the triangles, which is how feet sank and
+                    props floated on curved ground. <code>TerrainService::sample_ground_normal</code> is the smoothed
+                    up-vector used for anything that tilts.
+                </li>
+                <li><strong>Roads.</strong> The road ribbon is draped over the highest terrain within
+                    <code>k_road_surface_envelope_tiles</code> of each vertex. <code>TerrainService</code> samples the same
+                    envelope for points on a road, so units walk on the paving rather than on the ground
+                    under it.
+                </li>
+                <li><strong>Structures stay upright and get a foundation.</strong> Buildings, walls, towers, construction
+                    sites and placement ghosts are seated at the height under their centre.
+                    <code>render/entity/structure_foundation</code> measures the drop across the drawn body (the
+                    <code>BuildingCollisionRegistry</code> body table × transform scale) and adds a fieldstone
+                    foundation down to the lowest ground. Completed buildings cache it in <code>CachedUnitData</code>
+                    and recompute it only when the model matrix changes. Ghosts resolve it on the spot, using
+                    the same rule the finished structure will use.
+                </li>
+                <li><strong>Upright props are bedded, not tilted.</strong> Trees, iron ore and plants sink by
+                    <code>slope_bed_depth</code> (contact radius × tan slope) so the downhill side of the trunk or base
+                    meets the ground. Rocks keep their tilt-and-sink ground fit (<code>stone_ground_fit.h</code>).
+                    Footprint props (tents, ruins, carts, shrines) sit at the lowest ground under their
+                    footprint. All of this is resolved when instances are built, never per frame.
+                </li>
+                <li><strong>Things that rest on the ground follow it.</strong> Siege carriages tilt to the slope and each
+                    crew member stands on their own ground. Horses and elephants pitch along their heading
+                    (the rider inherits it) but stay upright across the slope. Fallen soldiers ease onto
+                    the slope as they go down. Selection rings drape over the terrain unless their owner is
+                    raised well above it (a bridge deck).</li>
+            </ul>
+            <p><code>grounding_flat</code>, <code>grounding_hill</code>, <code>grounding_ridge</code>, <code>grounding_riverbank</code>,
+                <code>grounding_road</code> and <code>grounding_scatter</code> put the same cast on each kind of ground for
+                arena captures. <code>tests/render/terrain_grounding_test.cpp</code> pins the surface, road,
+                foundation and tilt rules.
+            </p>
+            <h3 id="ground-plane-draws-after-the-terrain">Ground plane draws after the terrain</h3>
+            <p>The ground plane (<code>GroundRenderer</code>, the map-plus-48-tile skirt at y = -0.08) and the terrain
+                chunks are both <code>TerrainSurfaceCmd</code>s. The plane uses sort key <code>0x00C0</code>, after the chunks and
+                the boundary mountains (<code>0x0080</code>). Both are opaque and nothing between them depends on the
+                plane, so the order is invisible in the image. What it changes is cost: drawn first, every
+                pixel under the terrain ran <code>ground_plane.frag</code> (18 fbm calls) and was then overdrawn;
+                drawn last, early depth rejects those pixels. GPU timers on Zama Ultra put the terrain
+                surface pass at 1.78 ms before and 1.23 ms after.</p>
+            <h3 id="baked-terrain-shader-variant">Baked terrain shader variant</h3>
+            <p><code>terrain_chunk.frag</code> is compiled twice. <code>terrain_chunk</code> keeps the procedural fallbacks for
+                when the per-map noise atlas or microdetail texture is missing (<code>SOI_TERRAIN_NOISE_BAKE=0</code>
+                or a failed bake). <code>terrain_chunk_baked</code> is compiled with <code>SOI_TERRAIN_BAKED</code>, which turns
+                <code>HAS_NOISE_ATLAS</code> and <code>HAS_MICRODETAIL</code> into compile-time <code>true</code>, so the compiler drops the
+                fallback code instead of carrying it behind a uniform branch. The executor picks the baked
+                program per draw when the command's height resources carry all three textures, and
+                <code>TerrainPipeline::terrain_uniforms_for()</code> hands back the matching uniform table; the baked
+                table resolves every handle as optional because the stripped program no longer has the
+                fallback-only uniforms. Measured on Zama Ultra: 1.23 ms to 0.97 ms for the terrain pass on
+                top of the ground-plane change.
+            </p>
+            <h3 id="weapon-rack-carries-a-per-vertex-surface-stream">Weapon rack carries a per-vertex surface stream</h3>
+            <p>Most instanced props pick their materials in the shader from the model-space position (bands keyed to where a part happens to sit) or from a length packed into the normal (the tent). The weapon rack (<code>render/gl/backend/weapon_rack_mesh.cpp</code>) has too many small, overlapping parts for that to work. Every vertex therefore carries a fourth attribute at location 4, <code>(material, u, v, seed)</code>, uploaded by <code>VegetationPipeline::upload_prop_mesh_with_surface_impl</code>. Location 4 is free on prop VAOs because the instance stream only binds locations 2 and 3.</p>
+            <ul>
+                <li><code>material</code> is one of the <code>WeaponRackMaterial</code> ids, which match the <code>k_mat_*</code> constants in <code>weapon_rack_instanced.frag</code>: oak, ash, steel, iron, bronze, leather, yew, linen, shield paint, shield back, bone and feather.</li>
+                <li><code>u, v</code> depend on how the part was built:<ul>
+                        <li>Boxes and beams are projected so that <code>v</code> runs along the member. The shader lays grain, forging streaks and wear along it.</li>
+                        <li>Swept parts use <code>u</code> for the distance around the section (0 to 1) and <code>v</code> for the distance along the sweep. Blades and spearheads have <code>v</code> normalised from 0 at the base to 1 at the tip, and their four-facet diamond section puts the edges at <code>cos(u·2π) = ±1</code>.</li>
+                        <li>Shield faces use the flat face coordinates in [-1, 1]. The scutum outline is the superellipse <code>|s|^2.4 + |t|^2.4 = 1</code>, and the shader paints its border against that curve. On the parma the coordinates are polar.</li>
+                    </ul>
+                </li>
+                <li><code>seed</code> varies each part. For shield paint it also chooses the design: below 0.5 is a scutum, 0.5 and above is a parma.</li>
+            </ul>
+            <p>The frame parts in <code>weapon_rack_parts.h</code> are still the source for <code>PropModelFootprintTest</code>. Weapons and shields are built only in the mesh builder and stay inside the declared <code>{0.88, 0.54}</code> half extents. The shader builds a height field for each material and turns it into a bump normal from screen-space derivatives. Every derivative is taken outside the material branches, and the bump fades out beyond about 48 m. Lighting is GGX specular plus a sky/ground reflection. Directional shadow blocks sun specular completely but only tints the ambient and diffuse terms, so metal in shadow does not glint.</p>
             <h2 id="terrain-scatter-readiness">Terrain scatter readiness</h2>
             <p>Terrain scatter has an explicit GPU-readiness state.</p>
-            <p>Mission startup can keep the loading overlay visible while terrain scatter exists but is not yet ready for presentation. That state is one of the startup readiness gates described in <a href="MISSION_STARTUP.md">MISSION_STARTUP.md</a>.</p>
+            <p>Mission startup can keep the loading overlay visible while terrain scatter exists but is not yet ready for presentation. That state is one of the startup readiness gates described in <a href="mission_startup.html">MISSION_STARTUP.md</a>.</p>
             <p>The startup system therefore distinguishes “simulation world exists” from “the main visual environment is ready enough to reveal the battle.”</p>
             <h2 id="environment-lighting">Environment lighting</h2>
             <p><code>scene/environment_lighting.h</code> defines the shared outdoor environment-lighting state.</p>
@@ -459,30 +606,32 @@ set_frame_budget(...)</code></pre>
             <h2 id="directional-shadows">Directional shadows</h2>
             <p>Directional shadows are configured by <code>DirectionalShadowSettings</code> in the active graphics profile.</p>
             <p>Current profile behavior is:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Profile</td>
-                    <td>Directional shadows</td>
-                </tr>
-                <tr>
-                    <td>Low</td>
-                    <td>disabled</td>
-                </tr>
-                <tr>
-                    <td>Medium</td>
-                    <td>2 cascades, 1024 resolution</td>
-                </tr>
-                <tr>
-                    <td>High</td>
-                    <td>4 cascades, 4096 resolution, 200 m envelope</td>
-                </tr>
-                <tr>
-                    <td>Ultra</td>
-                    <td>full High-style cascade envelope</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Profile</th>
+                        <th>Directional shadows</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Low</td>
+                        <td>disabled</td>
+                    </tr>
+                    <tr>
+                        <td>Medium</td>
+                        <td>2 cascades, 1024 resolution</td>
+                    </tr>
+                    <tr>
+                        <td>High</td>
+                        <td>4 cascades, 4096 resolution, 200 m envelope</td>
+                    </tr>
+                    <tr>
+                        <td>Ultra</td>
+                        <td>full High-style cascade envelope</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Cascade fitting, bias, filtering, light-space culling, and sampling are implemented in <code>render/gl/</code> and shared shader includes.</p>
             <p>Those implementation sources are the correct place to read exact shadow mechanics. The profile table documents the quality envelope rather than duplicating every internal shadow constant into multiple articles.</p>
             <h2 id="contact-shadows-and-grounding">Contact shadows and grounding</h2>
@@ -545,6 +694,31 @@ set_frame_budget(...)</code></pre>
                 <li>resource lifetime.</li>
             </ul>
             <p>Higher layers submit render intent. They should not depend on raw GL state layout unless they are explicitly part of the backend implementation.</p>
+            <h3 id="gl-object-lifetime">GL object lifetime</h3>
+            <p>The process has one GL context that is never recreated. The gameplay <code>GLView</code> and the commander portrait are both <code>QQuickFramebufferObject</code> items in the same window, so they share the scene-graph context and render thread. The portrait still owns a second <code>Renderer</code> and <code>Backend</code>, and that is why per-renderer state matters even with one context.</p>
+            <p>Every GL name records the share group it was created in (<code>current_gl_share_group()</code>), and is released through one policy in <code>render/gl/gl_lifetime.*</code>:</p>
+            <ul>
+                <li>If the owning share group is current, the name is deleted immediately.</li>
+                <li>Otherwise it is queued with <code>defer_gl_delete</code>. The queue drains only into its own group, and is discarded (<code>forget_gl_share_group</code>) when that group is destroyed.</li>
+                <li>No destructor issues a GL call without a current context.</li>
+            </ul>
+            <p><code>Buffer</code>, <code>VertexArray</code>, <code>Texture</code>, <code>Shader</code> (as <code>DeferredGlObject::Program</code>) and the resource manager's 3D wear volume all use <code>release_gl_object</code>. Pipeline objects in <code>render/gl/backend/*</code> still delete their own names. For that reason <code>Backend::~Backend()</code>, when it runs without a context, releases (abandons) the pipelines rather than destroying them, but it still clears the shared geometry cache: cached meshes defer their names safely.</p>
+            <p><code>Mesh::prepare_draw</code> re-uploads when its vertex array belongs to a different share group than the current one. The process-global <code>SharedGeometryCache</code> can therefore survive a context change without handing out dead VAO names.</p>
+            <p><code>current_gl_share_group()</code> is called per draw, so it caches the last context group per thread. The cache is invalidated by a generation counter bumped whenever a group is destroyed, so a reused <code>QOpenGLContextGroup</code> address cannot resolve to a stale id.</p>
+            <h3 id="renderer-scoped-state">Renderer-scoped state</h3>
+            <ul>
+                <li><strong>Graphics quality.</strong> <code>GraphicsSettings</code> publishes quality, profile pointer and backend kind as atomics. The profiles are immutable <code>constexpr</code> tables, so a reader on the render thread or a prepare worker always sees a whole profile while the GUI thread changes quality.</li>
+                <li><strong>Shader reload.</strong> <code>Shader::set_global_defines</code> bumps a generation only when the defines actually change. <code>Shader::reload_all()</code> recompiles only programs that were compiled under an older generation and that belong to the current share group. When both backends apply the same tier, the second one recompiles nothing.</li>
+                <li><strong>Runtime-bake barrier.</strong> A <code>Renderer</code> lifts the global no-runtime-bake barrier on <code>initialize()</code>/<code>shutdown()</code> only if it raised it. Initializing or tearing down the portrait renderer no longer re-enables runtime bakes for the gameplay renderer. The barrier itself remains process-global because bake sites deep in the creature caches read it without a renderer in hand. Both renderers run one after the other on the render thread, and the portrait wraps its frames in <code>RuntimeBakeAllowScope</code>.</li>
+                <li><strong>Frame profile.</strong> The portrait wraps its frames in <code>ScopedFrameProfileRedirect</code>, so its draw counts and phase timings go to a local <code>FrameProfile</code> instead of overwriting the gameplay frame shown by F10 and the benchmark.</li>
+                <li><strong>Parallel prepare.</strong> <code>prepare_unit_plans</code> freezes the render world's registry (<code>Registry::StructureFreeze</code>) while worker threads prepare creatures. Adding or removing components, creating storages, or creating or destroying entities while frozen is counted in <code>structure_violations()</code> and asserts in debug builds. A preparer that forgets to add a component in <code>ensure_prepare_components</code> fails there instead of racing.</li>
+            </ul>
+            <p>Not changed, deliberately:</p>
+            <ul>
+                <li><code>CameraVisibility</code> and <code>VisibilityBudgetTracker</code> stay process-global. The portrait renderer draws no dust or contact shadows that consult them, and <code>begin_frame</code> resets run one after the other on one thread.</li>
+                <li><code>Renderer::shutdown()</code> is terminal. Every caller destroys the renderer right after it, so there is no re-initialize contract to honour.</li>
+                <li>Draw commands keep borrowed raw pointers. The queue is filled, sorted and played back within one <code>end_frame</code>, and the only reader of a previous frame's queue (<code>render_software_preview</code>) is test-only.</li>
+            </ul>
             <h2 id="software-backend">Software backend</h2>
             <p><code>SoftwareBackend</code> is selected when shader quality is <code>None</code> or the application is explicitly configured to use the CPU renderer.</p>
             <p>The software path is a diagnostic/reduced-fidelity fallback, but it is a real backend in the repository. Documentation should not state that software rendering is unsupported or absent.</p>
@@ -552,7 +726,7 @@ set_frame_budget(...)</code></pre>
             <h2 id="minimap-and-secondary-presentation-consumers">Minimap and secondary presentation consumers</h2>
             <p>The minimap follows the same ownership principle as the main renderer. It consumes published/read-model state rather than scanning and mutating the live world at arbitrary presentation cadence.</p>
             <p>Other UI/presentation systems use the same pattern: simulation publishes facts; presentation derives visual state; presentation caches remain disposable.</p>
-            <p>See <a href="MINIMAP.md">MINIMAP.md</a>.</p>
+            <p>See <a href="minimap.html">MINIMAP.md</a>.</p>
             <h2 id="resource-generation-and-quality-changes">Resource generation and quality changes</h2>
             <p>Graphics quality changes increment a settings generation. Consumers can observe that generation and apply expensive changes at controlled boundaries.</p>
             <p>This is preferable to re-reading dozens of mutable options for every entity every frame.</p>
@@ -577,7 +751,7 @@ set_frame_budget(...)</code></pre>
                 <li>frame interval timing; and</li>
                 <li>budget verdicts.</li>
             </ul>
-            <p><a href="FRAME_PACING.md">FRAME_PACING.md</a> defines the current presentation-budget gate. <a href="PERFORMANCE_INSTRUMENTATION.md">PERFORMANCE_INSTRUMENTATION.md</a> covers the broader runtime measurement system.</p>
+            <p><a href="frame_pacing.html">FRAME_PACING.md</a> defines the current presentation-budget gate. <a href="https://github.com/djeada/Standard-of-Iron/blob/main/docs/PERFORMANCE_INSTRUMENTATION.md">PERFORMANCE_INSTRUMENTATION.md</a> covers the broader runtime measurement system.</p>
             <h2 id="playable-frame-resource-discipline">Playable-frame resource discipline</h2>
             <p>The frame-pacing gate distinguishes ordinary per-frame transfer work from asset/resource construction occurring after the battle is considered playable.</p>
             <p>That distinction is important because a frame can look acceptable in steady state while still hitching the first time an asset, shader, buffer, or texture is created in combat.</p>
@@ -591,7 +765,7 @@ set_frame_budget(...)</code></pre>
                 <li>simulation-published render snapshot types.</li>
             </ul>
             <p>The build graph and architecture/source checks enforce selected parts of this direction.</p>
-            <p>See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the repository-wide dependency boundary.</p>
+            <p>See <a href="architecture.html">ARCHITECTURE.md</a> for the repository-wide dependency boundary.</p>
             <h2 id="failure-modes-by-layer">Failure modes by layer</h2>
             <p>A rendering bug is easier to diagnose when separated by stage.</p>
             <h3 id="snapshot-is-wrong-or-missing">Snapshot is wrong or missing</h3>
@@ -634,54 +808,56 @@ set_frame_budget(...)</code></pre>
                 <li>performance counters measure presentation work without becoming gameplay state.</li>
             </ul>
             <h2 id="source-map">Source map</h2>
-            <p>
             <table>
-                <tr>
-                    <td>Concern</td>
-                    <td>Source</td>
-                </tr>
-                <tr>
-                    <td>Graphics profiles</td>
-                    <td><code>render/graphics_settings.h</code></td>
-                </tr>
-                <tr>
-                    <td>Backend interface</td>
-                    <td><code>render/i_render_backend.h</code></td>
-                </tr>
-                <tr>
-                    <td>Backend selection</td>
-                    <td><code>render/render_backend_factory.cpp</code></td>
-                </tr>
-                <tr>
-                    <td>Scene traversal</td>
-                    <td><code>render/scene_walk.cpp</code></td>
-                </tr>
-                <tr>
-                    <td>OpenGL backend/passes</td>
-                    <td><code>render/gl/</code></td>
-                </tr>
-                <tr>
-                    <td>Software backend</td>
-                    <td><code>render/software_backend.*</code>, <code>render/software/</code></td>
-                </tr>
-                <tr>
-                    <td>Scene/environment data</td>
-                    <td><code>scene/</code></td>
-                </tr>
-                <tr>
-                    <td>Animation/BPAT</td>
-                    <td><code>animation/</code></td>
-                </tr>
-                <tr>
-                    <td>Shaders</td>
-                    <td><code>assets/shaders/</code></td>
-                </tr>
-                <tr>
-                    <td>Frame pacing/profiling</td>
-                    <td><code>render/profiling/</code>, <code>scripts/check-frame-pacing.py</code></td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Concern</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Graphics profiles</td>
+                        <td><code>render/graphics_settings.h</code></td>
+                    </tr>
+                    <tr>
+                        <td>Backend interface</td>
+                        <td><code>render/i_render_backend.h</code></td>
+                    </tr>
+                    <tr>
+                        <td>Backend selection</td>
+                        <td><code>render/render_backend_factory.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td>Scene traversal</td>
+                        <td><code>render/scene_walk.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td>OpenGL backend/passes</td>
+                        <td><code>render/gl/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Software backend</td>
+                        <td><code>render/software_backend.*</code>, <code>render/software/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Scene/environment data</td>
+                        <td><code>scene/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Animation/BPAT</td>
+                        <td><code>animation/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Shaders</td>
+                        <td><code>assets/shaders/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Frame pacing/profiling</td>
+                        <td><code>render/profiling/</code>, <code>scripts/check-frame-pacing.py</code></td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>The current implementation is the source of truth for renderer capability and quality behavior. Historical refactor notes, old preset descriptions, and proposed follow-up work are not part of the runtime contract.</p>
         </article-section>
     </div>
@@ -708,23 +884,33 @@ set_frame_budget(...)</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -741,21 +927,5 @@ set_frame_budget(...)</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

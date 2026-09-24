@@ -1,29 +1,3 @@
-/*
- * Optical materials, dispersion and ultrashort-pulse propagation (pure, DOM-free).
- *
- * Browser: <script src="../shared/optics/dispersion.js"></script> → window.OpticsModels.dispersion
- * Node:    const disp = require(".../shared/optics/dispersion.js")
- *
- * Conventions (shared with the rest of the optics suite, see TEMPLATE.md §5)
- * -----------------------------------------------------------------------------
- *  - SI internally: λ in m, ω in rad/s, z in m, t in s. Sellmeier coefficients are tabulated in the
- *    source units (λ in µm, C in µm²) and converted inside sellmeierN.
- *  - λ is always the vacuum wavelength. Time convention E(z,t) = Re{Ẽ(ω) exp[i(k(ω) z − ω t)]}.
- *    Complex index ñ = n + iκ with κ ≥ 0 for a passive (absorbing) medium, k = ω ñ / c, and the
- *    intensity absorption coefficient is α = 2 Im k = 2 κ ω / c.
- *  - Taylor expansion about the carrier ω0 (Ω = ω − ω0):
- *        k(ω) ≈ β0 + β1 Ω + β2 Ω²/2 + β3 Ω³/6,   β1 = 1/v_g, β2 = GVD, β3 = TOD.
- *    A spectral phase φ(ω) multiplies exp(+iφ); group delay τ_g = +dφ/dω; GDD = d²φ/dω².
- *    Propagation through length z adds φ = k(ω) z, so GDD = β2 z and normal dispersion
- *    (β2 > 0) makes red components lead (up-chirp).
- *  - Pulse envelope: E(t) = Re{A(t) exp(−i ω0 t)}. The transform-limited input is
- *        A(t) = exp(−t² / (2 τ0²))   ⇒   |A|² = exp(−t²/τ0²),
- *    so τ0 is the 1/e half-width of the INTENSITY and FWHM = 2√(ln 2) τ0 ≈ 1.665 τ0.
- *    With pure GDD φ2 the intensity stays Gaussian with τ = τ0 √(1 + (φ2/τ0²)²);
- *    for a slab φ2 = β2 z, i.e. τ(z) = τ0 √(1 + (z/L_D)²) with L_D = τ0²/|β2|.
- *  - FFT (core.fft, numpy convention): A_n = (1/N) Σ X_k exp(+2πi k n/N). With t_n = n Δt the
- *    component exp(+2πi f_k t) = exp(−i Ω_k t), hence Ω_k = −2π f_k (f_k from core.fftFreq).
- */
 (function(root, factory) {
     const m = factory(root);
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -38,11 +12,8 @@
     const C0 = core.constants.c;
     const TWO_PI = 2 * Math.PI;
 
-    // ================================================================ material data
-    /**
-     * Sellmeier form n² − 1 = Σ B_i λ² / (λ² − C_i), λ in µm, C_i in µm² (B dimensionless).
-     * range = [λmin, λmax] in metres: the interval over which the fit was made / is published.
-     */
+
+
     const MATERIALS = Object.freeze({
         fused_silica: Object.freeze({
             id: "fused_silica",
@@ -108,10 +79,7 @@
         epsInf: 1
     });
 
-    /**
-     * Resolve a material spec: a MATERIALS id, {kind: "constant", n}, or
-     * {kind: "lorentz", lambdaR (m), gammaRel = γ/ω_R, strength S = ω_p²/ω_R², epsInf}.
-     */
+
     function resolveMaterial(spec) {
         if (typeof spec === "string") {
             const m = MATERIALS[spec];
@@ -148,7 +116,7 @@
         throw new RangeError("invalid material spec");
     }
 
-    /** Sellmeier n at vacuum wavelength λ (m). Returns NaN where n² ≤ 0 (inside an absorption pole). */
+
     function sellmeierN(mat, lambda) {
         const l2 = (lambda * 1e6) ** 2;
         let s = 1;
@@ -156,7 +124,7 @@
         return s > 0 ? Math.sqrt(s) : NaN;
     }
 
-    /** Lorentz permittivity ε(ω) = ε∞ + S ω_R² / (ω_R² − ω² − iγω) (exp(−iωt): Im ε ≥ 0). */
+
     function lorentzEps(mat, omega) {
         const wr = mat.omegaR,
             g = mat.gammaRel * wr;
@@ -165,7 +133,7 @@
         return core.complex.cx(mat.epsInf + term.re, term.im);
     }
 
-    /** Complex refractive index ñ = n + iκ at angular frequency ω (rad/s). Principal root (κ ≥ 0). */
+
     function complexIndex(spec, omega) {
         const mat = resolveMaterial(spec);
         if (mat.kind === "constant") return core.complex.cx(mat.n, 0);
@@ -173,17 +141,13 @@
         return core.complex.cx(sellmeierN(mat, TWO_PI * C0 / omega), 0);
     }
 
-    /** Is λ inside the published validity interval of the material? */
+
     function inRange(spec, lambda) {
         const mat = resolveMaterial(spec);
         return lambda >= mat.range[0] && lambda <= mat.range[1];
     }
 
-    /**
-     * Index at vacuum wavelength λ (m): { n, kappa, alpha (1/m, intensity), valid, message }.
-     * Outside the validity interval n is still evaluated (valid = false, with a warning message);
-     * with {strict: true} it returns n = NaN instead (refuses to extrapolate).
-     */
+
     function indexAt(spec, lambda, opts = {}) {
         const mat = resolveMaterial(spec);
         const omega = TWO_PI * C0 / lambda;
@@ -206,18 +170,13 @@
         };
     }
 
-    /** Complex propagation constant k(ω) = ω ñ(ω)/c (rad/m). */
+
     function kOmega(spec, omega) {
         const nt = complexIndex(spec, omega);
         return core.complex.cx(omega * nt.re / C0, omega * nt.im / C0);
     }
 
-    /**
-     * Dispersion parameters at vacuum wavelength λ0 from central differences of Re k(ω)
-     * (step h = relStep·ω0, default 2e-3; error O(h²)).
-     * Returns { lambda0, omega0, n, kappa, ng, vp, vg, beta0, beta1, beta2, beta3, alpha,
-     *           dndl (1/m), d2ndl2 (1/m²), valid }. β in SI: s/m, s²/m, s³/m.
-     */
+
     function dispersionAt(spec, lambda0, opts = {}) {
         const mat = resolveMaterial(spec);
         const w0 = TWO_PI * C0 / lambda0;
@@ -228,14 +187,14 @@
             km1 = K(w0 - h),
             kp2 = K(w0 + 2 * h),
             km2 = K(w0 - 2 * h);
-        // 4th-order accurate first and second derivatives, 2nd-order third derivative
+
         const beta1 = (-kp2 + 8 * kp1 - 8 * km1 + km2) / (12 * h);
         const beta2 = (-kp2 + 16 * kp1 - 30 * k0 + 16 * km1 - km2) / (12 * h * h);
         const beta3 = (kp2 - 2 * kp1 + 2 * km1 - km2) / (2 * h * h * h);
         const nt = complexIndex(mat, w0);
         const n = nt.re;
         const ng = beta1 * C0;
-        // wavelength derivatives (for prisms): n(λ) by central differences
+
         const hl = (opts.relStep || 2e-3) * lambda0;
         const N = (l) => complexIndex(mat, TWO_PI * C0 / l).re;
         const np = N(lambda0 + hl),
@@ -259,7 +218,7 @@
         };
     }
 
-    /** Wavelengths (m) inside [lo, hi] where β2 changes sign (zero-dispersion wavelengths). */
+
     function zeroGVD(spec, lo, hi) {
         const mat = resolveMaterial(spec);
         lo = lo || mat.range[0];
@@ -269,13 +228,8 @@
         return core.findRoots(f, lo, hi, 400, 1e-13);
     }
 
-    // ================================================================ Kramers–Kronig
-    /**
-     * Rebuild n(ω) from κ(ω) with the Kramers–Kronig relation for ñ − n∞ (analytic in the upper half plane):
-     *     n(ω) − n∞ = (2/π) P ∫₀^∞ ω' κ(ω') / (ω'² − ω²) dω'.
-     * The principal value uses 1/(ω'²−ω²) = [1/(ω'−ω) − 1/(ω'+ω)]/(2ω) with singularity subtraction on a
-     * uniform grid 0…omegaMax (M points). kappaFn(ω) → κ. Returns Float64Array of n at each ω in omegas.
-     */
+
+
     function kramersKronigN(kappaFn, omegas, opts = {}) {
         const nInf = opts.nInf == null ? 1 : opts.nInf;
         const W = opts.omegaMax;
@@ -293,7 +247,7 @@
             const d = 1e-4 * w;
             const fpw = ((w + d) * kappaFn(w + d) - (w - d) * kappaFn(w - d)) / (2 * d);
             let s1 = 0,
-                s2 = 0; // s1: ∫ (f − f(ω))/(ω' − ω), s2: ∫ f/(ω' + ω)
+                s2 = 0;
             for (let j = 0; j < M; j++) {
                 const wp = j * dw;
                 const wt = (j === 0 || j === M - 1) ? 0.5 : 1;
@@ -308,11 +262,8 @@
         return out;
     }
 
-    // ================================================================ prism
-    /**
-     * Prism of apex angle A (rad), index n, in air. Returns the minimum-deviation geometry:
-     * { deltaMin, theta1 (incidence at min deviation), inner (= A/2) }.
-     */
+
+
     function prismMinDeviation(n, A) {
         const s = n * Math.sin(A / 2);
         if (s >= 1) return {
@@ -328,7 +279,7 @@
         };
     }
 
-    /** Deviation δ(θ1) = θ1 + θ4 − A for index n and apex A (NaN on total internal reflection). */
+
     function prismDeviation(n, A, theta1) {
         const t2 = Math.asin(Math.sin(theta1) / n);
         const t3 = A - t2;
@@ -337,17 +288,13 @@
         return theta1 + Math.asin(s4) - A;
     }
 
-    /** Angular dispersion at minimum deviation: dδ/dλ = 2 sin(A/2)/cos((δmin + A)/2) · dn/dλ (rad/m). */
+
     function prismAngularDispersion(n, dndl, A) {
         const g = prismMinDeviation(n, A);
         return 2 * Math.sin(A / 2) / Math.cos((g.deltaMin + A) / 2) * dndl;
     }
 
-    /**
-     * GDD of a Brewster/minimum-deviation prism pair (Fork, Martinez & Gordon 1984) in the limit where the beam
-     * grazes the prism apexes: GDD ≈ (λ³/2πc²)·d²P/dλ² with d²P/dλ² ≈ −8 L (dn/dλ)², plus the material GDD of
-     * a total glass path Lg: β2·Lg. L = apex-to-apex separation (m). Returns s².
-     */
+
     function prismPairGDD(spec, lambda0, L, Lg = 0) {
         const d = dispersionAt(spec, lambda0);
         const angular = -(lambda0 ** 3) / (TWO_PI * C0 * C0) * 8 * L * d.dndl * d.dndl;
@@ -358,21 +305,17 @@
         };
     }
 
-    // ================================================================ pulses
+
     const FWHM_PER_TAU0 = 2 * Math.sqrt(Math.LN2);
-    /** τ0 (1/e intensity half-width) ↔ intensity FWHM for a Gaussian. */
+
     const tau0FromFwhm = (fwhm) => fwhm / FWHM_PER_TAU0;
     const fwhmFromTau0 = (tau0) => tau0 * FWHM_PER_TAU0;
-    /** Analytic Gaussian duration (1/e intensity half-width) after total GDD φ2 (s²). */
+
     const gaussianTau = (tau0, gdd) => tau0 * Math.sqrt(1 + (gdd / (tau0 * tau0)) ** 2);
-    /** Dispersion length L_D = τ0²/|β2|. */
+
     const dispersionLength = (tau0, beta2) => tau0 * tau0 / Math.abs(beta2);
 
-    /**
-     * Spectral phase model φ(Ω) accumulated over z (without the frame term), complex:
-     *   exact:  k(ω0+Ω)·z                      (complex; Im part = loss)
-     *   taylor: [b0 β0 + b1 β1 Ω + b2 β2 Ω²/2 + b3 β3 Ω³/6]·z  (real; β at ω0 from the exact model)
-     */
+
     function makePhaseFn(mat, lambda0, z, mode, terms, disp) {
         const w0 = TWO_PI * C0 / lambda0;
         if (mode === "taylor") {
@@ -404,10 +347,10 @@
     function frameInverseVelocity(frame, disp) {
         if (frame === "vacuum") return 1 / C0;
         if (frame === "phase") return disp.beta0 / disp.omega0;
-        return disp.beta1; // co-moving with the group velocity at ω0
+        return disp.beta1;
     }
 
-    /** Pulse metrics of a sampled envelope on times t (s): energy, centroid, rms, FWHM, peak |A|². */
+
     function pulseMetrics(t, re, im) {
         const N = t.length;
         let E = 0,
@@ -428,7 +371,7 @@
         let m2 = 0;
         for (let i = 0; i < N; i++) m2 += (re[i] * re[i] + im[i] * im[i]) * (t[i] - cen) ** 2;
         const rms = E > 0 ? Math.sqrt(m2 / E) : 0;
-        // FWHM: outermost half-maximum crossings, linearly interpolated
+
         const half = pk / 2;
         const I = (i) => re[i] * re[i] + im[i] * im[i];
         let a = 0,
@@ -452,18 +395,7 @@
         };
     }
 
-    /**
-     * Propagate a Gaussian pulse (optionally pre-chirped) through length z of a material by FFT.
-     * opts: { material, lambda0 (m), fwhm (s, transform-limited intensity FWHM), gdd0 (s², input chirp),
-     *         z (m, may be negative = inverse propagation), mode "exact" | "taylor",
-     *         terms {b0, b1, b2, b3} (taylor), frame "group" | "vacuum" | "phase", maxN = 65536 }
-     * Displayed time is the retarded time τ = t − z/v_frame. Returns
-     * { N, dt, tIn, tOut (Float64Array, ascending), inRe, inIm, outRe, outIm, omega (ascending ω, rad/s),
-     *   specIn, specOut (|Ã|², peak-normalised to the input), phaseOut (rad, applied spectral phase incl. chirp),
-     *   metricsIn, metricsOut, disp, tau0, lossless, transmission, fractionOutside, dropped, undersampled,
-     *   carrierPhase (rad, φ of the ω0 component of the output = CE phase slip), frameDelay, groupDelay, phaseDelay,
-     *   evalEnvelope(which, taus) }
-     */
+
     function propagatePulse(opts) {
         const mat = resolveMaterial(opts.material);
         const lambda0 = opts.lambda0;
@@ -477,7 +409,7 @@
         const phaseFn = makePhaseFn(mat, lambda0, z, mode, opts.terms, disp);
         const maxN = opts.maxN || 65536;
 
-        // total spectral phase (real part) incl. chirp and frame term, and log-amplitude from Im k
+
         const totalPhase = (Om) => {
             const p = phaseFn(Om);
             return {
@@ -486,7 +418,7 @@
             };
         };
 
-        // window sizing from the group-delay spread over the significant band |Ω| ≤ 5/τ0 (|Ã| > e^-12.5)
+
         const band = 5 / tau0;
         let gdMin = Infinity,
             gdMax = -Infinity,
@@ -513,7 +445,7 @@
         const spanOut = gdMax - gdMin,
             spanIn = gdInMax - gdInMin;
         const T = 1.25 * Math.max(spanOut, spanIn) + 20 * tau0;
-        let dt = Math.PI * tau0 / 10; // Ω-grid covers ±10/τ0
+        let dt = Math.PI * tau0 / 10;
         let N = core.nextPow2(Math.ceil(T / dt));
         N = Math.max(512, N);
         let undersampled = false;
@@ -525,11 +457,11 @@
         const tCenterOut = (gdMin + gdMax) / 2;
         const tCenterIn = (gdInMin + gdInMax) / 2;
 
-        // unshifted time grid s_n (n dt for n < N/2, (n − N) dt otherwise) and Ω_k = −2π f_k
+
         const f = core.fftFreq(N, dt);
         const Om = new Float64Array(N);
         for (let k = 0; k < N; k++) Om[k] = -TWO_PI * f[k];
-        // transform-limited input spectrum: FFT of A(s) = exp(−s²/(2τ0²)) is real, positive and Gaussian
+
         const xr = new Float64Array(N),
             xi = new Float64Array(N);
         for (let n = 0; n < N; n++) {
@@ -549,13 +481,13 @@
             eDropped = 0,
             eOutside = 0;
         for (let k = 0; k < N; k++) {
-            const a = xr[k]; // imaginary part ≈ 0 by symmetry
+            const a = xr[k];
             const w = w0 + Om[k];
             const e = a * a;
             eTot += e;
             const lam = TWO_PI * C0 / w;
             if (!(w > 0) || !inRange(mat, lam)) eOutside += e;
-            // input at z = 0: chirp only. Sampling τ = t_c + s means X·exp(−iΩ t_c) (A(τ) = (1/N) Σ X e^{−iΩτ}).
+
             const pIn = gdd0 * Om[k] * Om[k] / 2 - Om[k] * tCenterIn;
             inR[k] = a * Math.cos(pIn);
             inI[k] = a * Math.sin(pIn);
@@ -585,7 +517,7 @@
         core.ifft(inR, inI);
         core.ifft(outR, outI);
 
-        // reorder to ascending time
+
         const half = N / 2;
         const tIn = new Float64Array(N),
             tOut = new Float64Array(N);
@@ -594,7 +526,7 @@
             aOutR = new Float64Array(N),
             aOutI = new Float64Array(N);
         for (let i = 0; i < N; i++) {
-            const n = (i + half) % N; // i = 0 ↔ s = −N/2·dt
+            const n = (i + half) % N;
             const s = (i - half) * dt;
             tIn[i] = s + tCenterIn;
             tOut[i] = s + tCenterOut;
@@ -603,7 +535,7 @@
             aOutR[i] = outR[n];
             aOutI[i] = outI[n];
         }
-        // ascending ω arrays for the spectrum plots
+
         const order = Array.from({
             length: N
         }, (_, k) => k).sort((p, q) => Om[p] - Om[q]);
@@ -620,7 +552,7 @@
             specOut[j] = Number.isFinite(logAmp[k]) ? specIn[j] * Math.exp(2 * logAmp[k]) : 0;
             phaseOut[j] = phase[k];
         }
-        // carrier phase at ω0 (Ω = 0 sample): what the carrier under the envelope has accumulated in this frame
+
         const p0 = totalPhase(0);
         const metricsIn = pulseMetrics(tIn, aInR, aInI);
         const metricsOut = pulseMetrics(tOut, aOutR, aOutI);
@@ -654,7 +586,7 @@
             };
         }
 
-        // refine the FWHM crossings with the band-limited (exact-interpolation) envelope
+
         function refineFwhm(which, m, t) {
             if (!Number.isFinite(m.fwhm)) return;
             const half = m.peak / 2;
@@ -662,7 +594,7 @@
                 const v = evalEnvelope(which, [tau]);
                 return v.re[0] * v.re[0] + v.im[0] * v.im[0];
             };
-            const cross = (tA, tB) => { // I(tA) < half ≤ I(tB) or reverse
+            const cross = (tA, tB) => {
                 let fa = I(tA) - half;
                 for (let it = 0; it < 48; it++) {
                     const tm = 0.5 * (tA + tB),
@@ -728,10 +660,7 @@
         };
     }
 
-    /**
-     * Inverse propagation check: take the output spectrum of a propagatePulse result and remove the same phase
-     * (and restore the loss), sampling on the input grid. Returns { re, im, maxError, relError } versus the input.
-     */
+
     function backPropagate(res) {
         const {
             Om,
@@ -746,7 +675,7 @@
         for (let k = 0; k < N; k++) {
             const tp = totalPhase(Om[k]);
             if (!Number.isFinite(tp.re)) continue;
-            // undo exp(iφ_total − iΩ t_out) (φ_total includes the input chirp), undo the loss, re-centre on the input grid
+
             const ph = -(tp.re - Om[k] * tCenterOut) - Om[k] * tCenterIn;
             const g = Math.exp(tp.im);
             const c = Math.cos(ph),
@@ -763,7 +692,7 @@
             oR[i] = r[n];
             oI[i] = im[n];
         }
-        // compare with the transform-limited input (chirp was part of totalPhase, so back-propagation removes it too)
+
         let maxErr = 0,
             pk = 0;
         for (let i = 0; i < N; i++) {
@@ -780,15 +709,12 @@
         };
     }
 
-    /**
-     * Largest deviation (rad) between the exact spectral phase k(ω)z and its Taylor series through β3 over the
-     * band where the input spectral intensity exceeds `floor` (default 1e-3). A measure of Taylor validity.
-     */
+
     function taylorResidual(spec, lambda0, fwhm, z, floor = 1e-3) {
         const mat = resolveMaterial(spec);
         const disp = dispersionAt(mat, lambda0);
         const tau0 = tau0FromFwhm(fwhm);
-        const band = Math.sqrt(-Math.log(floor)) / tau0; // |Ã|² = exp(−Ω²τ0²) = floor
+        const band = Math.sqrt(-Math.log(floor)) / tau0;
         const ex = makePhaseFn(mat, lambda0, z, "exact", null, disp);
         const ty = makePhaseFn(mat, lambda0, z, "taylor", null, disp);
         let worst = 0;

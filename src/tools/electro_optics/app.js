@@ -1,4 +1,3 @@
-/* Electro-/acousto-optic modulators: page glue. Physics lives in ../shared/optics/electroOptics.js. */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -13,7 +12,7 @@
     const pct = (v, n = 1) => (Number.isFinite(v) ? (100 * v).toFixed(n) + " %" : "—");
     const DEG = Math.PI / 180;
 
-    // ------------------------------------------------------------------ defaults & presets
+
     const DEFAULTS = {
         dev: "pm",
         lam: 1550,
@@ -206,7 +205,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     UI.enhanceSlider($("lamSlider"), {
         unit: "nm",
         label: "Vacuum wavelength"
@@ -356,10 +355,10 @@
         }
     });
 
-    // ------------------------------------------------------------------ state + model evaluation
+
     let S = ctl.get();
-    let R = {}; // derived results for the current device
-    let ph = 0; // animation phase (fraction of a drive period)
+    let R = {};
+    let ph = 0;
     let pending = false;
 
     function schedule() {
@@ -490,7 +489,7 @@
         const i1 = ord.orders.indexOf(1);
         const key = [S.lam, S.aoMat, S.fa, S.aoL, S.aoH, S.inc].join("|");
         const keyQ = key + "|" + a.nu.toFixed(6);
-        // efficiency vs power (current Q, a)
+
         const Pmax = Math.max(1.5 * a.P100, 1.2 * S.pa, 0.05);
         if (aoCache.key !== key || aoCache.Pmax !== Pmax) {
             const Ps = [],
@@ -615,7 +614,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     function stems(xs, ys, base) {
         const X = [],
             Y = [];
@@ -670,7 +669,7 @@
         ctx.fillRect(0, 0, w, h);
     }
 
-    /** Line spectrum (stems) with order labels. lines: [{offset (GHz), power, n}] */
+
     function drawSpectrum(ctx, w, h, lines, opts) {
         bg(ctx, w, h);
         const log = !!S.lg;
@@ -718,7 +717,7 @@
             markers: opts.markers || [],
             legend: false
         });
-        // order labels
+
         const pxStep = lines.length > 1 ? Math.abs(map.xToPx(lines[1].offset) - map.xToPx(lines[0].offset)) : 99;
         if (pxStep > 15) {
             lines.forEach((l, i) => {
@@ -733,7 +732,7 @@
         return map;
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const cv = {};
     const desc = {};
 
@@ -761,7 +760,7 @@
         return cv[id];
     }
 
-    // ---- phase modulator
+
     canvas("pmSpecCanvas", 2.6, (ctx, w, h) => {
         const r = R.pm;
         const lines = r.sb.filter((x) => Math.abs(x.n) <= Math.ceil(r.beta) + 4).map((x) => ({
@@ -838,7 +837,7 @@
         ctx.moveTo(cx0, cy0 - rad - 8);
         ctx.lineTo(cx0, cy0 + rad + 8);
         ctx.stroke();
-        // swing arc ±β
+
         const b = Math.min(Math.PI, r.beta);
         ctx.strokeStyle = PAL.textMuted;
         ctx.lineWidth = 5;
@@ -861,7 +860,7 @@
         text(ctx, "φ = " + phi.toFixed(2) + " rad", 8, 14, {
             size: 12
         });
-        // φ(t) plot on the right
+
         const ts = core.linspace(0, 2, 200);
         UI.plot(ctx, {
             x: sq + 6,
@@ -894,7 +893,7 @@
         });
     }, "Animated field phasor of the phase modulator", 200);
 
-    // ---- MZM
+
     canvas("mzmTfCanvas", 1.5, (ctx, w, h) => {
         bg(ctx, w, h);
         const r = R.mzm,
@@ -945,7 +944,7 @@
         });
     }, "MZM transfer curve");
 
-    function mzmDriveAt(t) { // t in drive periods (sine) or displayed bits (nrz)
+    function mzmDriveAt(t) {
         const r = R.mzm;
         if (S.drv === "sine") return S.mvm * Math.sin(2 * Math.PI * t);
         const e = r.eye,
@@ -982,7 +981,7 @@
         ctx.moveTo(cx0, cy0 - rad - 8);
         ctx.lineTo(cx0, cy0 + rad + 8);
         ctx.stroke();
-        const sc = rad / 1.45; // |sum| ≤ √2 fits inside the circle
+        const sc = rad / 1.45;
         const P = (z) => [cx0 + sc * z.re, cy0 - sc * z.im];
         const [x1, y1] = P(a1), [x2, y2] = P(a2), [xs, ys] = P(sum);
         arrow(ctx, cx0, cy0, x1, y1, SER[0], 2.5);
@@ -1027,7 +1026,7 @@
             ts = core.linspace(0, 2, 400);
             V = Array.from(ts, (t) => S.mvm * Math.sin(2 * Math.PI * t));
             P = V.map((v) => EO.mzmFields(q, v).P2);
-            const T = 1 / S.fm2; // ns
+            const T = 1 / S.fm2;
             ts = Array.from(ts, (t) => t * T * 1e3);
             xlab = "Time";
             xmax = 2 * T * 1e3;
@@ -1036,7 +1035,7 @@
             const e = r.eye,
                 nb = 24,
                 spb = e.spb,
-                Tb = 1 / S.br * 1e3; // ps
+                Tb = 1 / S.br * 1e3;
             ts = [];
             V = [];
             P = [];
@@ -1186,7 +1185,7 @@
             ctx.stroke();
         }
         ctx.restore();
-        // eye-opening bar at the sampling instant
+
         const xo = map.xToPx(0.5 * Tb) + 6;
         arrow(ctx, xo, map.yToPx(e.levels.maxLow), xo, map.yToPx(e.levels.minHigh), PAL.marker, 1.5);
         text(ctx, "opening " + fx(e.opening, 3), xo + 6, map.yToPx((e.levels.maxLow + e.levels.minHigh) / 2), {
@@ -1195,7 +1194,7 @@
         });
     }, "Eye diagram");
 
-    // ---- Pockels cell
+
     canvas("pcTfCanvas", 1.5, (ctx, w, h) => {
         bg(ctx, w, h);
         const r = R.pc;
@@ -1242,7 +1241,7 @@
         bg(ctx, w, h);
         const r = R.pc,
             [Ex, Ey] = r.res.jones;
-        // bench schematic (left 45 %)
+
         const bw = w * 0.44,
             y0 = h / 2;
         ctx.strokeStyle = PAL.axis;
@@ -1275,7 +1274,7 @@
             size: 11,
             color: PAL.marker
         });
-        // ellipse (right part)
+
         const cx0 = bw + (w - bw) / 2,
             rad = Math.max(8, Math.min((w - bw) / 2 - 14, h / 2 - 22));
         ctx.strokeStyle = PAL.gridStrong;
@@ -1314,7 +1313,7 @@
         });
     }, "Polarization state after the Pockels cell");
 
-    // ---- AOM
+
     canvas("aoGeoCanvas", 2.4, (ctx, w, h) => {
         bg(ctx, w, h);
         const r = R.ao,
@@ -1323,7 +1322,7 @@
             cellW = w * 0.16,
             cellY = h * 0.12,
             cellH = h * 0.7;
-        // sound column + wavefronts
+
         ctx.fillStyle = "rgba(105,245,231,0.07)";
         ctx.fillRect(cellX, cellY, cellW, cellH);
         ctx.strokeStyle = PAL.axis;
@@ -1356,12 +1355,12 @@
             size: 11,
             color: PAL.textMuted
         });
-        // exaggerated angles
+
         const thB = a.thetaBOut;
         const short = w < 600;
         const LoutPre = Math.max(40, w - (cellX + cellW / 2) - (short ? 62 : 165));
         const shown = r.ord.orders.filter((m, i) => r.ord.power[i] >= 2e-3 && Math.abs(m) <= 5);
-        const spread = Math.max(1, ...shown.map((m) => Math.abs(m - S.inc / 2) * 2)); // in units of θ_B
+        const spread = Math.max(1, ...shown.map((m) => Math.abs(m - S.inc / 2) * 2));
         let ex = Math.max((7 * DEG) / Math.max(thB, 1e-9), 16 / (LoutPre * 2 * Math.max(thB, 1e-9)));
         const angMax = Math.min(35 * DEG, Math.asin(Math.min(1, (h / 2 - 24) / LoutPre)));
         ex = Math.min(ex, angMax / (spread * Math.max(thB, 1e-9)), 1e4);
@@ -1369,7 +1368,7 @@
             cy0 = cellY + cellH / 2;
         const tin = -S.inc * thB * ex;
         const Lin = cx0 - 10;
-        // travel direction (cos t, sin t) with + = up; canvas y points down
+
         arrow(ctx, cx0 - Lin * Math.cos(tin), cy0 + Lin * Math.sin(tin), cx0, cy0, PAL.text, 2.5);
         text(ctx, "incident ν₀", 10, cy0 + Lin * Math.sin(tin) - 12, {
             size: 12
@@ -1378,7 +1377,7 @@
         r.ord.orders.forEach((m, i) => {
             const pw = r.ord.power[i];
             if (pw < 2e-3 || Math.abs(m) > 5) return;
-            const ang = tin + m * 2 * thB * ex; // + = towards the sound direction (up)
+            const ang = tin + m * 2 * thB * ex;
             const x1 = cx0 + Lout * Math.cos(ang),
                 y1 = cy0 - Lout * Math.sin(ang);
             ctx.save();
@@ -1457,7 +1456,7 @@
             ctx.fillRect(x - bwPx / 2, y, bwPx, y0 - y);
         });
         ctx.restore();
-        // redraw the dots above the bars
+
         ctx.fillStyle = SER[1];
         ords.forEach((m, i) => {
             ctx.beginPath();
@@ -1573,7 +1572,7 @@
         });
     }, "Order powers versus Klein–Cook Q");
 
-    // ---- directional coupler
+
     canvas("dcZCanvas", 2.8, (ctx, w, h) => {
         bg(ctx, w, h);
         const r = R.dc,
@@ -1689,7 +1688,7 @@
         });
     }, "Cross-port power versus voltage");
 
-    // ------------------------------------------------------------------ visibility
+
     function applyVisibility() {
         document.querySelectorAll("[data-dev]").forEach((el) => {
             const on = el.dataset.dev.split(/\s+/).includes(S.dev);
@@ -1703,7 +1702,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ readouts, stats
+
     const setText = (id, v) => {
         const el = $(id);
         if (el && el.textContent !== v) el.textContent = v;
@@ -1896,7 +1895,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ animation
+
     function setPlay(running) {
         ["playBtn", "playBtn2"].forEach((id) => {
             const b = $(id);
@@ -1933,7 +1932,7 @@
         render();
     }));
 
-    // ------------------------------------------------------------------ presets
+
     document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => {
         const p = PRESETS[b.dataset.preset];
         if (!p) return;
@@ -1944,7 +1943,7 @@
         render();
     }));
 
-    // ------------------------------------------------------------------ export
+
     function csv() {
         if (S.dev === "pm") return {
             headers: ["order n", "offset (GHz)", "amplitude Re", "amplitude Im", "power / P_in"],
@@ -2011,7 +2010,8 @@
     url.ready.then(() => {
         render();
         if (!UI.prefersReducedMotion()) {
-            /* stay paused by default: animation is optional */ }
+
+        }
     });
     render();
 })();

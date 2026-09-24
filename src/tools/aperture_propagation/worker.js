@@ -1,11 +1,3 @@
-/*
- * Propagation worker: rasterises the aperture and propagates it off the main thread.
- * Message in:  {id, spec, N, L, params}   (SI units; see shared/optics/propagation.js)
- * Message out: {id, ok: true, field: {re, im}, res: {re, im, n, dx, crop, power, bandLimit, method, pad}, ms}
- *              {id, ok: false, error}
- * The page terminates and respawns this worker to cancel an obsolete long-running job.
- */
-/* global importScripts */
 importScripts("../shared/optics/core.js", "../shared/optics/propagation.js");
 
 const P = self.OpticsModels.propagation;

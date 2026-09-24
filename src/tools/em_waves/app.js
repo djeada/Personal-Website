@@ -1,8 +1,3 @@
-/*
- * Electromagnetic waves and energy flow — page glue.
- * Physics lives in ../shared/optics/emWaves.js (pure, tested in tests/optics/em_waves.test.js).
- * Units: SI internally; λ in nm, z in µm, t in fs only at the display boundary.
- */
 (function() {
     "use strict";
 
@@ -24,7 +19,7 @@
         tot: "#ece9f8"
     };
     const Z_MIN = -2.5,
-        Z_MAX = 1.0; // display window in units of λ1
+        Z_MAX = 1.0;
     const NZ = 481,
         NT = 241,
         N_ARROWS = 42;
@@ -129,7 +124,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     const sidebar = document.querySelector(".options-sidebar");
     const deg = (v) => v + "°";
     UI.enhanceAllSliders(sidebar, {
@@ -217,7 +212,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ model
+
     function polSpec(s) {
         const psi = core.units.toRad(s.psi),
             delta = core.units.toRad(s.dl);
@@ -245,7 +240,7 @@
             boundary: state.bnd
         });
         zs = core.linspace(Z_MIN * cfg.lambda1, Z_MAX * cfg.lambda1, NZ);
-        // stable axis ranges from time-independent bounds (|E(t)| ≤ |Ẽ|, |S| ≤ |Ẽ||H̃|)
+
         let fMax = 0,
             uMax = 0,
             sMax = 0;
@@ -256,7 +251,7 @@
             uMax = Math.max(uMax, 0.5 * eps * a.Eamp * a.Eamp, 0.5 * core.constants.mu0 * a.Hamp * a.Hamp);
             sMax = Math.max(sMax, a.Eamp * a.Hamp);
         }
-        // tighter energy/flux bounds from a coarse space-time sweep (fixed per configuration)
+
         uMax = 0;
         sMax = 0;
         let sMin = 0;
@@ -272,10 +267,10 @@
             f: fMax || 1,
             u: uMax / cfg.u0 || 1,
             s: sMax / cfg.I0 || 1,
-            sMin: sMin / cfg.I0, // most negative S_z/I₀ (0 unless energy flows back toward the source)
+            sMin: sMin / cfg.I0,
             sAbs: sMax || 1
         };
-        // Poynting theorem check away from the interface, several instants
+
         let worst = 0;
         for (let i = 0; i < 36; i++) {
             const z = (Z_MIN + (i + 0.5) * (Z_MAX - Z_MIN) / 36) * cfg.lambda1;
@@ -295,7 +290,7 @@
         sT = em.sampleT(cfg, zProbe(), ts);
     }
 
-    // ------------------------------------------------------------------ 3-D view
+
     function layout3D(w, h) {
         const wide = w >= 560;
         if (wide) {
@@ -370,10 +365,10 @@
         if (!cfg || !sZ) return;
         const L = layout3D(w, h),
             M = L.main;
-        const A = Math.min(M.h * 0.3, 140); // px for the largest field in the window
-        const sc = A / ranges.f; // px per V/m
+        const A = Math.min(M.h * 0.3, 140);
+        const sc = A / ranges.f;
         const oblX = -0.47,
-            oblY = 0.27; // screen direction of +y (toward the viewer)
+            oblY = 0.27;
         const left = M.x + 30 + A * 0.5,
             right = M.x + M.w - 22;
         const zmin = zs[0],
@@ -383,12 +378,12 @@
         const P = (z, x, y) => [left + (z - zmin) * Kz + y * sc * oblX, yc - x * sc + y * sc * oblY];
         const um = (z) => z * 1e6;
 
-        // medium 2 / conductor region
+
         if (cfg.boundary !== "none") {
             const x0 = P(0, 0, 0)[0];
             ctx.fillStyle = cfg.boundary === "pec" ? "rgba(184,178,207,0.16)" : "rgba(138,180,255,0.08)";
             ctx.fillRect(x0, M.y, right + 12 - x0, M.h - 4);
-            // interface plane (parallelogram in x–y)
+
             const e = ranges.f * 1.08;
             const c1 = P(0, e, -e),
                 c2 = P(0, e, e),
@@ -415,7 +410,7 @@
             color: pal.text,
             weight: 600
         });
-        // propagation directions (top-right of the main view, clear of the x axis)
+
         const kr = M.x + M.w - 10,
             ky = M.y + 16;
         text(ctx, "k̂ incident", kr - 42, ky, {
@@ -431,7 +426,7 @@
                 align: "right"
             });
         }
-        // axes: z along the axis, x and y at the left end
+
         const o = P(zmin, 0, 0);
         ctx.setLineDash([]);
         arrow(ctx, o[0], o[1], right + 12, o[1], pal.axis, 1.2, 8);
@@ -452,7 +447,7 @@
             weight: 700
         });
 
-        // tip loci ("trajectories"): dotted, thin — a curve through the tips, not a path
+
         const eta1 = cfg.m1.eta;
         if (state.sl) {
             ctx.lineWidth = 1.3;
@@ -473,7 +468,7 @@
             ctx.setLineDash([]);
         }
 
-        // field arrows at sample points on the axis
+
         const t = tNow();
         const nA = Math.round(core.clamp(M.w / 17, 18, N_ARROWS));
         for (let i = 0; i < nA; i++) {
@@ -489,7 +484,7 @@
             arrow(ctx, b[0], b[1], ep[0], ep[1], COL.E, 1.8, 6);
         }
 
-        // probe plane + bold arrows
+
         const zp = zProbe(),
             fp = em.fields(cfg, zp, t);
         {
@@ -524,14 +519,14 @@
                 color: COL.E,
                 weight: 700
             });
-            // label at the plane's lower far corner: the upper corners can leave the canvas top
+
             text(ctx, "z_p", c4[0] + 4, c4[1] + 4, {
                 color: pal.textMuted,
                 size: 11
             });
         }
 
-        // Poynting rail
+
         const railY = M.y + M.h - 40;
         const railL = left,
             railR = right;
@@ -551,7 +546,7 @@
             for (let i = 0; i < nS; i++) {
                 const z = zmin + (i + 0.5) * (zmax - zmin) / nS;
                 if (em.region(cfg, z) === 0) continue;
-                const s = em.fields(cfg, z, t).S[2] / ranges.sAbs; // −1..1
+                const s = em.fields(cfg, z, t).S[2] / ranges.sAbs;
                 const xc = railL + (i + 0.5) * gap,
                     len = s * gap * 0.9;
                 if (Math.abs(len) < 1.5) {
@@ -564,7 +559,7 @@
                 arrow(ctx, xc - len / 2, railY, xc + len / 2, railY, COL.S, 3, 7);
             }
         }
-        // z ticks (µm) under the rail
+
         const ticks = UI.niceTicks(um(zmin), um(zmax), Math.max(3, Math.round(M.w / 110)));
         for (const tv of ticks) {
             const x = left + (tv * 1e-6 - zmin) * Kz;
@@ -593,7 +588,7 @@
             cy = R.y + R.h / 2 + 8;
         const s = r / ranges.f,
             eta1 = cfg.m1.eta;
-        const Q = (x, y) => [cx - y * s, cy - x * s]; // facing the source: x up, y to the left
+        const Q = (x, y) => [cx - y * s, cy - x * s];
         ctx.fillStyle = pal.panel;
         ctx.strokeStyle = pal.gridStrong;
         ctx.lineWidth = 1;
@@ -620,7 +615,7 @@
             weight: 700,
             size: 11
         });
-        // polarisation ellipse traced over one period (dotted)
+
         ctx.setLineDash([2, 3]);
         ctx.strokeStyle = COL.E;
         ctx.lineWidth = 1.2;
@@ -638,7 +633,7 @@
         }
         const ep = Q(fp.E[0], fp.E[1]);
         arrow(ctx, cx, cy, ep[0], ep[1], COL.E, 2.8, 8);
-        // S along ±z: ⊙ toward the viewer (+z), ⊗ away
+
         const Sz = fp.S[2],
             mag = Math.abs(Sz) / ranges.sAbs;
         const rr = 4 + 5 * Math.min(1, mag);
@@ -649,7 +644,8 @@
         ctx.arc(cx, cy, rr, 0, 2 * Math.PI);
         ctx.stroke();
         if (mag < 0.01) {
-            /* no flow this instant */ } else if (Sz > 0) {
+
+        } else if (Sz > 0) {
             ctx.beginPath();
             ctx.arc(cx, cy, 2, 0, 2 * Math.PI);
             ctx.fill();
@@ -670,7 +666,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ plots
+
     function shadeRegion2(ctx, map) {
         if (cfg.boundary === "none") return;
         const x0 = map.xToPx(0),
@@ -1043,7 +1039,7 @@
         label: "Energy densities and Poynting flux versus time at the probe"
     });
 
-    // drag on the z plots to move the probe
+
     for (const [c, getMap] of [
             [cZF.canvas, () => mapZF],
             [cZE.canvas, () => mapZE]
@@ -1078,7 +1074,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ readouts
+
     const sig = (v, d = 3) => (Math.abs(v) < 1e-300 ? "0" : Number(v.toPrecision(d)).toString());
     const sci = (v) => (v === 0 ? "0" : v.toExponential(1).replace(/e([+-])(\d+)/, (m, s, e) => "×10" + (s === "-" ? "⁻" : "") + e.split("").map((c) => "⁰¹²³⁴⁵⁶⁷⁸⁹" [c]).join("")));
 
@@ -1121,8 +1117,8 @@
 
         const f = em.fields(cfg, zProbe(), tNow());
         const eta1 = cfg.m1.eta;
-        // transversality of the forward (+z) travelling wave alone: H_f = ẑ × E_f / η. The total field of a
-        // standing wave need not have E ⟂ H (e.g. circular polarization in front of a mirror).
+
+
         const etaF = f.region === 2 ? cfg.m2.eta : eta1;
         const Ef = f.Ef,
             Hf = [-Ef[1] / etaF, Ef[0] / etaF, 0];
@@ -1131,7 +1127,7 @@
         const ang = Em > 1e-9 * cfg.E0 && Hm > 1e-9 * cfg.E0 / eta1 ? Math.acos(core.clamp(em.vec.dot(Ef, Hf) / (Em * Hm), -1, 1)) * 180 / Math.PI : NaN;
         $("rTrans").textContent = `${sig(Ef[2])} V/m, ${sig(eta1 * Hf[2])} V/m, η₁E·H/E₀² = ${sig(eta1 * em.vec.dot(Ef, Hf) / (cfg.E0 * cfg.E0), 2)}` +
             (Number.isFinite(ang) ? `; ∠(E, H) = ${ang.toFixed(1)}°` : "");
-        const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v); // hide round-off at exact nodes
+        const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v);
         $("rProbe").textContent = `${fmt(snap(f.uE, cfg.u0), "J/m³")}, ${fmt(snap(f.uH, cfg.u0), "J/m³")}, ${fmt(snap(f.S[2], cfg.I0), "W/m²")}`;
         const av = em.timeAverage(cfg, zProbe());
         $("rRatio").textContent = av.uH > 0 ? `${fmt(av.uE, "J/m³")} / ${fmt(av.uH, "J/m³")} = ${sig(av.uE / av.uH, 4)}` : "— (inside conductor)";
@@ -1168,7 +1164,7 @@
         dTE.update(`At z = ${fmt(zp, "m")}: u_E/ū₀ from ${sig(mn(sT.uE) / cfg.u0)} to ${sig(pk(sT.uE) / cfg.u0)}, u_H/ū₀ from ${sig(mn(sT.uH) / cfg.u0)} to ${sig(pk(sT.uH) / cfg.u0)}, S_z/I₀ from ${sig(mn(sT.Sz) / I0)} to ${sig(pk(sT.Sz) / I0)}.`);
     }
 
-    // ------------------------------------------------------------------ render
+
     function render(timeOnly) {
         renderQueued = false;
         if (needModel || !cfg) rebuildModel();
@@ -1188,7 +1184,7 @@
         requestAnimationFrame(() => render(false));
     }
 
-    // ------------------------------------------------------------------ animation
+
     const playBtn = $("playBtn");
     let frameCount = 0;
     const loop = UI.createLoop((dt) => {

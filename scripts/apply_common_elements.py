@@ -4,7 +4,8 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Dict, Callable
+from typing import Tuple, Dict, Callable, Optional
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -42,6 +43,10 @@ PREDEFINED_DESCRIPTIONS = {
     "vtk_examples": "Examples and tutorials on VTK (Visualization Toolkit) for 3D computer graphics, image processing, and visualization.",
 }
 SITE_BASE_URL = "https://adamdjellouli.com/"
+SITE_NAME = "Adam Djellouli"
+TITLE_SUFFIX = f" | {SITE_NAME}"
+DESCRIPTION_LENGTH = 155
+ABBREVIATIONS = ("ang.", "np.", "tzw.", "e.g.", "i.e.", "etc.", "vs.", "cf.", "approx.")
 STRUCTURED_DATA_ID = "structured-data"
 LAST_MODIFIED_PATTERN = re.compile(
     r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>'
@@ -96,7 +101,7 @@ def replace_footer(html: str, footer_html: str) -> str:
     return replace_element(html, footer_html, "footer", "body")
 
 
-def change_title_in_head(html: str) -> str:
+def change_title_in_head(html: str, file_path: Optional[Path] = None) -> str:
     """Update the <title> tag to match the primary page heading (prefer <h1>)."""
     soup = BeautifulSoup(html, "html.parser")
 
@@ -125,6 +130,12 @@ def change_title_in_head(html: str) -> str:
     if not title_text:
         return str(soup)
 
+    page = re.fullmatch(r"blog_(\d+)", file_path.stem) if file_path else None
+    if page and page.group(1) != "1":
+        title_text += f" – Page {page.group(1)}"
+    if len(title_text + TITLE_SUFFIX) <= 65:
+        title_text += TITLE_SUFFIX
+
     title_tag = soup.find("title")
     if title_tag:
         title_tag.string = title_text
@@ -142,30 +153,70 @@ def change_title_in_head(html: str) -> str:
     return str(soup)
 
 
+def plain_math(latex: str) -> str:
+    """Readable text for a short inline formula, e.g. $f(x)$ -> f(x)."""
+    text = re.sub(r"\\[a-zA-Z]+|[{}\\]", "", latex).strip()
+    return text if len(text) <= 20 else "…"
+
+
+def summarize(texts: list) -> Optional[str]:
+    """Joins the opening sentences of an article into a ~155 character summary."""
+    sentences = []
+    for text in texts:
+        text = re.sub(r"\$\$.*?\$\$", "", text, flags=re.S)
+        text = re.sub(r"\$([^$]+)\$", lambda m: plain_math(m.group(1)), text)
+        text = re.sub(r"\s+", " ", text).strip()
+        pieces = re.split(r"(?<=[.!?]) +", text)
+        for piece in pieces:
+            if sentences and sentences[-1].lower().endswith(ABBREVIATIONS):
+                sentences[-1] += " " + piece
+            elif piece:
+                sentences.append(piece)
+
+    summary = ""
+    for sentence in sentences:
+        if summary and len(summary) + len(sentence) + 1 > DESCRIPTION_LENGTH:
+            break
+        summary = f"{summary} {sentence}".strip()
+        if len(summary) >= 110 and not summary.endswith(":"):
+            break
+
+    if len(summary) > DESCRIPTION_LENGTH:
+        summary = summary[: DESCRIPTION_LENGTH - 1].rsplit(" ", 1)[0] + "…"
+    summary = re.sub(r"\s*:$", ".", summary)
+    return summary or None
+
+
 def find_first_ascii_sentence(paragraphs: list, file_path: Path) -> str:
-    """Find the first ASCII sentence in the provided paragraphs."""
+    """Build a description from predefined text or the article's opening paragraphs."""
 
-    if file_path.name.lower() in PREDEFINED_DESCRIPTIONS:
-        return PREDEFINED_DESCRIPTIONS[file_path.name.lower()]
-    if file_path.name.lower().startswith("blog_"):
-        return "Welcome to our technical blog, where we explore a wide range of topics including algorithms, data structures, frontend development, version control with Git, Python basics, Linux, NumPy, C to C++ transition, parallel and concurrent programming, Stanford machine learning insights, statistics, and VTK examples. Whether you're a beginner or an experienced developer, you'll find valuable information and practical tutorials to enhance your skills."
+    if file_path.stem.lower() in PREDEFINED_DESCRIPTIONS:
+        return PREDEFINED_DESCRIPTIONS[file_path.stem.lower()]
+    blog_page = re.fullmatch(r"blog_(\d+)", file_path.stem.lower())
+    if blog_page:
+        return (
+            "Notes and tutorials on algorithms, data structures, Linux, Git, Python, "
+            "C++, databases, statistics, machine learning and web development "
+            f"(page {blog_page.group(1)})."
+        )
 
-    filtered_paragraphs = [
-        p for p in paragraphs if p.get("style") != "text-align: right;"
-    ]
-    for paragraph in filtered_paragraphs:
-        sentences = re.split(r"(?<=[.!?]) +", paragraph.get_text())
-        for sentence in sentences:
+    def usable(tag):
+        return (
+            tag.get("style") != "text-align: right;"
+            and not tag.find_parent(class_="article-header")
+            and tag.get_text(strip=True)
+        )
 
-            stripped_sentence = BeautifulSoup(sentence, "html.parser").get_text()
-            return stripped_sentence
-    return None
+    texts = [p.get_text() for p in paragraphs if p.name == "p" and usable(p)]
+    items = [li.get_text() for li in paragraphs if li.name == "li" and usable(li)]
+    return summarize(texts) or summarize(items)
 
 
 def change_meta_description_in_head(html_content: str, file_path: Path) -> str:
     """Change the meta description tag in the head based on the first ASCII sentence found in paragraphs."""
     soup = BeautifulSoup(html_content, "html.parser")
-    paragraphs = soup.find_all("p")
+    article_body = soup.find(id="article-body")
+    paragraphs = (article_body or soup).find_all(["p", "li"])
     first_ascii_sentence = find_first_ascii_sentence(
         paragraphs=paragraphs, file_path=file_path
     )
@@ -179,7 +230,7 @@ def change_meta_description_in_head(html_content: str, file_path: Path) -> str:
         current_description = meta_desc_tag.get("content", "").strip()
         if (
             current_description.lower() == "xxx"
-            or file_path.name.lower() in PREDEFINED_DESCRIPTIONS
+            or file_path.stem.lower() in PREDEFINED_DESCRIPTIONS
         ):
             meta_desc_tag["content"] = first_ascii_sentence
         else:
@@ -198,7 +249,7 @@ def build_canonical_url(file_path: Path) -> str:
     """Build the canonical URL for a given HTML file."""
     base_dir = Path("../src").resolve()
     relative_path = file_path.resolve().relative_to(base_dir).as_posix()
-    relative_path = relative_path.replace(".html", "")
+    relative_path = relative_path.removesuffix(".html")
     if relative_path == "index":
         relative_path = ""
     elif relative_path.endswith("/index"):
@@ -229,11 +280,60 @@ def upsert_canonical_link(soup: BeautifulSoup, canonical_url: str) -> None:
         soup.head.append(new_tag)
 
 
+def find_share_image(soup: BeautifulSoup, canonical_url: str) -> Optional[str]:
+    """Absolute URL of the first article image, if the article has one."""
+    article_body = soup.find(id="article-body")
+    image = article_body.find("img", src=True) if article_body else None
+    if image is None:
+        return None
+    return urljoin(canonical_url, image["src"])
+
+
+def upsert_meta(soup: BeautifulSoup, key: str, name: str, content: str) -> None:
+    tag = soup.find("meta", attrs={key: name})
+    if tag is None:
+        tag = soup.new_tag("meta", attrs={key: name})
+        soup.head.append(tag)
+    tag["content"] = content
+
+
+def upsert_social_tags(
+    soup: BeautifulSoup, canonical_url: str, page_type: str, last_modified: str
+) -> None:
+    """Open Graph and Twitter card tags for link previews."""
+    if not soup.head:
+        return
+    title = soup.title.get_text(strip=True) if soup.title else SITE_NAME
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    description = meta_desc.get("content", "").strip() if meta_desc else ""
+    image = find_share_image(soup, canonical_url)
+
+    properties = {
+        "og:title": title.removesuffix(TITLE_SUFFIX),
+        "og:type": "article" if page_type == "ARTICLES" else "website",
+        "og:url": canonical_url,
+        "og:site_name": SITE_NAME,
+    }
+    if description:
+        properties["og:description"] = description
+    if image:
+        properties["og:image"] = image
+    if page_type == "ARTICLES" and last_modified:
+        properties["article:modified_time"] = last_modified
+    for name, content in properties.items():
+        upsert_meta(soup, "property", name, content)
+    upsert_meta(
+        soup, "name", "twitter:card", "summary_large_image" if image else "summary"
+    )
+
+
 def build_structured_data(
     soup: BeautifulSoup, canonical_url: str, page_type: str, last_modified: str
 ) -> dict:
     """Build JSON-LD structured data for the page."""
     title = soup.title.get_text(strip=True) if soup.title else None
+    if title:
+        title = title.removesuffix(TITLE_SUFFIX)
     meta_desc = soup.find("meta", attrs={"name": "description"})
     description = meta_desc.get("content", "").strip() if meta_desc else None
 
@@ -258,6 +358,12 @@ def build_structured_data(
         data["description"] = description
     if last_modified:
         data["dateModified"] = last_modified
+    image = find_share_image(soup, canonical_url)
+    if image and page_type == "ARTICLES":
+        data["image"] = image
+    language = soup.html.get("lang") if soup.html else None
+    if language:
+        data["inLanguage"] = language
 
     return data
 
@@ -289,7 +395,7 @@ def process_file(
             element_html = element_html.replace("../../", f"{depth_prefix}")
         html = replace_func(html, element_html)
 
-    html = change_title_in_head(html)
+    html = change_title_in_head(html, file_path)
     html = change_meta_description_in_head(html_content=html, file_path=file_path)
 
     soup = BeautifulSoup(html, "html.parser")
@@ -303,6 +409,7 @@ def process_file(
         last_modified=last_modified,
     )
     upsert_structured_data(soup, structured_data)
+    upsert_social_tags(soup, canonical_url, category, last_modified)
     html = str(soup)
 
     file_path.write_text(html)
@@ -325,6 +432,7 @@ def process_metadata_file(file_path: Path, page_type: str) -> None:
         last_modified=last_modified,
     )
     upsert_structured_data(soup, structured_data)
+    upsert_social_tags(soup, canonical_url, page_type, last_modified)
     file_path.write_text(str(soup))
 
 
@@ -343,6 +451,7 @@ def process_course_file(file_path: Path, depth: int = 1) -> None:
         html = replace_func(html, element_html)
 
     file_path.write_text(html)
+    process_metadata_file(file_path, "COURSES")
 
 
 def main() -> None:
@@ -354,30 +463,37 @@ def main() -> None:
     }
     tool_configurations = {"NAVBAR": replace_navbar, "FOOTER": replace_footer}
 
+    jobs = []
     article_dir = Path(CONFIG["ARTICLES"]["INPUT_DIR"])
-    with ThreadPoolExecutor() as executor:
-        for file in article_dir.rglob("**/*.html"):
-            depth = len(file.relative_to(article_dir).parts) - 1
-            executor.submit(
-                process_file, file, "ARTICLES", article_configurations, depth
-            )
+    for file in article_dir.rglob("**/*.html"):
+        depth = len(file.relative_to(article_dir).parts) - 1
+        jobs.append((process_file, file, "ARTICLES", article_configurations, depth))
 
     tool_dir = Path(CONFIG["TOOLS"]["INPUT_DIR"])
-    with ThreadPoolExecutor() as executor:
-        for file in tool_dir.rglob("**/*.html"):
-            depth = len(file.relative_to(tool_dir).parts) - 1
-            executor.submit(process_file, file, "TOOLS", tool_configurations, depth)
+    for file in tool_dir.rglob("**/*.html"):
+        depth = len(file.relative_to(tool_dir).parts) - 1
+        jobs.append((process_file, file, "TOOLS", tool_configurations, depth))
 
     course_dir = Path(CONFIG["COURSES"]["INPUT_DIR"])
-    with ThreadPoolExecutor() as executor:
-        for file in course_dir.rglob("**/*.html"):
-            depth = len(file.relative_to(course_dir).parts) - 1
-            executor.submit(process_course_file, file, depth)
+    for file in course_dir.rglob("**/*.html"):
+        depth = len(file.relative_to(course_dir).parts) - 1
+        jobs.append((process_course_file, file, depth))
 
-    core_dir = Path("../src/core")
+    for file in Path("../src/core").rglob("**/*.html"):
+        jobs.append((process_metadata_file, file, "CORE"))
+
+    empty = [job for job in jobs if not job[1].read_text().strip()]
+    for job in empty:
+        logging.warning(f"Skipping empty page {job[1]}")
+    jobs = [job for job in jobs if job not in empty]
+
     with ThreadPoolExecutor() as executor:
-        for file in core_dir.rglob("**/*.html"):
-            executor.submit(process_metadata_file, file, "CORE")
+        futures = {executor.submit(*job): job[1] for job in jobs}
+    failures = [(path, f.exception()) for f, path in futures.items() if f.exception()]
+    for path, error in failures:
+        logging.error(f"Failed to process {path}: {error!r}")
+    if failures:
+        raise SystemExit(f"{len(failures)} pages failed to process")
 
     index_file = Path("../src/index.html")
     if index_file.exists():

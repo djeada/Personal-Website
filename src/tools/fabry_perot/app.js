@@ -1,8 +1,3 @@
-/*
- * Fabry–Pérot / passive optical resonator page glue.
- * Physics lives in ../shared/optics/resonator.js (window.OpticsModels.resonator); this file only
- * converts UI units (%, mm, nm) to SI, calls the model and draws.
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI;
@@ -13,7 +8,7 @@
     const fmt = (v, u, d = 3) => core.formatSI(v, u, d);
     const fixed = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : "—");
 
-    // ------------------------------------------------------------------ defaults and presets
+
     const DEFAULTS = {
         R1: 99,
         R2: 99,
@@ -141,7 +136,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     const sidebar = document.querySelector(".options-sidebar");
     UI.enhanceAllSliders(sidebar, {
         R1Slider: {
@@ -164,7 +159,7 @@
         }
     });
     let renderPending = false;
-    let url = null; // assigned after the controls exist (urlState needs ctl.get)
+    let url = null;
     const ctl = UI.bindControls({
         R1: "#R1Slider",
         R2: "#R2Slider",
@@ -223,8 +218,8 @@
         scheduleRender();
     });
 
-    // ------------------------------------------------------------------ derived state
-    let S = null; // everything the draw functions need
+
+    let S = null;
     let lastValid = {
         rc1: DEFAULTS.rc1,
         rc2: DEFAULTS.rc2
@@ -285,7 +280,7 @@
         };
     }
 
-    /** Min/max decimation keeps oscillations visible when there are more samples than pixels. */
+
     function decimate(xs, ys, maxPts) {
         const n = xs.length;
         if (n <= maxPts) return {
@@ -336,7 +331,7 @@
         const probe = res.response(cav, nuProbe);
         const maxOrd = Number(v.ord) || 0;
 
-        // spectrum range
+
         let lo, hi, zoomed = false;
         if (v.zoom && Number.isFinite(cav.fwhm)) {
             const center = cav.nuRes + Math.round(v.det) * cav.fsr;
@@ -352,11 +347,11 @@
         const sp = res.spectrum(cav, nus);
         const xs = Array.from(nus, (nu) => (nu - cav.nuRes) / unit.s);
 
-        // time response
+
         const perTau = Number.isFinite(cav.tauP) && cav.tauP > 0 ? cav.tauP / cav.Trt : 1;
         const nOn = Math.max(30, Math.min(200000, Math.ceil(8 * perTau)));
         const tr = res.timeResponse(cav, nuProbe, nOn, nOn);
-        // ring-down fit on circulating power (independent of R2) over ≤ 3 τp after switch-off
+
         let fitTau = NaN;
         {
             const nFit = Math.max(3, Math.min(nOn, Math.ceil(3 * perTau)));
@@ -403,7 +398,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ readouts
+
     function updateReadouts() {
         const {
             v,
@@ -460,7 +455,7 @@
         set("rW12", Number.isFinite(md.w1) ? fmt(md.w1, "m") + ", " + fmt(md.w2, "m") : "—");
         set("rZR", Number.isFinite(md.zR) ? fmt(md.zR, "m") : "—");
 
-        // warnings and boundary notes
+
         const warn = $("stabWarn");
         const msgs = [];
         if (md.status === "unstable") msgs.push("Unstable resonator: |(A + D)/2| = " + Math.abs(md.m).toFixed(3) + " > 1, so no self-consistent Gaussian mode exists. The spectrum shows the plane-wave Airy idealisation and transverse modes are undefined.");
@@ -472,7 +467,7 @@
             "Stable interior: ψ = arccos(" + (md.g1 < 0 ? "−" : "+") + "√(g₁g₂)) = " + (md.gouy * 180 / Math.PI).toFixed(2) + "°; ray matrix gives the same value as the propagated beam (" + (md.gouyPropagated * 180 / Math.PI).toFixed(2) + "°)." :
             (md.boundary.note || (md.status === "unstable" ? "Outside the stable region: rays walk off after a few round trips." : ""));
 
-        // mode table
+
         const tb = document.querySelector("#modeTable tbody");
         const rows = [];
         for (let N = 0; N <= S.maxOrd; N++) {
@@ -488,7 +483,7 @@
         tb.innerHTML = rows.join("");
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     function noteText(ctx, map, text) {
         const P = map.plot;
         ctx.save();
@@ -533,7 +528,7 @@
     }
     const small = (w) => w < 520;
 
-    // ------------------------------------------------------------------ beam / cavity schematic
+
     let beamMap;
 
     function drawBeam(ctx, w, h) {
@@ -593,7 +588,7 @@
             }] : []
         });
         const P = beamMap.plot;
-        // optical axis
+
         ctx.save();
         ctx.strokeStyle = PAL.gridStrong;
         ctx.setLineDash([6, 4]);
@@ -603,12 +598,12 @@
         ctx.lineTo(P.x + P.w, y0);
         ctx.stroke();
         ctx.setLineDash([]);
-        // mirrors
+
         const drawMirror = (zmm, Rc, dirIn, label, R) => {
             const x = beamMap.xToPx(zmm);
             const half = P.h * 0.42;
             const curv = Number.isFinite(Rc) ? Math.max(-1, Math.min(1, L / Rc)) : 0;
-            const sag = 14 * curv * dirIn; // concave (Rc > 0): edges bend toward the cavity interior
+            const sag = 14 * curv * dirIn;
             ctx.strokeStyle = "#c9d4ff";
             ctx.lineWidth = 5;
             ctx.lineCap = "round";
@@ -635,7 +630,7 @@
         if (!bound) noteText(ctx, beamMap, md.status === "unstable" ? "Unstable: no self-consistent Gaussian mode" : "Marginal (" + (md.boundary.label || "boundary") + "): no finite Gaussian mode");
     }
 
-    // ------------------------------------------------------------------ spectrum
+
     let specMap;
 
     function drawSpectrum(ctx, w, h) {
@@ -723,7 +718,7 @@
                 label: "T " + probe.T.toFixed(3) + "  R " + probe.R.toFixed(3)
             }
         });
-        // FSR or FWHM annotation
+
         const yA = log ? specMap.yToPx(Math.sqrt(cav.Tmax / 2 * yMax)) : specMap.yToPx(Math.min(0.8, cav.Tmax * 0.75));
         if (!zoomed) {
             const x0 = specMap.xToPx(0),
@@ -737,7 +732,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ mode comb
+
     let combMap;
 
     function drawComb(ctx, w, h) {
@@ -780,7 +775,7 @@
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
-        // longitudinal comb
+
         ctx.strokeStyle = PAL.gridStrong;
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1;
@@ -822,7 +817,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ intracavity field
+
     let phase = 0;
     let fieldCache = null;
 
@@ -859,7 +854,7 @@
         const inside = Array.from(zs, (z) => z >= 0 && z <= L);
         const zf = Float64Array.from(zs, (z) => Math.min(L, Math.max(0, z)));
         const zoom = res.intracavityField(cav, nuProbe, zf);
-        // phase reference: at animation phase 0 the field is real and positive at the strongest antinode
+
         let iMax = 0;
         for (let i = 0; i < nz; i++)
             if (inside[i] && zoom.abs2[i] > zoom.abs2[iMax]) iMax = i;
@@ -935,7 +930,7 @@
                 b: fs * 3.0
             }
         });
-        // zoom window marker
+
         const za = Math.max(0, f.a) * 1e3,
             zb = Math.min(cav.L, f.b) * 1e3;
         ctx.save();
@@ -945,7 +940,7 @@
         ctx.fillRect(xa - 1, m1.plot.y, xb - xa + 2, m1.plot.h);
         ctx.restore();
 
-        // zoom: ±|E| envelope and the instantaneous real field
+
         const um = Array.from(f.zs, (z) => (z - f.ref) * 1e6);
         const mag = [],
             neg = [],
@@ -964,7 +959,7 @@
             const a = Math.hypot(re, im);
             mag.push(a);
             neg.push(-a);
-            inst.push(re * c + im * s); // Re{E e^{−iφ}}
+            inst.push(re * c + im * s);
         }
         let ym = 0;
         for (const x of mag)
@@ -1010,7 +1005,7 @@
             fontSize: fs,
             legendPosition: S.v.zwin === "m1" ? "right" : "left"
         });
-        // mirror bands
+
         ctx.save();
         const P = m2.plot;
         ctx.beginPath();
@@ -1028,7 +1023,7 @@
         ctx.restore();
     }
 
-    // ------------------------------------------------------------------ time response
+
     let timeMap;
 
     function drawTime(ctx, w, h) {
@@ -1042,9 +1037,9 @@
         const tu = pickTimeUnit(tEnd);
         const tx = Array.from(tr.t, (t) => t / tu.s);
         const dec = decimate(tx, tr.Pt, 2400);
-        const tOff = cav.Trt * nOn; // input switched off after nOn round trips
+        const tOff = cav.Trt * nOn;
         const Ps = tr.Pt[nOn - 1],
-            tLast = tr.t[nOn - 1]; // last sample with the input on
+            tLast = tr.t[nOn - 1];
         const refX = [],
             refY = [];
         for (let i = 0; i <= 200; i++) {
@@ -1106,7 +1101,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ g1–g2 diagram
+
     let gMap;
     const GR = 2.5;
 
@@ -1139,7 +1134,7 @@
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
-        // stable region (two branches)
+
         ctx.fillStyle = "rgba(105,245,231,0.16)";
         for (const s of [1, -1]) {
             ctx.beginPath();
@@ -1153,7 +1148,7 @@
             ctx.closePath();
             ctx.fill();
         }
-        // marginal boundaries: axes (g1g2 = 0) and hyperbola (g1g2 = 1)
+
         ctx.strokeStyle = PAL.text;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -1174,14 +1169,14 @@
             }
             ctx.stroke();
         }
-        // symmetric diagonal
+
         ctx.setLineDash([1, 4]);
         ctx.strokeStyle = PAL.gridStrong;
         ctx.beginPath();
         ctx.moveTo(X(-GR), Y(-GR));
         ctx.lineTo(X(GR), Y(GR));
         ctx.stroke();
-        // locus if only L changes: g_i = 1 − L'/Rc_i, L' ≥ 0 (starts at planar point (1, 1))
+
         const k1 = Number.isFinite(S.p.Rc1) ? 1 / S.p.Rc1 : 0,
             k2 = Number.isFinite(S.p.Rc2) ? 1 / S.p.Rc2 : 0;
         if (k1 || k2) {
@@ -1195,7 +1190,7 @@
             ctx.stroke();
         }
         ctx.setLineDash([]);
-        // special points
+
         ctx.font = "12px " + PAL.font;
         ctx.fillStyle = PAL.textMuted;
         ctx.textBaseline = "middle";
@@ -1218,7 +1213,7 @@
         ctx.fillStyle = PAL.textMuted;
         ctx.fillText("unstable", X(1.75), Y(1.75));
         ctx.fillText("unstable", X(1.5), Y(-1.5));
-        // current point
+
         const g1 = Math.max(-GR, Math.min(GR, md.g1)),
             g2 = Math.max(-GR, Math.min(GR, md.g2));
         const col = md.status === "stable" ? PAL.series[4] : md.status === "marginal" ? PAL.marker : "#ff6b6b";
@@ -1237,7 +1232,7 @@
             ctx.stroke();
         }
         ctx.restore();
-        // label
+
         ctx.save();
         ctx.font = "12px " + PAL.mono;
         ctx.fillStyle = PAL.text;
@@ -1252,7 +1247,7 @@
         ctx.restore();
     }
 
-    // ------------------------------------------------------------------ canvases
+
     compute();
     let gFocused = false;
     const beamCv = UI.setupCanvas($("beamCanvas"), {
@@ -1337,8 +1332,8 @@
         describeAll();
     }
 
-    // ------------------------------------------------------------------ interactions
-    // spectrum: click / drag / keys set the probe detuning
+
+
     const detEl = $("detSlider");
 
     function setDet(d) {
@@ -1388,7 +1383,7 @@
         setDet(Math.round(Number(detEl.value)) + S.cav.fwhm / 2 / S.cav.fsr);
     });
 
-    // g diagram: drag / keys set the radii of curvature
+
     function setG(g1, g2) {
         const snap = (g) => {
             for (const t of [1, 0, -1])
@@ -1459,7 +1454,7 @@
         setG(Number(g1.toFixed(4)), Number(g2.toFixed(4)));
     });
 
-    // field animation
+
     const playBtn = $("playBtn");
     const loop = UI.createLoop((dt) => {
         phase = (phase + Math.PI * dt) % (2 * Math.PI);
@@ -1485,7 +1480,7 @@
 
     UI.onThemeChange(() => all.forEach((c) => c.redraw()));
 
-    // ------------------------------------------------------------------ URL + export
+
     url = UI.urlState({
         get: ctl.get,
         set: ctl.set

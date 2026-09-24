@@ -1,25 +1,3 @@
-/*
- * Double-slit Fraunhofer model (classical scalar optics).
- *
- * All lengths are in metres, angles in radians, phases in radians.
- *
- * Geometry: two identical slits of width `a` whose centres are separated by `d`,
- * slit 1 centred at y = +d/2 ("top"), slit 2 at y = -d/2 ("bottom"). A screen at
- * distance `L` is sampled at position `y`; the observation angle is θ = atan(y/L).
- *
- * Far-field (Fraunhofer) field of the pair, for unit-amplitude equal slits:
- *   E(θ) ∝ sinc(β) [A1 e^{+iδ/2} + A2 e^{iφ} e^{-iδ/2}],
- *   β = π a sinθ / λ, δ = 2π d sinθ / λ, sinc(u) = sin(u)/u.
- * With partial mutual coherence |γ| between the two slit fields the intensity is
- *   I(θ) = sinc²(β) [A1² + A2² + 2 A1 A2 |γ| cos(δ − φ)].
- * For A1 = A2 = 1, γ = 1, φ = 0 this is 4 sinc²(β) cos²(δ/2), i.e.
- *   I/Imax = sinc²(π a sinθ/λ) cos²(π d sinθ/λ).
- *
- * Assumptions: scalar field, monochromatic illumination, normally incident plane
- * wave, uniform slit illumination, Fraunhofer propagation (valid when
- * L ≫ (d + a)² / λ). Using the exact screen angle does not make this a near-field
- * solver; obliquity and 1/r fall-off are neglected.
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -37,9 +15,9 @@
         distance: 1,
         slit1: true,
         slit2: true,
-        amplitudeRatio: 1, // A2 / A1 (field amplitude), 0..1
-        relativePhase: 0, // φ, phase of slit 2 relative to slit 1
-        coherence: 1, // |γ12|, 0..1
+        amplitudeRatio: 1,
+        relativePhase: 0,
+        coherence: 1,
     });
 
     function sinc(u) {
@@ -47,7 +25,7 @@
         return Math.sin(u) / u;
     }
 
-    /** Normalise and validate parameters. Throws on physically impossible input. */
+
     function normalizeParams(p) {
         const q = Object.assign({}, DEFAULTS, p || {});
         ["wavelength", "slitWidth", "slitSeparation", "distance"].forEach((k) => {
@@ -66,10 +44,7 @@
         return q;
     }
 
-    /**
-     * Largest slit width allowed for a given separation (keeps an opaque bar
-     * between the slits). `margin` is the minimum fraction of d left opaque.
-     */
+
     function maxSlitWidth(slitSeparation, margin) {
         const f = margin === undefined ? 0.02 : margin;
         return slitSeparation * (1 - f);
@@ -82,16 +57,13 @@
         };
     }
 
-    /** Single-slit envelope sinc²(π a sinθ / λ). */
+
     function envelopeAtSin(sinTheta, q) {
         const b = sinc((Math.PI * q.slitWidth * sinTheta) / q.wavelength);
         return b * b;
     }
 
-    /**
-     * Intensity at a given sinθ, in units of the on-axis intensity of ONE fully
-     * open slit (so two equal, coherent, in-phase slits give 4 on axis).
-     */
+
     function intensityAtSin(sinTheta, params) {
         const q = normalizeParams(params);
         return intensityAtSinQ(sinTheta, q);
@@ -112,16 +84,13 @@
         return Math.sin(theta);
     }
 
-    /** Intensity at screen position y (metres), same units as intensityAtSin. */
+
     function intensityAtY(y, params) {
         const q = normalizeParams(params);
         return intensityAtSinQ(sinThetaAtY(y, q.distance), q);
     }
 
-    /**
-     * Peak-normalised textbook baseline for equal, coherent, in-phase slits:
-     * I/Imax = sinc²(π a sinθ/λ) cos²(π d sinθ/λ).
-     */
+
     function normalizedBaselineAtY(y, params) {
         const q = normalizeParams(Object.assign({}, params, {
             slit1: true,
@@ -133,19 +102,19 @@
         return intensityAtSinQ(sinThetaAtY(y, q.distance), q) / 4;
     }
 
-    /** Paraxial fringe spacing λL/d. */
+
     function paraxialFringeSpacing(params) {
         const q = normalizeParams(params);
         return (q.wavelength * q.distance) / q.slitSeparation;
     }
 
-    /** Paraxial position of the first envelope zero, λL/a. */
+
     function paraxialEnvelopeZero(params) {
         const q = normalizeParams(params);
         return (q.wavelength * q.distance) / q.slitWidth;
     }
 
-    /** Exact screen position of the first envelope zero, or Infinity if λ ≥ a. */
+
     function envelopeZero(params) {
         const q = normalizeParams(params);
         const s = q.wavelength / q.slitWidth;
@@ -153,12 +122,7 @@
         return q.distance * Math.tan(Math.asin(s));
     }
 
-    /**
-     * Interference maxima orders m that correspond to real propagating directions:
-     * |m| λ / d < 1 (|m|λ/d = 1 is grazing, never reaching a finite screen).
-     * Returns each order with sinθ and exact screen position y = L tan(asin(sinθ)),
-     * optionally limited to |y| ≤ halfWidth. Relative phase shifts every order by φ/(2π).
-     */
+
     function interferenceOrders(params, halfWidth) {
         const q = normalizeParams(params);
         const shift = q.relativePhase / (2 * Math.PI);
@@ -182,22 +146,22 @@
         return out;
     }
 
-    /** Highest real order magnitude for φ = 0: largest integer |m| with |m| λ/d < 1. */
+
     function maxPhysicalOrder(params) {
         const q = normalizeParams(params);
         const r = q.slitSeparation / q.wavelength;
-        // tolerate round-off so that d = Nλ exactly (grazing order) is excluded
+
         return Math.max(0, Math.ceil(r * (1 - 1e-12)) - 1);
     }
 
-    /** Fresnel number N_F = (D/2)² / (λL) with D = d + a the full aperture extent. */
+
     function fresnelNumber(params) {
         const q = normalizeParams(params);
         const half = (q.slitSeparation + q.slitWidth) / 2;
         return (half * half) / (q.wavelength * q.distance);
     }
 
-    /** Theoretical fringe visibility 2 A1 A2 |γ| / (A1² + A2²). */
+
     function theoreticalVisibility(params) {
         const q = normalizeParams(params);
         const {
@@ -209,10 +173,7 @@
         return (2 * a1 * a2 * q.coherence) / den;
     }
 
-    /**
-     * Sample the screen from -halfWidth to +halfWidth (metres). Every readout,
-     * detector pixel, and plot point is derived from this one array.
-     */
+
     function sampleScreen(params, halfWidth, options) {
         const q = normalizeParams(params);
         if (!(halfWidth > 0)) throw new RangeError("halfWidth must be positive");
@@ -223,7 +184,7 @@
         const maxN = opts.maxSamples || 40001;
         let n = Math.ceil(((2 * halfWidth) / spacing) * perFringe) + 1;
         n = Math.max(minN, Math.min(maxN, n));
-        if (n % 2 === 0) n += 1; // keep y = 0 on a sample
+        if (n % 2 === 0) n += 1;
         const y = new Float64Array(n);
         const intensity = new Float64Array(n);
         const envelope = new Float64Array(n);
@@ -252,11 +213,11 @@
             n,
             dy,
             y,
-            intensity, // units: single-slit on-axis intensity
-            envelope, // upper fringe envelope, same units
+            intensity,
+            envelope,
             lowerEnvelope: lower,
             peak,
-            reference: 4, // two equal coherent in-phase slits, on axis
+            reference: 4,
             samplesPerFringe: spacing / dy,
             resolved: spacing / dy >= 4,
         };
@@ -271,7 +232,7 @@
                 I[i] > I[i - 1] && I[i] >= I[i + 1] && I[i] > floor :
                 I[i] < I[i - 1] && I[i] <= I[i + 1];
             if (isExt) {
-                // parabolic refinement
+
                 const den = I[i - 1] - 2 * I[i] + I[i + 1];
                 const off = den !== 0 ? (0.5 * (I[i - 1] - I[i + 1])) / den : 0;
                 out.push({
@@ -292,12 +253,7 @@
         return localExtrema(sample, false);
     }
 
-    /**
-     * Readouts measured from the sampled array: fringe spacing from adjacent
-     * minima near the centre (minima are not pulled inward by the sloping
-     * envelope the way maxima are), and visibility (Imax − Imin)/(Imax + Imin) over the
-     * central fringe period.
-     */
+
     function analyzeSample(sample) {
         const q = sample.params;
         const I = sample.intensity;
@@ -314,8 +270,8 @@
         result.maximaCount = maxima.length;
         if (!sample.resolved) return result;
 
-        // central window: one paraxial fringe period on each side of y = 0,
-        // limited to the central envelope lobe
+
+
         const env0 = Math.min(envelopeZero(q), sample.halfWidth);
         const win = Math.min(0.5 * paraxial, 0.5 * env0);
         const mid = (n - 1) / 2;
@@ -339,13 +295,7 @@
         return result;
     }
 
-    /**
-     * Far-field validity summary for a given screen half-width (metres).
-     * regime: "far" (N_F < 0.1), "marginal" (0.1 ≤ N_F < 1) or "near" (N_F ≥ 1), where
-     * N_F = (D/2)²/(λL), D = d + a. `minFarFieldDistance` is the L at which N_F = 0.1.
-     * `maxAngle` is the largest observation angle on the screen; `paraxialOK` is false beyond 10°,
-     * where sinθ ≈ tanθ ≈ y/L errs by more than ~1.5 %.
-     */
+
     function validity(params, halfWidth) {
         const q = normalizeParams(params);
         const nf = fresnelNumber(q);
@@ -362,10 +312,7 @@
         };
     }
 
-    /**
-     * Cumulative trapezoidal integral of the sampled intensity (same length as sample.y),
-     * units: intensity × metres. Used for expected detection counts.
-     */
+
     function cumulativeIntensity(sample) {
         const I = sample.intensity;
         const C = new Float64Array(sample.n);
@@ -379,21 +326,13 @@
         if (t >= sample.n - 1) return C[sample.n - 1];
         const i = Math.floor(t),
             f = t - i;
-        // exact integral of the linear interpolant inside segment i
+
         const I0 = sample.intensity[i],
             I1 = sample.intensity[i + 1];
         return C[i] + sample.dy * (I0 * f + 0.5 * (I1 - I0) * f * f);
     }
 
-    /**
-     * Simulated single-quantum detections on the screen (photon-count view).
-     * The normalised sampled intensity is used as the probability density for a detection
-     * *conditioned on hitting the screen* (|y| ≤ halfWidth). `rng` is a seeded generator
-     * ({next()} or a function returning [0, 1)); use core.createRng(seed) for reproducibility.
-     * Returns { nBins, edges, centers, counts (Uint32Array), expected (Float64Array, mean counts),
-     *           total, positions (Float64Array of y, only when N ≤ keepPositions, default 20000) }.
-     * Detector physics (quantum efficiency, dark counts, pixel cross-talk) is not modelled.
-     */
+
     function detectionHistogram(sample, N, nBins, rng, options) {
         const opts = options || {};
         const next = typeof rng === "function" ? rng : rng.next.bind(rng);
@@ -418,7 +357,7 @@
                 dy = sample.dy;
             for (let k = 0; k < N; k++) {
                 const target = next() * total;
-                // binary search for the segment containing target
+
                 let lo = 0,
                     hi = sample.n - 1;
                 while (hi - lo > 1) {
@@ -426,7 +365,7 @@
                     if (C[mid] <= target) lo = mid;
                     else hi = mid;
                 }
-                // invert the linear-interpolant integral inside segment lo
+
                 const I0 = I[lo],
                     I1 = I[lo + 1],
                     r = (target - C[lo]) / dy;

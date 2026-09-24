@@ -1,4 +1,3 @@
-/* Fourier optics, imaging and resolution: page glue (model: ../shared/optics/fourierOptics.js). */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -11,7 +10,7 @@
     const um = (m, d = 3) => (Number.isFinite(m) ? fmt(m * 1e6, d) + " µm" : "—");
     const perUm = (f, d = 3) => (Number.isFinite(f) ? fmt(f * 1e-6, d) + " /µm" : "—");
 
-    // ------------------------------------------------------------------ state
+
     const DEFAULTS = Object.freeze({
         mode: "incoherent",
         obj: "twoPoints",
@@ -246,7 +245,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ helpers
+
     function crop(a, N, half) {
         half = Math.min(N / 2, Math.max(4, Math.round(half)));
         const n = 2 * half,
@@ -260,7 +259,7 @@
             half
         };
     }
-    /** Square image with axes and a vertical colour bar. Returns the plot mapping. */
+
     function drawMap(ctx, w, h, o) {
         const l = FS * 4.2,
             rr = 70,
@@ -368,7 +367,7 @@
         return c;
     }
 
-    // ------------------------------------------------------------------ compute
+
     let pending = 0;
 
     function schedule() {
@@ -383,7 +382,7 @@
         const s = ctl.get();
         const p = toParams(s);
         res = FO.simulate(p);
-        // through-focus: total defocus z; the pupil already contains p.dz
+
         const dof = FO.depthOfFocus(p.lambda, p.NA);
         const range = Math.max(2.5 * dof, 1.25 * Math.abs(p.dz));
         const zs = core.linspace(-range, range, 161);
@@ -398,7 +397,7 @@
         updateText(s, p);
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const cv = {};
 
     function setup(id, key, aspect, draw, minHeight = 240) {
@@ -414,7 +413,7 @@
         for (const k in cv) cv[k].redraw();
     }
 
-    /** Half-width (samples) of the object/image view: zoomed for point objects, full field otherwise. */
+
     function viewHalf() {
         const g = res.grid,
             p = res.params,
@@ -554,7 +553,7 @@
                 max: wmax
             },
             cbLabel: "W (waves)",
-            under: (cx, map) => { // hatch = blocked by the filter (visible where the image is transparent)
+            under: (cx, map) => {
                 const cc = map.toPx(0, 0),
                     r = Math.abs(map.xToPx(R.fc * 1e-6) - cc.x);
                 cx.beginPath();
@@ -682,7 +681,7 @@
             cref.push(FO.ctfCircular(f, p.lambda, p.NA));
             if (Math.abs(my[i] - cuts.mtf[i]) > 2e-3) differs = true;
         }
-        // also compare with the negative-fx side (knife edge / coma make |CTF| one-sided)
+
         const inc = p.mode === "incoherent";
         const series = [{
                 xs,
@@ -980,7 +979,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ text: readouts, labels, visibility
+
     function setText(id, t) {
         const e = $(id);
         if (e && e.textContent !== t) e.textContent = t;
@@ -1065,7 +1064,7 @@
         rows.push(["Image min / max", fmt(R.image.min * sc, 3) + " / " + fmt(R.image.max * sc, 3) + (pt ? " × ideal point peak" : " × I_illum")]);
         readoutEl.innerHTML = rows.map(([k, v]) => "<div><dt>" + k + "</dt><dd>" + v + "</dd></div>").join("");
 
-        // text equivalents for the canvases
+
         if (descs.img) {
             descs.obj.update("Object: " + res.object.info + ".");
             descs.spec.update("Fourier plane: " + (coh ? "amplitude" : "intensity") + " spectrum; pupil radius NA/λ₀ = " + perUm(R.fc) + "; filter " + p.filter + ".");
@@ -1079,7 +1078,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ init
+
     compute();
     setup("objCanvas", "obj", 1.08, drawObject);
     setup("specCanvas", "spec", 1.08, drawSpectrum);

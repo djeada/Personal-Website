@@ -1,7 +1,7 @@
 "use strict";
 
-// Physics lives in ../shared/optics/quantumOptics.js (pure, tested in tests/optics/quantum_optics.test.js).
-// This file maps the three experiments onto controls, canvases, readouts and exports.
+
+
 (function() {
     const UI = window.OpticsUI;
     const core = window.OpticsModels.core;
@@ -16,7 +16,7 @@
     const pow10 = (v) => Number(Math.pow(10, v).toPrecision(4));
     const reduced = UI.prefersReducedMotion();
 
-    // ================================================================== state and presets
+
     const DEFAULTS = Object.freeze({
         exp: "mz",
         phi: 60,
@@ -298,7 +298,7 @@
         }
     };
 
-    // ================================================================== controls
+
     const sidebar = document.querySelector(".options-sidebar");
     UI.enhanceAllSliders(sidebar, {
         spdS: {
@@ -425,7 +425,7 @@
         });
     }
 
-    // ================================================================== experiment switching
+
     let currentExp = null;
 
     function showExperiment(exp) {
@@ -447,7 +447,7 @@
         else hbtRefresh(S);
     }
 
-    // stats bar
+
     function stat(i, icon, value, label) {
         $("s" + i + "i").innerHTML = icon;
         $("s" + i + "v").textContent = value;
@@ -464,8 +464,8 @@
         }
     }
 
-    // ================================================================== ① Mach–Zehnder
-    const NB = 24; // phase settings visited in turn
+
+    const NB = 24;
     const MZ = {
         key: "",
         rng: null,
@@ -562,7 +562,7 @@
         if (n > 0) {
             mzEmit(n);
             mzDrawAll();
-        } else mzCanvas.redraw(); // fade the flash
+        } else mzCanvas.redraw();
     }, {
         onChange: (running) => {
             mzPlay.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause' : '<span aria-hidden="true">▶</span> Emit photons';
@@ -600,7 +600,7 @@
             })));
             mzResetCounts(S);
         }
-        // theory curves
+
         const n = 181,
             xs = new Float64Array(n),
             c1 = new Float64Array(n),
@@ -627,18 +627,18 @@
         MZ.clickNow = QO.mzClickProbabilities(MZ.now, m.det);
         MZ.vis = QO.mzVisibility(Object.assign({}, m.cfg, {
             polarizer: null
-        })); // marker unread
-        MZ.visE = m.cfg.polarizer == null ? null : QO.mzVisibility(m.cfg); // eraser: among transmitted photons
+        }));
+        MZ.visE = m.cfg.polarizer == null ? null : QO.mzVisibility(m.cfg);
         MZ.wp = QO.whichPath(m.cfg);
         MZ.purity = QO.purity(MZ.now.rhoIn);
-        // click visibility of D1 from the four-phase sinusoid
+
         const ck = [0, 0.5, 1, 1.5].map((k) => QO.mzClickProbabilities(QO.mzProbabilities(Object.assign({}, m.cfg, {
             phi: k * Math.PI
         })), m.det).c1);
         const A = (ck[0] + ck[1] + ck[2] + ck[3]) / 4,
             B = 0.5 * Math.hypot(ck[0] - ck[2], ck[1] - ck[3]);
         MZ.clickV = A > 0 ? B / A : 0;
-        // pure-marker sweep over θ for the V–D plot
+
         const sw = {
             V: [],
             D: []
@@ -660,7 +660,7 @@
     }
 
     function fitVisibility() {
-        // weighted LSQ of D1 click fraction y = a + b cos φ + c sin φ ; var_i from theory click probabilities
+
         const M = [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -690,7 +690,7 @@
         const amp = Math.hypot(c[1], c[2]);
         if (!(c[0] > 0)) return null;
         const V = amp / c[0];
-        // gradient of V wrt (a, b, c)
+
         const g = [-amp / (c[0] * c[0]), amp > 0 ? c[1] / (amp * c[0]) : 0, amp > 0 ? c[2] / (amp * c[0]) : 0];
         let varV = 0;
         for (let i = 0; i < 3; i++)
@@ -715,7 +715,7 @@
         ];
     }
 
-    // --- canvases for ①
+
     let buildMap = null;
     const mzCanvas = UI.setupCanvas($("mzCanvas"), {
         aspect: 2.8,
@@ -782,7 +782,7 @@
         const fs = w < 520 ? 11 : 12;
         ctx.font = fs + "px " + PAL.font;
         const narrow = w < 560;
-        const L = narrow ? 70 : 120; // left space for source
+        const L = narrow ? 70 : 120;
         const xB1 = L,
             xB2 = w - (narrow ? 90 : 170),
             yB = h - 46,
@@ -802,9 +802,9 @@
             ctx.stroke();
             ctx.setLineDash([]);
         };
-        // input beam
+
         line(14, yB, xB1, yB, PAL.text, lw(1));
-        // arm a: BS1 → right mirror (xB2, yB) → up to BS2 (xB2, yT)? Use square: BS1 bottom-left, M_a bottom-right, M_b top-left, BS2 top-right
+
         if (wa > 0) {
             line(xB1, yB, xB2, yB, beamA, lw(wa));
             line(xB2, yB, xB2, yT, beamA, lw(wa));
@@ -813,14 +813,14 @@
             line(xB1, yB, xB1, yT, beamB, lw(wb));
             line(xB1, yT, xB2, yT, beamB, lw(wb));
         }
-        // outputs: D1 to the right of BS2, D2 above BS2
+
         const P1 = MZ.now.P1,
             P2 = MZ.now.P2;
         const xD1 = w - 26,
             yD2 = 14;
         line(xB2, yT, xD1 - 12, yT, PAL.text, lw(Math.min(1, P1 + 1e-3)));
         line(xB2, yT, xB2, yD2 + 10, PAL.text, lw(Math.min(1, P2 + 1e-3)));
-        // splitters
+
         const bs = (x, y, lab, dx, dy) => {
             ctx.strokeStyle = PAL.series[3];
             ctx.lineWidth = 4;
@@ -857,12 +857,12 @@
         } else bs(xB2, yT, "BS2 50:50", -44, -20);
         mirror(xB2, yB, "M", 20, 12);
         mirror(xB1, yT, "M", -20, -8);
-        // source
+
         ctx.fillStyle = PAL.text;
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
         ctx.fillText(narrow ? "1 γ, H" : "single photon, H", 6, yB - 8);
-        // polarization glyphs: circle with a double arrow at angle (H = horizontal)
+
         const glyph = (x, y, ang, col) => {
             ctx.strokeStyle = col;
             ctx.lineWidth = 1.5;
@@ -887,7 +887,7 @@
                 ctx.fillText("arm a: H", midA + 16, yB + 20);
             }
         }
-        // marker plate on arm b (vertical segment)
+
         const yM = (yB + yT) / 2;
         ctx.fillStyle = "rgba(241,135,200,0.25)";
         ctx.fillRect(xB1 - 16, yM - 5, 32, 10);
@@ -899,7 +899,7 @@
         ctx.textBaseline = "middle";
         ctx.fillText("θ = " + Math.round(MZ.cfg.theta / RAD) + "°", xB1 + 20, yM);
         if (wb > 0) glyph(xB1 + 20 + ctx.measureText("θ = " + Math.round(MZ.cfg.theta / RAD) + "°").width + 16, yM, MZ.cfg.theta, beamB);
-        // phase plate on arm b (top segment)
+
         const xP = xB1 + (xB2 - xB1) * 0.35;
         ctx.fillStyle = "rgba(167,139,250,0.25)";
         ctx.fillRect(xP - 6, yT - 14, 12, 28);
@@ -914,7 +914,7 @@
             ctx.textAlign = "center";
             ctx.fillText("dephasing γ = " + Math.round(MZ.cfg.dephase * 100) + "%", xP + (narrow ? 20 : 90), yT + 17 + fs + 4);
         }
-        // eraser polarizers
+
         if (MZ.polDeg != null) {
             const pz = (x, y, vertical) => {
                 ctx.fillStyle = "rgba(248,212,119,0.25)";
@@ -930,7 +930,7 @@
             if (narrow) ctx.fillText("polarizers χ = " + MZ.polDeg + "°", xB2 - 8, yT + 24 + fs + 6);
             else ctx.fillText("polarizer χ = " + MZ.polDeg + "°", xD1 - 34, yT + 40);
         }
-        // detectors with flash
+
         const age = (performance.now() - MZ.flash.t) / 350;
         const glow = Math.max(0, 1 - age);
         const det = (x, y, lab, count, on) => {
@@ -963,7 +963,7 @@
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText("D₂: " + k2, xB2 + 16, yD2 + 2);
-        // probabilities
+
         ctx.fillStyle = PAL.textMuted;
         ctx.textAlign = "right";
         ctx.textBaseline = "bottom";
@@ -1095,7 +1095,7 @@
             ],
             legendPosition: "left"
         });
-        // theory point
+
         const px = m.xToPx(MZ.vis.V),
             py = m.yToPx(MZ.wp.D);
         ctx.fillStyle = PAL.marker;
@@ -1111,10 +1111,10 @@
         const lab = "V = " + fx(MZ.vis.V, 2) + ", D = " + fx(MZ.wp.D, 2);
         const tw = ctx.measureText(lab).width;
         ctx.textAlign = "left";
-        // label below the point (the legend occupies the top-left corner), kept inside the plot
+
         ctx.textBaseline = "top";
         ctx.fillText(lab, Math.max(m.plot.x + 4, Math.min(px + 9, m.plot.x + m.plot.w - tw - 4)), Math.min(py + 9, m.plot.y + m.plot.h - FS - 4));
-        // sampled V (click visibility fit, only meaningful with ideal detectors)
+
         const fit = MZ.fit;
         if (fit && MZ.polDeg == null && MZ.det.eta === 1 && MZ.det.pDark === 0) {
             const sx = m.xToPx(Math.min(1.05, fit.V));
@@ -1219,7 +1219,7 @@
         dRec.update(`Last ten photons: ${last || "none yet"}.`);
     }
 
-    // ================================================================== ② photon statistics
+
     const ST = {};
     const histCanvas = UI.setupCanvas($("histCanvas"), {
         aspect: 2.6,
@@ -1310,7 +1310,7 @@
             sample,
             state
         } = ST;
-        // cover 99.9 % of the predicted and pre-detector distributions (rare sampled outliers stay in the CSV)
+
         const q999 = (p) => {
             let c = 0;
             for (let i = 0; i < p.length; i++) {
@@ -1371,7 +1371,7 @@
         }, Object.assign({
             series: []
         }, axes));
-        // bars (sampled)
+
         const bw = Math.max(1, (m.xToPx(1) - m.xToPx(0)) * 0.72);
         ctx.fillStyle = "rgba(105, 245, 231, 0.42)";
         ctx.strokeStyle = PAL.series[0];
@@ -1422,7 +1422,7 @@
                 }
             ]
         }));
-        // predicted points with ±1σ sampling bands
+
         ctx.save();
         ctx.beginPath();
         ctx.rect(m.plot.x, m.plot.y, m.plot.w, m.plot.h);
@@ -1649,7 +1649,7 @@
             fock: "Fock |" + ST.S.nf + "⟩",
             squeezed: "squeezed vacuum"
         } [ST.S.st] + ", η = " + ST.S.etaS + " %";
-        // table
+
         const tb = document.querySelector("#stTable tbody");
         const rows = [];
         const mMax = Math.min(histRange(), 15);
@@ -1669,7 +1669,7 @@
         dQ.update(`At efficiency ${ST.S.etaS} %: Q = ${fx(mDet.Q, 3)}, g2(0) = ${fx(mDet.g2, 3)}; sampled Q = ${fx(sQ, 3)}.`);
     }
 
-    // ================================================================== ③ HBT
+
     const HB = {
         key: "",
         res: null,
@@ -1752,7 +1752,7 @@
                 range: W,
                 T: sim.T
             });
-            // a saturated emitter delivers only Remit·η/2 per detector, not the requested rate
+
             const sig = P.kind === "emitter" && sim.info.saturated ? sim.info.Remit * P.eta / 2 : P.rate;
             const rho1 = sig > 0 ? sig / (sig + P.dark) : 0,
                 rho = rho1;
@@ -1865,7 +1865,7 @@
                 lo = Math.min(lo, hist.g2[i] - hist.err[i]);
             }
         for (const v of R.fine.ideal) hi = Math.max(hi, v);
-        hi = Math.min(hi + 0.28 * (hi - Math.min(lo, 0)), 7); // headroom for the legend
+        hi = Math.min(hi + 0.28 * (hi - Math.min(lo, 0)), 7);
         const pts = {
             xs: Float64Array.from(hist.centers, (t) => t * f),
             ys: hist.g2
@@ -2040,7 +2040,7 @@
         ctx.restore();
     }
 
-    // ================================================================== exports
+
     UI.addExportBar($("mzExport"), {
         name: "quantum-optics-mach-zehnder",
         url,
@@ -2110,7 +2110,7 @@
         }
     });
 
-    // ================================================================== start
+
     refresh();
     url.ready.then(() => {
         refresh();

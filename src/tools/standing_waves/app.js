@@ -1,10 +1,6 @@
 "use strict";
 
-/*
- * Standing waves: page glue. Physics lives in ../shared/optics/standingWaves.js (pure, SI units).
- * Canvases use OpticsUI.setupCanvas (devicePixelRatio backing store, CSS-pixel drawing, reflow)
- * and OpticsUI.plot (axes with units, ticks, cursor). Controls are bound to the URL.
- */
+
 (function() {
     const SW = window.OpticsModels.standingWaves;
     const UI = window.OpticsUI;
@@ -12,7 +8,7 @@
     const TWO_PI = 2 * Math.PI;
     const $ = (id) => document.getElementById(id);
 
-    // ------------------------------------------------------------------ elements
+
     const modeSelect = $("modeSelect");
     const boundarySelect = $("boundaryType");
     const mirrorSelect = $("mirrorConfig");
@@ -39,7 +35,7 @@
     const spectrumPanel = $("spectrumPanel");
     const fieldLegend = $("fieldLegend");
 
-    // ------------------------------------------------------------------ configuration
+
     const MIRROR_CONFIGS = {
         "pec-pec": {
             r1: SW.REFLECTOR_PRESETS.pec.r,
@@ -58,7 +54,7 @@
         },
     };
 
-    // Slider values are in UI units (THz, µm, degrees); conversion to SI happens in readState().
+
     const DEFAULTS = {
         mode: "single",
         bnd: "pec",
@@ -190,21 +186,21 @@
         h: [7, 4],
         sum: [2, 3]
     };
-    const BEYOND_FRAC = 0.2; // extra x-range drawn beyond a single boundary (to scale)
+    const BEYOND_FRAC = 0.2;
 
-    // ------------------------------------------------------------------ state
-    let opticalTime = 0; // seconds of optical time
-    let probeFrac = 0.5; // probe position as a fraction of L (survives changes of L)
+
+    let opticalTime = 0;
+    let probeFrac = 0.5;
     let specCursorTHz = NaN;
     let cache = null;
     let cacheKey = "";
-    let state = null; // current validated state (SI)
-    let pr = null; // current profile
+    let state = null;
+    let pr = null;
     let fieldMap = null,
         energyMap = null,
         specMap = null;
     let applyingPreset = false;
-    let specPngBtn = null; // set once the export bar exists
+    let specPngBtn = null;
 
     function readState() {
         const mode = modeSelect.value;
@@ -243,11 +239,11 @@
             }
         }
         st.period = 1 / st.nu;
-        st.slowdown = +periodSlider.value * st.nu; // wall seconds per optical second
+        st.slowdown = +periodSlider.value * st.nu;
         return st;
     }
 
-    // Parameter-dependent quantities are computed once per parameter set, never per frame.
+
     function getProfile(st) {
         const key = JSON.stringify([st.mode, st.n, st.L, st.nu, st.r, st.r1, st.r2, st.n2]);
         if (key !== cacheKey) {
@@ -265,12 +261,12 @@
             p.bufH = new Float64Array(N);
             p.bufInc = new Float64Array(N);
             p.bufRef = new Float64Array(N);
-            // Time origin: t = 0 is the instant of peak field at the first antinode (a constant,
-            // parameter-dependent phase; it never moves nodes).
+
+
             const xRef = p.maxima.length ? p.maxima[0] : (st.mode === "single" ? st.L : 0);
             const ref = SW.phasors(p.cfg, xRef);
             p.timeOriginPhase = -Math.atan2(ref.eIm, ref.eRe);
-            // Transmitted region beyond a dielectric boundary (physical coordinates, to scale)
+
             if (st.mode === "single") {
                 const M = 240;
                 p.beyondUm = new Float64Array(M);
@@ -286,10 +282,10 @@
                         p.beyondIm[i] = t.im;
                     } else if (st.boundary === "pec") {
                         p.beyondRe[i] = 0;
-                        p.beyondIm[i] = 0; // no field inside a perfect conductor
+                        p.beyondIm[i] = 0;
                     } else {
                         p.beyondRe[i] = NaN;
-                        p.beyondIm[i] = NaN; // not modelled (absorber / PMC / custom)
+                        p.beyondIm[i] = NaN;
                     }
                 }
             }
@@ -299,7 +295,7 @@
         return cache;
     }
 
-    // ------------------------------------------------------------------ formatting
+
     const fmtFreq = (nu) => UI.formatSI(nu, "Hz", 4);
     const fmtLen = (m) => UI.formatSI(m, "m", 4);
     const fmtNum = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : "∞");
@@ -333,7 +329,7 @@
         return String(n).split("").map((c) => map[c]).join("");
     }
 
-    // ------------------------------------------------------------------ derived per-frame values
+
     function phiNow() {
         return state.phi0 + pr.timeOriginPhase;
     }
@@ -350,7 +346,7 @@
         const p = SW.phasors(pr.cfg, probeX());
         const e2 = p.eRe * p.eRe + p.eIm * p.eIm;
         const h2 = p.hRe * p.hRe + p.hIm * p.hIm;
-        // E · (ηH)* : real part ∝ time-averaged Poynting flux, imaginary part = reactive exchange
+
         const re = p.eRe * p.hRe + p.eIm * p.hIm;
         const im = p.eIm * p.hRe - p.eRe * p.hIm;
         const lag = e2 > 1e-20 && h2 > 1e-20 ? (Math.atan2(im, re) * 180) / Math.PI : NaN;
@@ -363,7 +359,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     function textStrip(ctx, text, x, y, align, color, bold) {
         ctx.font = (bold ? "600 " : "") + "12px " + PAL.font;
         ctx.textAlign = align;
@@ -382,7 +378,7 @@
         ctx.fill();
     }
 
-    // ------------------------------------------------------------------ field panel
+
     function drawField(ctx, w, h) {
         if (!state) return;
         const single = state.mode === "single";
@@ -499,7 +495,7 @@
             }],
             cursor: {
                 x: xp
-            }, // label drawn last (below), so markers never cover it
+            },
         });
         const P = fieldMap.plot;
         const X = fieldMap.xToPx,
@@ -508,7 +504,7 @@
             wallL = X(0);
 
         let nameW = 0;
-        // region beyond a single boundary (fill + vertical label, so it never collides with ticks)
+
         if (single) {
             const fills = {
                 pec: "rgba(228, 224, 245, 0.22)",
@@ -526,7 +522,7 @@
             };
             ctx.fillStyle = fills[state.boundary] || fills.custom;
             ctx.fillRect(wallR, P.y, P.x + P.w - wallR, P.h);
-            // region name in the top strip, right of the boundary (clamped to the canvas edge)
+
             ctx.font = "600 12px " + PAL.font;
             const name = names[state.boundary] || "";
             nameW = ctx.measureText(name).width;
@@ -534,7 +530,7 @@
             textStrip(ctx, name, nx, P.y - 9, "left", PAL.textMuted, true);
         }
 
-        // mirrors / boundary lines
+
         const wall = (px, thick) => {
             ctx.strokeStyle = COLORS.wall;
             ctx.lineWidth = thick ? 3 : 1.5;
@@ -554,7 +550,7 @@
             textStrip(ctx, "r₂ = " + fmtR(state.r2), wallR, P.y - 9, "right", PAL.text, true);
         }
 
-        // analytic extrema markers
+
         const perfect = pr.cfg.r.mag >= 1 - 1e-12;
         const spacingPx = ((pr.wavelength / 2) * 1e6 / xMax) * P.w;
         ctx.font = "600 12px " + PAL.font;
@@ -573,14 +569,14 @@
             ctx.fill();
             ctx.stroke();
             if (!perfect) {
-                // nonzero minimum: bars at ± (1 − |r|)
+
                 ctx.fillRect(px - 5, Y(pr.eMin) - 1, 10, 2);
                 ctx.fillRect(px - 5, Y(-pr.eMin) - 1, 10, 2);
             }
             if (showLabels) {
-                // Keep labels clear of mirror lines: shift inward when a node sits on a wall.
-                // A node on a mirror gets its label shifted inward, but only when that leaves room
-                // before the neighbouring label; otherwise the mirror line itself marks it.
+
+
+
                 let lx = px,
                     align = "center",
                     skip = false;
@@ -602,7 +598,7 @@
         });
         ctx.restore();
 
-        // probe label, drawn last in the strip below the lowest data (y < −2.1)
+
         const pxp = X(xp);
         if (pxp >= P.x && pxp <= P.x + P.w) {
             const label = "xₚ = " + xp.toFixed(3) + " µm";
@@ -644,7 +640,7 @@
         fieldLegend.innerHTML = legendHTML(items);
     }
 
-    // ------------------------------------------------------------------ energy panel
+
     function drawEnergy(ctx, w, h) {
         if (!state) return;
         const xp = probeX() * 1e6;
@@ -707,7 +703,7 @@
         ]);
     }
 
-    /** Compact one-row legend drawn in the top margin strip above a plot. */
+
     function drawMiniLegend(ctx, P, items) {
         ctx.save();
         ctx.font = "12px " + PAL.font;
@@ -731,7 +727,7 @@
         ctx.restore();
     }
 
-    // ------------------------------------------------------------------ probe time trace
+
     function drawTrace(ctx, w, h) {
         if (!state) return;
         const T = state.period;
@@ -802,7 +798,7 @@
         ]);
     }
 
-    // ------------------------------------------------------------------ cavity spectrum
+
     function spectrumData() {
         const fsr = state.fsr;
         const nuM = state.nu;
@@ -819,7 +815,7 @@
         const pts = [];
         const U = 1600;
         for (let i = 0; i <= U; i++) pts.push(lo + ((hi - lo) * i) / U);
-        // refine around each resonance so narrow peaks are resolved (width = FSR / F)
+
         const width = Number.isFinite(state.fwhm) ? state.fwhm : fsr / Math.max(1, state.finesse);
         const allModes = SW.resonatorModes(state.n, state.L, state.r1.phase, state.r2.phase, state.modeNumber + 4);
         const inWindow = allModes.filter((md) => md.nu >= lo && md.nu <= hi);
@@ -914,7 +910,7 @@
         ]);
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const fieldCanvas = $("fieldCanvas"),
         energyCanvas = $("energyCanvas"),
         traceCanvas = $("traceCanvas"),
@@ -959,7 +955,7 @@
         label: "Cavity mode frequencies and Airy transmission spectrum"
     });
 
-    // ------------------------------------------------------------------ readouts and descriptions
+
     function row(k, v) {
         return "<div><dt>" + k + "</dt><dd>" + v + "</dd></div>";
     }
@@ -1016,7 +1012,7 @@
         rows.push(row("Slow-down (wall/optical time)", fmtSci(state.slowdown)));
         readout.innerHTML = rows.join("");
 
-        // warnings: rendering resolution and low finesse
+
         const warns = [];
         const plotW = fieldMap ? fieldMap.plot.w : 600;
         const spacingPx = ((pr.wavelength / 2) / (single ? state.L * (1 + BEYOND_FRAC) : state.L)) * plotW;
@@ -1052,7 +1048,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ UI sync
+
     function updateVisibility() {
         const single = modeSelect.value === "single";
         $("singleControls").hidden = !single;
@@ -1093,7 +1089,7 @@
         drawDynamic();
         energyView.redraw();
         if (state.mode === "resonator") {
-            // the panel may just have become visible: size it before drawing
+
             if (!spectrumView.resize()) spectrumView.redraw();
         }
         updateReadouts();
@@ -1110,7 +1106,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ controls, URL, export
+
     const optsById = {
         frequencySlider: {
             unit: "THz"
@@ -1214,12 +1210,11 @@
         getCSV: profileCSV,
         canvases: [fieldCanvas, energyCanvas, traceCanvas, spectrumCanvas],
         caption: () => state.mode === "single" ?
-            "Standing wave: n = " + state.n.toFixed(2) + ", L = " + fmtLen(state.L) + ", ν = " + fmtFreq(state.nu) + ", r = " + fmtR(state.r) :
-            "Resonator " + state.mirrors.label + ": n = " + state.n.toFixed(2) + ", L = " + fmtLen(state.L) + ", m = " + state.modeNumber + ", ν = " + fmtFreq(state.nu) + ", R = " + state.R.toFixed(3),
+            "Standing wave: n = " + state.n.toFixed(2) + ", L = " + fmtLen(state.L) + ", ν = " + fmtFreq(state.nu) + ", r = " + fmtR(state.r) : "Resonator " + state.mirrors.label + ": n = " + state.n.toFixed(2) + ", L = " + fmtLen(state.L) + ", m = " + state.modeNumber + ", ν = " + fmtFreq(state.nu) + ", R = " + state.R.toFixed(3),
     });
     specPngBtn = Array.from(exportBar.querySelectorAll("button")).find((b) => b.textContent === "PNG spectrum") || null;
 
-    // ------------------------------------------------------------------ presets
+
     function setActivePreset(name) {
         presetButtons.forEach((b) => {
             const on = b.dataset.preset === name;
@@ -1243,7 +1238,7 @@
 
     presetButtons.forEach((btn) => btn.addEventListener("click", () => applyPreset(btn.dataset.preset)));
 
-    // ------------------------------------------------------------------ probe interaction
+
     function setProbeFromMap(map, e, canvas) {
         if (!map) return false;
         const rect = canvas.getBoundingClientRect();
@@ -1273,7 +1268,8 @@
                 try {
                     canvas.setPointerCapture(e.pointerId);
                 } catch (err) {
-                    /* ignore */ }
+
+                }
                 onProbeChanged();
             }
         });
@@ -1289,7 +1285,7 @@
         canvas.addEventListener("keydown", (e) => {
             if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") return;
             e.preventDefault();
-            const stepFrac = (pr.wavelength / 16) / state.L * (e.shiftKey ? 4 : 1); // λ/16 per press, λ/4 with Shift
+            const stepFrac = (pr.wavelength / 16) / state.L * (e.shiftKey ? 4 : 1);
             if (e.key === "Home") probeFrac = 0;
             else if (e.key === "End") probeFrac = 1;
             else probeFrac = Math.min(1, Math.max(0, probeFrac + (e.key === "ArrowRight" ? stepFrac : -stepFrac)));
@@ -1316,7 +1312,7 @@
         spectrumView.redraw();
     });
 
-    // ------------------------------------------------------------------ animation
+
     const loop = UI.createLoop((dt) => {
         opticalTime += dt / state.slowdown;
         drawDynamic();
@@ -1342,7 +1338,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ start-up
+
     setActivePreset("pec");
     updateAll();
     url.ready.then((restored) => {

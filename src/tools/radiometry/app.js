@@ -1,7 +1,3 @@
-/*
- * Radiometry, throughput and detection — page glue.
- * Physics lives in ../shared/optics/radiometry.js (window.OpticsModels.radiometry).
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -16,7 +12,7 @@
         const a = Math.abs(v);
         return a >= 1e-3 && a < 1e5 ? String(Number(v.toPrecision(d))) : v.toExponential(d - 1).replace("e", "×10^").replace(/\^\+?(-?\d+)/, (m, e) => "^" + e);
     };
-    // superscript exponents for readability: 1.2×10^-5 → 1.2×10⁻⁵
+
     const SUP = {
         "-": "⁻",
         "0": "⁰",
@@ -149,7 +145,7 @@
         }
     };
 
-    // --------------------------------------------------------------- controls
+
     const sidebar = $(".options-sidebar");
     const SLIDER_OPTS = {
         LSlider: {
@@ -195,7 +191,7 @@
             unit: "e⁻"
         }
     };
-    // accessible names from the visible label text (without the live value span); the number box adds the unit
+
     sidebar.querySelectorAll('input[type="range"]').forEach((r) => {
         const span = r.closest(".control-group").querySelector(".control-label span");
         let name = span ? span.textContent.trim() : r.id;
@@ -275,7 +271,7 @@
         el.value = String(Number.isFinite(v) && v >= 1 ? Math.min(999999, v) : 1);
     });
 
-    // --------------------------------------------------------------- state → SI parameters
+
     function params(s) {
         return {
             source: s.src,
@@ -302,7 +298,7 @@
         };
     }
 
-    // --------------------------------------------------------------- computed state shared by the draw functions
+
     let S = null,
         P = null,
         E = null,
@@ -317,7 +313,7 @@
         P = params(S);
         E = RM.experiment(P);
 
-        // Monte Carlo of the detector readout
+
         const mean = E.S + E.dark;
         const trials = Math.max(100, Math.round(S.trials));
         const samples = RM.simulateCounts({
@@ -349,7 +345,7 @@
             readNoise: P.readNoise,
             fullWell: P.fullWell
         }, edges);
-        // exact mean/variance of the (possibly clipped) readout
+
         const mom = RM.readoutMoments({
             mean,
             readNoise: P.readNoise,
@@ -373,7 +369,7 @@
             sigmaPhys
         };
 
-        // NA sweep: aperture diameter from 0.2 mm to 100 mm
+
         const Ds = [];
         for (let i = 0; i <= 160; i++) Ds.push(0.2e-3 * Math.pow(100 / 0.2, i / 160));
         naSweep = Ds.map((D) => {
@@ -389,7 +385,7 @@
             };
         });
 
-        // irradiance profile on the aperture plane
+
         const rhoMax = Math.max(1.4 * E.R, P.source === "lambert" ? 1.6 * P.a : 0, P.source === "laser" ? 1.8 * E.wLens : 0);
         const nPts = 90,
             xs = [],
@@ -401,7 +397,7 @@
                 P.source === "point" ? RM.pointIrradianceAt(P.I, P.so, rho) :
                 RM.gaussianIrradianceAt(P.P0, E.wLens, rho));
         }
-        // numerical collected power: ∫₀ᴿ E(ρ) 2πρ dρ (Simpson; split at the source edge for the disk)
+
         let PcollNum, E0num, E0ana;
         const Ef = (rho) => (P.source === "lambert" ? RM.lambertIrradianceAt(P.L, P.a, P.so, rho, 1e-11) :
             P.source === "point" ? RM.pointIrradianceAt(P.I, P.so, rho) : RM.gaussianIrradianceAt(P.P0, E.wLens, rho));
@@ -423,7 +419,7 @@
             E0ana
         };
 
-        // SNR curves
+
         const pts = 160,
             eRatePerW = P.eta * P.lambda0 / (core.constants.h * core.constants.c);
         const X = [],
@@ -455,7 +451,7 @@
             shot.push(Math.sqrt(sig));
             read.push(P.readNoise > 0 ? sig / P.readNoise : NaN);
         }
-        // crossover S = σr² + D and saturation
+
         let xCross = NaN,
             xSat = NaN;
         if (byTime) {
@@ -480,7 +476,7 @@
         };
     }
 
-    // --------------------------------------------------------------- canvases
+
     const PAL = UI.CANVAS_PALETTE;
     let naMap = null;
 
@@ -536,7 +532,7 @@
         const zL = P.so,
             zD = P.so + si;
 
-        // media tint
+
         if (P.no > 1.0001) {
             ctx.fillStyle = "rgba(138, 180, 255, " + Math.min(0.22, (P.no - 1) * 0.3) + ")";
             ctx.fillRect(0, mt - 8, X(zL), h - mt - mb + 16);
@@ -545,7 +541,7 @@
             ctx.fillStyle = "rgba(138, 180, 255, " + Math.min(0.22, (P.ni - 1) * 0.3) + ")";
             ctx.fillRect(X(zL), mt - 8, w - X(zL), h - mt - mb + 16);
         }
-        // optical axis
+
         ctx.strokeStyle = PAL.gridStrong;
         ctx.setLineDash([6, 5]);
         ctx.lineWidth = 1;
@@ -555,10 +551,10 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // collection cone (object side) and image-side cone
+
         ctx.fillStyle = beamColor(0.2);
         if (P.source === "laser") {
-            // Gaussian envelope w(z) from waist to lens, then converging to the imaged waist
+
             ctx.beginPath();
             const N = 60;
             for (let i = 0; i <= N; i++) {
@@ -628,7 +624,7 @@
             ctx.lineTo(X(zD), Y(0));
             ctx.lineTo(X(zL), Y(-E.R));
             ctx.stroke();
-            // chief ray from the source edge through the lens centre
+
             if (P.source === "lambert") {
                 ctx.strokeStyle = PAL.marker;
                 ctx.setLineDash([4, 3]);
@@ -654,7 +650,7 @@
             ctx.setLineDash([]);
         }
 
-        // source
+
         if (P.source === "lambert") {
             ctx.fillStyle = PAL.marker;
             ctx.fillRect(X(0) - 3, Y(P.a), 6, Math.max(2, 2 * P.a * sy));
@@ -678,7 +674,7 @@
             ctx.fillStyle = beamColor(1);
             ctx.fillRect(X(0) - 2, Y(P.w0), 3, Math.max(2, 2 * P.w0 * sy));
         }
-        // aperture stop blades and lens
+
         ctx.fillStyle = "#4a4560";
         ctx.fillRect(X(zL) - 3, Y(ymax * 1.05), 6, Y(E.R) - Y(ymax * 1.05));
         ctx.fillRect(X(zL) - 3, Y(-E.R), 6, Y(-ymax * 1.05) - Y(-E.R));
@@ -690,13 +686,13 @@
         ctx.ellipse(X(zL), Y(0), lensW / 2, Math.max(3, E.R * sy), 0, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
-        // detector
+
         ctx.fillStyle = "#8ab4ff";
         ctx.fillRect(X(zD) - 2, Y(P.rd), 5, Math.max(2, 2 * P.rd * sy));
         ctx.strokeStyle = "#8ab4ff";
         ctx.lineWidth = 1;
         ctx.strokeRect(X(zD) + 3, Y(P.rd), 5, Math.max(2, 2 * P.rd * sy));
-        if (real && imgR > 0) { // image extent
+        if (real && imgR > 0) {
             ctx.strokeStyle = PAL.marker;
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -704,7 +700,7 @@
             ctx.lineTo(X(zD) - 7, Y(-imgR));
             ctx.stroke();
         }
-        // θ arc at the source
+
         if (P.source !== "laser") {
             const rArc = Math.min(60, X(zL) - X(0) - 10) * 0.7;
             const ang = Math.atan2(E.R * sy, P.so * sx);
@@ -718,7 +714,7 @@
             ctx.textBaseline = "bottom";
             ctx.fillText("θ₀ = " + (E.thO * 180 / Math.PI).toFixed(2) + "°", X(0) + rArc + 4, Y(0) - 3);
         }
-        // labels (three rows on narrow canvases so the lens label cannot collide with the others)
+
         ctx.textBaseline = "top";
         const srcLabel = P.source === "lambert" ? "Lambertian disk" : P.source === "point" ? "point source" : "laser waist";
         const lh = fs + 3;
@@ -749,7 +745,7 @@
             ctx.fillStyle = PAL.textMuted;
             ctx.fillText(collTxt, cxl, 4 + lh);
         }
-        // bottom: distances and indices
+
         const yb = h - mb + 8;
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1;
@@ -1153,7 +1149,7 @@
         label: "Signal-to-noise ratio regimes"
     });
 
-    // --------------------------------------------------------------- DOM readouts
+
     const setText = (id, t) => {
         const el = document.getElementById(id);
         if (el) el.textContent = t;
@@ -1198,7 +1194,7 @@
     }
 
     function updateTables() {
-        // budget
+
         const tb = $("#budgetBody");
         tb.textContent = "";
         E.rows.forEach((r, i) => {
@@ -1226,7 +1222,7 @@
         cell(trS, "N = η Φ_d t λ₀/(hc); dark adds " + num(E.dark, 3) + " e⁻", "note");
         tb.appendChild(trS);
 
-        // cross-checks
+
         const cb = $("#checkBody");
         cb.textContent = "";
         const rd = (a, b) => (Number.isFinite(a) && Number.isFinite(b) && b !== 0 ? num(Math.abs(a - b) / Math.abs(b), 2) : "—");
@@ -1254,7 +1250,7 @@
         }
         rowC("Counts formula", "η Φ_d t λ₀/(hc) = " + num(E.S, 6), "responsivity × Φ_d × t / q = " + num(E.responsivity * E.Pdet * P.t / core.constants.e, 6), rd(E.responsivity * E.Pdet * P.t / core.constants.e, E.S));
 
-        // units table
+
         const ub = $("#unitsBody");
         ub.textContent = "";
         const rowU = (q, s, m, v) => {
@@ -1275,7 +1271,7 @@
         rowU("Photon flux", "Φ_p, s⁻¹", "Φ λ₀/(hc)", num(E.photonRateDet, 4) + " /s on detector");
         rowU("Étendue", "G, m² sr", "n² A π sin²θ; throughput of the system", Number.isFinite(E.Gobj) ? num(E.Gobj, 4) + " m² sr" : "0 (ideal point)");
 
-        // radiance chain
+
         const rb = $("#radianceBody");
         rb.textContent = "";
         if (E.ray) {
@@ -1317,7 +1313,7 @@
             "G_image/G_object = " + (E.Gimg / E.Gobj).toFixed(5) + " = (cos θᵢ/cos θ₀)² = " + ((Math.cos(E.thI) / Math.cos(E.thO)) ** 2).toFixed(5) + ". A paraxial thin lens conserves étendue only to first order in the angles; an aplanatic system (sine condition) conserves it exactly. The radiance-theorem irradiance E′ = T πL NAᵢ²/n₀² and the budget-based mean differ by the same kind of factor." :
             P.source === "laser" ? "A TEM₀₀ beam has the minimum étendue allowed by diffraction, G = λ₀²/4 (πw₀²/2 × πθ²/2 × n²), so its radiance 4Φn²/λ₀² is enormous." : "");
 
-        // Monte Carlo table
+
         const mb = $("#mcBody");
         mb.textContent = "";
         const st = MC.stats;
@@ -1343,7 +1339,7 @@
             (MC.clipped ? " The well clips part of the distribution, so theory values come from the clipped model distribution." : ""));
         setText("mcBadge", "seed " + Math.round(S.seed) + ", N = " + MC.trials + (MC.theory.approx ? ", normal approx." : ", exact theory"));
 
-        // photometry
+
         setText("rV", E.V.toFixed(5));
         setText("rKv", (683 * E.V).toFixed(2) + " lm/W");
         setText("rLum", fmt(E.luminousDet, "lm"));

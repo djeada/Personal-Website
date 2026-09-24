@@ -1,8 +1,3 @@
-/*
- * Diffraction gratings and spectroscopy: page glue.
- * Physics lives in ../shared/optics/grating.js (window.OpticsModels.grating); this file only reads
- * controls, calls the model, and draws. SI internally; nm/µm/mm/degrees only at this boundary.
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -18,7 +13,7 @@
     const fmt = (v, digits = 3, unit = "") => core.formatSI(v, unit, digits);
     const fixed = (v, n) => (Number.isFinite(v) ? v.toFixed(n) : "—");
 
-    // ------------------------------------------------------------------ presets
+
     const DEFAULTS = {
         sp: "hg",
         l0: 500,
@@ -139,7 +134,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     const sidebar = document.querySelector(".options-sidebar");
     UI.enhanceAllSliders(sidebar, {
         l0Slider: {
@@ -176,7 +171,7 @@
     const nInput = $("nInput"),
         nSlider = $("nSlider");
     let applyingPreset = false;
-    let url = null; // assigned after the canvases exist
+    let url = null;
     const ctl = UI.bindControls({
         sp: "#specSelect",
         l0: "#l0Slider",
@@ -250,7 +245,7 @@
         return s;
     }
 
-    // ------------------------------------------------------------------ model evaluation
+
     function compute(st) {
         const d = MM / st.lpm;
         const g = {
@@ -281,7 +276,7 @@
         const orders = G.allowedOrders(lamC, d, thetaI);
         const missing = G.missingOrders(orders, g);
 
-        // closest pair of neighbouring lines around the zoom centre (for the dip tests)
+
         const zc = st.zc * NM;
         const F = prof ? Math.max(prof.fwhmLambda.inst, prof.fwhmLambda.ideal) : 1 * NM;
         const sorted = spec.lines.slice().sort((p, q) => p.lambda - q.lambda);
@@ -317,14 +312,14 @@
                 };
             }
         }
-        // zoom window (wavelength, order m)
+
         const centre = pair ? pair.mid : zc;
         let half = pair ? Math.max(6 * F, 0.5 * pair.sep + 4 * F) : 6 * F;
         if (prof) half = Math.max(half, 4 * prof.pixelLambda);
         half = Math.max(half, 0.02 * NM);
         const zoom = sim.ok ? zoomData(sim, cfg, centre - half, centre + half) : null;
 
-        // analytic vs direct phasor sum around order m of λc (or around the zero order)
+
         const sM = Number.isFinite(G.orderAngle(st.m, lamC, d, thetaI)) ? st.m * lamC / d : 0;
         const w = lamC / (g.N * d);
         const sCheck = [];
@@ -352,7 +347,7 @@
         };
     }
 
-    /** Fine local evaluation of the ideal and slit-convolved spectrum between two wavelengths. */
+
     function zoomData(sim, cfg, l0, l1) {
         const geo = sim.geo,
             wImg = geo.slitImage,
@@ -399,7 +394,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     function decimate(xs, ys, ncol) {
         const n = xs.length;
         if (n <= 3 * ncol) return {
@@ -453,7 +448,7 @@
     const scaled = (a, s) => Array.from(a, (v) => v * s);
     const rgbOf = (nm) => UI.wavelengthToRGB(nm);
 
-    /** Mix component intensities into an RGB strip. comps: [{values, colorAt(i) → [r,g,b]}]. */
+
     function drawStrip(ctx, x, y, w, h, n, comps, logScale) {
         const tot = new Float64Array(n);
         for (const c of comps)
@@ -507,7 +502,7 @@
         lines.forEach((l, i) => ctx.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * 18));
     }
 
-    // ------------------------------------------------------------------ state for cursors
+
     let M = null;
     let angCursor = NaN,
         detCursor = NaN,
@@ -515,9 +510,9 @@
     let angMap = null,
         detMap = null,
         zoomMap = null;
-    let angLast = null; // cached columns for readout
+    let angLast = null;
 
-    // ------------------------------------------------------------------ angular plot
+
     function angRange() {
         const st = M.st;
         if (st.v === "zoom") {
@@ -529,7 +524,7 @@
                 b = clampT(tB, hi) / DEG;
             if (a > b)[a, b] = [b, a];
             const cosT = Math.max(0.05, Math.cos(0.5 * (a + b) * DEG));
-            const pk = (hi / (M.g.N * M.d * cosT)) / DEG; // centre-to-first-zero width in degrees
+            const pk = (hi / (M.g.N * M.d * cosT)) / DEG;
             const pad = Math.max(0.15 * (b - a), 4 * pk, 0.2);
             return [Math.max(-90, a - pad), Math.min(90, b + pad)];
         }
@@ -615,15 +610,14 @@
             edges,
             ncol
         };
-        // colour strip across the top
+
         const P = angMap.plot;
         const comps = cm.comps.map((c) => ({
             values: c.values,
             colorAt: c.kind === "line" ? (() => {
-                    const rgb = rgbOf(c.lambda / NM);
-                    return () => rgb;
-                })() :
-                (c.order === 0 ? () => [255, 255, 255] : (i) => rgbOf(M.d * 0.5 * (edges[i] + edges[i + 1]) / c.order / NM))
+                const rgb = rgbOf(c.lambda / NM);
+                return () => rgb;
+            })() : (c.order === 0 ? () => [255, 255, 255] : (i) => rgbOf(M.d * 0.5 * (edges[i] + edges[i + 1]) / c.order / NM))
         }));
         drawStrip(ctx, P.x, 4, P.w, 14, ncol, comps, log);
     }
@@ -644,7 +638,7 @@
             (parts.length ? ". Wavelengths sent here: " + parts.slice(0, 6).join(", ") : ". No order sends 200–1100 nm light here.");
     }
 
-    // ------------------------------------------------------------------ detector plot
+
     function drawDet(ctx, w, h) {
         if (!M) return;
         const sim = M.sim;
@@ -673,7 +667,7 @@
             pv.push(sim.pixels[i] / pixMax, sim.pixels[i] / pixMax);
         }
         const dP = decimate(px, pv, ncol);
-        // other-order and same-order line markers
+
         const markers = [];
         for (const l of M.spec.lines) {
             for (const m of G.allowedOrders(l.lambda, M.d, M.thetaI)) {
@@ -738,7 +732,7 @@
             cursor
         });
         const P = detMap.plot;
-        // wavelength scale (order m) above the strip
+
         const lA = geo.lambdaAt(-geo.width / 2) / NM,
             lB = geo.lambdaAt(geo.width / 2) / NM;
         const ticks = UI.niceTicks(Math.min(lA, lB), Math.max(lA, lB), Math.max(3, Math.round(P.w / 80)));
@@ -768,10 +762,9 @@
         const comps = sim.comps.map((c) => ({
             values: c.pixels,
             colorAt: c.kind === "line" ? (() => {
-                    const rgb = rgbOf(c.lambda / NM);
-                    return () => rgb;
-                })() :
-                (c.order === 0 ? () => [255, 255, 255] : (i) => rgbOf(geo.lambdaAt(sim.pixX[i], c.order) / NM))
+                const rgb = rgbOf(c.lambda / NM);
+                return () => rgb;
+            })() : (c.order === 0 ? () => [255, 255, 255] : (i) => rgbOf(geo.lambdaAt(sim.pixX[i], c.order) / NM))
         }));
         drawStrip(ctx, P.x, 36, P.w, 12, NPIX, comps, false);
     }
@@ -793,7 +786,7 @@
             " nm, pixel signal " + (Number.isFinite(sig) ? sig.toExponential(3) : "—") + (others.length ? ". Same position in other orders: " + others.join(", ") : "");
     }
 
-    // ------------------------------------------------------------------ zoom plot
+
     function drawZoom(ctx, w, h) {
         if (!M) return;
         const z = M.zoom;
@@ -868,7 +861,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ schematic
+
     function drawSchem(ctx, w, h) {
         ctx.fillStyle = pal.background;
         ctx.fillRect(0, 0, w, h);
@@ -884,7 +877,7 @@
         const beamCol = UI.wavelengthToCSS(Math.min(760, Math.max(390, st.lc)));
         const uIn = [Math.cos(ti), -Math.sin(ti)],
             nIn = [Math.sin(ti), Math.cos(ti)];
-        // normal
+
         ctx.strokeStyle = pal.gridStrong;
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1;
@@ -897,7 +890,7 @@
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("normal", gx + 0.08 * L, gy + 3);
-        // incoming: slit → collimator → grating
+
         const Lin = 0.4 * L,
             hb = Math.min(0.1 * h, 0.065 * L);
         const slit = [gx - Lin * uIn[0], gy - Lin * uIn[1]];
@@ -918,7 +911,7 @@
             ctx.stroke();
         }
         ctx.globalAlpha = 1;
-        // slit
+
         ctx.strokeStyle = pal.text;
         ctx.lineWidth = 2;
         const sn = nIn;
@@ -928,7 +921,7 @@
         ctx.moveTo(slit[0] - sn[0] * 3, slit[1] - sn[1] * 3);
         ctx.lineTo(slit[0] - sn[0] * 12, slit[1] - sn[1] * 12);
         ctx.stroke();
-        // lens helper
+
         const drawLens = (c, n, half) => {
             ctx.strokeStyle = "#8ab4ff";
             ctx.lineWidth = 2;
@@ -946,7 +939,7 @@
             }
         };
         drawLens(lens, nIn, hb + 6);
-        // grating
+
         const gh = Math.max(hb * 1.6, 0.2 * h);
         ctx.strokeStyle = pal.text;
         ctx.lineWidth = 2;
@@ -961,7 +954,7 @@
             ctx.lineTo(gx + 4, y);
             ctx.stroke();
         }
-        // zero order (dashed) and other orders (faint)
+
         const ray = (th, len, col, dash, lw = 1) => {
             ctx.strokeStyle = col;
             ctx.setLineDash(dash);
@@ -990,7 +983,7 @@
             ray(th, 0.2 * L, "rgba(184,178,207,0.45)", [2, 3]);
             lbl(th, 0.21 * L, "m=" + m, pal.textMuted);
         }
-        // detector arm
+
         if (Number.isFinite(thC)) {
             const uO = [Math.cos(thC), -Math.sin(thC)],
                 nO = [Math.sin(thC), Math.cos(thC)];
@@ -1026,7 +1019,7 @@
             ctx.textBaseline = "bottom";
             const dlab = [focus[0] + 0.06 * L * uO[0], focus[1] + 0.06 * L * uO[1] - dl * 0.3];
             ctx.fillText("detector", Math.min(w - 32, Math.max(32, dlab[0])), Math.max(fs + 2, Math.min(h - 4, dlab[1] - 4)));
-            // θm arc
+
             ctx.strokeStyle = pal.series[0];
             ctx.lineWidth = 1;
             const r1 = 0.1 * L;
@@ -1034,7 +1027,7 @@
             ctx.arc(gx, gy, r1, Math.min(0, -thC), Math.max(0, -thC));
             ctx.stroke();
         }
-        // θi arc
+
         if (Math.abs(ti) > 0.2 * DEG) {
             ctx.strokeStyle = pal.series[2];
             ctx.lineWidth = 1;
@@ -1043,7 +1036,7 @@
             ctx.arc(gx, gy, r0, Math.PI + Math.min(0, -ti), Math.PI + Math.max(0, -ti));
             ctx.stroke();
         }
-        // labels
+
         ctx.fillStyle = pal.text;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
@@ -1060,7 +1053,7 @@
         ctx.fillText("θm = " + (Number.isFinite(thC) ? (thC / DEG).toFixed(2) + "°" : "none"), 6, h - fs - 6);
     }
 
-    // ------------------------------------------------------------------ canvases
+
     M = compute(readState());
     const angH = UI.setupCanvas($("angCanvas"), {
         aspect: 2.6,
@@ -1101,7 +1094,7 @@
 
     function hover(handle, getMap, set, readout, get) {
         const c = handle.canvas;
-        // keyboard equivalent of hovering: focus the plot, ←/→ move the cursor (Shift = ×10), Esc hides it
+
         c.tabIndex = 0;
         c.addEventListener("keydown", (e) => {
             const map = getMap();
@@ -1145,7 +1138,7 @@
         zoomCursor = v;
     }, null, () => zoomCursor);
     detH.canvas.addEventListener("keydown", (e) => {
-        // Enter: keyboard equivalent of clicking the detector (zoom centre = wavelength under the cursor)
+
         if (e.key !== "Enter" || !M.sim.ok || !Number.isFinite(detCursor)) return;
         e.preventDefault();
         const lam = M.sim.geo.lambdaAt(detCursor * MM) / NM;
@@ -1165,7 +1158,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ DOM updates
+
     const setText = (id, t) => {
         const el = $(id);
         if (el && el.textContent !== t) el.textContent = t;
@@ -1241,7 +1234,7 @@
         setText("rDipInst", dipText(dipInst));
         setText("rCheck", "max |ΔI| = " + M.check.toExponential(1));
 
-        // order overlap note
+
         let overlap = "";
         if (sim.ok) {
             const geo = sim.geo,
@@ -1265,7 +1258,7 @@
         }
         setText("overlapNote", overlap);
 
-        // order table
+
         const tb = $("orderTable").querySelector("tbody");
         const rows = [];
         const shown = orders.length > 25 ? orders.filter((m) => Math.abs(m) <= 12) : orders;
@@ -1282,7 +1275,7 @@
         const html = rows.join("");
         if (tb.innerHTML !== html) tb.innerHTML = html;
 
-        // warnings
+
         const warn = [];
         if (!sim.ok) warn.push("Order " + st.m + " of λc = " + st.lc + " nm does not propagate: |sin θ| = " + Math.abs(G.orderSin(st.m, lamC, d, M.thetaI)).toFixed(3) + " ≥ 1. Lower m, reduce the groove density or change θᵢ.");
         if (M.spec.continuum && st.N < 10) warn.push("White light with N < 10: orders overlap their neighbours' side lobes and the order-integrated continuum model is only qualitative.");
@@ -1293,7 +1286,7 @@
         wEl.hidden = !warn.length;
         setText("regimeWarn", warn.join(" "));
 
-        // text equivalents
+
         const angParts = orders.filter((m) => Math.abs(m) <= 3).map((m) => "m=" + m + " at " + (G.orderAngle(m, lamC, d, M.thetaI) / DEG).toFixed(2) + "°" + (missing.includes(m) ? " (missing)" : ""));
         angDesc.update("Angular intensity for N = " + st.N + ", " + st.lpm + " lines/mm, a/d = " + st.af + ", θᵢ = " + st.ti + "°. Orders of λc = " + st.lc + " nm: " + angParts.join(", ") + ". " + orders.length + " orders propagate.");
         if (sim.ok) {
@@ -1327,7 +1320,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ presets, reset, URL, export
+
     const presetBtns = Array.from(document.querySelectorAll("[data-preset]"));
 
     function markPreset(name) {
