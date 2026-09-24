@@ -677,6 +677,10 @@ STALE_HEAD_TAGS = [
 
 
 def fill_template(template: str, head: str, main: str) -> str:
+    if "<!-- PYK:MAIN:START -->" not in template and '<main class="pyk"' in template:
+        template = template.replace(
+            '<main class="pyk"', '<!-- PYK:MAIN:START -->\n    <main class="pyk"', 1
+        )
     if not HEAD_RE.search(template) or not MAIN_RE.search(template):
         raise ValueError("Runner template is missing PYK:HEAD / PYK:MAIN markers")
     page = HEAD_RE.sub(

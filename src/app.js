@@ -478,14 +478,16 @@ function main() {
 
     const darkModeButton = document.getElementById("dark-mode-button");
     darkModeButton.addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-        setCookie("darkMode", document.body.classList.contains("dark-mode"), 365, "Lax");
+        const isDark = !document.body.classList.contains("dark-mode");
+        document.documentElement.classList.toggle("dark-mode", isDark);
+        document.body.classList.toggle("dark-mode", isDark);
+        setCookie("darkMode", isDark, 365, "Lax");
         checkLogo();
     });
 
-    if (getCookie("darkMode") === "true") {
-        document.body.classList.add("dark-mode");
-    }
+    const isDark = getCookie("darkMode") === "true";
+    document.documentElement.classList.toggle("dark-mode", isDark);
+    document.body.classList.toggle("dark-mode", isDark);
     checkLogo();
 
 
