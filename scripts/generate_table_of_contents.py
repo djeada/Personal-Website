@@ -14,7 +14,7 @@ INPUT_ARTICLES_DIR = Path("../src/articles")
 
 def slugify(text: str) -> str:
     """Convert text into a URL-friendly slug."""
-    return re.sub(r"\W+", "-", text.lower().strip())
+    return re.sub(r"\W+", "-", text.lower().strip()).strip("-") or "section"
 
 
 def move_specific_section(soup: BeautifulSoup) -> None:
@@ -29,9 +29,11 @@ def move_specific_section(soup: BeautifulSoup) -> None:
 def create_toc_entries(soup: BeautifulSoup) -> Tag:
     """Generate ordered list of table of contents based on headers."""
     body = soup.find("article-section", {"id": "article-body"})
-    headers = body.find_all(["h1", "h2", "h3", "h4"])
+
+    headers = body.find_all(["h2", "h3", "h4"])
 
     root_ol = soup.new_tag("ol")
+    used_ids = {}
 
     ol_stack = [root_ol]
     level_mapping = {}
@@ -45,6 +47,9 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
         mapped_level = level_mapping[current_level]
 
         header_id = slugify(header.text)
+        used_ids[header_id] = used_ids.get(header_id, 0) + 1
+        if used_ids[header_id] > 1:
+            header_id = f"{header_id}-{used_ids[header_id]}"
         header["id"] = header_id
 
         li = soup.new_tag("li")
@@ -71,10 +76,13 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
 def process_nested_list(tag):
     """
     Check a bs4 Tag (expected to be an ol or ul) for nested lists.
-    If the outer list has only one item, the outer list tags are removed.
+    If the outer list has a single item wrapping all others, return the inner list.
     """
-    if tag.name in ["ol", "ul"] and len(tag.find_all("li", recursive=False)) == 1:
-        tag.li.unwrap()
+    items = tag.find_all("li", recursive=False)
+    if tag.name in ["ol", "ul"] and len(items) == 1:
+        nested = items[0].find(["ol", "ul"], recursive=False)
+        if nested:
+            return nested.extract()
 
     return tag
 
@@ -89,10 +97,7 @@ def create_toc_wrapper(soup: BeautifulSoup, html: str) -> Tag:
     toc_wrapper = soup.new_tag(
         "div", id="table-of-contents", attrs={"class": "collapsed"}
     )
-    try:
-        toc_wrapper.extend([toc_header, process_nested_list(create_toc_entries(soup))])
-    except Exception as e:
-        pass
+    toc_wrapper.extend([toc_header, process_nested_list(create_toc_entries(soup))])
     return toc_wrapper
 
 
@@ -138,7 +143,7 @@ def generate_table_of_contents(html: str) -> str:
 def remove_empty_tags(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
     section = soup.find("article-section", id="article-body")
-    if len(list(section.children)) == 0:
+    if section is not None and len(list(section.children)) == 0:
         section.decompose()
     return str(soup)
 
@@ -152,7 +157,7 @@ def process_html_file(file):
 def main():
     with ThreadPoolExecutor() as executor:
         files = list(INPUT_ARTICLES_DIR.rglob("*.html"))
-        executor.map(process_html_file, files)
+        list(executor.map(process_html_file, files))
 
 
 if __name__ == "__main__":

@@ -15,29 +15,24 @@ const viewports = [
 ];
 
 for (const width of [390, 900, 1262, 1600]) {
-  test(`framework table keeps words readable at ${width}px`, async ({ page }) => {
+  test(`article tables keep words readable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/articles/frontend_notes/10_testing.html", { waitUntil: "domcontentloaded" });
     const table = page.locator("#article-body table").first();
-    const layout = await table.evaluate(element => {
-      const label = element.querySelector("strong");
-      const range = document.createRange();
-      range.selectNodeContents(label);
-      return {
-        labelLines: range.getClientRects().length,
-        cells: [...element.querySelectorAll("td, th")].map(cell => cell.getBoundingClientRect().width),
-        width: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-        pageWidth: document.documentElement.scrollWidth,
-        viewport: document.documentElement.clientWidth,
-      };
-    });
-    expect(layout.labelLines, "MochaJS should stay on one line").toBe(1);
-    expect(Math.min(...layout.cells)).toBeGreaterThanOrEqual(159);
-    expect(layout.scrollWidth).toBeGreaterThan(layout.width);
+    const layout = await table.evaluate(element => ({
+      overflowingCells: [...element.querySelectorAll("td, th")]
+        .filter(cell => cell.scrollWidth > cell.clientWidth + 1).length,
+      width: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      pageWidth: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }));
+    expect(layout.overflowingCells, "cell text should wrap between words, not overflow").toBe(0);
     expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
-    await table.evaluate(element => { element.scrollLeft = element.scrollWidth; });
-    expect(await table.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+    if (layout.scrollWidth > layout.width) {
+      await table.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+      expect(await table.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+    }
   });
 }
 

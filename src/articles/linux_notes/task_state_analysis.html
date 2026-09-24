@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/task_state_analysis",
             "description": "Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-07-06",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Task-State Analysis for Monitoring Application Processes" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/linux_notes/task_state_analysis" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states." property="og:description" />
+    <meta content="2026-07-06" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,129 +80,129 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#task-state-analysis-for-monitoring-application-processes">Task-State Analysis for Monitoring Application Processes</a>
-                    <ol>
-                        <li><a href="#processes-and-threads">Processes and Threads</a></li>
-                        <li><a href="#task">Task</a></li>
-                        <li><a href="#why-task-state-analysis-matters">Why Task-State Analysis Matters</a></li>
-                        <li><a href="#common-linux-task-states">Common Linux Task States</a></li>
-                        <li><a href="#r-running-or-runnable">R: Running or Runnable</a></li>
-                        <li><a href="#s-sleeping">S: Sleeping</a></li>
-                        <li><a href="#d-uninterruptible-sleep">D: Uninterruptible Sleep</a></li>
-                        <li><a href="#t-stopped">T: Stopped</a></li>
-                        <li><a href="#z-zombie">Z: Zombie</a></li>
-                        <li><a href="#viewing-process-and-thread-states-with-ps">Viewing Process and Thread States with ps</a></li>
-                        <li><a href="#viewing-threads-for-one-process">Viewing Threads for One Process</a></li>
-                        <li><a href="#using-proc-for-task-state-analysis">Using /proc for Task-State Analysis</a></li>
-                        <li><a href="#-proc-pid-stat">/proc/PID/stat</a></li>
-                        <li><a href="#counting-task-states">Counting Task States</a></li>
-                        <li><a href="#finding-d-state-tasks">Finding D-State Tasks</a></li>
-                        <li><a href="#htop-for-interactive-state-viewing">htop for Interactive State Viewing</a></li>
-                        <li><a href="#top-for-thread-view">top for Thread View</a></li>
-                        <li><a href="#perf-top">perf top</a></li>
-                        <li><a href="#combining-task-states-with-other-tools">Combining Task States with Other Tools</a></li>
-                        <li><a href="#scenario-1-simulate-cpu-bound-threads-in-r-state">Scenario 1: Simulate CPU-Bound Threads in R State</a>
-                            <ol>
-                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
-                                <li><a href="#check-with-top">Check with top</a></li>
-                                <li><a href="#check-task-states">Check Task States</a></li>
-                                <li><a href="#what-this-means-in-a-real-application">What This Means in a Real Application</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-2-simulate-sleeping-tasks-in-s-state">Scenario 2: Simulate Sleeping Tasks in S State</a>
-                            <ol>
-                                <li><a href="#simulate">Simulate</a></li>
-                                <li><a href="#real-meaning">Real Meaning</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-3-simulate-a-stopped-task-in-t-state">Scenario 3: Simulate a Stopped Task in T State</a>
-                            <ol>
-                                <li><a href="#simulate">Simulate</a></li>
-                                <li><a href="#real-meaning">Real Meaning</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-4-simulate-a-zombie-process-in-z-state">Scenario 4: Simulate a Zombie Process in Z State</a>
-                            <ol>
-                                <li><a href="#simulate-with-python">Simulate with Python</a></li>
-                                <li><a href="#real-meaning">Real Meaning</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-5-simulate-disk-i-o-pressure-and-look-for-d-state">Scenario 5: Simulate Disk I/O Pressure and Look for D State</a>
-                            <ol>
-                                <li><a href="#simulate-disk-pressure">Simulate Disk Pressure</a></li>
-                                <li><a href="#check-task-states">Check Task States</a></li>
-                                <li><a href="#check-with-iostat">Check with iostat</a></li>
-                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-6-simulate-high-load-from-cpu-vs-high-load-from-i-o">Scenario 6: Simulate High Load from CPU vs High Load from I/O</a>
-                            <ol>
-                                <li><a href="#cpu-based-load">CPU-Based Load</a></li>
-                                <li><a href="#i-o-based-load">I/O-Based Load</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-7-analyze-a-multi-threaded-process">Scenario 7: Analyze a Multi-Threaded Process</a>
-                            <ol>
-                                <li><a href="#simulate-a-multi-threaded-python-program">Simulate a Multi-Threaded Python Program</a></li>
-                                <li><a href="#check-threads">Check Threads</a></li>
-                                <li><a href="#check-with-top">Check with top</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-8-detect-lock-or-synchronization-waiting">Scenario 8: Detect Lock or Synchronization Waiting</a>
-                            <ol>
-                                <li><a href="#simulate-with-file-locking">Simulate with File Locking</a></li>
-                                <li><a href="#check-state">Check State</a></li>
-                                <li><a href="#real-meaning">Real Meaning</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-9-use-strace-to-see-what-a-sleeping-process-waits-on">Scenario 9: Use strace to See What a Sleeping Process Waits On</a>
-                            <ol>
-                                <li><a href="#simulate">Simulate</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-10-create-a-simple-task-state-sampler">Scenario 10: Create a Simple Task-State Sampler</a>
-                            <ol>
-                                <li><a href="#script">Script</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-11-sample-states-for-one-application">Scenario 11: Sample States for One Application</a>
-                            <ol>
-                                <li><a href="#script">Script</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-12-database-like-i-o-wait-investigation">Scenario 12: Database-Like I/O Wait Investigation</a>
-                            <ol>
-                                <li><a href="#symptoms">Symptoms</a></li>
-                                <li><a href="#check-task-states">Check Task States</a></li>
-                                <li><a href="#check-disk">Check Disk</a></li>
-                                <li><a href="#possible-fixes">Possible Fixes</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#task-state-interpretation-guide">Task-State Interpretation Guide</a>
-                            <ol>
-                                <li><a href="#pattern-many-r-tasks">Pattern: Many R Tasks</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#pattern-many-s-tasks">Pattern: Many S Tasks</a></li>
-                        <li><a href="#pattern-many-d-tasks">Pattern: Many D Tasks</a></li>
-                        <li><a href="#pattern-t-tasks">Pattern: T Tasks</a></li>
-                        <li><a href="#pattern-z-tasks">Pattern: Z Tasks</a></li>
-                        <li><a href="#practical-troubleshooting-workflow">Practical Troubleshooting Workflow</a></li>
-                        <li><a href="#step-1-identify-the-pid">Step 1: Identify the PID</a></li>
-                        <li><a href="#step-2-check-overall-system-health">Step 2: Check Overall System Health</a></li>
-                        <li><a href="#step-3-inspect-threads">Step 3: Inspect Threads</a></li>
-                        <li><a href="#step-4-check-disk-if-d-state-appears">Step 4: Check Disk If D-State Appears</a></li>
-                        <li><a href="#step-5-check-cpu-hotspots-if-r-state-dominates">Step 5: Check CPU Hotspots If R-State Dominates</a></li>
-                        <li><a href="#step-6-check-application-logs">Step 6: Check Application Logs</a></li>
-                        <li><a href="#caveats-of-task-state-analysis">Caveats of Task-State Analysis</a></li>
-                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
-                        <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
+                <ol>
+                    <li><a href="#processes-and-threads">Processes and Threads</a></li>
+                    <li><a href="#task">Task</a></li>
+                    <li><a href="#why-task-state-analysis-matters">Why Task-State Analysis Matters</a></li>
+                    <li><a href="#common-linux-task-states">Common Linux Task States</a></li>
+                    <li><a href="#r-running-or-runnable">R: Running or Runnable</a></li>
+                    <li><a href="#s-sleeping">S: Sleeping</a></li>
+                    <li><a href="#d-uninterruptible-sleep">D: Uninterruptible Sleep</a></li>
+                    <li><a href="#t-stopped">T: Stopped</a></li>
+                    <li><a href="#z-zombie">Z: Zombie</a></li>
+                    <li><a href="#viewing-process-and-thread-states-with-ps">Viewing Process and Thread States with ps</a></li>
+                    <li><a href="#viewing-threads-for-one-process">Viewing Threads for One Process</a></li>
+                    <li><a href="#using-proc-for-task-state-analysis">Using /proc for Task-State Analysis</a></li>
+                    <li><a href="#proc-pid-stat">/proc/PID/stat</a></li>
+                    <li><a href="#counting-task-states">Counting Task States</a></li>
+                    <li><a href="#finding-d-state-tasks">Finding D-State Tasks</a></li>
+                    <li><a href="#htop-for-interactive-state-viewing">htop for Interactive State Viewing</a></li>
+                    <li><a href="#top-for-thread-view">top for Thread View</a></li>
+                    <li><a href="#perf-top">perf top</a></li>
+                    <li><a href="#combining-task-states-with-other-tools">Combining Task States with Other Tools</a></li>
+                    <li><a href="#scenario-1-simulate-cpu-bound-threads-in-r-state">Scenario 1: Simulate CPU-Bound Threads in R State</a>
+                        <ol>
+                            <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                            <li><a href="#check-with-top">Check with top</a></li>
+                            <li><a href="#check-task-states">Check Task States</a></li>
+                            <li><a href="#what-this-means-in-a-real-application">What This Means in a Real Application</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-2-simulate-sleeping-tasks-in-s-state">Scenario 2: Simulate Sleeping Tasks in S State</a>
+                        <ol>
+                            <li><a href="#simulate">Simulate</a></li>
+                            <li><a href="#real-meaning">Real Meaning</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-3-simulate-a-stopped-task-in-t-state">Scenario 3: Simulate a Stopped Task in T State</a>
+                        <ol>
+                            <li><a href="#simulate-2">Simulate</a></li>
+                            <li><a href="#real-meaning-2">Real Meaning</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-4-simulate-a-zombie-process-in-z-state">Scenario 4: Simulate a Zombie Process in Z State</a>
+                        <ol>
+                            <li><a href="#simulate-with-python">Simulate with Python</a></li>
+                            <li><a href="#real-meaning-3">Real Meaning</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-5-simulate-disk-i-o-pressure-and-look-for-d-state">Scenario 5: Simulate Disk I/O Pressure and Look for D State</a>
+                        <ol>
+                            <li><a href="#simulate-disk-pressure">Simulate Disk Pressure</a></li>
+                            <li><a href="#check-task-states-2">Check Task States</a></li>
+                            <li><a href="#check-with-iostat">Check with iostat</a></li>
+                            <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-6-simulate-high-load-from-cpu-vs-high-load-from-i-o">Scenario 6: Simulate High Load from CPU vs High Load from I/O</a>
+                        <ol>
+                            <li><a href="#cpu-based-load">CPU-Based Load</a></li>
+                            <li><a href="#i-o-based-load">I/O-Based Load</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-7-analyze-a-multi-threaded-process">Scenario 7: Analyze a Multi-Threaded Process</a>
+                        <ol>
+                            <li><a href="#simulate-a-multi-threaded-python-program">Simulate a Multi-Threaded Python Program</a></li>
+                            <li><a href="#check-threads">Check Threads</a></li>
+                            <li><a href="#check-with-top-2">Check with top</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-8-detect-lock-or-synchronization-waiting">Scenario 8: Detect Lock or Synchronization Waiting</a>
+                        <ol>
+                            <li><a href="#simulate-with-file-locking">Simulate with File Locking</a></li>
+                            <li><a href="#check-state">Check State</a></li>
+                            <li><a href="#real-meaning-4">Real Meaning</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-9-use-strace-to-see-what-a-sleeping-process-waits-on">Scenario 9: Use strace to See What a Sleeping Process Waits On</a>
+                        <ol>
+                            <li><a href="#simulate-3">Simulate</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-10-create-a-simple-task-state-sampler">Scenario 10: Create a Simple Task-State Sampler</a>
+                        <ol>
+                            <li><a href="#script">Script</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-11-sample-states-for-one-application">Scenario 11: Sample States for One Application</a>
+                        <ol>
+                            <li><a href="#script-2">Script</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-12-database-like-i-o-wait-investigation">Scenario 12: Database-Like I/O Wait Investigation</a>
+                        <ol>
+                            <li><a href="#symptoms">Symptoms</a></li>
+                            <li><a href="#check-task-states-3">Check Task States</a></li>
+                            <li><a href="#check-disk">Check Disk</a></li>
+                            <li><a href="#possible-fixes">Possible Fixes</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#task-state-interpretation-guide">Task-State Interpretation Guide</a>
+                        <ol>
+                            <li><a href="#pattern-many-r-tasks">Pattern: Many R Tasks</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#pattern-many-s-tasks">Pattern: Many S Tasks</a></li>
+                    <li><a href="#pattern-many-d-tasks">Pattern: Many D Tasks</a></li>
+                    <li><a href="#pattern-t-tasks">Pattern: T Tasks</a></li>
+                    <li><a href="#pattern-z-tasks">Pattern: Z Tasks</a></li>
+                    <li><a href="#practical-troubleshooting-workflow">Practical Troubleshooting Workflow</a></li>
+                    <li><a href="#step-1-identify-the-pid">Step 1: Identify the PID</a></li>
+                    <li><a href="#step-2-check-overall-system-health">Step 2: Check Overall System Health</a></li>
+                    <li><a href="#step-3-inspect-threads">Step 3: Inspect Threads</a></li>
+                    <li><a href="#step-4-check-disk-if-d-state-appears">Step 4: Check Disk If D-State Appears</a></li>
+                    <li><a href="#step-5-check-cpu-hotspots-if-r-state-dominates">Step 5: Check CPU Hotspots If R-State Dominates</a></li>
+                    <li><a href="#step-6-check-application-logs">Step 6: Check Application Logs</a></li>
+                    <li><a href="#caveats-of-task-state-analysis">Caveats of Task-State Analysis</a></li>
+                    <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                    <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -255,7 +262,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: July 06, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -274,7 +281,7 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="task-state-analysis-for-monitoring-application-processes">Task-State Analysis for Monitoring Application Processes</h2>
+            <h1>Task-State Analysis for Monitoring Application Processes</h1>
             <p>Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states.</p>
             <p>Traditional monitoring often starts with resource usage:</p>
             <ul>
@@ -360,64 +367,68 @@
             </ul>
             <p>This may indicate CPU saturation.</p>
             <p>Task-state analysis helps separate different types of problems:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Condition</td>
-                    <td>Typical Task State Pattern</td>
-                </tr>
-                <tr>
-                    <td>CPU bottleneck</td>
-                    <td>Many tasks runnable or running (<strong>R</strong> state)</td>
-                </tr>
-                <tr>
-                    <td>I/O bottleneck</td>
-                    <td>Many tasks blocked in uninterruptible sleep (<strong>D</strong> state)</td>
-                </tr>
-                <tr>
-                    <td>Idle waiting</td>
-                    <td>Many tasks sleeping (<strong>S</strong> state)</td>
-                </tr>
-                <tr>
-                    <td>Stopped process</td>
-                    <td>Tasks in stopped/traced (<strong>T</strong> state)</td>
-                </tr>
-                <tr>
-                    <td>Zombie accumulation</td>
-                    <td>Tasks in zombie (<strong>Z</strong> state)</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Typical Task State Pattern</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CPU bottleneck</td>
+                        <td>Many tasks runnable or running (<strong>R</strong> state)</td>
+                    </tr>
+                    <tr>
+                        <td>I/O bottleneck</td>
+                        <td>Many tasks blocked in uninterruptible sleep (<strong>D</strong> state)</td>
+                    </tr>
+                    <tr>
+                        <td>Idle waiting</td>
+                        <td>Many tasks sleeping (<strong>S</strong> state)</td>
+                    </tr>
+                    <tr>
+                        <td>Stopped process</td>
+                        <td>Tasks in stopped/traced (<strong>T</strong> state)</td>
+                    </tr>
+                    <tr>
+                        <td>Zombie accumulation</td>
+                        <td>Tasks in zombie (<strong>Z</strong> state)</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="common-linux-task-states">Common Linux Task States</h3>
             <p>Linux process and thread states are often shown as letters.</p>
-            <p>
             <table>
-                <tr>
-                    <td>State</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><strong>R</strong></td>
-                    <td>Running or runnable</td>
-                </tr>
-                <tr>
-                    <td><strong>S</strong></td>
-                    <td>Interruptible sleep</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>Uninterruptible sleep</td>
-                </tr>
-                <tr>
-                    <td><strong>T</strong></td>
-                    <td>Stopped</td>
-                </tr>
-                <tr>
-                    <td><strong>Z</strong></td>
-                    <td>Zombie</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>R</strong></td>
+                        <td>Running or runnable</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S</strong></td>
+                        <td>Interruptible sleep</td>
+                    </tr>
+                    <tr>
+                        <td><strong>D</strong></td>
+                        <td>Uninterruptible sleep</td>
+                    </tr>
+                    <tr>
+                        <td><strong>T</strong></td>
+                        <td>Stopped</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Z</strong></td>
+                        <td>Zombie</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Some tools show extra letters after the main state.</p>
             <p>For example:</p>
             <ul>
@@ -580,7 +591,7 @@ Threads: 3</code></pre>
                 <li>It has 3 threads.</li>
                 <li>Tgid is the thread group ID, usually the main process ID.</li>
             </ul>
-            <h3 id="-proc-pid-stat"><code>/proc/PID/stat</code></h3>
+            <h3 id="proc-pid-stat"><code>/proc/PID/stat</code></h3>
             <p>The file <code>/proc/PID/stat</code> contains many fields.</p>
             <p>Example:</p>
             <div>
@@ -718,34 +729,36 @@ Overhead  Shared Object      Symbol
             <p><code>perf</code> is useful after task-state analysis suggests the application is CPU-bound.</p>
             <h3 id="combining-task-states-with-other-tools">Combining Task States with Other Tools</h3>
             <p>Task states are most useful when combined with other metrics.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Observation</td>
-                    <td>What to Check</td>
-                </tr>
-                <tr>
-                    <td><strong>Many R tasks</strong></td>
-                    <td>Check CPU usage with <code>top</code>, <code>uptime</code>, <code>vmstat</code>, <code>perf</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Many D tasks</strong></td>
-                    <td>Check disk and I/O with <code>iostat</code>, <code>iotop</code>, <code>dmesg</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Many S tasks</strong></td>
-                    <td>Check locks, network issues, application logs, and database waits</td>
-                </tr>
-                <tr>
-                    <td><strong>Many Z tasks</strong></td>
-                    <td>Check parent process behavior and whether it is reaping child processes</td>
-                </tr>
-                <tr>
-                    <td><strong>Many T tasks</strong></td>
-                    <td>Check signals, job control, and debugger activity</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Observation</th>
+                        <th>What to Check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Many R tasks</strong></td>
+                        <td>Check CPU usage with <code>top</code>, <code>uptime</code>, <code>vmstat</code>, <code>perf</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Many D tasks</strong></td>
+                        <td>Check disk and I/O with <code>iostat</code>, <code>iotop</code>, <code>dmesg</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Many S tasks</strong></td>
+                        <td>Check locks, network issues, application logs, and database waits</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Many Z tasks</strong></td>
+                        <td>Check parent process behavior and whether it is reaping child processes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Many T tasks</strong></td>
+                        <td>Check signals, job control, and debugger activity</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Task-state analysis tells you where to look next.</p>
             <h3 id="scenario-1-simulate-cpu-bound-threads-in-r-state">Scenario 1: Simulate CPU-Bound Threads in <code>R</code> State</h3>
             <p>Create CPU pressure and observe runnable/running tasks.</p>
@@ -832,7 +845,7 @@ sudo perf top</code></pre>
             <p>The question is whether the sleep is expected.</p>
             <h3 id="scenario-3-simulate-a-stopped-task-in-t-state">Scenario 3: Simulate a Stopped Task in <code>T</code> State</h3>
             <p>Show what happens when a process is paused.</p>
-            <h4 id="simulate">Simulate</h4>
+            <h4 id="simulate-2">Simulate</h4>
             <p>Run a long sleep:</p>
             <div>
                 <pre><code class="language-bash">sleep 300</code></pre>
@@ -874,7 +887,7 @@ sudo perf top</code></pre>
                 <pre><code class="language-text">  PID STAT COMMAND
  4300 S    sleep</code></pre>
             </div>
-            <h4 id="real-meaning">Real Meaning</h4>
+            <h4 id="real-meaning-2">Real Meaning</h4>
             <p>A <code>T</code> state may appear when:</p>
             <ul>
                 <li>a user presses Ctrl+Z</li>
@@ -915,7 +928,7 @@ EOF</code></pre>
                 - The child process exited.
                 - The parent process has not collected its exit status.
                 - The zombie will disappear when the parent exits or reaps it.</p>
-            <h4 id="real-meaning">Real Meaning</h4>
+            <h4 id="real-meaning-3">Real Meaning</h4>
             <p>A few temporary zombies are not usually a problem.</p>
             <p>Many persistent zombies may mean:</p>
             <ul>
@@ -947,7 +960,7 @@ fio --name=randwrite-test \
     --runtime=60 \
     --time_based</code></pre>
             </div>
-            <h4 id="check-task-states">Check Task States</h4>
+            <h4 id="check-task-states-2">Check Task States</h4>
             <div>
                 <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
             </div>
@@ -1107,7 +1120,7 @@ EOF</code></pre>
                 - One thread is CPU-bound in R state.
                 - Other threads are sleeping.
                 - Thread-level monitoring shows more detail than process-level monitoring alone.</p>
-            <h4 id="check-with-top">Check with <code>top</code></h4>
+            <h4 id="check-with-top-2">Check with <code>top</code></h4>
             <div>
                 <pre><code class="language-bash">top -H -p 5200</code></pre>
             </div>
@@ -1139,7 +1152,7 @@ EOF</code></pre>
                 - The wait channel suggests it is waiting on a lock.
                 - This is not a CPU bottleneck.
                 - It is synchronization or lock contention.</p>
-            <h4 id="real-meaning">Real Meaning</h4>
+            <h4 id="real-meaning-4">Real Meaning</h4>
             <p>In real applications, many sleeping threads may indicate:</p>
             <ul>
                 <li>database lock contention</li>
@@ -1158,7 +1171,7 @@ EOF</code></pre>
             </ul>
             <h3 id="scenario-9-use-strace-to-see-what-a-sleeping-process-waits-on">Scenario 9: Use <code>strace</code> to See What a Sleeping Process Waits On</h3>
             <p>Connect task state to system calls.</p>
-            <h4 id="simulate">Simulate</h4>
+            <h4 id="simulate-3">Simulate</h4>
             <p>Run:</p>
             <div>
                 <pre><code class="language-bash">sleep 300</code></pre>
@@ -1235,7 +1248,7 @@ chmod +x ~/task-state-sampler.sh</code></pre>
             <p>This kind of sampling helps show trends over time.</p>
             <h3 id="scenario-11-sample-states-for-one-application">Scenario 11: Sample States for One Application</h3>
             <p>Track only one process and its threads.</p>
-            <h4 id="script">Script</h4>
+            <h4 id="script-2">Script</h4>
             <div>
                 <pre><code class="language-bash">cat &gt; ~/sample-process-threads.sh &lt;&lt;'EOF'
 #!/bin/bash
@@ -1284,7 +1297,7 @@ chmod +x ~/sample-process-threads.sh</code></pre>
                 <li>CPU usage is low.</li>
                 <li>Application response time is high.</li>
             </ul>
-            <h4 id="check-task-states">Check Task States</h4>
+            <h4 id="check-task-states-3">Check Task States</h4>
             <div>
                 <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
             </div>
@@ -1605,23 +1618,33 @@ pkill -f fio</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -1638,21 +1661,5 @@ pkill -f fio</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

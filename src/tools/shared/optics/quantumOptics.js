@@ -1,45 +1,3 @@
-/*
- * Quantum optics and photodetection statistics (pure, DOM-free).
- *
- * Browser: <script src="../shared/optics/quantumOptics.js"></script> → window.OpticsModels.quantumOptics
- * Node:    const Q = require(".../shared/optics/quantumOptics.js")
- *
- * What is modelled (and what is not)
- * ----------------------------------
- *  Every result is computed from an explicit quantum state (ket or density matrix) and an explicit
- *  detector model; random events are Born-rule samples from those probabilities with a seeded RNG.
- *  Nothing here is a quantum-field simulation: one or two optical modes (or a single photon in two
- *  paths with a polarization marker) are treated, propagation is idealised, and detectors are
- *  described by efficiency (a beam-splitter loss channel), Poisson dark counts and Gaussian timing
- *  jitter only.
- *
- *  1. Mach–Zehnder with which-path marking (4-dim Hilbert space path ⊗ polarization)
- *     Beam splitter S = [[t, i r], [i r, t]] (same convention as interferometers.js); input in port a
- *     with H polarization. Arm b carries a polarization rotator by θ (the "which-path marker") and a
- *     phase e^{iφ}. A path-dephasing factor (1 − γ) multiplies the path coherences (unobserved
- *     environment). BS2 is 50:50. An optional linear polarizer at angle χ in front of both detectors
- *     acts as a quantum eraser.
- *     Distinguishability D = ‖w_a ρ_a − w_b ρ_b‖₁ (trace norm; Englert 1996), predictability P = |w_a − w_b|,
- *     visibility V of the port-1 probability versus φ; V² + D² ≤ 1 with equality for pure states.
- *
- *  2. Single-mode photon-number statistics in a truncated Fock basis {|0⟩ … |N⟩}
- *     Coherent, thermal, Fock and squeezed-vacuum states. The truncated state is renormalised and the
- *     discarded probability ("truncation error") is reported from the analytic distribution.
- *     Detector: loss channel of transmissivity η (binomial thinning, Kraus form keeps coherences),
- *     then additive Poisson dark counts of mean d per gate, photon-number-resolving read-out.
- *
- *  3. Hanbury Brown–Twiss g²(τ)
- *     Coherent light: independent Poisson streams. Chaotic light: a complex Gaussian field with a
- *     Lorentzian (Ornstein–Uhlenbeck, exact update) or Gaussian (FIR-filtered noise) spectrum; each
- *     detector is an inhomogeneous Poisson process of rate ∝ |E(t)|² (the semiclassical photodetection
- *     formula, exact for thermal light because its P-function is a positive Gaussian). Single emitter:
- *     incoherently pumped two-level system, a renewal process with exponential pump and decay waits,
- *     each photon routed at random by the 50:50 splitter (g²(τ) = 1 − e^{−|τ|/τ₀}).
- *     Detectors add Poisson dark counts and independent Gaussian timing jitter σ.
- *     g²_meas(τ) = 1 + ρ₁ρ₂ [(g² − 1) ⊛ N(0, 2σ²)] averaged over the histogram bin, ρ = S/(S + dark).
- *
- * Units: SI (seconds, counts per second). Complex numbers use {re, im}.
- */
 (function(root, factory) {
     const m = factory(root);
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -54,8 +12,8 @@
     const logGamma = core.logGamma;
     const lnFact = (n) => logGamma(n + 1);
 
-    // =================================================================== dense complex matrices
-    /** n×n complex matrix {n, re, im} with row-major Float64Arrays. */
+
+
     function cmat(n) {
         return {
             n,
@@ -64,13 +22,13 @@
         };
     }
 
-    /** |ψ⟩⟨ψ| from ket {re: [...], im: [...]} */
+
     function densityFromKet(ket) {
         const n = ket.re.length,
             M = cmat(n);
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
-                // ψ_i ψ_j*
+
                 M.re[i * n + j] = ket.re[i] * ket.re[j] + ket.im[i] * ket.im[j];
                 M.im[i * n + j] = ket.im[i] * ket.re[j] - ket.re[i] * ket.im[j];
             }
@@ -128,7 +86,7 @@
         return B;
     }
 
-    /** max |A − A†| */
+
     function hermiticityError(A) {
         const n = A.n;
         let e = 0;
@@ -141,17 +99,14 @@
         return e;
     }
 
-    /** Tr ρ² */
+
     function purity(A) {
         let s = 0;
         for (let k = 0; k < A.n * A.n; k++) s += A.re[k] * A.re[k] + A.im[k] * A.im[k];
-        return s; // Tr ρ² = Σ |ρ_ij|² for Hermitian ρ
+        return s;
     }
 
-    /**
-     * Eigenvalues of a Hermitian matrix (ascending), via cyclic Jacobi on the real symmetric
-     * embedding [[Re, −Im], [Im, Re]] whose spectrum is that of A with every value doubled.
-     */
+
     function eigvalsHermitian(A, opts = {}) {
         const n = A.n,
             m = 2 * n;
@@ -207,7 +162,7 @@
         return out;
     }
 
-    /** Validity checks for a density matrix: trace, Hermiticity, smallest eigenvalue, purity. */
+
     function checkDensity(rho, opts = {}) {
         const tr = trace(rho);
         const ev = opts.skipEigen ? null : eigvalsHermitian(rho);
@@ -220,10 +175,10 @@
         };
     }
 
-    // =================================================================== Fock-basis states
+
     const STATE_KINDS = ["coherent", "thermal", "fock", "squeezed"];
 
-    /** Analytic (untruncated) photon-number moments and g²(0) for each state family. */
+
     function analyticMoments(kind, par) {
         if (kind === "coherent") {
             const n = par.nbar;
@@ -253,7 +208,7 @@
             };
         }
         if (kind === "squeezed") {
-            const n = par.nbar; // n̄ = sinh² r
+            const n = par.nbar;
             return {
                 mean: n,
                 variance: 2 * n * (n + 1),
@@ -264,7 +219,7 @@
         throw new Error("unknown state " + kind);
     }
 
-    /** log p_n for the untruncated distributions (−Infinity where p_n = 0). */
+
     function logPn(kind, par, n) {
         if (kind === "coherent") {
             const m = par.nbar;
@@ -289,7 +244,7 @@
         throw new Error("unknown state " + kind);
     }
 
-    /** Probability mass above n = N (exact for thermal/Fock, summed series otherwise). */
+
     function tailProbability(kind, par, N) {
         if (kind === "thermal") return par.nbar === 0 ? 0 : Math.pow(par.nbar / (1 + par.nbar), N + 1);
         if (kind === "fock") return par.n > N ? 1 : 0;
@@ -306,12 +261,7 @@
         return s;
     }
 
-    /**
-     * Build a state in the truncated Fock basis {|0⟩…|N⟩}.
-     * kind: "coherent" {nbar, phase} | "thermal" {nbar} | "fock" {n} | "squeezed" {nbar, phase}
-     * Returns { kind, par, N, dim, ket|null, rho, p (diag), truncation (discarded probability of the
-     * exact state), normalisedFrom (Σ p before renormalisation), exact: analyticMoments }.
-     */
+
     function makeState(kind, par, N) {
         N = Math.max(0, Math.round(N));
         const dim = N + 1;
@@ -327,7 +277,7 @@
                 const lp = logPn(kind, par, n);
                 if (lp === -Infinity) continue;
                 const amp = Math.exp(0.5 * lp);
-                // coherent: α^n → phase nθ ; squeezed vacuum S(ξ)|0⟩, ξ = r e^{iϑ}: (−e^{iϑ} tanh r)^m
+
                 const ang = kind === "coherent" ? n * ph : (n / 2) * (ph + Math.PI);
                 ket.re[n] = amp * Math.cos(ang);
                 ket.im[n] = amp * Math.sin(ang);
@@ -372,14 +322,14 @@
         };
     }
 
-    /** Photon-number distribution (real diagonal) of a density matrix. */
+
     function numberDistribution(rho) {
         const p = new Float64Array(rho.n);
         for (let i = 0; i < rho.n; i++) p[i] = rho.re[i * rho.n + i];
         return p;
     }
 
-    /** Mean, variance, Mandel Q = Var/⟨n⟩ − 1, g²(0) = ⟨n(n−1)⟩/⟨n⟩², total probability. */
+
     function momentsOf(p) {
         let s0 = 0,
             s1 = 0,
@@ -404,10 +354,7 @@
         return lnFact(n) - lnFact(k) - lnFact(n - k);
     }
 
-    /**
-     * Loss (pure-loss beam-splitter) channel of transmissivity η on a Fock-basis density matrix:
-     * ρ' = Σ_k E_k ρ E_k†, E_k = Σ_n √C(n,k) η^{(n−k)/2} (1−η)^{k/2} |n−k⟩⟨n|. Keeps coherences.
-     */
+
     function lossChannel(rho, eta) {
         const n = rho.n,
             out = cmat(n);
@@ -439,7 +386,7 @@
         return out;
     }
 
-    /** Binomial thinning of a number distribution (diagonal of lossChannel). */
+
     function thinDistribution(p, eta) {
         const n = p.length,
             q = new Float64Array(n);
@@ -459,11 +406,7 @@
         return out;
     }
 
-    /**
-     * Detected count distribution for a photon-number-resolving detector:
-     * efficiency η (loss channel), then independent Poisson dark counts of mean `dark` per gate.
-     * Returns Float64Array P(m) long enough that the dark-count tail below 1e-14 is dropped.
-     */
+
     function detectedDistribution(p, eta, dark = 0) {
         const q = eta >= 1 ? Float64Array.from(p) : thinDistribution(p, eta);
         if (!(dark > 0)) return q;
@@ -488,10 +431,10 @@
         return out;
     }
 
-    /** Analytic moments after loss η and Poisson dark counts d (from the untruncated moments). */
+
     function detectedMomentsAnalytic(ex, eta, dark = 0) {
         const mean = eta * ex.mean + dark;
-        // Var after thinning: η² Var + η(1−η)⟨n⟩ ; dark counts add Poisson variance d
+
         const variance = eta * eta * ex.variance + eta * (1 - eta) * ex.mean + dark;
         return {
             mean,
@@ -501,7 +444,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ sampling
+
     function cumulative(p) {
         const c = new Float64Array(p.length);
         let s = 0;
@@ -524,11 +467,7 @@
         return lo;
     }
 
-    /**
-     * Shot-by-shot detector simulation: n ~ p (Born rule), each photon detected with probability η
-     * (Bernoulli), plus Poisson(dark) dark counts. Returns { hist (Float64Array counts), shots,
-     * mean, variance, seMean, samples (first `keep` detected values) }.
-     */
+
     function sampleDetections(p, det, shots, rng, keep = 0) {
         const eta = det.eta == null ? 1 : det.eta,
             dark = det.dark || 0;
@@ -566,10 +505,7 @@
         };
     }
 
-    /**
-     * Pearson χ² of observed counts against probabilities p for `shots` trials, pooling adjacent bins
-     * until each expected count is ≥ minExpected. Returns { chi2, dof, bins }.
-     */
+
     function chiSquare(counts, p, shots, minExpected = 5) {
         const L = Math.max(counts.length, p.length);
         let chi2 = 0,
@@ -588,7 +524,7 @@
         }
         if (eAcc > 0 || oAcc > 0) {
             if (bins > 0 && eAcc < minExpected) {
-                // fold the remainder into the last bin approximately (keeps total counts consistent)
+
                 chi2 += eAcc > 0 ? (oAcc - eAcc) ** 2 / Math.max(eAcc, minExpected) : oAcc;
             } else {
                 chi2 += (oAcc - eAcc) ** 2 / Math.max(eAcc, 1e-300);
@@ -602,8 +538,8 @@
         };
     }
 
-    // =================================================================== Mach–Zehnder with which-path marker
-    // basis index = 2·path + pol ; path a = 0, b = 1 ; pol H = 0, V = 1
+
+
     function mzState(cfg = {}) {
         const R = cfg.R1 == null ? 0.5 : Math.min(1, Math.max(0, cfg.R1));
         const t = Math.sqrt(1 - R),
@@ -611,14 +547,14 @@
         const th = cfg.theta || 0,
             phi = cfg.phi || 0,
             gam = Math.min(1, Math.max(0, cfg.dephase || 0));
-        // after BS1 (input a, H): a: t|H⟩ ; b: i r e^{iφ} (cos θ |H⟩ + sin θ |V⟩)
+
         const ket = {
             re: new Float64Array(4),
             im: new Float64Array(4)
         };
         ket.re[0] = t;
         const br = -r * Math.sin(phi),
-            bi = r * Math.cos(phi); // i r e^{iφ}
+            bi = r * Math.cos(phi);
         ket.re[2] = br * Math.cos(th);
         ket.im[2] = bi * Math.cos(th);
         ket.re[3] = br * Math.sin(th);
@@ -640,11 +576,11 @@
         };
     }
 
-    /** Unitary 50:50 BS2 on the path index (⊗ identity on polarization). */
+
     function bs2Unitary() {
         const U = cmat(4),
             s = Math.SQRT1_2;
-        // |c⟩ = t a + i r b ; |d⟩ = i r a + t b  (output ports 1 = c, 2 = d)
+
         for (let pol = 0; pol < 2; pol++) {
             U.re[(0 + pol) * 4 + (0 + pol)] = s;
             U.im[(0 + pol) * 4 + (2 + pol)] = s;
@@ -655,10 +591,7 @@
     }
     const BS2 = bs2Unitary();
 
-    /**
-     * Born-rule outcome probabilities for one photon. cfg: {R1, theta, phi, dephase, polarizer: null |
-     * χ (rad)}. Returns { P1, P2, Pblocked, rhoOut, rhoIn }.
-     */
+
     function mzProbabilities(cfg = {}) {
         const {
             rho
@@ -671,7 +604,7 @@
         } else {
             const c = Math.cos(cfg.polarizer),
                 s = Math.sin(cfg.polarizer);
-            // ⟨χ| ρ_pol |χ⟩ for each port block
+
             const blk = (o) => c * c * out.re[(o) * 4 + o] + s * s * out.re[(o + 1) * 4 + (o + 1)] + 2 * c * s * out.re[o * 4 + (o + 1)];
             P1 = blk(0);
             P2 = blk(2);
@@ -685,7 +618,7 @@
         };
     }
 
-    /** Port-1 fringe visibility of a sinusoid sampled at φ = 0, π/2, π, 3π/2; conditional on detection. */
+
     function mzVisibility(cfg = {}, port = 1) {
         const ps = [0, 0.5, 1, 1.5].map((k) => {
             const r = mzProbabilities(Object.assign({}, cfg, {
@@ -709,18 +642,14 @@
         };
     }
 
-    /**
-     * Which-path quantities for the marker: predictability P = |w_a − w_b|, distinguishability
-     * D = ‖w_a ρ_a − w_b ρ_b‖₁ (trace norm, Englert), marker overlap |⟨m_a|m_b⟩|, theoretical visibility
-     * V = 2√(w_a w_b)|⟨m_a|m_b⟩|(1 − γ), best which-path guess probability (1 + D)/2.
-     */
+
     function whichPath(cfg = {}) {
         const R = cfg.R1 == null ? 0.5 : cfg.R1;
         const wa = 1 - R,
             wb = R,
             th = cfg.theta || 0,
             gam = cfg.dephase || 0;
-        // M = wa |H⟩⟨H| − wb |m⟩⟨m| , |m⟩ = (cos θ, sin θ)
+
         const c = Math.cos(th),
             s = Math.sin(th);
         const a = wa - wb * c * c,
@@ -728,7 +657,7 @@
             b = -wb * c * s;
         const half = Math.sqrt(0.25 * (a - d) * (a - d) + b * b),
             mid = 0.5 * (a + d);
-        const D = Math.abs(mid + half) + Math.abs(mid - half); // trace norm ‖M‖₁
+        const D = Math.abs(mid + half) + Math.abs(mid - half);
         const overlap = Math.abs(c);
         const Vth = 2 * Math.sqrt(wa * wb) * overlap * (1 - gam);
         return {
@@ -741,7 +670,7 @@
         };
     }
 
-    /** Click probabilities for detectors of efficiency η and dark-count probability pd per trial. */
+
     function mzClickProbabilities(probs, det = {}) {
         const eta = det.eta == null ? 1 : det.eta,
             pd = det.pDark || 0;
@@ -752,10 +681,7 @@
         };
     }
 
-    /**
-     * One heralded photon: Born-rule choice of port 1 / port 2 / blocked (by the polarizer), then
-     * Bernoulli(η) detection, then independent dark clicks. Returns { port: 1|2|0, c1, c2 }.
-     */
+
     function mzSampleEvent(probs, det, rng) {
         const eta = det.eta == null ? 1 : det.eta,
             pd = det.pDark || 0;
@@ -772,10 +698,10 @@
         };
     }
 
-    // =================================================================== HBT g²(τ)
+
     const G2_KINDS = ["coherent", "thermal", "emitter"];
 
-    /** Ideal g²(τ). thermal: 1 + |g¹|², Lorentzian |g¹| = e^{−|τ|/τc}, Gaussian e^{−πτ²/(2τc²)} (τc = ∫|g¹|²dτ). */
+
     function g2Ideal(kind, tau, par = {}) {
         const t0 = par.tau0;
         if (kind === "coherent") return 1;
@@ -787,10 +713,7 @@
         throw new Error("unknown source " + kind);
     }
 
-    /**
-     * Expected measured g²: 1 + ρ₁ρ₂ · [(g² − 1) ⊛ Gaussian(σ_eff = √2 σ)] averaged over a bin of width Δt.
-     * par: {tau0, line, jitter σ (per detector), binWidth, rho1, rho2}.
-     */
+
     function g2Measured(kind, tau, par = {}) {
         const sig = Math.SQRT2 * (par.jitter || 0);
         const bw = par.binWidth || 0;
@@ -805,7 +728,7 @@
                 acc += f(tb);
                 continue;
             }
-            // Gauss–Hermite-like dense Simpson over ±6σ; include the cusp region finely
+
             const n = 240,
                 L = 6 * sig;
             let s = 0;
@@ -819,7 +742,7 @@
         return 1 + rho * acc / nb;
     }
 
-    /** Emitter rates: pump Γp and decay Γr with Γp + Γr = 1/τ₀ and mean emission rate Remit. */
+
     function emitterRates(tau0, Remit) {
         const S = 1 / tau0;
         const disc = S * S - 4 * S * Remit;
@@ -846,14 +769,7 @@
         return a;
     }
 
-    /**
-     * Seeded two-detector time-tag streams for an HBT experiment.
-     * cfg: { kind, line ("lorentz"|"gauss"), tau0 (s), rate (detected signal counts/s per detector),
-     *        dark (dark counts/s per detector), eta (overall efficiency, emitter only), T (s),
-     *        jitter σ (s, per detector), seed, maxSteps = 3e6, maxEvents = 4e6, maxEmissions = 1.2e7 }
-     * Returns { t1, t2 (sorted Float64Array, s), T (used), truncated, dt (thermal field step),
-     *           intensity: {dt, I: Float64Array} first 400 field samples (thermal), emitter info }.
-     */
+
     function simulateHBT(cfg) {
         const rng = core.createRng(cfg.seed == null ? 1 : cfg.seed);
         const R = Math.max(0, cfg.rate),
@@ -892,7 +808,7 @@
             const steps = Math.floor(T / dt);
             info.dt = dt;
             const keepI = new Float64Array(Math.min(steps, 400));
-            const lam = R * dt; // mean counts per step per detector for ⟨I⟩ = 1
+            const lam = R * dt;
             const emit = (i, I) => {
                 if (lam * I <= 0) return;
                 const k1 = rng.poisson(lam * I),
@@ -960,7 +876,7 @@
             const eta = Math.min(1, Math.max(1e-6, cfg.eta == null ? 0.1 : cfg.eta));
             const er = emitterRates(tau0, 2 * R / eta);
             Object.assign(info, er);
-            // every emission costs work even when undetected: cap the number of emissions too
+
             const maxEmit = cfg.maxEmissions || 1.2e7;
             if (er.Remit * T > maxEmit * 1.02) {
                 T = maxEmit / er.Remit;
@@ -978,7 +894,7 @@
             }
             info.emitted = emitted;
         } else throw new Error("unknown source " + cfg.kind);
-        // dark counts: independent Poisson processes
+
         if (dark > 0)
             for (const arr of [a1, a2]) {
                 let t = 0;
@@ -1002,11 +918,7 @@
         };
     }
 
-    /**
-     * All-pairs (multi-stop) coincidence histogram of τ = t2 − t1 over [−range, range] with bins of
-     * width binWidth, normalised by the accidental rate N1N2Δt(T − |τ|)/T².
-     * Returns { centers, counts, g2, err (1σ Poisson), expectedAccidental (per bin at τ = 0) }.
-     */
+
     function coincidenceHistogram(t1, t2, opts) {
         const bw = opts.binWidth,
             W = opts.range,
@@ -1048,7 +960,7 @@
     }
 
     return {
-        // matrices
+
         cmat,
         densityFromKet,
         diagonalDensity,
@@ -1059,7 +971,7 @@
         purity,
         eigvalsHermitian,
         checkDensity,
-        // Fock states and detection
+
         STATE_KINDS,
         analyticMoments,
         logPn,
@@ -1074,14 +986,14 @@
         detectedMomentsAnalytic,
         sampleDetections,
         chiSquare,
-        // Mach–Zehnder
+
         mzState,
         mzProbabilities,
         mzVisibility,
         whichPath,
         mzClickProbabilities,
         mzSampleEvent,
-        // HBT
+
         G2_KINDS,
         g2Ideal,
         g2Measured,

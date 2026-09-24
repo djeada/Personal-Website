@@ -1,10 +1,6 @@
 "use strict";
 
-/*
- * Double-slit experiment UI.
- * Physics lives in ../shared/optics/doubleSlit.js (SI units). This file converts units at the
- * UI boundary, keeps one validated state object, and draws every view from one sampled array.
- */
+
 
 (function() {
     const DS = window.OpticsModels.doubleSlit;
@@ -14,9 +10,9 @@
 
     const el = (id) => document.getElementById(id);
 
-    // -----------------------------------------------------------------------------------------
-    // Logarithmic sliders (slider positions 0..1000 ↔ metres)
-    // -----------------------------------------------------------------------------------------
+
+
+
     const LOG_RANGES = {
         slitSeparation: {
             min: 0.2e-6,
@@ -44,9 +40,9 @@
         return Number((Math.round(x / p) * p).toPrecision(sig));
     }
 
-    // -----------------------------------------------------------------------------------------
-    // State (SI units) and presets (reproducible experiments with an expected observation)
-    // -----------------------------------------------------------------------------------------
+
+
+
     const SOURCE_DEFAULTS = {
         slitMode: "both",
         illum: 1,
@@ -154,15 +150,15 @@
 
     const state = Object.assign({}, TEXTBOOK, SOURCE_DEFAULTS, VIEW_DEFAULTS);
     let activePreset = "textbook";
-    let cursorY = null; // metres on the screen, or null
-    let current = null; // { params, sample, analysis, orders, validity, hist }
-    let fieldPhase = 0; // schematic animation phase (rad)
+    let cursorY = null;
+    let current = null;
+    let fieldPhase = 0;
     let speed = 1;
 
-    // -----------------------------------------------------------------------------------------
-    // Formatting
-    // -----------------------------------------------------------------------------------------
-    /** SI length with fixed significant figures (keeps trailing zeros: "2.000 mm"). */
+
+
+
+
     function fmtLen(m, sig) {
         if (!Number.isFinite(m)) return "∞";
         const d = sig || 3;
@@ -181,7 +177,7 @@
     const fmtInt = (n) => Math.round(n).toLocaleString("en-US").replace(/,/g, " ");
     const photonsN = () => Math.round(Math.pow(10, state.photonsLog));
 
-    /** Best display unit for a screen extent. */
+
     function screenUnit(hw) {
         if (hw < 2e-3) return {
             f: 1e6,
@@ -197,9 +193,9 @@
         };
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Model evaluation (single source of truth for every view)
-    // -----------------------------------------------------------------------------------------
+
+
+
     function modelParams() {
         return {
             wavelength: state.wavelength,
@@ -217,7 +213,7 @@
     function enforceGeometry(changed) {
         if (state.slitWidth <= DS.maxSlitWidth(state.slitSeparation)) return false;
         if (changed === "slitWidth") {
-            // widening a pushes the separation out so the slits never overlap
+
             const needD = roundSig(state.slitWidth / 0.98, 3) * 1.0001;
             if (needD <= LOG_RANGES.slitSeparation.max) state.slitSeparation = needD;
             else state.slitWidth = DS.maxSlitWidth(state.slitSeparation);
@@ -247,16 +243,16 @@
         };
     }
 
-    /** Intensity → displayed value according to the fixed/auto scale. */
+
     function scaleRef() {
         const s = current.sample;
         return state.scaleMode === "auto" ? s.peak || 1 : s.reference;
     }
     const LOG_FLOOR = 1e-4;
 
-    // -----------------------------------------------------------------------------------------
-    // Controls
-    // -----------------------------------------------------------------------------------------
+
+
+
     const sliders = {
         wavelength: el("wavelength"),
         slitSeparation: el("slitSeparation"),
@@ -356,7 +352,7 @@
         el("coherenceValue").textContent = fmtNum(state.coherence);
         el("photonValue").textContent = fmtInt(photonsN());
         el("photonGroup").hidden = state.detMode !== "photons";
-        // the log sliders' number boxes show rounded physical values; refresh them
+
         ["slitSeparation", "slitWidth", "distance", "halfWidth", "photons"].forEach((k) => sliders[k].__opticsNum && sliders[k].__opticsNum.sync());
     }
 
@@ -473,9 +469,9 @@
     }
     document.querySelectorAll("#presetButtons .preset-option").forEach((b) => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
 
-    // -----------------------------------------------------------------------------------------
-    // Readouts, warnings, table
-    // -----------------------------------------------------------------------------------------
+
+
+
     function updateStats() {
         const {
             params: q,
@@ -500,7 +496,7 @@
         }
         el("stat-orders").textContent = orderText;
         el("stat-orders-label").textContent = `Orders on Screen (max ±${maxOrder})`;
-        // with d < λ there is a single broad maximum and no fringe period to measure a contrast over
+
         const visText = bothOpen && maxOrder === 0 ? "n/a (d < λ)" : analysis.measuredVisibility === null ? "unresolved" : null;
         el("stat-visibility").textContent = visText || fmtNum(analysis.measuredVisibility);
 
@@ -555,7 +551,7 @@
             dl.appendChild(div);
         });
 
-        // regime / validity warnings ---------------------------------------------------------
+
         const rw = el("regimeWarn");
         if (v.regime !== "far") {
             rw.innerHTML = `Fresnel number N<sub>F</sub> = ${nfText}: ${v.regime === "near" ? "near field, the far-field (Fraunhofer) pattern shown here is <strong>not valid</strong>" : "marginal far field, expect visible deviations from this pattern"}. ` +
@@ -613,11 +609,11 @@
         });
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Colour helpers
-    // -----------------------------------------------------------------------------------------
+
+
+
     const spectralCache = {};
-    /** Black → monochromatic colour ramp, shaped like a UI.colormap object (display aid only). */
+
     function spectralMap(nm) {
         const key = Math.round(nm);
         if (spectralCache[key]) return spectralCache[key];
@@ -667,9 +663,9 @@
         };
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Schematic panel: instantaneous signed field (illustrative, not to scale)
-    // -----------------------------------------------------------------------------------------
+
+
+
     const FIELD_NX = 150,
         FIELD_NY = 100;
     const fieldBuf = new Float64Array(FIELD_NX * FIELD_NY);
@@ -696,7 +692,7 @@
             top = 26,
             bottom = H - 30;
         const x0 = pad,
-            x1 = W - 40; // leave room for a colour bar
+            x1 = W - 40;
         const barrierX = x0 + (x1 - x0) * 0.26;
         const screenX = x1 - 8;
         const cy = (top + bottom) / 2;
@@ -706,16 +702,16 @@
         ctx.textBaseline = "alphabetic";
         ctx.fillText("Re ψ(x, y, t), illustrative λ", x0, 17);
 
-        // aperture scale: d + a spans 44 % of the panel height; a : d is to scale
+
         const span = (bottom - top) * 0.44;
         const s = span / (q.slitSeparation + q.slitWidth);
         const halfA = Math.max(1, (q.slitWidth * s) / 2);
         const enlarged = (q.slitWidth * s) / 2 < 1;
-        const c1 = cy - (q.slitSeparation * s) / 2; // top slit (y = +d/2)
-        const c2 = cy + (q.slitSeparation * s) / 2; // bottom slit
+        const c1 = cy - (q.slitSeparation * s) / 2;
+        const c2 = cy + (q.slitSeparation * s) / 2;
         const A = [q.slit1 ? 1 : 0, q.slit2 ? q.amplitudeRatio : 0];
-        const P = [0, -q.relativePhase]; // bottom leads by φ: cos(kr − ωt − φ), fringes shift toward the top slit as in the model
-        const lamPx = Math.max(10, (x1 - x0) / 16); // display wavelength: NOT the physical λ
+        const P = [0, -q.relativePhase];
+        const lamPx = Math.max(10, (x1 - x0) / 16);
         const k = (2 * Math.PI) / lamPx;
 
         if (state.showField) {
@@ -723,7 +719,7 @@
                 ch = (bottom - top) / FIELD_NY;
             let maxAbs = 1e-9;
             for (let iy = 0; iy < FIELD_NY; iy++) {
-                const py = bottom - (iy + 0.5) * ch; // iy = 0 at bottom
+                const py = bottom - (iy + 0.5) * ch;
                 for (let ix = 0; ix < FIELD_NX; ix++) {
                     const px = x0 + (ix + 0.5) * cw;
                     let v;
@@ -769,7 +765,7 @@
             ctx.fillRect(x0, top, x1 - x0, bottom - top);
         }
 
-        // rays to the cursor
+
         if (cursorY !== null) {
             const py = top + (1 - (cursorY + state.halfWidth) / (2 * state.halfWidth)) * (bottom - top);
             ctx.strokeStyle = PAL.cursor;
@@ -788,7 +784,7 @@
             ctx.setLineDash([]);
         }
 
-        // barrier from the same aperture definition (edges at ±d/2 ± a/2)
+
         ctx.fillStyle = "#9aa3b5";
         const bw = 6;
         ctx.fillRect(barrierX - bw / 2, top, bw, c1 - halfA - top);
@@ -806,7 +802,7 @@
             ctx.fillText("blocked", barrierX - 8, sy + 4);
         });
 
-        // dimension labels
+
         ctx.strokeStyle = PAL.text;
         ctx.fillStyle = PAL.text;
         ctx.lineWidth = 1;
@@ -833,7 +829,7 @@
         label(dTxt, Math.max(dimX - 6, x0 + 3 + ctx.measureText(dTxt).width), cy + 4, "right");
         label("a = " + fmtLen(q.slitWidth) + (enlarged ? " (drawn wider)" : ""), barrierX + 8, Math.min(bottom - 4, c2 + halfA + fs + 4), "left");
 
-        // screen strip mirrors the detector (same sample array)
+
         const rows = Math.max(1, Math.round(bottom - top));
         const cm = currentCmap();
         const ref = current.sample.peak || 1;
@@ -851,9 +847,9 @@
         ctx.fillText("a : d to scale", x0, H - 10);
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Detector panel: face-on image of the screen (x = screen y)
-    // -----------------------------------------------------------------------------------------
+
+
+
     const detCanvas = el("detCanvas");
     detCanvas.dataset.exportName = "detector";
     const detDesc = UI.describeCanvas(detCanvas, "Detector image.", {
@@ -909,7 +905,7 @@
             ctx.fillStyle = "#000";
             ctx.fillRect(P.x, P.y, P.w, P.h);
             if (hist.positions) {
-                // individual detections; the vertical coordinate is random (the pattern is uniform along the slits)
+
                 const rng = core.createRng((state.seed * 7919) >>> 0 || 3);
                 const r = hist.total > 3000 ? 0.8 : hist.total > 500 ? 1.2 : 1.8;
                 ctx.fillStyle = cm.css(0.92);
@@ -927,7 +923,7 @@
                 });
             }
         } else {
-            // pixel-binned (averaged) sampled intensity: one image column per CSS pixel
+
             const nx = Math.max(2, Math.min(sample.n, Math.round(P.w)));
             const data = new Float64Array(nx);
             const ref = scaleRef();
@@ -982,9 +978,9 @@
         ctx.restore();
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Line plot: I(y) with envelopes, orders and cursor
-    // -----------------------------------------------------------------------------------------
+
+
+
     const plotCanvas = el("plotCanvas");
     plotCanvas.dataset.exportName = "intensity";
     const plotDesc = UI.describeCanvas(plotCanvas, "Intensity versus screen position.", {
@@ -999,7 +995,7 @@
     });
 
     function decimate(xs, ys, maxPts) {
-        // min/max per bucket keeps unresolved fringes visible as a filled band
+
         const n = xs.length;
         if (n <= maxPts) return {
             xs,
@@ -1048,7 +1044,7 @@
         const main = decimate(xs, Array.from(sample.intensity, tr), pts);
         const floorize = (arr) => (state.log ? arr.map((v) => (v > LOG_FLOOR ? v : LOG_FLOOR)) : arr);
         if (hist) {
-            // expected curve dashed; histogram as points with ±√n bars (drawn below)
+
             series.push({
                 xs: main.xs,
                 ys: floorize(main.ys),
@@ -1091,7 +1087,7 @@
         }
         let histPts = null;
         if (hist) {
-            // density estimate in intensity units: Î_b = counts_b / N · ∫I dy / Δy_bin
+
             const totalInt = DS.cumulativeIntensity(sample)[sample.n - 1];
             const bw = (2 * state.halfWidth) / hist.nBins;
             const k = hist.total > 0 ? totalInt / (hist.total * bw) / ref : 0;
@@ -1168,7 +1164,7 @@
             ctx.textAlign = "center";
             ctx.fillText("All slits blocked: no light reaches the screen", P.x + P.w / 2, P.y + P.h / 2);
         }
-        // order ticks along the top edge (non-colour cue: missing orders are hollow)
+
         if (state.showOrders && q.slit1 && q.slit2 && q.amplitudeRatio > 0) {
             ctx.font = "11px " + PAL.mono;
             ctx.textAlign = "center";
@@ -1197,9 +1193,9 @@
         }
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Cursor: pointer on detector / plot, keyboard on the plot
-    // -----------------------------------------------------------------------------------------
+
+
+
     function setCursorFromPx(map, canvas, ev) {
         if (!map) return;
         const r = canvas.getBoundingClientRect();
@@ -1244,9 +1240,9 @@
         }
     });
 
-    // -----------------------------------------------------------------------------------------
-    // Text equivalents
-    // -----------------------------------------------------------------------------------------
+
+
+
     function describe() {
         const {
             params: q,
@@ -1270,9 +1266,9 @@
         schemDesc.update(`Schematic, not to scale: plane wave incident on two slits (${q.slit1 ? "top open" : "top blocked"}, ${q.slit2 ? "bottom open" : "bottom blocked"}), cylindrical wavelets beyond the barrier, relative phase ${state.phaseDeg}°.`);
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Refresh cycle
-    // -----------------------------------------------------------------------------------------
+
+
+
     function redrawAll() {
         schem.redraw();
         det.redraw();
@@ -1294,10 +1290,10 @@
         if (url) url.update();
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Animation (schematic only): elapsed-time loop, pause / step / speed / reset
-    // -----------------------------------------------------------------------------------------
-    const OMEGA = 2 * Math.PI * 0.6; // display rad/s at 1× (illustrative)
+
+
+
+    const OMEGA = 2 * Math.PI * 0.6;
     const startStopBtn = el("startStopBtn");
     const loop = UI.createLoop((dt) => {
         fieldPhase = (fieldPhase + OMEGA * speed * dt) % (2 * Math.PI);
@@ -1324,9 +1320,9 @@
         applyPreset("textbook");
     });
 
-    // -----------------------------------------------------------------------------------------
-    // URL state + export
-    // -----------------------------------------------------------------------------------------
+
+
+
     const MODES = {
         slits: ["both", "top", "bottom"],
         det: ["intensity", "photons"],
@@ -1384,7 +1380,7 @@
     }
     let url = null;
 
-    // first render
+
     syncControls();
     setPreset("textbook");
     refresh();
@@ -1427,6 +1423,6 @@
         caption: () => `Double slit (Fraunhofer): λ = ${fmtLen(state.wavelength, 4)}, d = ${fmtLen(state.slitSeparation)}, a = ${fmtLen(state.slitWidth)}, L = ${fmtLen(state.distance)}, |γ| = ${fmtNum(state.coherence)}, φ = ${state.phaseDeg}°`,
     });
 
-    // reduced motion: never autostart; the schematic stays static until Start or Step
+
     if (UI.prefersReducedMotion()) startStopBtn.title = "Reduced motion is on: animation starts only on request";
 })();

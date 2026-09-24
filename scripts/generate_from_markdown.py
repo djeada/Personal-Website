@@ -3,7 +3,9 @@ Transforms Markdown to HTML.
 """
 
 import argparse
+import html as html_lib
 import json
+import os
 import sys
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -13,13 +15,19 @@ import markdown
 from pathlib import Path
 import re
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.append(str(SCRIPT_DIR))
+import clean_output_dirs
 import date_utils
+import source_dates
 
 PATH_TO_CONFIG = "input.json"
 OUTPUT_DIR = Path("../src/articles")
@@ -56,6 +64,26 @@ RANDOM_DATE_RANGE = False
 RANDOM_DATE_START = datetime(2016, 1, 1)
 RANDOM_DATE_END: Optional[datetime] = None
 RANDOM_DATE_SEED = ""
+
+
+SOURCE_DATES: Dict[str, datetime] = {}
+ARTICLE_PATHS: Dict[tuple, Path] = {}
+
+CODE_PLACEHOLDER = "CODEBLOCKPLACEHOLDER{:04d}END"
+MATH_PLACEHOLDER = "MATHPLACEHOLDER{:04d}END"
+DISPLAY_MATH_PATTERN = re.compile(r"\$\$[^`]+?\$\$", re.DOTALL)
+INLINE_MATH_PATTERN = re.compile(r"(?<![\\$\w])\$(?=\S)[^$\n`]+?(?<=\S)\$(?![\w$])")
+MATH_PRESENCE_PATTERN = re.compile(
+    r"\$\$|\\\(|(?<![\\$\w])\$(?=\S)[^$\n<]+?(?<=\S)\$(?![\w$])"
+)
+
+LANGUAGE_ALIASES = {
+    "c++": "cpp",
+    "py": "python",
+    "js": "javascript",
+    "ts": "typescript",
+}
+PRISM_BASE = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0"
 
 
 @dataclass
@@ -107,41 +135,63 @@ class MarkdownProcessor:
 
     @classmethod
     def remove_code_blocks(cls, markdown_text: str) -> str:
+        counter = iter(range(1_000_000))
         return re.sub(
-            r"```.*?```", "\nCODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
+            r"```.*?```",
+            lambda _: "\n" + CODE_PLACEHOLDER.format(next(counter)) + "\n\n",
+            markdown_text,
+            flags=re.DOTALL,
         )
+
+    @staticmethod
+    def protect_math(markdown_text: str) -> tuple[str, List[str]]:
+        """Swaps LaTeX for placeholders so markdown cannot rewrite it."""
+        formulas: List[str] = []
+
+        def stash(match: re.Match) -> str:
+            formulas.append(match.group(0))
+            return MATH_PLACEHOLDER.format(len(formulas) - 1)
+
+        markdown_text = DISPLAY_MATH_PATTERN.sub(stash, markdown_text)
+        markdown_text = INLINE_MATH_PATTERN.sub(stash, markdown_text)
+        return markdown_text, formulas
 
     @classmethod
     def convert_markdown_to_html(cls, markdown_text: str) -> str:
-        return markdown.markdown(markdown_text)
+
+        markdown_text = re.sub(
+            r"<details(?![^>]*\bmarkdown=)", '<details markdown="1"', markdown_text
+        )
+        html = markdown.markdown(markdown_text, extensions=["md_in_html"])
+        return re.sub(r"<p>\s*(<summary>.*?</summary>)\s*</p>", r"\1", html, flags=re.S)
+
+    @staticmethod
+    def restore(html: str, template: str, items: List[str]) -> str:
+        for idx, item in enumerate(items):
+            html = html.replace(
+                template.format(idx), html_lib.escape(item, quote=False)
+            )
+        return html
 
     @classmethod
     def insert_code_blocks(cls, html: str, code_blocks: List[str]) -> str:
-        soup = BeautifulSoup(html, "html.parser")
-        placeholders = soup.find_all(string="CODE_BLOCK_PLACEHOLDER")
-
-        for idx, placeholder in enumerate(placeholders):
-            if idx >= len(code_blocks):
-                break
-
-            placeholder.replace_with(code_blocks[idx])
-
-        return str(soup)
+        return cls.restore(html, CODE_PLACEHOLDER, code_blocks)
 
     @classmethod
     def run(cls, text: str) -> str:
         code_blocks = cls.extract_code_blocks(text)
-        text_without_code_blocks = cls.remove_code_blocks(text)
+        text = cls.remove_code_blocks(text)
+        text, formulas = cls.protect_math(text)
 
-        html = cls.convert_markdown_to_html(text_without_code_blocks)
-        enhanced_html = cls.insert_code_blocks(html, code_blocks)
-
-        return enhanced_html
+        html = cls.convert_markdown_to_html(text)
+        html = cls.restore(html, MATH_PLACEHOLDER, formulas)
+        return cls.insert_code_blocks(html, code_blocks)
 
 
 class HtmlEnhancer:
     def run(self, html: str, url_data, date_override: Optional[str] = None) -> str:
         """Main method to enhance the provided HTML content."""
+        html = self.rewrite_links(html, url_data)
         html = self.apply_filters(html, url_data.language.lower())
         html = self.add_language_info(html, LANGUAGE_MAP[url_data.language.lower()])
         html = self.add_date_info(html, date_override)
@@ -153,7 +203,6 @@ class HtmlEnhancer:
         html = cls.replace_all_tables(html)
         html = cls.correct_image_sources(html)
         html = cls.handle_code_blocks(html)
-        html = cls.correct_math_blocks(html)
         html = cls.apply_prism_for_code_samples(html)
         html = cls.ensure_structure(html, lang)
         html = cls.replace_backticks_with_code_tags(html)
@@ -161,9 +210,54 @@ class HtmlEnhancer:
 
     @classmethod
     def replace_backticks_with_code_tags(cls, text: str) -> str:
-        pattern = r"`([^`]+)`"
-        replaced_text = re.sub(pattern, r"<code>\1</code>", text)
-        return replaced_text
+        """Turns leftover `code` spans into tags, leaving code and scripts alone."""
+        protected = re.compile(
+            r"(<(pre|code|script)\b.*?</\2>)", re.DOTALL | re.IGNORECASE
+        )
+        parts = protected.split(text)
+        output = []
+        for idx in range(0, len(parts), 3):
+            output.append(re.sub(r"`([^`]+)`", r"<code>\1</code>", parts[idx]))
+            if idx + 1 < len(parts):
+                output.append(parts[idx + 1])
+        return "".join(output)
+
+    @staticmethod
+    def rewrite_links(html: str, url_data) -> str:
+        """Points links to other notes at their article pages instead of GitHub."""
+        source = source_dates.parse_raw_url(url_data.url)
+        if not source:
+            return html
+        owner, repo, branch, _ = source
+        soup = BeautifulSoup(html, "html.parser")
+        for link in soup.find_all("a", href=True):
+            href = link["href"].strip()
+            target, _, fragment = href.partition("#")
+            parsed = urlparse(target)
+            if not target or parsed.scheme in ("mailto", "tel"):
+                continue
+            if not parsed.scheme:
+                target_key = source_dates.parse_raw_url(urljoin(url_data.url, target))
+            elif parsed.netloc == "github.com" and "/blob/" in parsed.path:
+                parts = parsed.path.strip("/").split("/")
+                target_key = (parts[0], parts[1], parts[3], "/".join(parts[4:]))
+            else:
+                continue
+            if not target_key:
+                continue
+
+            article = ARTICLE_PATHS.get(target_key)
+            if article:
+                new_href = os.path.relpath(article, url_data.output_path.parent)
+            elif parsed.scheme:
+                continue
+            else:
+                t_owner, t_repo, t_branch, t_path = target_key
+                new_href = (
+                    f"https://github.com/{t_owner}/{t_repo}/blob/{t_branch}/{t_path}"
+                )
+            link["href"] = new_href + (f"#{fragment}" if fragment else "")
+        return str(soup)
 
     @classmethod
     def replace_all_tables(cls, html: str) -> str:
@@ -185,12 +279,7 @@ class HtmlEnhancer:
             end = table_end_match.end()
             table = html[table_start_match.end() : table_end_match.start()]
 
-            output_html += (
-                html[last_end:start]
-                + "<p>"
-                + cls.markdown_to_html_table(table)
-                + "</p>"
-            )
+            output_html += html[last_end:start] + cls.markdown_to_html_table(table)
             last_end = table_end_match.end()
 
         output_html += html[last_end:]
@@ -203,15 +292,11 @@ class HtmlEnhancer:
         soup = BeautifulSoup(html, "html.parser")
         images = soup.find_all("img")
         for image in images:
-            src = image["src"]
-            if not src.endswith(".png"):
-                continue
-            if src.startswith("https://github.com"):
-                src = src.replace(
-                    "https://github.com", "https://raw.githubusercontent.com"
-                )
-                src = src.replace("/blob/", "/")
-                image["src"] = src
+            image["src"] = re.sub(
+                r"^https://github\.com/([^/]+)/([^/]+)/(?:blob|raw)/",
+                r"https://raw.githubusercontent.com/\1/\2/",
+                image.get("src", ""),
+            )
         return str(soup)
 
     @staticmethod
@@ -227,25 +312,6 @@ class HtmlEnhancer:
         return str(soup)
 
     @classmethod
-    def correct_math_blocks(cls, html: str) -> str:
-
-        math_pattern = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
-
-        def replacer(match):
-
-            math_content = match.group(1)
-
-            math_content = math_content.replace("\\\n", "\\\\\n")
-
-            math_content = re.sub(r'<a\s+href="([^"]+)">.*?</a>', r"[\1]", math_content)
-
-            math_content = math_content.replace("&amp;", "&")
-
-            return f"$${math_content}$$"
-
-        return math_pattern.sub(replacer, html)
-
-    @classmethod
     def apply_prism_for_code_samples(cls, html: str) -> str:
         pattern = re.compile(
             r"(?:<p>)?```[ \t]*(?:(?P<lang>[\w+-]+)[ \t]*)?\r?\n(?P<code>.*?)```(?:</p>)?",
@@ -254,16 +320,14 @@ class HtmlEnhancer:
 
         def replacer(match: re.Match) -> str:
             language = match.group("lang") or "shell"
-            language = language.lower()
-
-            if language in {"c++", "cpp", "c"}:
-                language = "clike"
+            language = LANGUAGE_ALIASES.get(language.lower(), language.lower())
 
             code_sample = re.sub(r"\r?\n\Z", "", match.group("code"))
             code_sample = re.sub(r"<", "&lt;", code_sample)
             code_sample = re.sub(r">", "&gt;", code_sample)
-            code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
-            code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
+
+            if language in {"math", "latex", "tex"}:
+                return f"<div>$${code_sample}$$</div>"
 
             return f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
 
@@ -275,26 +339,25 @@ class HtmlEnhancer:
         html = cls.add_missing_tags(html, lang)
         html = cls.wrap_content(html)
         html = cls.add_scripts(html)
-        html = cls.replace_header_tags(html)
+        html = cls.promote_title(html)
         html = cls.clean_whitespace(html)
         return html
 
     @staticmethod
     def add_missing_tags(html: str, lang: str) -> str:
         """Adds missing essential HTML tags."""
-        if "<body>" not in html:
-            html = "<body>\n" + html + "\n</body>"
-        if "<head>" not in html:
-            html = "<head></head>\n" + html
-        if "<!DOCTYPE html>" not in html:
-            html = f'<!DOCTYPE html>\n<html lang="{lang}">\n' + html + "\n</html>"
-        return html
+        if re.match(r"\s*(<!DOCTYPE|<html)", html, re.IGNORECASE):
+            return html
+        return (
+            f'<!DOCTYPE html>\n<html lang="{lang}">\n<head></head>\n'
+            f"<body>\n{html}\n</body>\n</html>"
+        )
 
     @staticmethod
     def wrap_content(html: str) -> str:
         """Wraps the content inside the body tag in a section."""
         body_start = html.find("<body>")
-        body_end = html.find("</body>")
+        body_end = html.rfind("</body>")
         body_content = html[body_start + 6 : body_end]
         html = (
             html[: body_start + 6]
@@ -308,11 +371,8 @@ class HtmlEnhancer:
         """Adds necessary scripts to the provided HTML."""
         prism_scripts = "\n".join(
             [
-                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>',
-                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>',
-                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>',
-                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>',
-                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>',
+                f'<script src="{PRISM_BASE}/components/prism-core.min.js"></script>',
+                f'<script src="{PRISM_BASE}/plugins/autoloader/prism-autoloader.min.js"></script>',
             ]
         )
         mathjax_config = "\n".join(
@@ -330,20 +390,39 @@ class HtmlEnhancer:
                 '<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>',
             ]
         )
-        combined_scripts = prism_scripts + mathjax_config
         soup = BeautifulSoup(html, "html.parser")
-        body_tag = soup.find("html")
-        if body_tag:
+        body = soup.find("body")
+        if body is None:
+            return html
+        code_text = "".join(pre.get_text() for pre in body.find_all("pre"))
+        body_text = (
+            body.get_text().replace(code_text, "") if code_text else body.get_text()
+        )
 
-            body_tag.append(BeautifulSoup(combined_scripts, "html.parser"))
-
+        scripts = []
+        if body.find("pre"):
+            scripts.append(prism_scripts)
+        if MATH_PRESENCE_PATTERN.search(body_text):
+            scripts.append(mathjax_config)
+        if scripts:
+            body.append(BeautifulSoup("\n".join(scripts), "html.parser"))
         return str(soup)
 
     @staticmethod
-    def replace_header_tags(html: str) -> str:
-        """Replaces h1 tags with header tags."""
-        html = html.replace("<h1>", "<header>").replace("</h1>", "</header>")
-        return html
+    def promote_title(html: str) -> str:
+        """Makes the first heading the article's only <h1>."""
+        soup = BeautifulSoup(html, "html.parser")
+        section = soup.find(id="article-body")
+        if section is None:
+            return html
+        title = section.find(["h1", "h2"])
+        if title is None:
+            return html
+        for heading in section.find_all("h1"):
+            if heading is not title:
+                heading.name = "h2"
+        title.name = "h1"
+        return str(soup)
 
     @staticmethod
     def clean_whitespace(html: str) -> str:
@@ -420,18 +499,30 @@ class HtmlEnhancer:
 
             processed_rows.append(cells)
 
-        processed_rows = [
-            row
-            for row in processed_rows
-            if not all(re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row)
-        ]
+        def is_separator(row: List[str]) -> bool:
+            return all(
+                re.match(r"\s*:?-+:?\s*", cell) or not cell.strip() for cell in row
+            )
+
+        has_header = len(processed_rows) > 1 and is_separator(processed_rows[1])
+        processed_rows = [row for row in processed_rows if not is_separator(row)]
 
         html_table = "<table>"
-        for row in processed_rows:
+        for idx, row in enumerate(processed_rows):
+            is_header = has_header and idx == 0
+            cell_tag = "th" if is_header else "td"
+            if is_header:
+                html_table += "<thead>"
+            elif idx == (1 if has_header else 0):
+                html_table += "<tbody>"
             html_table += "<tr>"
             for cell in row:
-                html_table += f"<td>{cell}</td>"
+                html_table += f"<{cell_tag}>{cell}</{cell_tag}>"
             html_table += "</tr>"
+            if is_header:
+                html_table += "</thead>"
+        if len(processed_rows) > (1 if has_header else 0):
+            html_table += "</tbody>"
         html_table += "</table>"
 
         return "\n" + html_table + "\n"
@@ -516,23 +607,51 @@ def discover_source_entries(source: dict) -> list[dict]:
     return entries
 
 
-def process_url(url_data):
-    response = requests.get(url_data.url, timeout=30)
-    response.raise_for_status()
-    website_text = response.text
+def make_session() -> requests.Session:
+    retry = Retry(
+        total=4,
+        backoff_factor=1.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET",),
+    )
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=retry, pool_maxsize=16))
+    return session
 
-    if website_text.strip() == "404: Not Found":
-        raise ValueError(f"Unexpected 404 body returned for {url_data.url}")
 
-    code_blocks = MarkdownProcessor.extract_code_blocks(website_text)
+def fetch_markdown(urls: List[UrlData]) -> Dict[str, str]:
+    """Downloads every source first, so a failed fetch never leaves a half-built site."""
+    session = make_session()
 
-    md_processor = MarkdownProcessor()
-    html = md_processor.run(website_text)
+    def fetch(url_data: UrlData) -> tuple[str, Optional[str]]:
+        try:
+            response = session.get(url_data.url, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            print(f"Error: could not fetch {url_data.url}: {exc}", file=sys.stderr)
+            return url_data.url, None
+        return url_data.url, response.text
 
-    html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        texts = dict(executor.map(fetch, urls))
+
+    failed = [url for url, text in texts.items() if text is None]
+    if failed:
+        raise RuntimeError(
+            f"{len(failed)} markdown sources could not be fetched; "
+            "the existing articles were left untouched."
+        )
+    return texts
+
+
+def process_url(item: tuple[UrlData, str]) -> None:
+    url_data, website_text = item
+    html = MarkdownProcessor.run(website_text)
 
     enhancer = HtmlEnhancer()
     date_override = None
+    if url_data.url in SOURCE_DATES:
+        date_override = date_utils.format_date(SOURCE_DATES[url_data.url])
     if RANDOM_DATE_RANGE:
         start_date = RANDOM_DATE_START or datetime(2016, 1, 1)
         end_date = RANDOM_DATE_END or datetime.now()
@@ -583,10 +702,25 @@ def main():
         RANDOM_DATE_END = date_utils.parse_date_arg(args.random_date_end, now=now)
         RANDOM_DATE_SEED = args.random_date_seed
 
+    global SOURCE_DATES, ARTICLE_PATHS
     urls = read_urls()
+    texts = fetch_markdown(urls)
 
+    if not RANDOM_DATE_RANGE:
+        SOURCE_DATES = source_dates.upstream_dates(url.url for url in urls)
+        missing = len(urls) - len(SOURCE_DATES)
+        if missing:
+            print(
+                f"Warning: {missing} articles fall back to today's date",
+                file=sys.stderr,
+            )
+    ARTICLE_PATHS = {
+        source_dates.parse_raw_url(url.url): url.output_path.resolve() for url in urls
+    }
+
+    clean_output_dirs.main()
     with Pool() as pool:
-        pool.map(process_url, urls)
+        pool.map(process_url, [(url, texts[url.url]) for url in urls])
 
 
 if __name__ == "__main__":

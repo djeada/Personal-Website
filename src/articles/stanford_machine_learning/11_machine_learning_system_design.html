@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/stanford_machine_learning/11_machine_learning_system_design" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,25 @@
             },
             "url": "https://adamdjellouli.com/articles/stanford_machine_learning/11_machine_learning_system_design",
             "description": "These notes outline the key strategies and considerations for developing a spam classification system.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2024-06-20",
+            "image": "https://adamdjellouli.com/resources/article-images/spam-25e3be8106.webp",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Machine Learning System Design: Building a Spam Classifier" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/stanford_machine_learning/11_machine_learning_system_design" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="These notes outline the key strategies and considerations for developing a spam classification system." property="og:description" />
+    <meta content="https://adamdjellouli.com/resources/article-images/spam-25e3be8106.webp" property="og:image" />
+    <meta content="2024-06-20" property="article:modified_time" />
+    <meta content="summary_large_image" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,47 +82,61 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+    <script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#machine-learning-system-design-building-a-spam-classifier">Machine Learning System Design: Building a Spam Classifier</a>
+                    <li><a href="#prioritizing-work-in-spam-classification">Prioritizing Work in Spam Classification</a>
                         <ol>
-                            <li><a href="#prioritizing-work-in-spam-classification">Prioritizing Work in Spam Classification</a>
-                                <ol>
-                                    <li><a href="#feature-selection">Feature Selection</a></li>
-                                    <li><a href="#vector-representation-of-emails">Vector Representation of Emails</a></li>
-                                    <li><a href="#example-of-input-representation">Example of Input Representation</a></li>
-                                    <li><a href="#word-occurrences-analysis">Word Occurrences Analysis</a></li>
-                                    <li><a href="#model-selection">Model Selection</a></li>
-                                    <li><a href="#why-this-approach-">Why This Approach?</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#improving-system-accuracy">Improving System Accuracy</a></li>
-                            <li><a href="#error-analysis">Error Analysis</a></li>
-                            <li><a href="#error-metrics-for-skewed-classes">Error Metrics for Skewed Classes</a>
-                                <ol>
-                                    <li><a href="#cancer-classification-example">Cancer Classification Example</a></li>
-                                    <li><a href="#f-score-computation">F-Score Computation</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#understanding-precision-and-recall">Understanding Precision and Recall</a>
-                                <ol>
-                                    <li><a href="#definition-of-terms">Definition of Terms</a></li>
-                                    <li><a href="#precision">Precision</a></li>
-                                    <li><a href="#recall">Recall</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#trading-off-precision-and-recall">Trading off Precision and Recall</a>
-                                <ol>
-                                    <li><a href="#logistic-regression-classifier-example">Logistic Regression Classifier Example</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#calculating-the-f-score">Calculating the F-Score</a></li>
+                            <li><a href="#feature-selection">Feature Selection</a></li>
+                            <li><a href="#vector-representation-of-emails">Vector Representation of Emails</a></li>
+                            <li><a href="#example-of-input-representation">Example of Input Representation</a></li>
+                            <li><a href="#word-occurrences-analysis">Word Occurrences Analysis</a></li>
+                            <li><a href="#model-selection">Model Selection</a></li>
+                            <li><a href="#why-this-approach">Why This Approach?</a></li>
                         </ol>
                     </li>
-                    <li><a href="#reference">Reference</a></li>
+                    <li><a href="#improving-system-accuracy">Improving System Accuracy</a></li>
+                    <li><a href="#error-analysis">Error Analysis</a></li>
+                    <li><a href="#error-metrics-for-skewed-classes">Error Metrics for Skewed Classes</a>
+                        <ol>
+                            <li><a href="#cancer-classification-example">Cancer Classification Example</a></li>
+                            <li><a href="#f-score-computation">F-Score Computation</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#understanding-precision-and-recall">Understanding Precision and Recall</a>
+                        <ol>
+                            <li><a href="#definition-of-terms">Definition of Terms</a></li>
+                            <li><a href="#precision">Precision</a></li>
+                            <li><a href="#recall">Recall</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#trading-off-precision-and-recall">Trading off Precision and Recall</a>
+                        <ol>
+                            <li><a href="#logistic-regression-classifier-example">Logistic Regression Classifier Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#calculating-the-f-score">Calculating the F-Score</a>
+                        <ol>
+                            <ol>
+                                <li><a href="#reference">Reference</a></li>
+                            </ol>
+                        </ol>
+                    </li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -141,7 +164,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: June 20, 2024</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -160,11 +183,11 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="machine-learning-system-design-building-a-spam-classifier">Machine Learning System Design: Building a Spam Classifier</h2>
+            <h1>Machine Learning System Design: Building a Spam Classifier</h1>
             <p>These notes outline the key strategies and considerations for developing a spam classification system. This process involves several steps, from feature selection to error analysis, and addresses the challenges of working with skewed datasets.</p>
             <h3 id="prioritizing-work-in-spam-classification">Prioritizing Work in Spam Classification</h3>
             <p>When building a spam classifier, a critical step is to select and utilize features effectively. Let's break down the process and include an example of how inputs might look.</p>
-            <p><img alt="Spam Classifier Visualization" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/spam.png" /></p>
+            <p><img alt="Spam Classifier Visualization" decoding="async" height="359" loading="lazy" src="../../resources/article-images/spam-25e3be8106.webp" width="774" /></p>
             <h4 id="feature-selection">Feature Selection</h4>
             <p>The first step involves choosing words that are strongly indicative of whether an email is spam. This is based on the assumption that certain words appear more frequently in spam emails than in non-spam emails.</p>
             <ul>
@@ -294,42 +317,44 @@ print(binary_vectors)</code></pre>
             <p>This code will create and display the binary vectors representing the presence or absence of selected features (words) in each email, along with their labels.</p>
             <h4 id="example-of-input-representation">Example of Input Representation</h4>
             <p>Consider an example where our feature set consists of words: <code>["buy", "discount", "deal", "Andrew", "now"]</code>. An email's content will be transformed into a vector based on the presence or absence of these words.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Email Content</td>
-                    <td>buy</td>
-                    <td>discount</td>
-                    <td>deal</td>
-                    <td>Andrew</td>
-                    <td>now</td>
-                </tr>
-                <tr>
-                    <td>"Buy now at a great discount"</td>
-                    <td>1</td>
-                    <td>1</td>
-                    <td>0</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>"Meeting Andrew now"</td>
-                    <td>0</td>
-                    <td>0</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>"Deal of the century"</td>
-                    <td>0</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>0</td>
-                    <td>0</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Email Content</th>
+                        <th>buy</th>
+                        <th>discount</th>
+                        <th>deal</th>
+                        <th>Andrew</th>
+                        <th>now</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"Buy now at a great discount"</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>"Meeting Andrew now"</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>"Deal of the century"</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>0</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Below is the Python implementation that transforms email content into vectors based on the presence or absence of specific words in a given feature set.</p>
             <div>
                 <pre><code class="language-python">import pandas as pd
@@ -490,7 +515,7 @@ print("Naive Bayes Classification Report:")
 print(naive_bayes_report)</code></pre>
             </div>
             <p>This implementation provides a basic comparison of two common classification models for spam detection and highlights how to evaluate their performance based on different metrics.</p>
-            <h4 id="why-this-approach-">Why This Approach?</h4>
+            <h4 id="why-this-approach">Why This Approach?</h4>
             <p>This method of feature selection and vector representation is effective for several reasons:</p>
             <ul>
                 <li><strong>Simplicity:</strong> It’s straightforward to implement and understand.</li>
@@ -600,7 +625,7 @@ plt.tight_layout()
 plt.savefig('/mnt/data/combined_learning_curves.png')
 plt.show()</code></pre>
             </div>
-            <p><img alt="output(2)" src="https://github.com/djeada/Stanford-Machine-Learning/assets/37275728/1bd24b7c-4762-440c-93da-8871ed1edb1a" /></p>
+            <p><img alt="output(2)" decoding="async" height="477" loading="lazy" src="../../resources/article-images/1bd24b7c-4762-440c-93da-8871ed1edb1a-5ed327326f.webp" width="960" /></p>
             <p>Conclusions:</p>
             <p>I. <strong>Logistic Regression</strong>:</p>
             <ul>
@@ -746,75 +771,79 @@ weighted avg       0.81      0.50      0.47        10</code></pre>
 weighted avg       0.81      0.50      0.47        10</code></pre>
             </div>
             <p><strong>Logistic Regression Errors:</strong></p>
-            <p>
             <table>
-                <tr>
-                    <td>Email</td>
-                    <td>True Label</td>
-                    <td>Predicted Label</td>
-                </tr>
-                <tr>
-                    <td>Your order has been shipped</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Join us for a webinar on marketing</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Your invoice is attached</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Your delivery is on its way</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Invitation to connect on LinkedIn</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>True Label</th>
+                        <th>Predicted Label</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Your order has been shipped</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Join us for a webinar on marketing</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Your invoice is attached</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Your delivery is on its way</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Invitation to connect on LinkedIn</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><strong>Naive Bayes Errors:</strong></p>
-            <p>
             <table>
-                <tr>
-                    <td>Email</td>
-                    <td>True Label</td>
-                    <td>Predicted Label</td>
-                </tr>
-                <tr>
-                    <td>Your order has been shipped</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Join us for a webinar on marketing</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Your invoice is attached</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Your delivery is on its way</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td>Invitation to connect on LinkedIn</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>True Label</th>
+                        <th>Predicted Label</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Your order has been shipped</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Join us for a webinar on marketing</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Your invoice is attached</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Your delivery is on its way</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Invitation to connect on LinkedIn</td>
+                        <td>0</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Conclusions:</p>
             <p>I. <strong>Model Performance</strong>: Both Logistic Regression and Naive Bayes models have similar performance on this dataset. They correctly identify most spam emails but struggle with non-spam emails.</p>
             <p>II. <strong>Error Patterns</strong>:</p>
@@ -865,7 +894,7 @@ weighted avg       0.81      0.50      0.47        10</code></pre>
                 <li><strong>Standard Threshold ($h_{\theta}(x) \geq 0.5$):</strong> The default threshold for binary classification.</li>
                 <li><strong>Modified Threshold ($h_{\theta}(x) \geq 0.8$):</strong> Increases precision but may reduce recall, leading to fewer overall positive predictions.</li>
             </ul>
-            <p><img alt="Precision-Recall Trade-off" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/precission_recall.png" /></p>
+            <p><img alt="Precision-Recall Trade-off" decoding="async" height="265" loading="lazy" src="../../resources/article-images/precission-recall-ed35835d9a.webp" width="259" /></p>
             <h3 id="calculating-the-f-score">Calculating the F-Score</h3>
             <p>The $F_{score}$ is a metric that combines precision and recall into a single number, often used to find a balance between these two measures:</p>
             <p>$$F_{score} = 2 \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$$</p>
@@ -940,23 +969,33 @@ print(f"Optimal F-Score: {optimal_f_score}")</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -973,21 +1012,5 @@ print(f"Optimal F-Score: {optimal_f_score}")</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

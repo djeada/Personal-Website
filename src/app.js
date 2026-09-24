@@ -59,10 +59,10 @@ function checkLogo() {
     let logoImage = document.getElementById("logo-image");
     if (document.body.classList.contains("dark-mode")) {
         logoImage.src =
-            "https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo_dark.PNG";
+            "/resources/brand/logo-dark.webp";
     } else {
         logoImage.src =
-            "https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG";
+            "/resources/brand/logo.webp";
     }
 }
 
@@ -210,6 +210,21 @@ function handleCreateIssueClick() {
 }
 
 
+const HTML2PDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = () => {
+            script.remove();
+            reject(new Error(`Unable to load ${src}`));
+        };
+        document.head.appendChild(script);
+    });
+}
+
 function handleDownloadClick() {
     const article = document.getElementById('article-body');
     if (!article) return;
@@ -234,11 +249,10 @@ function handleDownloadClick() {
 
 
 
-    cloned.querySelectorAll('img').forEach(img => img.remove());
-
-
     cloned.querySelectorAll('header').forEach(header => {
-        header.innerHTML = '<h1>Your Custom Header</h1>';
+        const title = document.createElement('h1');
+        title.textContent = header.textContent.trim();
+        header.replaceChildren(title);
     });
 
 
@@ -255,7 +269,7 @@ function handleDownloadClick() {
 
     const options = {
         margin: 0.5,
-        filename: 'article.pdf',
+        filename: (location.pathname.split('/').pop().replace(/\.html$/, '') || 'article') + '.pdf',
         image: {
             type: 'jpeg',
             quality: 1
@@ -275,7 +289,9 @@ function handleDownloadClick() {
     };
 
 
-    html2pdf().set(options).from(cloned).save()
+    const ready = window.html2pdf ? Promise.resolve() : loadScript(HTML2PDF_URL);
+    ready
+        .then(() => html2pdf().set(options).from(cloned).save())
         .then(() => {
             document.body.removeChild(container);
             if (spinner) spinner.style.display = 'none';
@@ -302,22 +318,28 @@ function initializeThreeJS() {
 
 
 
+function initVideoFacades() {
+    document.querySelectorAll('.video-facade').forEach(button => {
+        button.addEventListener('click', () => {
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube-nocookie.com/embed/${button.dataset.videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+            iframe.title = button.dataset.videoTitle || 'YouTube video';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+            button.replaceWith(iframe);
+        }, {
+            once: true
+        });
+    });
+}
+
 function initLazyThreeJS() {
     const container = document.getElementById('threejs-container');
     if (!container) return;
     const appScript = Array.from(document.scripts).find(script => /\/app\.js(?:[?#]|$)/.test(script.src));
     const simulationUrl = new URL('ring-universe.js', appScript ? appScript.src : document.baseURI).href;
     let loading = false;
-    const loadScript = src => new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = () => {
-            script.remove();
-            reject(new Error(`Unable to load ${src}`));
-        };
-        document.head.appendChild(script);
-    });
     const load = async () => {
         if (loading) return;
         loading = true;
@@ -472,6 +494,7 @@ function main() {
 
 
     initLazyThreeJS();
+    initVideoFacades();
 
 
     const suggestEditButton = document.querySelector('.btn-suggest-edit');

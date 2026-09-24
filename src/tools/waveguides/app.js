@@ -1,4 +1,3 @@
-/* Waveguides and optical fibres: page glue. Physics lives in ../shared/optics/waveguides.js. */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -9,7 +8,7 @@
     const DEG = 180 / Math.PI;
     const C0 = core.constants.c;
 
-    // ------------------------------------------------------------------ defaults & presets
+
     const DEFAULTS = {
         geo: "slab",
         pol: "TE",
@@ -134,7 +133,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     const sliders = ["n1Slider", "n2Slider", "dSlider", "lambdaSlider", "gapSlider"].map($);
     UI.enhanceSlider($("n1Slider"), {
         unit: "",
@@ -194,7 +193,7 @@
         }
     });
 
-    // ------------------------------------------------------------------ state
+
     let S = ctl.get();
     let input = null,
         sol = null,
@@ -224,7 +223,7 @@
         if (S.geo === "slab") sol = W.solveSlab(input, S.pol);
         else sol = W.solveFibre(input);
         const labels = sol.modes.map((m) => m.label);
-        // repopulate the mode selector when the list changed
+
         const current = Array.from(modeSel.options).map((o) => o.value).join("|");
         if (current !== labels.join("|")) {
             modeSel.innerHTML = "";
@@ -235,7 +234,7 @@
                 modeSel.appendChild(o);
             }
         }
-        // keep the requested mode if it exists; map TE↔TM of the same order when the polarization changes
+
         let target = wantedMode;
         if (S.geo === "slab" && /^T[EM]\d+$/.test(target)) target = S.pol + target.slice(2);
         if (S.geo === "slab" && /^LP/.test(target)) target = S.pol + "0";
@@ -254,7 +253,7 @@
         coup = S.geo === "slab" ? W.coupledSlabs(input, S.pol, gap) : W.coupledFibres(input, gap);
     }
 
-    /** Transverse cut through the selected mode: x in µm, ψ peak-normalised (fibre: along φ = 0/π). */
+
     function buildProfile(m) {
         const a = m.a;
         const tail = Number.isFinite(m.decayLength) ? m.decayLength : 4 * a;
@@ -288,7 +287,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ helpers
+
     function noData(ctx, w, h, text) {
         ctx.fillStyle = PAL.background;
         ctx.fillRect(0, 0, w, h);
@@ -301,7 +300,7 @@
     const colorOf = (i) => PAL.series[i % PAL.series.length];
     const dashOf = (i) => PAL.dashes[Math.floor(i / PAL.series.length) % PAL.dashes.length];
 
-    /** Choose a length unit for an axis range given in metres. */
+
     function lengthUnit(maxM) {
         if (maxM >= 0.5) return {
             unit: "m",
@@ -317,7 +316,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ canvas 1: field snapshot
+
     let fieldMap = null;
     const fieldCv = UI.setupCanvas($("fieldCanvas"), {
         aspect: 2.6,
@@ -334,8 +333,8 @@
             const margin = {
                 r: 62
             };
-            // provisional mapping to learn the plot rectangle
-            const lamG = sel.lambda0 / sel.neff * 1e6; // guided wavelength in µm
+
+            const lamG = sel.lambda0 / sel.neff * 1e6;
             const tmp = UI.plot(ctx, {
                 x: 0,
                 y: 0,
@@ -357,7 +356,7 @@
             });
             const P = tmp.plot;
             ctx.clearRect(0, 0, w, h);
-            let Z = (P.w / P.h) * 2 * X; // equal scale
+            let Z = (P.w / P.h) * 2 * X;
             const pxPerFringe = P.w * lamG / Z;
             let compressed = false;
             if (pxPerFringe < 8) {
@@ -391,7 +390,7 @@
                 ny = Math.max(40, Math.min(180, Math.round(Q.h)));
             const col = new Float64Array(nx),
                 row = new Float64Array(ny);
-            const beta = sel.beta * 1e-6; // rad/µm
+            const beta = sel.beta * 1e-6;
             for (let i = 0; i < nx; i++) col[i] = Math.cos(beta * (Z * (i + 0.5) / nx) - phase);
             for (let j = 0; j < ny; j++) row[j] = profile.fn((-X + 2 * X * (j + 0.5) / ny) * 1e-6);
             const data = new Float64Array(nx * ny);
@@ -402,7 +401,7 @@
                 max: 1,
                 smooth: true
             });
-            // core boundaries
+
             ctx.save();
             ctx.strokeStyle = "rgba(236, 233, 248, 0.75)";
             ctx.setLineDash([6, 4]);
@@ -417,7 +416,7 @@
             ctx.setLineDash([]);
             ctx.strokeStyle = PAL.axis;
             ctx.strokeRect(Q.x + 0.5, Q.y + 0.5, Q.w - 1, Q.h - 1);
-            // ray directions ±θ (screen angle respects the axis scales)
+
             const sx = Q.w / Z,
                 sy = Q.h / (2 * X);
             const L = Math.min(Q.w * 0.22, 140);
@@ -498,7 +497,7 @@
         ctx.restore();
     }
 
-    // ------------------------------------------------------------------ canvas 2: ray picture
+
     const rayCv = UI.setupCanvas($("rayCanvas"), {
         aspect: 2.8,
         minHeight: 230,
@@ -515,7 +514,7 @@
             const aum = profile.aum,
                 Y = 1.6 * aum;
             const tanT = Math.tan(sel.theta);
-            const period = 4 * sel.a / Math.max(tanT, 1e-9); // metres, one full zig-zag cycle
+            const period = 4 * sel.a / Math.max(tanT, 1e-9);
             const zMax = 2 * period,
                 zMin = -0.3 * period;
             const U = lengthUnit(zMax);
@@ -546,7 +545,7 @@
             ctx.beginPath();
             ctx.rect(P.x, P.y, P.w, P.h);
             ctx.clip();
-            // core and cladding shading, air on the left of the entrance face
+
             const z0 = map.xToPx(0);
             ctx.fillStyle = "rgba(105, 245, 231, 0.10)";
             ctx.fillRect(z0, map.yToPx(aum), P.x + P.w - z0, map.yToPx(-aum) - map.yToPx(aum));
@@ -565,18 +564,18 @@
             ctx.moveTo(z0, P.y);
             ctx.lineTo(z0, P.y + P.h);
             ctx.stroke();
-            // steepest guided ray (dashed)
+
             const tMax = Math.acos(sel.n2 / sel.n1);
             drawZigZag(ctx, map, U, tMax, zMax, "rgba(248, 212, 119, 0.55)", [6, 5], 1.3, aum);
-            // the mode's ray
+
             drawZigZag(ctx, map, U, sel.theta, zMax, PAL.series[0], [], 2.2, aum);
-            // external ray and acceptance cone in air (n0 = 1)
+
             const sinAir = sel.n1 * Math.sin(sel.theta);
             const sinAcc = Math.min(1, sel.n1 * Math.sin(tMax));
             const zAir = zMin * 0.92;
             const slopeAir = Math.tan(Math.asin(Math.min(1, sinAir)));
             const slopeAcc = Math.tan(Math.asin(Math.min(0.999, sinAcc)));
-            // cone (data coordinates: x = slope · (z − 0) · 1e6 µm)
+
             ctx.fillStyle = "rgba(248, 212, 119, 0.10)";
             ctx.beginPath();
             ctx.moveTo(z0, map.yToPx(0));
@@ -591,14 +590,14 @@
             ctx.lineTo(z0, map.yToPx(0));
             ctx.stroke();
             ctx.restore();
-            // labels
+
             ctx.save();
             labelBox(ctx, narrow ? `θ = ${(sel.theta * DEG).toFixed(2)}°, wall ${(sel.incidence * DEG).toFixed(2)}° > θc ${(Math.asin(sel.n2 / sel.n1) * DEG).toFixed(2)}°` :
                 `θ = ${(sel.theta * DEG).toFixed(2)}° (incidence on wall ${(sel.incidence * DEG).toFixed(2)}° > θc ${(Math.asin(sel.n2 / sel.n1) * DEG).toFixed(2)}°)`, P.x + 6, P.y + 6, fs);
             labelBox(ctx, `dashed: θmax = ${(tMax * DEG).toFixed(2)}°`, P.x + 6, P.y + fs + 14, fs, PAL.marker);
             labelBox(ctx, "air", map.xToPx(zMin * U.s) + 4, P.y + P.h - fs - 10, fs, PAL.textMuted);
             ctx.restore();
-            // profile panel
+
             const pr = narrow ? {
                 x: 0,
                 y: rayH,
@@ -698,7 +697,7 @@
         ctx.setLineDash([]);
     }
 
-    // ------------------------------------------------------------------ canvas 3: profile
+
     let profMap = null;
     const profCv = UI.setupCanvas($("profileCanvas"), {
         aspect: 1.6,
@@ -786,7 +785,7 @@
         profCv.redraw();
     });
 
-    // ------------------------------------------------------------------ canvas 4: all modes / LP image
+
     const imgCv = UI.setupCanvas($("imageCanvas"), {
         aspect: 1.25,
         minHeight: 260,
@@ -955,7 +954,7 @@
         $("imageCaption").textContent = `Scalar LP field ψ(r, φ) = J_l(ur/a) cos lφ inside, K_l(wr/a) cos lφ outside (${S.inten ? "intensity |ψ|², inferno" : "signed field, diverging ±peak"}); dashed circle = core (radius a). LP approximation: valid for Δ ≪ 1. Degeneracy ${sel.degeneracy} (orientations × polarizations).`;
     }
 
-    // ------------------------------------------------------------------ canvas 5: b–V diagram
+
     const bvCache = new Map();
 
     function bvCurves(geo, Vmax, ratio) {
@@ -1024,7 +1023,7 @@
             }));
             const dots = sol.modes.filter((m) => V <= Vmax).map((m) => [V, m.b]);
             if (S.geo === "slab") {
-                // the other polarization at the current V
+
                 const other = W.solveSlab(input, S.pol === "TE" ? "TM" : "TE").modes;
                 other.forEach((m) => {
                     if (V <= Vmax) dots.push([V, m.b]);
@@ -1037,17 +1036,15 @@
                 pointRadius: 4,
                 color: PAL.cursor
             });
-            const markers = S.geo === "slab" ?
-                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => ({
-                    x: k * Math.PI / 2,
-                    label: k === 1 ? "π/2" : undefined,
-                    color: "rgba(248,212,119,0.55)"
-                })) :
-                [{
-                    x: W.SINGLE_MODE_FIBRE_V,
-                    label: "2.405",
-                    color: PAL.marker
-                }];
+            const markers = S.geo === "slab" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => ({
+                x: k * Math.PI / 2,
+                label: k === 1 ? "π/2" : undefined,
+                color: "rgba(248,212,119,0.55)"
+            })) : [{
+                x: W.SINGLE_MODE_FIBRE_V,
+                label: "2.405",
+                color: PAL.marker
+            }];
             bvMap = UI.plot(ctx, {
                 x: 0,
                 y: 0,
@@ -1073,7 +1070,7 @@
                 legend: false,
                 fontSize: fs
             });
-            // curve labels
+
             ctx.save();
             ctx.font = (fs - 0) + "px " + PAL.font;
             curves.filter((c) => !c.tm).slice(0, S.geo === "slab" ? 8 : 10).forEach((c) => {
@@ -1117,7 +1114,7 @@
         }));
     }
 
-    // ------------------------------------------------------------------ sweeps (n_eff, Γ)
+
     let sweep = null,
         sweepKey = "";
 
@@ -1135,7 +1132,7 @@
             ...input,
             d: x * 1e-6
         };
-        // tracked modes: those guided at the high-V end of the sweep
+
         const hiInput = S.sweep === "lambda" ? inputAt(400) : inputAt(xs[nPts - 1]);
         let labels;
         if (!(S.n1 > S.n2)) labels = [];
@@ -1174,7 +1171,7 @@
     }
     let sweepMap = null,
         gammaMap = null;
-    /** Label each curve at its last finite point (used when the legend would be too long). */
+
     function endLabels(ctx, map, values, fs) {
         if (!map) return;
         ctx.save();
@@ -1318,7 +1315,7 @@
     $("sweepCanvas").addEventListener("click", sweepClick(() => sweepMap));
     $("gammaCanvas").addEventListener("click", sweepClick(() => gammaMap));
 
-    // ------------------------------------------------------------------ group index vs λ
+
     let group = null,
         groupKey = "",
         groupMap = null;
@@ -1415,7 +1412,7 @@
         if (groupMap.contains(px, py)) setSlider("lambdaSlider", Math.round(groupMap.pxToX(px)));
     });
 
-    // ------------------------------------------------------------------ coupler
+
     function couplerLc() {
         if (!coup) return {
             Lc: NaN,
@@ -1504,7 +1501,7 @@
         }
     });
 
-    // ------------------------------------------------------------------ readouts, table, warnings
+
     const descs = {
         field: UI.describeCanvas($("fieldCanvas"), "Field snapshot of the guided mode", {
             label: "Guided mode field in the x–z plane"
@@ -1606,7 +1603,7 @@
             ["rMode", "rNeff", "rBeta", "rB", "rUW", "rGamma", "rDecay", "rTheta", "rThetaMax", "rRes", "rNg", "rDw", "rCut"].forEach((id) => set(id, "—"));
         }
 
-        // modal dispersion (1 km)
+
         if (disp && hasGuide) {
             const L = 1000;
             set("dRay", core.formatSI(disp.rayDelayPerLength * L, "s"));
@@ -1620,7 +1617,7 @@
             "Slab: the spread is over the guided modes of the chosen polarization. The ray estimate compares the axial ray with the steepest guided ray. A single-mode guide has no intermodal delay; what remains is chromatic dispersion (D_w above, plus material dispersion, which this tool leaves out)." :
             "The ray estimate (meridional rays) compares the axial ray with the ray at the critical angle; it is meaningful only for V ≫ 1, where many modes fill the ray angles. The mode-based value is the spread of the computed LP group delays. A single-mode fibre has no intermodal delay; what remains is chromatic dispersion (D_w above, plus material dispersion, which this tool leaves out).";
 
-        // coupler readouts
+
         const {
             Lc,
             source
@@ -1651,7 +1648,7 @@
 
         buildTable();
 
-        // canvas descriptions
+
         if (sel) {
             descs.field.update(`${sel.label} field snapshot: core |x| < ${fmt(profile.aum, 4)} µm, n_eff ${sel.neff.toFixed(5)}, evanescent 1/e depth ${Number.isFinite(sel.decayLength) ? core.formatSI(sel.decayLength, "m") : "infinite"}, ray angle ${(sel.theta * DEG).toFixed(2)} degrees.`);
             descs.ray.update(`Zig-zag ray at ${(sel.theta * DEG).toFixed(2)} degrees to the axis, steepest guided ray ${(Math.acos(sel.n2 / sel.n1) * DEG).toFixed(2)} degrees, acceptance angle in air ${hasGuide && sol.NA < 1 ? (Math.asin(sol.NA) * DEG).toFixed(2) : 90} degrees.`);
@@ -1712,7 +1709,7 @@
             `Guided LP modes (${sol.lpCount} LP, ${sol.totalModes} counting degeneracy; V²/2 ≈ ${Math.round(sol.V * sol.V / 2)})${sol.modes.length > maxRows ? `, showing the first ${maxRows} (CSV has all)` : ""}.`;
     }
 
-    // ------------------------------------------------------------------ render scheduling
+
     let pending = false;
 
     function schedule() {
@@ -1732,7 +1729,7 @@
         [fieldCv, rayCv, profCv, imgCv, bvCv, sweepCv, gammaCv, groupCv, coupleCv].forEach((c) => c.redraw());
     }
 
-    // ------------------------------------------------------------------ animation
+
     const playBtn = $("playBtn");
     const loop = UI.createLoop((dt) => {
         phase = (phase + 2 * Math.PI * 0.5 * dt) % (2 * Math.PI);
@@ -1760,7 +1757,7 @@
         schedule();
     });
 
-    // ------------------------------------------------------------------ presets
+
     document.querySelectorAll(".wg-presets .preset-option").forEach((btn) => {
         btn.addEventListener("click", () => {
             const p = PRESETS[btn.dataset.preset];
@@ -1774,7 +1771,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ export
+
     UI.addExportBar($("exportHost"), {
         name: "waveguides",
         url,

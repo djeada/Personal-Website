@@ -1,21 +1,17 @@
 "use strict";
 
-/*
- * Polarization lab: ordered element bench, Jones + Mueller calculus, Poincaré sphere,
- * birefringent A-plates. Physics lives in ../shared/optics/polarization.js (pure, tested);
- * this file is page glue (state, DOM, canvases).
- */
+
 (function() {
     const Pol = window.OpticsModels.polarization;
     const UI = window.OpticsUI;
     const DEG = Math.PI / 180;
     const MAX_ELEMENTS = 5;
     const APPROX_TOL_DEG = Pol.DEFAULT_APPROX_TOL_DEG;
-    const OMEGA_DISPLAY = Math.PI; // rad/s on screen: one optical period is shown as 2 s
+    const OMEGA_DISPLAY = Math.PI;
 
     const $ = (id) => document.getElementById(id);
 
-    // ------------------------------------------------------------------ element catalogue
+
     const TYPES = {
         polarizer: {
             code: "P",
@@ -86,7 +82,7 @@
         return el;
     }
 
-    /** UI element (degrees, µm) → model element (radians, metres). */
+
     function toModel(el) {
         return {
             type: el.type,
@@ -99,7 +95,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ state + URL encoding
+
     const DEFAULTS = {
         psi: 45,
         delta: 0,
@@ -158,7 +154,7 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ static controls
+
     const psiSlider = $("psiSlider"),
         deltaSlider = $("deltaSlider"),
         dopSlider = $("dopSlider"),
@@ -196,7 +192,7 @@
         render();
     }));
 
-    // ------------------------------------------------------------------ bench DOM
+
     const benchList = $("benchList"),
         benchEmpty = $("benchEmpty"),
         addType = $("addType"),
@@ -429,7 +425,7 @@
         render();
     });
 
-    // ------------------------------------------------------------------ presets
+
     const P = (a) => ({
         type: "polarizer",
         a
@@ -578,7 +574,7 @@
         b.addEventListener("click", () => applyPreset(b.dataset.preset));
     });
 
-    // ------------------------------------------------------------------ physics
+
     let result = null;
     const ctxModel = () => ({
         wavelength: state.lam * 1e-9
@@ -598,12 +594,12 @@
         result.models = els;
     }
 
-    /** Jones vector to draw for a stage: exact when available, else the polarized part from Stokes. */
+
     function stageJones(st) {
         return st.J || Pol.jonesFromStokes(st.S);
     }
 
-    // ------------------------------------------------------------------ formatting
+
     function fmtNum(x, digits = 3) {
         if (!Number.isFinite(x)) return "—";
         const v = Math.abs(x) < 5 * Math.pow(10, -digits - 1) ? 0 : x;
@@ -663,7 +659,7 @@
             `</span><span class="jm-bracket">]</span>`;
     }
 
-    // ------------------------------------------------------------------ readouts
+
     const el$ = {
         trans: $("stat-trans"),
         dop: $("stat-dop"),
@@ -722,7 +718,7 @@
             el$.fieldBadge.textContent = "input";
         }
 
-        // per-stage table
+
         el$.stepBody.innerHTML = result.stages.map((st, k) => {
             const d = st.desc;
             const name = k === 0 ? "Input" : `${k}. ${elementSummary(state.bench[k - 1])}`;
@@ -734,7 +730,7 @@
                 `<td>${orientLabel(d)}</td><td>${fmtDeg(d.ellipticity)}</td></tr>`;
         }).join("");
 
-        // derived notes in bench rows
+
         state.bench.forEach((el, i) => {
             const r = rowRefs[i];
             if (!r) return;
@@ -748,7 +744,7 @@
         });
     }
 
-    /** Axis angle reduced to (−90°, 90°]. */
+
     function fmtAngle180(rad) {
         let d = rad / DEG;
         d = ((d + 90) % 180 + 180) % 180 - 90;
@@ -756,12 +752,12 @@
         return d.toFixed(1).replace("-", "−") + "°";
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     const PAL = UI.CANVAS_PALETTE;
     const stageColor = (k) => (k === 0 ? "#ffffff" : PAL.series[(k - 1) % PAL.series.length]);
     const font = (px, weight = "") => `${weight ? weight + " " : ""}${px}px ${PAL.font}`;
-    let tNow = 0; // display time (s)
-    const phaseNow = () => -OMEGA_DISPLAY * tNow; // kz − ωt at z = 0
+    let tNow = 0;
+    const phaseNow = () => -OMEGA_DISPLAY * tNow;
 
     function fillBg(ctx, w, h) {
         ctx.fillStyle = PAL.background;
@@ -796,7 +792,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ field ellipse canvas
+
     function drawField(ctx, w, h) {
         fillBg(ctx, w, h);
         const fs = w < 420 ? 11 : 12;
@@ -814,7 +810,7 @@
         const cx = w / 2;
         let cy = h / 2 + 4;
         let R = Math.min(w * 0.36, (h - 56) / 2.3);
-        // On narrow canvases the legend reaches the y axis: start the plot below it.
+
         ctx.font = font(fs);
         const legendW = Math.max(...lines.map(([t]) => ctx.measureText(t).width));
         const legendBottom = fs + 6 + (lines.length - 1) * (fs + 4) + 4;
@@ -822,7 +818,7 @@
             R = Math.min(R, (h - fs - 14 - legendBottom) / 2.4);
             cy = legendBottom + 1.2 * R;
         }
-        // axes
+
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -858,7 +854,7 @@
         ctx.fillText("Ex/E₀", cx + 1.25 * R, cy - 7);
         ctx.textAlign = "left";
         ctx.fillText("Ey/E₀", cx + 7, cy - 1.2 * R + fs);
-        // +z out of screen
+
         const zx = cx - 18,
             zy = cy + 18;
         ctx.strokeStyle = PAL.textMuted;
@@ -874,7 +870,7 @@
         ctx.textAlign = "right";
         ctx.fillText("+z", zx - 9, zy + 4);
 
-        // element axes
+
         if (hasSel) {
             const el = state.bench[sel];
             const par = Pol.elementRetarderParams(toModel(el), ctxModel());
@@ -893,7 +889,7 @@
                 ctx.fillStyle = color;
                 ctx.font = font(fs);
                 ctx.textAlign = c >= 0 ? "left" : "right";
-                // keep the label inside the canvas on narrow screens
+
                 const tw = ctx.measureText(label).width;
                 const lx = clamp(cx + c * L + (c >= 0 ? 3 : -3), c >= 0 ? 4 : tw + 4, c >= 0 ? w - tw - 4 : w - 4);
                 ctx.fillText(label, lx, cy - s * L - 3);
@@ -935,7 +931,7 @@
             ctx.stroke();
             ctx.setLineDash([]);
             if (!dashed && d.handedness !== "none" && d.type !== "linear") {
-                // time-sense arrowhead: phase −ωt decreases with time
+
                 const a = Pol.fieldAt(J, 1.0),
                     b = Pol.fieldAt(J, 0.88);
                 const ax = cx + a.x * R,
@@ -955,7 +951,7 @@
         };
         if (before) drawStage(before, "rgba(236, 233, 248, 0.6)", true, 1.8);
         drawStage(after, afterColor, false, 2.8);
-        // instantaneous vectors
+
         const ph = phaseNow();
         if (before && Math.hypot(before.S.S1, before.S.S2, before.S.S3) > 1e-9) {
             const e = Pol.fieldAt(stageJones(before), ph);
@@ -965,7 +961,7 @@
             const e = Pol.fieldAt(stageJones(after), ph);
             arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, "#ff6b6b", 2.6, 10);
         }
-        // legend
+
         textBox(ctx, lines, 10, fs + 6, fs);
         ctx.font = font(fs);
         ctx.textAlign = "left";
@@ -973,7 +969,7 @@
         ctx.fillText("Facing the source: CCW = right-handed (S₃ > 0)", 10, h - 8);
     }
 
-    // ------------------------------------------------------------------ Poincaré sphere
+
     const VIEW0 = {
         yaw: -120 * DEG,
         pitch: 22 * DEG
@@ -1011,7 +1007,7 @@
         const cx = w / 2,
             cy = h / 2 + 6;
         const R = Math.min(w, h) * 0.36;
-        // body
+
         const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R);
         grad.addColorStop(0, "rgba(167, 139, 250, 0.16)");
         grad.addColorStop(1, "rgba(167, 139, 250, 0.03)");
@@ -1022,7 +1018,7 @@
         ctx.strokeStyle = PAL.gridStrong;
         ctx.lineWidth = 1.2;
         ctx.stroke();
-        // great circles: equator (S3 = 0), S2 = 0 and S1 = 0 meridians
+
         const circle = (fn, color) => {
             const n = 120;
             for (let i = 0; i < n; i++) {
@@ -1042,7 +1038,7 @@
         circle((t) => [Math.cos(t), Math.sin(t), 0], "rgba(184, 178, 207, 0.45)");
         circle((t) => [Math.cos(t), 0, Math.sin(t)], PAL.grid);
         circle((t) => [0, Math.cos(t), Math.sin(t)], PAL.grid);
-        // axes + pole labels
+
         const axes = [
             [
                 [1, 0, 0], "H", "S₁"
@@ -1083,7 +1079,7 @@
             ctx.fillText(axisName ? `${lab} (+${axisName})` : lab, lx.x, lx.y);
         }
         ctx.textBaseline = "alphabetic";
-        // element paths and points
+
         const stages = result.stages;
         for (let k = 1; k < stages.length; k++) {
             const path = Pol.elementPath(result.models[k - 1], stages[k - 1].S, ctxModel(), 48).map(normS).filter(Boolean);
@@ -1138,7 +1134,7 @@
         ctx.fillText("radius = DoP; drag to rotate", 10, h - 8);
     }
 
-    // ------------------------------------------------------------------ bench (field along z)
+
     function drawBench(ctx, w, h) {
         fillBg(ctx, w, h);
         const fs = w < 520 ? 11 : 12;
@@ -1148,7 +1144,7 @@
         const cy = h * 0.58;
         const A = Math.min(h * 0.26, 70);
         const ox = A * 0.42 * Math.cos(35 * DEG),
-            oy = A * 0.42 * Math.sin(35 * DEG); // +x recedes up-right
+            oy = A * 0.42 * Math.sin(35 * DEG);
         const proj = (x, y, zpx) => ({
             x: zpx + ox * x,
             y: cy - A * y - oy * x
@@ -1156,13 +1152,13 @@
         const segs = n + 1,
             segW = (right - left) / segs;
         const cyclesPerSeg = segW > 120 ? 1.5 : 1;
-        // z axis
+
         arrow(ctx, left - 10, cy, right + 12, cy, PAL.axis, 1.2, 8);
         ctx.fillStyle = PAL.textMuted;
         ctx.font = font(fs);
         ctx.textAlign = "right";
         ctx.fillText("+z", right + 12, cy + fs + 6);
-        // triad
+
         ctx.textAlign = "left";
         const tri = {
             x: left - 4,
@@ -1183,7 +1179,7 @@
             if (Sp > 1e-9) {
                 const J = stageJones(st);
                 const m = Math.max(40, Math.round(segW));
-                // stems
+
                 ctx.strokeStyle = color;
                 ctx.globalAlpha = 0.28;
                 ctx.lineWidth = 1;
@@ -1213,14 +1209,14 @@
                 ctx.textAlign = "center";
                 ctx.fillText(st.S.S0 > 1e-9 ? "unpolarized" : "no light", (z0 + z1) / 2, cy - 8);
             }
-            // segment label
+
             const d = st.desc;
             ctx.fillStyle = color;
             ctx.font = font(fs);
             ctx.textAlign = "center";
             const lab = `I=${fmtNum(d.S0, 2)}${segW > 95 ? `  p=${d.type === "none" ? "—" : fmtNum(d.dop, 2)}` : ""}`;
             ctx.fillText(lab, (z0 + z1) / 2 + (k === segs - 1 ? -4 : 0), h - 8);
-            // element plane at z1
+
             if (k < n) {
                 const el = state.bench[k];
                 const S = 1.25;
@@ -1276,7 +1272,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ crystal (o/e) canvas
+
     const QUARTZ_DN = Pol.CRYSTALS.quartz.ne - Pol.CRYSTALS.quartz.no;
 
     function crystalInfo() {
@@ -1294,7 +1290,7 @@
             el,
             g: null
         };
-        // ideal retarder drawn as the equivalent zero-order quartz A-plate (positive: c ⊥ fast axis)
+
         const gam = ((par.retardance % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
         const d = gam / (2 * Math.PI) * lam / QUARTZ_DN;
         return {
@@ -1336,7 +1332,7 @@
         const FAST = PAL.series[0],
             SLOW = PAL.series[2];
 
-        // --- front view (left)
+
         const stacked = w < 560;
         const sq = stacked ? Math.min(h * 0.42, w * 0.6) : Math.min(h - 16, w * 0.3);
         const fcx = stacked ? w / 2 : sq / 2 + 10,
@@ -1369,7 +1365,7 @@
         line(c, PAL.marker, [2, 4], 1.4, "c");
         line(f, FAST, [], 1.2, `fast (${g.fastRay})`, 1.05);
         line(s, SLOW, [], 1.2, `slow (${g.slowRay})`, 1.05);
-        // input ellipse (polarized part) and its projections
+
         if (Math.hypot(stIn.S.S1, stIn.S.S2, stIn.S.S3) > 1e-9) {
             ctx.beginPath();
             for (let i = 0; i <= 120; i++) {
@@ -1402,7 +1398,7 @@
         ctx.textAlign = "center";
         ctx.fillText("front view (x right, y up)", fcx, stacked ? sq + 14 : Math.min(h - 6, fcy + R * 1.15 + fs + 6));
 
-        // --- side view (right): lanes for fast and slow components + δ(z) plot
+
         const x0 = stacked ? 8 : sq + 26;
         const top = stacked ? sq + 24 : 8;
         const rw = w - x0 - 6,
@@ -1453,13 +1449,13 @@
             px1 = map.xToPx(dUm);
         const laneTop = top + 2,
             laneH = (rh - plotH - 8) / 2;
-        // slab
+
         ctx.fillStyle = "rgba(167, 139, 250, 0.10)";
         ctx.fillRect(px0, laneTop, px1 - px0, laneH * 2);
         ctx.strokeStyle = "rgba(167, 139, 250, 0.5)";
         ctx.lineWidth = 1;
         ctx.strokeRect(px0, laneTop, px1 - px0, laneH * 2);
-        const M = 5; // schematic carrier cycles across the plate
+        const M = 5;
         const ph = phaseNow();
         const lane = (k, amp, color, lag, label) => {
             const mid = laneTop + laneH * (k + 0.5),
@@ -1514,7 +1510,7 @@
         lines.forEach((l, i) => ctx.fillText(l, x, y + (i - (lines.length - 1) / 2) * lh));
     }
 
-    // ------------------------------------------------------------------ scan plot
+
     let scanHover = null;
     let scanMap = null;
 
@@ -1641,7 +1637,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ dispersion plot
+
     function drawDisp(ctx, w, h) {
         fillBg(ctx, w, h);
         const fs = w < 420 ? 11 : 12;
@@ -1711,7 +1707,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ canvases + a11y
+
     const crystalBadge = $("crystalBadge");
     const fieldCv = $("fieldCanvas"),
         sphereCv = $("sphereCanvas"),
@@ -1744,7 +1740,7 @@
         if (ready && result) fn(ctx, w, h);
         else fillBg(ctx, w, h);
     };
-    // On phones a square-ish canvas leaves no room for the corner legends above the plot, so make it taller.
+
     const narrowSquare = (cv, opts) => Object.defineProperty(opts, "height", {
         get: () => {
             const cw = cv.clientWidth || 600;
@@ -1769,8 +1765,8 @@
         maxHeight: 300,
         draw: guard(drawBench)
     });
-    // Narrow screens stack the front view above the side view, so the canvas needs a taller shape.
-    // setupCanvas has no responsive-aspect option; its opts.height is read on every resize, so a getter works.
+
+
     const crystalOpts = {
         aspect: 2.7,
         minHeight: 250,
@@ -1814,7 +1810,7 @@
         descs.disp.update(info && info.g && !info.equivalent ? `Retardance ${info.g.waves.toFixed(3)} waves at ${state.lam} nm; varies as 1/λ.` : "No crystal plate inspected.");
     }
 
-    // sphere interaction
+
     let drag = null;
     sphereCv.addEventListener("pointerdown", (e) => {
         drag = {
@@ -1855,7 +1851,7 @@
         cvSphere.redraw();
     });
 
-    // scan interaction: hover shows a cursor, click sets the element parameter
+
     scanCv.addEventListener("pointermove", (e) => {
         if (!scanMap) return;
         const r = scanCv.getBoundingClientRect();
@@ -1881,7 +1877,7 @@
         render();
     });
 
-    // ------------------------------------------------------------------ animation
+
     const startBtn = $("startStopBtn"),
         stepBtn = $("stepBtn"),
         resetBtn = $("resetBtn");
@@ -1921,7 +1917,7 @@
         render();
     });
 
-    // ------------------------------------------------------------------ URL state + export
+
     const getState = () => ({
         psi: state.psi,
         dl: state.delta,
@@ -1978,7 +1974,7 @@
         caption: () => `Polarization bench: input ψ=${state.psi}°, δ=${state.delta}°, p=${state.p}, λ=${state.lam} nm; ${state.bench.map((e, i) => `${i + 1} ${elementSummary(e)}`).join(", ") || "no elements"}`,
     });
 
-    // ------------------------------------------------------------------ render
+
     function render() {
         compute();
         updateReadouts();

@@ -27,9 +27,9 @@ for (const width of [390, 1280]) {
         ? route.continue() : route.abort());
       let release;
       const ready = new Promise(resolve => { release = resolve; });
-      await page.route('**/images/logo*.PNG', async route => {
+      await page.route('**/resources/brand/logo*.webp', async route => {
         await ready;
-        await route.fulfill({ path: path.join(__dirname, '../images/logo.PNG') });
+        await route.fulfill({ path: path.join(__dirname, '../src/resources/brand/logo.webp') });
       });
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       const logo = page.locator('#logo-image');

@@ -1,11 +1,6 @@
 "use strict";
 
-/*
- * Diffraction tool UI. All physics lives in ../shared/optics/diffraction.js
- * (window.OpticsModels.diffraction). This file converts control units (µm, nm, mm) to SI,
- * samples the model once per state change and draws four views from that one sample set:
- * 2D detector image, line cut, enclosed power and a not-to-scale schematic.
- */
+
 (function() {
     const UI = window.OpticsUI;
     const core = window.OpticsModels.core;
@@ -13,7 +8,7 @@
     const C = UI.CANVAS_PALETTE;
     const $ = (id) => document.getElementById(id);
 
-    // ------------------------------------------------------------------ presets (reproducible experiments)
+
     const DEFAULT_STATE = {
         ap: "slit",
         a: 100,
@@ -68,7 +63,7 @@
         }
     };
 
-    // ------------------------------------------------------------------ controls
+
     const sliderOpts = {
         apertureWidth: {
             unit: "µm",
@@ -90,14 +85,14 @@
     UI.enhanceAllSliders(document.querySelector(".options-sidebar"), sliderOpts);
 
     const holdBox = $("holdScale");
-    let held = null; // {key, lin, log} display-unit maxima frozen by "Hold intensity scale"
+    let held = null;
     let cursor = {
         x: NaN,
         y: 0
-    }; // probe position on the detector (mm)
+    };
     let presetNote = "";
-    let S = null; // current computed state
-    let phase = 0; // schematic animation phase (px)
+    let S = null;
+    let phase = 0;
     let renderQueued = false;
 
     const ctl = UI.bindControls({
@@ -127,7 +122,7 @@
         requestRender();
     });
 
-    // ------------------------------------------------------------------ physics sampling
+
     const N_CUT = 1201;
     let imgCache = {
         key: "",
@@ -137,17 +132,15 @@
 
     function displayUnits(type, norm, peakSI) {
         if (norm === "power") {
-            return type === "circular" ?
-                {
-                    label: "I/P",
-                    unit: "mm⁻²",
-                    factor: 1e-6
-                } :
-                {
-                    label: "I/P′",
-                    unit: "mm⁻¹",
-                    factor: 1e-3
-                };
+            return type === "circular" ? {
+                label: "I/P",
+                unit: "mm⁻²",
+                factor: 1e-6
+            } : {
+                label: "I/P′",
+                unit: "mm⁻¹",
+                factor: 1e-3
+            };
         }
         if (norm === "absolute") {
             const e = Math.floor(Math.log10(peakSI || 1) / 3) * 3;
@@ -196,17 +189,17 @@
         const key = [type, s.norm, s.scale].join("|");
         if (!holdBox.checked || (held && held.key !== key)) held = null;
         const du = held ? held.du : displayUnits(type, s.norm, peakSI);
-        const peak = peakSI * du.factor; // peak in display units
+        const peak = peakSI * du.factor;
         const cut = Model.lineCut(params, R, N_CUT);
         const xs = Array.from(cut.ys, (y) => y * 1e3);
         const other = s.cmp ? {
             ...params,
             type: type === "circular" ? "slit" : "circular"
         } : null;
-        // slit (per metre of length) and circle normalizations are different quantities: compare shapes only
+
         const otherPeak = other ? peak : 0;
         const otherI = other ? Model.lineCut(other, R, N_CUT).I : null;
-        // "Hold intensity scale": freeze limits (in SI) and the display unit at the moment it was ticked
+
         if (holdBox.checked && !held) held = {
             key,
             du,
@@ -215,7 +208,7 @@
         const refPeak = held ? held.peakSI * du.factor : peak;
         const yMax = logDec ? refPeak * 1.5 : (held ? refPeak : Math.max(peak, otherPeak)) * 1.05;
         const floor = logDec ? refPeak * Math.pow(10, -logDec) : 0;
-        // enclosed power 0..R
+
         const nE = 301;
         const eXs = [],
             eYs = [];
@@ -273,7 +266,7 @@
         return Model.intensityAt(r * 1e-3, S.params);
     }
 
-    // ------------------------------------------------------------------ formatting
+
     const fmtMm = (vm) => {
         if (!Number.isFinite(vm)) return "none (a < λ)";
         return vm < 1 ? Number((vm * 1e3).toPrecision(4)).toFixed(Math.max(0, 3 - Math.floor(Math.log10(vm * 1e3 || 1)))) + " mm" : core.formatSI(vm, "m", 4);
@@ -288,7 +281,7 @@
     const quantityLabel = () => S.du.label + (S.du.unit ? " (" + S.du.unit + ")" : "");
     const scaleText = () => (S.logDec ? "log, floor 10⁻" + S.logDec + " of peak" : "linear");
 
-    // ------------------------------------------------------------------ canvases
+
     const detCanvas = $("detectorCanvas");
     const cutCanvas = $("cutCanvas");
     const powCanvas = $("powerCanvas");
@@ -350,24 +343,22 @@
         const P = detMap.plot;
         const n = Math.max(64, Math.min(320, Math.round(P.w)));
         const data = detectorData(n);
-        // image data is peak-normalized: convert display limits to normalized units
+
         const toNorm = 1 / S.peak;
-        const opts = S.logDec ?
-            {
-                log: true,
-                min: S.floor * toNorm,
-                max: S.yMax * toNorm
-            } :
-            {
-                min: 0,
-                max: S.yMax * toNorm
-            };
+        const opts = S.logDec ? {
+            log: true,
+            min: S.floor * toNorm,
+            max: S.yMax * toNorm
+        } : {
+            min: 0,
+            max: S.yMax * toNorm
+        };
         UI.imageFromArray(ctx, data, n, n, P, "inferno", opts);
         ctx.save();
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
-        // computed minima
+
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = "rgba(105, 245, 231, 0.75)";
@@ -388,7 +379,7 @@
             ctx.stroke();
         });
         ctx.setLineDash([]);
-        // probe
+
         const px = detMap.xToPx(cursor.x),
             py = detMap.yToPx(cursor.y);
         ctx.strokeStyle = C.cursor;
@@ -400,7 +391,7 @@
         ctx.lineTo(px, py + 8);
         ctx.stroke();
         ctx.restore();
-        // first-minimum label
+
         if (S.mins.length && S.mins[0].y * 1e3 < R) {
             ctx.font = fs + "px " + C.font;
             ctx.fillStyle = C.text;
@@ -559,13 +550,13 @@
         const xa = Math.round(w * 0.28),
             xs = Math.round(w * 0.8),
             cy = h / 2;
-        const half = h * 0.42; // screen half-height ↔ detector half-width R
-        const gap = Math.max(10, Math.min(h * 0.32, 10 + Math.sqrt(S.s.a) * 3)); // not to scale
+        const half = h * 0.42;
+        const gap = Math.max(10, Math.min(h * 0.32, 10 + Math.sqrt(S.s.a) * 3));
         const col = UI.wavelengthToCSS(S.s.lam, 1);
         const colA = (a) => UI.wavelengthToCSS(S.s.lam, a);
         const lamPx = 14 * (S.s.lam / 550);
         const off = ((phase % lamPx) + lamPx) % lamPx;
-        // incident plane waves
+
         ctx.lineWidth = 2;
         for (let x = off; x < xa; x += lamPx) {
             ctx.strokeStyle = colA(0.55);
@@ -574,10 +565,10 @@
             ctx.lineTo(x, cy + half);
             ctx.stroke();
         }
-        // diffracted wavefronts, brightness from the computed pattern (angle mapped to screen)
+
         const dist = xs - xa;
         const Iat = (phi) => {
-            const v = Math.tan(phi) * dist; // px on screen
+            const v = Math.tan(phi) * dist;
             if (Math.abs(v) > half) return 0;
             return probeValue((v / half) * S.Rmm, 0);
         };
@@ -597,7 +588,7 @@
                 ctx.stroke();
             }
         }
-        // optional Huygens wavelets from points across the opening
+
         if (S.s.wav) {
             ctx.lineWidth = 1;
             ctx.strokeStyle = "rgba(236, 233, 248, 0.28)";
@@ -616,11 +607,11 @@
                 ctx.fill();
             }
         }
-        // barrier
+
         ctx.fillStyle = "#3a3654";
         ctx.fillRect(xa - 4, 0, 8, cy - gap / 2);
         ctx.fillRect(xa - 4, cy + gap / 2, 8, h - cy - gap / 2);
-        // screen and intensity profile
+
         ctx.fillStyle = "#26233a";
         ctx.fillRect(xs, cy - half, 4, 2 * half);
         const prof = Math.max(20, w - xs - 14);
@@ -636,7 +627,7 @@
             else ctx.lineTo(x, y);
         }
         ctx.stroke();
-        // θ1 rays (exaggerated)
+
         if (Number.isFinite(S.y1) && S.y1 * 1e3 <= S.Rmm) {
             const v1 = (S.y1 * 1e3 / S.Rmm) * half;
             ctx.setLineDash([4, 4]);
@@ -657,7 +648,7 @@
             ctx.textBaseline = "bottom";
             ctx.fillText("θ₁ = " + (S.mins[0].theta * 1e3).toPrecision(3) + " mrad", xa + 12, cy - 4);
         }
-        // labels
+
         ctx.font = fs + "px " + C.font;
         ctx.fillStyle = C.textMuted;
         ctx.textAlign = "left";
@@ -698,7 +689,7 @@
         draw: drawSchematic
     });
 
-    // ------------------------------------------------------------------ probe interaction
+
     function setProbeFromDetector(e) {
         if (!detMap) return;
         const r = detCanvas.getBoundingClientRect();
@@ -753,7 +744,7 @@
     detCanvas.addEventListener("keydown", (e) => keyProbe(e, true));
     cutCanvas.addEventListener("keydown", (e) => keyProbe(e, false));
 
-    // ------------------------------------------------------------------ DOM readouts
+
     function updateDom() {
         const s = S.s,
             circ = S.type === "circular";
@@ -789,7 +780,7 @@
         const IC = probeValue(cursor.x, cursor.y);
         $("rCurI").textContent = fmtVal(IC * S.peak) + unitSuffix();
 
-        // minima table
+
         const rows = [];
         let prev = 0;
         S.mins.slice(0, 8).forEach((mn) => {
@@ -803,7 +794,7 @@
         const beyond = S.mins.slice(0, 8).some((mn) => mn.y * 1e3 > S.Rmm);
         $("minimaTable").querySelector("tbody").innerHTML = rows.join("") + (beyond ? '<tr><td colspan="5">* outside the current field of view</td></tr>' : "");
 
-        // regime warning
+
         const warn = $("regimeWarn");
         if (S.regime !== "fraunhofer") {
             warn.hidden = false;
@@ -820,7 +811,7 @@
         $("detBadge").textContent = badge;
         $("cutBadge").textContent = (S.s.norm === "peak" ? "peak-normalized" : S.s.norm === "power" ? "power-normalized" : "absolute") + ", " + scaleText();
 
-        // text equivalents
+
         const y1t = Number.isFinite(S.y1) ? (S.y1 * 1e3).toPrecision(3) + " mm" : "none";
         const shape = circ ? "Airy rings" : "vertical fringes";
         descDet.update("2D detector, ±" + S.Rmm.toPrecision(3) + " mm, " + scaleText() + ", colour scale 0 to " + fmtVal(S.yMax) + unitSuffix() + ". " +
@@ -834,7 +825,7 @@
             (Number.isFinite(t1) ? (t1 * 1e3).toPrecision(3) + " mrad" : "undefined") + ". Animation " + (loop.isRunning() ? "running" : "paused") + ".");
     }
 
-    // ------------------------------------------------------------------ render scheduling
+
     function redrawData() {
         det.redraw();
         cutH.redraw();
@@ -855,7 +846,7 @@
         requestAnimationFrame(renderNow);
     }
 
-    // ------------------------------------------------------------------ animation (schematic only)
+
     const startBtn = $("startStopBtn");
     const loop = UI.createLoop((dt) => {
         phase += 40 * dt;
@@ -872,7 +863,7 @@
         loop.stepOnce(1 / 15);
     });
 
-    // ------------------------------------------------------------------ presets / reset
+
     function applyPreset(name) {
         const p = PRESETS[name] || PRESETS.slit100;
         holdBox.checked = false;
@@ -913,7 +904,7 @@
         applyPreset("slit100");
     });
 
-    // ------------------------------------------------------------------ URL state + export
+
     const url = UI.urlState({
         get: ctl.get,
         set: ctl.set
@@ -949,7 +940,7 @@
             " mm, " + quantityLabel() + ", " + scaleText() + ", Fraunhofer (N_F = " + S.nf.toPrecision(2) + ")") : ""
     });
 
-    // ------------------------------------------------------------------ start
+
     $("presetNote").textContent = PRESETS.slit100.note;
     presetNote = PRESETS.slit100.note;
     url.ready.then((restored) => {

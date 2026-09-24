@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Storage of Tables and Indexes on Disk</title>
+    <title>Storage of Tables and Indexes on Disk | Adam Djellouli</title>
     <meta content="Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk",
             "description": "Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2025-05-18",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Storage of Tables and Indexes on Disk" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently." property="og:description" />
+    <meta content="2025-05-18" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,36 +80,36 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#storage-of-tables-and-indexes-on-disk">Storage of Tables and Indexes on Disk</a>
-                    <ol>
-                        <li><a href="#operating-system-files-datafiles-">Operating-System Files (“Datafiles”)</a></li>
-                        <li><a href="#extents-pages-allocation-units-">Extents &amp; Pages (Allocation Units)</a></li>
-                        <li><a href="#anatomy-of-a-data-page">Anatomy of a Data Page</a></li>
-                        <li><a href="#heap-table-lifecycle">Heap Table Lifecycle</a></li>
-                        <li><a href="#clustered-index-organized-tables">Clustered (Index-Organized) Tables</a></li>
-                        <li><a href="#secondary-non-clustered-index-walk">Secondary (Non-Clustered) Index Walk</a></li>
-                        <li><a href="#other-index-types">Other Index Types</a></li>
-                        <li><a href="#free-space-extent-maps">Free-Space &amp; Extent Maps</a></li>
-                        <li><a href="#write-ahead-log-wal-relationship">Write-Ahead Log (WAL) Relationship</a></li>
-                        <li><a href="#implications-for-performance">Implications for Performance</a>
-                            <ol>
-                                <li><a href="#data-locality">Data Locality</a></li>
-                                <li><a href="#choosing-the-right-storage-model">Choosing the Right Storage Model</a></li>
-                                <li><a href="#effective-indexing-strategies">Effective Indexing Strategies</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#practical-examples-and-commands">Practical Examples and Commands</a>
-                            <ol>
-                                <li><a href="#postgresql-commands">PostgreSQL Commands</a></li>
-                                <li><a href="#mysql-commands">MySQL Commands</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#other-considerations">Other Considerations</a></li>
-                    </ol>
+                <ol>
+                    <li><a href="#operating-system-files-datafiles">Operating-System Files (“Datafiles”)</a></li>
+                    <li><a href="#extents-pages-allocation-units">Extents &amp; Pages (Allocation Units)</a></li>
+                    <li><a href="#anatomy-of-a-data-page">Anatomy of a Data Page</a></li>
+                    <li><a href="#heap-table-lifecycle">Heap Table Lifecycle</a></li>
+                    <li><a href="#clustered-index-organized-tables">Clustered (Index-Organized) Tables</a></li>
+                    <li><a href="#secondary-non-clustered-index-walk">Secondary (Non-Clustered) Index Walk</a></li>
+                    <li><a href="#other-index-types">Other Index Types</a></li>
+                    <li><a href="#free-space-extent-maps">Free-Space &amp; Extent Maps</a></li>
+                    <li><a href="#write-ahead-log-wal-relationship">Write-Ahead Log (WAL) Relationship</a></li>
+                    <li><a href="#implications-for-performance">Implications for Performance</a>
+                        <ol>
+                            <li><a href="#data-locality">Data Locality</a></li>
+                            <li><a href="#choosing-the-right-storage-model">Choosing the Right Storage Model</a></li>
+                            <li><a href="#effective-indexing-strategies">Effective Indexing Strategies</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#practical-examples-and-commands">Practical Examples and Commands</a>
+                        <ol>
+                            <li><a href="#postgresql-commands">PostgreSQL Commands</a></li>
+                            <li><a href="#mysql-commands">MySQL Commands</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#other-considerations">Other Considerations</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -269,7 +276,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -288,9 +295,9 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="storage-of-tables-and-indexes-on-disk">Storage of Tables and Indexes on Disk</h2>
+            <h1>Storage of Tables and Indexes on Disk</h1>
             <p>Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently. Let's delve into the fundamental concepts of disk storage in relational databases, focusing on the structures and mechanisms that underlie data organization.</p>
-            <h3 id="operating-system-files-datafiles-">Operating-System Files (“Datafiles”)</h3>
+            <h3 id="operating-system-files-datafiles">Operating-System Files (“Datafiles”)</h3>
             <div>
                 <pre><code class="language-shell">┌──────────────────────────────────────────────────────────────────────┐
 │ tablespace_sales                                                     │
@@ -305,7 +312,7 @@
                 <li>Growing a table means extending a file or adding another file; the DBA chooses the policy.</li>
                 <li>File layout on the physical platter/SSD is up to the OS unless the DBA pre-allocates contiguous space.</li>
             </ul>
-            <h3 id="extents-pages-allocation-units-">Extents &amp; Pages (Allocation Units)</h3>
+            <h3 id="extents-pages-allocation-units">Extents &amp; Pages (Allocation Units)</h3>
             <div>
                 <pre><code class="language-shell">DATAFILE  (sales01.dbf)
 │
@@ -476,20 +483,22 @@ page_id │ free_bytes
  pg_size_pretty(pg_total_relation_size('your_table')) AS total_size;</code></pre>
             </div>
             <p>Expected Output:</p>
-            <p>
             <table>
-                <tr>
-                    <td>table_size</td>
-                    <td>indexes_size</td>
-                    <td>total_size</td>
-                </tr>
-                <tr>
-                    <td>120 MB</td>
-                    <td>30 MB</td>
-                    <td>150 MB</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>table_size</th>
+                        <th>indexes_size</th>
+                        <th>total_size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>120 MB</td>
+                        <td>30 MB</td>
+                        <td>150 MB</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <ul>
                 <li><strong>table_size:</strong> Disk space used by the table's raw data.</li>
                 <li><strong>indexes_size:</strong> Disk space used by all indexes associated with the table.</li>
@@ -629,34 +638,36 @@ page_id │ free_bytes
                 <pre><code class="language-sql">SHOW TABLE STATUS LIKE 'your_table';</code></pre>
             </div>
             <p>Expected Output:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Name</td>
-                    <td>Engine</td>
-                    <td>Version</td>
-                    <td>Row_format</td>
-                    <td>Rows</td>
-                    <td>Avg_row_length</td>
-                    <td>Data_length</td>
-                    <td>Max_data_length</td>
-                    <td>Index_length</td>
-                    <td>...</td>
-                </tr>
-                <tr>
-                    <td>your_table</td>
-                    <td>InnoDB</td>
-                    <td>10</td>
-                    <td>Compact</td>
-                    <td>20000</td>
-                    <td>100</td>
-                    <td>2000000</td>
-                    <td>...</td>
-                    <td>500000</td>
-                    <td>...</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Engine</th>
+                        <th>Version</th>
+                        <th>Row_format</th>
+                        <th>Rows</th>
+                        <th>Avg_row_length</th>
+                        <th>Data_length</th>
+                        <th>Max_data_length</th>
+                        <th>Index_length</th>
+                        <th>...</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>your_table</td>
+                        <td>InnoDB</td>
+                        <td>10</td>
+                        <td>Compact</td>
+                        <td>20000</td>
+                        <td>100</td>
+                        <td>2000000</td>
+                        <td>...</td>
+                        <td>500000</td>
+                        <td>...</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <ul>
                 <li><strong>Rows:</strong> Number of records in the table.</li>
                 <li><strong>Data_length:</strong> Amount of space used for storing data.</li>
@@ -737,23 +748,33 @@ SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -770,21 +791,5 @@ SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

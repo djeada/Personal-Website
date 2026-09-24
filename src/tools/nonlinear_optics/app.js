@@ -1,8 +1,3 @@
-/*
- * Nonlinear optics (SHG + Kerr/SPM): page glue.
- * Physics lives in ../shared/optics/nonlinearOptics.js (pure; tests in tests/optics/nonlinear_optics.test.js).
- * Controls are in display units (nm, mrad, µm, mm, MW/cm², ps, W, ps²/km, W⁻¹km⁻¹, m); SI inside.
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -25,7 +20,7 @@
         none: TH.series[5],
         ideal: TH.series[4]
     };
-    const SINC2_HALF = 2.7831; // sinc²(x/2)=½ at x = ±2.7831 → FWHM in ΔkL = 5.566
+    const SINC2_HALF = 2.7831;
 
     const DEFAULTS = {
         cr: "bbo",
@@ -69,7 +64,7 @@
     };
     const pow10 = (v) => "10" + String(Math.round(Math.log10(v))).split("").map((ch) => SUP[ch]).join("");
 
-    // ------------------------------------------------------------------ controls
+
     const sidebar = document.querySelector(".options-sidebar");
     UI.enhanceAllSliders(sidebar, {
         lam: {
@@ -140,7 +135,7 @@
         set: ctl.set
     });
 
-    // ------------------------------------------------------------------ SHG model
+
     let shg = null,
         sweep = null,
         growth = null,
@@ -173,7 +168,7 @@
                 o.theta = Math.min(Math.PI / 2, (Number.isFinite(o.thpm) ? o.thpm : Math.PI / 2) + s.dth * 1e-3);
             }
             const p = NLO.shgParams(s.cr, lam, o.theta);
-            // Δk at θpm is zero up to root-finding round-off (~1e-9 rad/m): snap so the closed form is tanh²
+
             Object.assign(o, {
                 n1: p.n1,
                 n2: p.n2,
@@ -189,7 +184,7 @@
         o.kappa = NLO.kappa(o.dEff, lam, o.n1, o.n2);
         o.Gamma = o.kappa * Math.sqrt(I0);
         o.lc = Math.PI / Math.abs(o.dk);
-        o.dkRes = o.qpm ? o.dk - 2 * Math.PI / o.qpm.period : o.dk; // residual mismatch that the sinc² sees
+        o.dkRes = o.qpm ? o.dk - 2 * Math.PI / o.qpm.period : o.dk;
         if (o.qpm) {
             o.nDom = Math.ceil(L / (o.qpm.period / 2) - 1e-9);
             if (o.nDom > 40000) {
@@ -219,7 +214,7 @@
     }
 
     function closedForm(o, z) {
-        // reference for the SH curve along z
+
         if (o.qpm) {
             const G = o.Gamma * 2 / Math.PI,
                 x = o.dkRes * z / 2,
@@ -249,7 +244,7 @@
 
     function computeSlow() {
         const o = shg.o;
-        // efficiency vs residual mismatch x = Δk_res·L
+
         const perRun = o.qpm ? o.nDom * 6 : Math.min(400, ctl.get().steps);
         const n = o.qpm ? Math.max(15, Math.min(81, Math.floor(3e5 / perRun))) : 121;
         const span = 4 * Math.PI;
@@ -283,7 +278,7 @@
             eta,
             ana
         };
-        // ideal Δk = 0 reference with the same d (for the QPM ratio)
+
         const ideal = NLO.solveSHG({
             kappa: o.kappa,
             dk: 0,
@@ -293,7 +288,7 @@
             record: 0
         });
         shg.ideal = ideal;
-        // growth over the first coherence lengths (weak pump so the three curves are comparable)
+
         if (o.cr === "ppln" || o.cr === "custom") {
             const Lg = Number.isFinite(o.lc) && o.lc * 12 < o.L ? o.lc * 12 : o.L;
             const Iw = Math.min(o.I0, 1e-4 / Math.max(1e-30, (o.kappa * Lg) ** 2));
@@ -326,7 +321,7 @@
         } else growth = null;
     }
 
-    // ------------------------------------------------------------------ Kerr model
+
     function kerrSetup(s) {
         const T0 = s.T0 * PS,
             P0 = s.P0,
@@ -393,7 +388,7 @@
         const Iout = Array.from(out.re, (v, i) => v * v + out.im[i] * out.im[i]);
         const sIn = NLO.spectrum(p.re, p.im, p.dt),
             sOut = NLO.spectrum(out.re, out.im, p.dt);
-        // edge energy (periodic-window wrap warning)
+
         let eEdge = 0,
             eAll = 0;
         const edge = Math.floor(0.05 * k.Npts);
@@ -440,7 +435,7 @@
         conv.ref = exact ? "analytic soliton" : conv.refSteps + "-step reference";
     }
 
-    // ------------------------------------------------------------------ scheduling
+
     let rafPending = false,
         slowTimer = 0,
         kerrTimer = 0,
@@ -494,7 +489,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ labels / visibility
+
     function updateVisibility() {
         const s = ctl.get();
         const bi = s.cr === "bbo" || s.cr === "kdp";
@@ -527,7 +522,7 @@
         $("nzValue").textContent = s.nz;
     }
 
-    // ------------------------------------------------------------------ SHG drawing
+
     const descZ = UI.describeCanvas($("zCanvas"), "Pump and second-harmonic intensity versus position in the crystal.", {
         label: "Pump and SH intensity along the crystal"
     });
@@ -915,7 +910,7 @@
         pmPlot.redraw();
     }
 
-    // ------------------------------------------------------------------ Kerr drawing
+
     const descEvo = UI.describeCanvas($("evoCanvas"), "Pulse evolution along the fibre.", {
         label: "Pulse power versus time and distance"
     });
@@ -1043,7 +1038,7 @@
                 max: cmax,
                 label: "|A|²/P₀"
             });
-            // soliton-period guides
+
             if (k.b2 < 0 && Number.isFinite(k.LD)) {
                 const z0 = Math.PI * k.LD / 2;
                 ctx.save();
@@ -1315,7 +1310,7 @@
         convPlot.redraw();
     }
 
-    // ------------------------------------------------------------------ presets
+
     const SHG_PRESETS = {
         bboWeak: {
             s: {
@@ -1457,22 +1452,20 @@
     function applyPreset(kind, name) {
         const P = (kind === "shg" ? SHG_PRESETS : KERR_PRESETS)[name];
         if (!P) return;
-        const base = kind === "shg" ?
-            {
-                cr: DEFAULTS.cr,
-                lam: DEFAULTS.lam,
-                dth: 0,
-                qpm: true,
-                per: DEFAULTS.per,
-                n1: 1.6,
-                n2: 1.6,
-                deff: 2,
-                dk: 0,
-                L: 10,
-                Ilog: 0,
-                steps: 400
-            } :
-            {};
+        const base = kind === "shg" ? {
+            cr: DEFAULTS.cr,
+            lam: DEFAULTS.lam,
+            dth: 0,
+            qpm: true,
+            per: DEFAULTS.per,
+            n1: 1.6,
+            n2: 1.6,
+            deff: 2,
+            dk: 0,
+            L: 10,
+            Ilog: 0,
+            steps: 400
+        } : {};
         ctl.set(Object.assign(base, P.s));
         $(kind === "shg" ? "shgNote" : "kerrNote").textContent = P.note;
         document.querySelectorAll(kind === "shg" ? "[data-preset]" : "[data-kpreset]").forEach((b) => b.classList.toggle("active", b.dataset[kind === "shg" ? "preset" : "kpreset"] === name));
@@ -1507,7 +1500,7 @@
         schedule();
     });
 
-    // ------------------------------------------------------------------ export
+
     UI.addExportBar($("exportShg"), {
         name: "nonlinear-optics-shg",
         url,

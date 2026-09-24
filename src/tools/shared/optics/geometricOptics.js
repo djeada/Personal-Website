@@ -1,34 +1,3 @@
-/*
- * Geometrical optics / optical-system bench model (pure, DOM-free).
- *
- * Browser: <script src="../shared/optics/geometricOptics.js"></script> → window.OpticsModels.geometricOptics
- * Node:    const go = require(".../shared/optics/geometricOptics.js")
- *
- * Coordinates and sign convention (Cartesian, used everywhere in this file)
- * ------------------------------------------------------------------------
- *  - Optical axis z (metres), light enters travelling towards +z; meridional height y (metres),
- *    sagittal coordinate x (only used by skew rays for the spot diagram).
- *  - A surface radius R is positive when its centre of curvature lies to the RIGHT (+z) of its
- *    vertex; R = Infinity is a plane. This is the same for refracting surfaces and mirrors.
- *  - Paraxial rays are [y, θ] with θ = dy/ds the slope along the *unfolded* direction of travel
- *    (s increases along the ray; after a mirror s runs towards −z). Matrices act on column
- *    vectors and chain right-to-left (core.mat2.chain([M_last, …, M_first])).
- *      translate(t)          [[1, t], [0, 1]]
- *      refraction n1→n2, R   [[1, 0], [(n1 − n2)/(n2 R_u), n1/n2]]      det = n1/n2
- *      mirror, R             [[1, 0], [2/R_u, 1]]                      (concave: R_u < 0 → converging)
- *      ideal thin lens f     [[1, 0], [−1/f, 1]]
- *    R_u = R · dir where dir = ±1 is the travel direction along z at that surface.
- *  - Distances reported for imaging: object distance s_o = z_first − z_object (> 0 for a real
- *    object to the left), image distance s_i measured from the LAST surface along the outgoing
- *    direction (> 0 real image, < 0 virtual image), transverse magnification m = h'/h.
- *    Thin lens f = 100 mm, s_o = 300 mm → s_i = +150 mm, m = −0.5 (Gaussian 1/s_o + 1/s_i = 1/f).
- *  - Exact rays are traced sequentially (surface order = element order) with vector Snell's law,
- *    vector reflection and total-internal-reflection detection. The ideal thin lens is modelled
- *    as a perfect "paraxial lens": (dx/ds, dy/ds) → (dx/ds − x/f, dy/ds − y/f), which images every
- *    ray of every conjugate perfectly and therefore has no aberrations.
- *  - Wavelengths are vacuum wavelengths in metres. Materials: constant index, Cauchy
- *    n = A + B/λ² + C/λ⁴ (λ in µm) or Sellmeier n² = 1 + Σ Bᵢλ²/(λ² − Cᵢ) (λ in µm, Cᵢ in µm²).
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -39,8 +8,8 @@
 })(typeof self !== "undefined" ? self : this, function() {
     "use strict";
 
-    // ------------------------------------------------------------------ materials
-    /** Fraunhofer lines (vacuum wavelengths, m). */
+
+
     const LINES = Object.freeze({
         F: 486.1327e-9,
         d: 587.5618e-9,
@@ -61,7 +30,7 @@
             B: 0.00306,
             C: 0
         },
-        // Schott N-BK7 and F2 Sellmeier coefficients (Schott optical glass data sheets)
+
         BK7: {
             name: "N-BK7 crown (Sellmeier)",
             type: "sellmeier",
@@ -101,7 +70,7 @@
         return mat;
     }
 
-    /** Refractive index of a material (name, number or descriptor) at vacuum wavelength λ (m). */
+
     function refractiveIndex(mat, lambda = LINES.d) {
         const m = resolveMaterial(mat);
         const um = lambda * 1e6,
@@ -116,7 +85,7 @@
         throw new RangeError("bad material type");
     }
 
-    /** Abbe number V_d = (n_d − 1)/(n_F − n_C); Infinity for a non-dispersive material. */
+
     function abbeNumber(mat) {
         const nd = refractiveIndex(mat, LINES.d),
             nF = refractiveIndex(mat, LINES.F),
@@ -124,7 +93,7 @@
         return nF === nC ? Infinity : (nd - 1) / (nF - nC);
     }
 
-    // ------------------------------------------------------------------ 2×2 matrices [y, θ]
+
     const mul = (A, B) => [
         [A[0][0] * B[0][0] + A[0][1] * B[1][0], A[0][0] * B[0][1] + A[0][1] * B[1][1]],
         [A[1][0] * B[0][0] + A[1][1] * B[1][0], A[1][0] * B[0][1] + A[1][1] * B[1][1]]
@@ -135,7 +104,7 @@
         [1, 0],
         [0, 1]
     ];
-    const inv = (x) => (Number.isFinite(x) && x !== 0 ? 1 / x : 0); // 1/∞ = 0 (plane / no power)
+    const inv = (x) => (Number.isFinite(x) && x !== 0 ? 1 / x : 0);
 
     const translate = (t) => [
         [1, t],
@@ -154,9 +123,9 @@
         [-inv(f), 1]
     ];
 
-    /** Gaussian thin-lens imaging (real object distance so > 0 on the left). Robust at so = f. */
+
     function thinLensImage(f, so) {
-        // 1/so + 1/si = 1/f  →  si = so f / (so − f); written to avoid division blow-up
+
         const den = so - f;
         if (Math.abs(den) <= 1e-12 * Math.max(Math.abs(so), Math.abs(f))) {
             return {
@@ -177,18 +146,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ system construction
-    /**
-     * Build a sequential system from bench elements (all lengths in metres):
-     *   {type:"thin", z, f, semi, material?}   ideal thin lens; with a glass material its focal
-     *                                            length scales as f(λ) = f·(n_d − 1)/(n(λ) − 1)
-     *   {type:"lens", z, R1, R2, t, material, semi}   thick lens: two spherical/planar surfaces
-     *   {type:"surface", z, R, material, semi}  single refracting surface into `material`
-     *   {type:"mirror", z, R, semi}              spherical (or plane) mirror
-     *   {type:"stop", z, semi}                   aperture (iris)
-     *   {type:"detector", z, semi}               detector / screen (transparent in sequential mode)
-     * opts.medium: object-space medium (default air). Elements are used in the given order.
-     */
+
+
     function buildSystem(elements, opts = {}) {
         let medium = opts.medium || "air";
         const surfaces = [];
@@ -256,14 +215,14 @@
                     throw new RangeError("unknown element type " + el.type);
             }
         });
-        // travel direction after each surface (+1 → +z)
+
         let dir = 1;
         for (const s of surfaces) {
             s.dirIn = dir;
             if (s.kind === "mirror") dir = -dir;
             s.dirOut = dir;
         }
-        // reference (image-space) surface: the last surface with optical power or reflection
+
         let kRef = surfaces.length - 1;
         for (let k = surfaces.length - 1; k >= 0; k--) {
             if (surfaces[k].kind === "refract" || surfaces[k].kind === "mirror" || surfaces[k].kind === "thin") {
@@ -280,7 +239,7 @@
         };
     }
 
-    /** Per-wavelength indices and the thin-lens focal length at λ. */
+
     function indicesAt(sys, lambda) {
         let n = refractiveIndex(sys.objectMedium, lambda);
         const nObj = n;
@@ -307,7 +266,7 @@
         };
     }
 
-    /** Paraxial matrix of surface k alone (acting at its vertex plane). */
+
     function surfaceMatrix(s, ix) {
         switch (s.kind) {
             case "refract":
@@ -321,13 +280,10 @@
         }
     }
 
-    /** Unfolded gap from surface k−1 to surface k (k ≥ 1). */
+
     const gapBefore = (sys, k) => (sys.surfaces[k].z - sys.surfaces[k - 1].z) * sys.surfaces[k - 1].dirOut;
 
-    /**
-     * Paraxial matrices at λ: `pre[k]` maps [y, θ] at the first vertex plane (just before the
-     * first surface) to just BEFORE surface k; `post[k]` to just AFTER it; `M` = post[last].
-     */
+
     function paraxialMatrices(sys, lambda = LINES.d) {
         const ix = indicesAt(sys, lambda);
         const pre = [],
@@ -351,7 +307,7 @@
         };
     }
 
-    /** Matrix mapping just after surface a to just after surface b (a < b); a = −1 → from first vertex plane. */
+
     function matrixBetween(sys, pm, a, b) {
         let M = I2();
         for (let k = a + 1; k <= b; k++) {
@@ -361,7 +317,7 @@
         return M;
     }
 
-    /** Paraxial trace of [y, θ] given just before the first surface. Returns per-surface heights. */
+
     function paraxialTrace(sys, y0, th0, lambda = LINES.d) {
         const pm = paraxialMatrices(sys, lambda);
         return sys.surfaces.map((s, k) => {
@@ -380,15 +336,11 @@
 
     const first = (sys) => sys.surfaces[0];
     const last = (sys) => sys.surfaces[sys.kRef != null ? sys.kRef : sys.surfaces.length - 1];
-    /** Physical z of a point at unfolded distance d after the last surface. */
+
     const zAfterLast = (sys, d) => last(sys).z + sys.dirOut * d;
 
-    // ------------------------------------------------------------------ cardinal points
-    /**
-     * Cardinal points at λ. Uses the reduced matrix [y, nθ]; power P = −C_r. Positions are physical
-     * z (m). Returns { afocal, power, efl (1/P), fFront (n/P), fRear (n'/P), zF, zFp, zH, zHp, zN,
-     * zNp, bfd, ffd, M, Mr, nObj, nImg, angularMagnification (afocal only) }.
-     */
+
+
     function cardinalPoints(sys, lambda = LINES.d) {
         const pm = paraxialMatrices(sys, lambda);
         const [
@@ -413,7 +365,7 @@
             det: det(pm.M)
         };
         if (Math.abs(P) * scale < 1e-9) {
-            // afocal (telescopic): no finite focal points; angular magnification D (for n1 = n2 in θ units)
+
             return Object.assign(out, {
                 afocal: true,
                 efl: Infinity,
@@ -443,15 +395,10 @@
         });
     }
 
-    // ------------------------------------------------------------------ imaging
-    const INF_LIMIT = 1e4; // |s_i| beyond 10 km is reported as "at infinity"
 
-    /**
-     * Paraxial image of an object. obj = { z, h } (finite, object space) or { atInfinity: true,
-     * angle } (field angle in rad). Returns { atInfinity, virtual, si (unfolded from the last
-     * surface), zImage, m, hImage, angularOut (rad per object, for images at infinity),
-     * so (object distance), afocal }.
-     */
+    const INF_LIMIT = 1e4;
+
+
     function imageOf(sys, obj, lambda = LINES.d) {
         const pm = paraxialMatrices(sys, lambda);
         const M = pm.M;
@@ -493,7 +440,7 @@
         const b = Mo[0][1],
             d = Mo[1][1],
             c = Mo[1][0];
-        // image where T(si)·Mo has B = 0 → si = −b/d; m = det/d
+
         if (d === 0 || Math.abs(b) > INF_LIMIT * Math.abs(d)) {
             return {
                 atInfinity: true,
@@ -504,7 +451,7 @@
                 m: NaN,
                 hImage: NaN,
                 so,
-                angularOut: c * obj.h // every ray from the object top leaves with this slope
+                angularOut: c * obj.h
             };
         }
         const si = -b / d;
@@ -520,19 +467,14 @@
         };
     }
 
-    // ------------------------------------------------------------------ stops, pupils, NA
-    /**
-     * Aperture stop, field stop, entrance/exit pupils and numerical apertures (paraxial).
-     * The aperture stop is the surface that limits the axial marginal ray first; the field stop
-     * limits the chief ray (through the stop centre) first. The detector counts only as a field
-     * stop candidate.
-     */
+
+
     function stopsAndPupils(sys, obj, lambda = LINES.d) {
         const pm = paraxialMatrices(sys, lambda);
         const S = sys.surfaces;
         const so = obj.atInfinity ? Infinity : first(sys).z - obj.z;
         const zf = first(sys).z;
-        // unit marginal ray from the axial object point: finite [so, 1]; infinity [1, 0]
+
         const mIn = obj.atInfinity ? [1, 0] : [so, 1];
         let stop = -1,
             best = Infinity;
@@ -557,7 +499,7 @@
         });
         const Ms = pm.pre[stop];
         const semi = S[stop].semi;
-        // entrance pupil: image of the stop in object space
+
         if (Math.abs(Ms[0][0]) < 1e-12) Object.assign(res, {
             epAtInfinity: true,
             zEP: Infinity,
@@ -568,7 +510,7 @@
             zEP: zf + Ms[0][1] / Ms[0][0],
             rEP: semi / Math.abs(Ms[0][0])
         });
-        // exit pupil: image of the stop in image space (matrix from just before the stop to after the last surface)
+
         const Ma = mul(pm.M, inverse2(Ms));
         const b = Ma[0][1],
             d = Ma[1][1];
@@ -587,7 +529,7 @@
                 rXP: semi * Math.abs(det(Ma) / d)
             });
         }
-        // marginal ray scaled to fill the stop
+
         const marginIn = [mIn[0] * best, mIn[1] * best];
         const marginOut = apply(pm.M, marginIn);
         res.marginalIn = marginIn;
@@ -595,12 +537,12 @@
         res.naImage = pm.nImg * Math.sin(Math.atan(Math.abs(marginOut[1])));
         res.fNumberWorking = res.naImage > 0 ? 1 / (2 * res.naImage) : Infinity;
         res.beamRadiusIn = obj.atInfinity ? marginIn[0] : NaN;
-        // chief ray (through stop centre), unit field: finite → per unit object height; infinity → per unit slope
+
         let chiefIn;
         if (res.epAtInfinity) chiefIn = obj.atInfinity ? null : [1, 0];
-        else if (obj.atInfinity) chiefIn = [(zf - res.zEP) * 1, 1]; // slope 1 through the EP centre
+        else if (obj.atInfinity) chiefIn = [(zf - res.zEP) * 1, 1];
         else {
-            const th = -1 / (res.zEP - obj.z); // from (z_o, 1) towards (z_EP, 0)
+            const th = -1 / (res.zEP - obj.z);
             chiefIn = [1 + th * so, th];
         }
         res.chiefIn = chiefIn;
@@ -619,7 +561,7 @@
         }
         res.fieldStop = fs;
         res.fieldStopId = fs >= 0 ? S[fs].id : null;
-        // field limit (chief ray at the field-stop edge ⇒ 50 % vignetting): object height (m) or tan(angle)
+
         res.fieldLimit = bestF;
         return res;
     }
@@ -632,18 +574,14 @@
         ];
     }
 
-    // ------------------------------------------------------------------ exact ray tracing (3D)
+
     const norm3 = (v) => {
         const l = Math.hypot(v[0], v[1], v[2]);
         return [v[0] / l, v[1] / l, v[2] / l];
     };
     const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-    /**
-     * Intersection parameter of ray p + t d with the surface through vertex z (curvature cv = 1/R).
-     * Uses the numerically stable vertex-side root (reduces smoothly to the plane when cv → 0).
-     * Returns NaN when the ray misses the sphere.
-     */
+
     function intersect(p, d, zv, cv) {
         const q = [p[0], p[1], p[2] - zv];
         const B = cv * dot3(q, d) - d[2];
@@ -654,21 +592,16 @@
         const qq = -(B + (B >= 0 ? 1 : -1) * Math.sqrt(disc));
         const roots = [qq / cv];
         if (qq !== 0) roots.push(Cq / qq);
-        // keep the root(s) on the hemisphere that contains the vertex (cv·z_local < 1)
+
         const ok = roots.filter((t) => Number.isFinite(t) && cv * (q[2] + t * d[2]) < 1);
         if (!ok.length) return NaN;
         if (ok.length === 1) return ok[0];
-        // both on the vertex cap (grazing chord): the first one reached, preferring forward travel
+
         const fwd = ok.filter((t) => t >= 0);
         return fwd.length ? Math.min(...fwd) : Math.max(...ok);
     }
 
-    /**
-     * Trace one exact ray. ray = { p: [x, y, z], d: [dx, dy, dz] } in object space.
-     * Returns { points: [[x,y,z], …] (start + every surface hit), status: "ok" | "vignetted" |
-     * "missed" | "tir", at: surface index where it stopped (or −1), p, d (final, after the last
-     * surface), n (final index), opl (Σ n·t, m), virtualSegments: indices of segments with t < 0 }.
-     */
+
     function traceExact(sys, ray, lambda = LINES.d, opts = {}) {
         const ix = opts.ix || indicesAt(sys, lambda);
         let p = ray.p.slice(),
@@ -719,7 +652,7 @@
                 d = norm3([sxp, syp, sg]);
                 continue;
             }
-            // surface normal ∝ (cv x, cv y, cv z_local − 1), oriented against the incoming ray
+
             let N = norm3([cv * p[0], cv * p[1], cv * (p[2] - s.z) - 1]);
             if (dot3(N, d) > 0) N = [-N[0], -N[1], -N[2]];
             const cosi = -dot3(N, d);
@@ -758,25 +691,25 @@
         };
     }
 
-    /** Point where a traced ray (final p, d) crosses the plane z = zPlane; null if parallel. */
+
     function atPlane(tr, zPlane) {
         if (Math.abs(tr.d[2]) < 1e-15) return null;
         const t = (zPlane - tr.p[2]) / tr.d[2];
         return [tr.p[0] + t * tr.d[0], tr.p[1] + t * tr.d[1], zPlane, t];
     }
 
-    /** Axial crossing z of a meridional ray (y = 0) after the last surface; NaN if parallel to the axis. */
+
     function axialCrossing(tr) {
         if (Math.abs(tr.d[1]) < 1e-15) return NaN;
         return tr.p[2] - tr.p[1] / tr.d[1] * tr.d[2];
     }
 
-    /** Object-space ray from a field point through an object-space point on plane zAim at (xa, ya). */
+
     function objectRay(sys, obj, xa, ya, zAim, zStart) {
         if (obj.atInfinity) {
             const a = obj.angle || 0;
             const dirv = [0, Math.sin(a), Math.cos(a)];
-            const dz = zStart - zAim; // negative
+            const dz = zStart - zAim;
             return {
                 p: [xa, ya + Math.tan(a) * dz, zStart],
                 d: dirv
@@ -788,7 +721,7 @@
         };
     }
 
-    /** Where to aim rays in object space: the paraxial entrance pupil, or the first surface. */
+
     function aimPlane(sys, obj, lambda) {
         const sp = stopsAndPupils(sys, obj, lambda);
         const f0 = first(sys);
@@ -814,10 +747,7 @@
         return Math.min(...zs) - 0.35 * span - 0.02;
     }
 
-    /**
-     * Aim an exact meridional ray so it crosses surface `k` at height yTarget (secant iteration on
-     * the object-space aim height). Returns { ray, trace, ya, converged }.
-     */
+
     function aimRay(sys, obj, k, yTarget, lambda = LINES.d, guess) {
         const ix = indicesAt(sys, lambda);
         const ap = aimPlane(sys, obj, lambda);
@@ -854,7 +784,7 @@
         };
         let sol = secant(guess != null ? guess : 0, (guess || 0) + Math.max(1e-6, ap.r * 0.05));
         if (!sol.ok) {
-            // robust fallback: scan outward from the paraxial aim for the nearest sign change, then Illinois regula falsi
+
             const semis = sys.surfaces.slice(0, k + 1).map((s) => s.semi).filter(Number.isFinite);
             const slope = obj.atInfinity ? Math.abs(Math.tan(obj.angle || 0)) : Math.abs(obj.h) / Math.max(1e-6, Math.abs(first(sys).z - obj.z));
             const W = 2 * (semis.length ? Math.max(...semis) : 0.05) + ap.r + Math.abs(ap.z - first(sys).z) * slope;
@@ -926,7 +856,7 @@
         };
     }
 
-    /** Meridional fan: n rays filling the (paraxial) entrance pupil. Returns traces. */
+
     function rayFan(sys, obj, n = 9, lambda = LINES.d, opts = {}) {
         const ix = indicesAt(sys, lambda);
         const ap = aimPlane(sys, obj, lambda);
@@ -945,18 +875,14 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ aberration analysis
-    /** Reference image plane (physical z) at λ for the object, or null when the image is at infinity. */
+
+
     function referencePlane(sys, obj, lambda) {
         const im = imageOf(sys, obj, lambda);
         return im.atInfinity ? null : im.zImage;
     }
 
-    /**
-     * Longitudinal aberration of meridional rays from the axial object point.
-     * Returns for each λ: { lambda, rho: [...], dz: [...] (m, along the outgoing direction,
-     * relative to the paraxial image at lambdaRef), paraxial: Δz of the paraxial image at λ }.
-     */
+
     function longitudinalAberration(sys, obj, lambdas = [LINES.d], opts = {}) {
         const n = opts.n || 41;
         const lambdaRef = opts.lambdaRef || LINES.d;
@@ -1002,12 +928,7 @@
         };
     }
 
-    /**
-     * Exact vs paraxial comparison for meridional rays from the axial object point at pupil
-     * fractions ρ. Finite image: Δz = exact axial crossing − paraxial image (along the outgoing
-     * direction). Image at infinity (afocal or object at the front focus): Δslope = exact
-     * outgoing tan(u′) − paraxial outgoing slope. Both → 0 as ρ → 0.
-     */
+
     function exactVsParaxial(sys, obj, rhos, lambda = LINES.d) {
         const axial = obj.atInfinity ? {
             atInfinity: true,
@@ -1060,11 +981,7 @@
         };
     }
 
-    /**
-     * Chief-ray distortion vs field. obj gives the full field (h or angle); fields are fractions.
-     * Distortion = (y_real − y_paraxial)/y_paraxial on the paraxial image plane; for an image at
-     * infinity it compares tangents of the outgoing chief-ray angle instead.
-     */
+
     function distortion(sys, obj, fractions, lambda = LINES.d) {
         const sp = stopsAndPupils(sys, obj, lambda);
         const im = imageOf(sys, obj.atInfinity ? {
@@ -1099,7 +1016,7 @@
                 });
                 continue;
             }
-            // paraxial chief ray at the same field (linear in h or tan α)
+
             let parIn;
             if (sp.chiefIn) parIn = obj.atInfinity ? [sp.chiefIn[0] * Math.tan(o.angle), sp.chiefIn[1] * Math.tan(o.angle)] : [sp.chiefIn[0] * o.h, sp.chiefIn[1] * o.h];
             else {
@@ -1132,7 +1049,7 @@
         };
     }
 
-    /** Intersection of two 2D lines (z, y) given point+direction. Returns z or NaN. */
+
     function crossZ(p1, d1, p2, d2) {
         const den = d1[2] * d2[1] - d1[1] * d2[2];
         if (Math.abs(den) < 1e-18) return NaN;
@@ -1140,11 +1057,7 @@
         return p1[2] + t * d1[2];
     }
 
-    /**
-     * Tangential and sagittal focus (field curvature and astigmatism) from pairs of rays
-     * infinitesimally displaced from the exact chief ray. Δz relative to the paraxial image plane,
-     * measured along the outgoing direction. NaN when the image is at infinity.
-     */
+
     function fieldCurves(sys, obj, fractions, lambda = LINES.d) {
         const sp = stopsAndPupils(sys, obj, lambda);
         const im = imageOf(sys, obj.atInfinity ? {
@@ -1194,7 +1107,7 @@
                 continue;
             }
             const zT = crossZ(tu.p, tu.d, td.p, td.d);
-            // sagittal pair crosses the meridional plane x = 0 symmetrically
+
             const zS1 = Math.abs(ts.d[0]) > 1e-18 ? ts.p[2] - ts.p[0] / ts.d[0] * ts.d[2] : NaN;
             const zS2 = Math.abs(tsm.d[0]) > 1e-18 ? tsm.p[2] - tsm.p[0] / tsm.d[0] * tsm.d[2] : NaN;
             const zS = (zS1 + zS2) / 2;
@@ -1211,11 +1124,7 @@
         };
     }
 
-    /**
-     * Spot diagram with skew rays over a hexapolar pupil grid (3D exact trace of the rotationally
-     * symmetric system). Returns positions relative to the reference-λ chief ray on plane zPlane
-     * (metres) or, in "angle" mode (image at infinity), outgoing slopes relative to the chief ray.
-     */
+
     function spotDiagram(sys, obj, opts = {}) {
         const lambdas = opts.lambdas || [LINES.d];
         const lambdaRef = opts.lambdaRef || lambdas[0];
@@ -1223,10 +1132,10 @@
         const sp = stopsAndPupils(sys, obj, lambdaRef);
         const ap = aimPlane(sys, obj, lambdaRef);
         const im = imageOf(sys, obj, lambdaRef);
-        const mode = opts.mode || (im.atInfinity ? "angle" : "plane"); // virtual images: plane behind the system (rays extended backwards)
+        const mode = opts.mode || (im.atInfinity ? "angle" : "plane");
         const zPlane = opts.zPlane != null ? opts.zPlane : im.zImage;
         const z0 = startZ(sys, obj);
-        // centre the pupil grid on the exact chief ray's crossing of the aim plane
+
         let yc = 0;
         if (sp.stop >= 0 && ((obj.atInfinity && obj.angle) || (!obj.atInfinity && obj.h))) {
             const aim = aimRay(sys, obj, sp.stop, 0, lambdaRef);
@@ -1298,7 +1207,7 @@
         };
     }
 
-    /** Best-focus plane (minimum RMS spot for the reference λ) found by golden-section search around zGuess. */
+
     function bestFocus(sys, obj, zGuess, range, opts = {}) {
         const f = (z) => spotDiagram(sys, obj, Object.assign({}, opts, {
             zPlane: z,
@@ -1333,8 +1242,9 @@
         };
     }
 
-    /** Airy (diffraction-limited) spot: first dark ring radius 0.61 λ/NA, diameter 1.22 λ/NA. */
-    const J1_ZERO = 3.8317059702075125; // first zero of J1: Airy radius = j11/(2π) · λ/NA ≈ 0.610 λ/NA
+
+    const J1_ZERO = 3.8317059702075125;
+
     function airy(lambda, na) {
         if (!(na > 0)) return {
             radius: Infinity,
@@ -1347,7 +1257,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ presets (lengths in metres)
+
     const mm = 1e-3;
     const PRESETS = {
         single: {

@@ -1,11 +1,11 @@
 (function() {
     'use strict';
 
-    // ---------------------------------------------------------------------
-    // Physics (pure, shared with tests/ring-physics.spec.js)
-    // ---------------------------------------------------------------------
 
-    // Air-core, densely wound ideal toroid: B_phi = B0 R / r, with |q/m| = 1.
+
+
+
+
     const MAJOR_RADIUS = 3.25;
     const TUBE_RADIUS = 0.82;
     const REFERENCE_FIELD = 7;
@@ -19,8 +19,8 @@
         };
     }
 
-    // Boris rotation with leapfrog positions; no electric field or drag.
-    // https://www.particleincell.com/2011/vxb-rotation/
+
+
     function advanceParticle(particle, magneticField, dt) {
         const v = particle.velocity;
         const half = particle.charge * dt / 2;
@@ -41,7 +41,7 @@
 
     function advanceTrail(p, current, dt) {
         if (p.retiring) {
-            // Hold outgoing geometry while it fades. Reset only when invisible.
+
             p.opacity = Math.max(0, p.opacity - dt / 0.7);
             if (p.opacity === 0) {
                 Object.assign(p.position, p.initialPosition);
@@ -72,11 +72,11 @@
     }
     if (typeof window === 'undefined') return;
 
-    // ---------------------------------------------------------------------
-    // Scene description. Layout and styling live in 13_intro_page.css.
-    // Every material is a small shader writing display colors directly, so
-    // the scene needs no lights or tone mapping.
-    // ---------------------------------------------------------------------
+
+
+
+
+
 
     const PARTICLE_COUNT = 18;
     const TRAIL_LENGTH = 480;
@@ -153,8 +153,8 @@
             gl_Position = projectionMatrix * mv;
         }`;
 
-    // Copper winding lit by a camera-fixed key light. The side facing the
-    // viewer fades out, so the field region stays visible from every angle.
+
+
     function buildWinding(T) {
         const curve = new T.Curve();
         curve.getPoint = (t, target = new T.Vector3()) => {
@@ -163,7 +163,7 @@
             const r = MAJOR_RADIUS + WINDING.radius * Math.cos(b);
             return target.set(r * Math.cos(a), WINDING.radius * Math.sin(b), r * Math.sin(a));
         };
-        // The helix has nearly constant speed, so parameter and arc length agree.
+
         curve.getPointAt = curve.getPoint;
         curve.getTangentAt = curve.getTangent;
         const material = new T.ShaderMaterial({
@@ -197,8 +197,8 @@
         return mesh;
     }
 
-    // Glass-like outline of the field region: transparent face-on, visible
-    // only where the surface turns away from the viewer.
+
+
     function buildShell(T) {
         const material = new T.ShaderMaterial({
             transparent: true,
@@ -226,8 +226,8 @@
         return mesh;
     }
 
-    // Circular field lines drawn as dashes travelling along B. Dash speed is
-    // proportional to |B| = B0 R / r, so the inner side runs visibly faster.
+
+
     function buildFieldLines(T) {
         const segments = 256;
         const positions = [],
@@ -297,7 +297,7 @@
         return Array.from({
             length: PARTICLE_COUNT
         }, (_, i) => {
-            // Matched initial conditions make the effect of charge sign clear.
+
             const pair = Math.floor(i / 2);
             const a = pair / (PARTICLE_COUNT / 2) * Math.PI * 2;
             const r = MAJOR_RADIUS + 0.2 * Math.sin(pair * 2.4);
@@ -324,9 +324,9 @@
 
     const chargeColor = (T, p) => new T.Color(p.charge > 0 ? COLORS.positive : COLORS.negative);
 
-    // Screen-space ribbons: each history sample becomes two vertices pushed
-    // apart perpendicular to the projected direction of travel. Ordinary
-    // alpha blending bounds brightness at crossings.
+
+
+
     function createTrails(T, particles) {
         const vertexCount = particles.length * TRAIL_LENGTH * 2;
         const positions = new Float32Array(vertexCount * 3);
@@ -423,7 +423,7 @@
         };
     }
 
-    // Round head on each trail, faded with the trail so reinjection never pops.
+
     function createHeads(T, particles) {
         const positions = new Float32Array(particles.length * 3);
         const colors = new Float32Array(particles.length * 3);
@@ -480,9 +480,9 @@
         };
     }
 
-    // Projected extent of the apparatus for a camera at the given distance and
-    // pitch looking at the origin, in units of the focal length. The apparatus
-    // is rotationally symmetric, so yaw does not matter.
+
+
+
     function silhouette(distance, pitch) {
         const sin = Math.sin(pitch),
             cos = Math.cos(pitch);
@@ -510,7 +510,7 @@
         };
     }
 
-    // Smallest distance at which the silhouette fits the given half extents.
+
     function fittingDistance(pitch, halfWidth, halfHeight) {
         let near = 5,
             far = 80;
@@ -580,8 +580,8 @@
         }
         for (let i = 0; i < TRAIL_LENGTH; i++) integrate();
 
-        // Keep the apparatus framed inside the stage element, which is the
-        // space the header and footer leave free, at every container size.
+
+
         function placeCamera() {
             view.yaw += (view.targetYaw - view.yaw) * 0.12;
             view.pitch += (view.targetPitch - view.pitch) * 0.12;
@@ -679,7 +679,7 @@
             if (e.key === '-') view.zoom = clampZoom(view.zoom + 0.1);
         });
 
-        // The pause toggle keeps a constant name; aria-pressed carries its state.
+
         const pause = container.querySelector('[data-pause]');
 
         function updatePause() {

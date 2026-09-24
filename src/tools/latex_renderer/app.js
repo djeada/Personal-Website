@@ -892,570 +892,570 @@ class LatexRenderer {
             binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
         }
 
-        return btoa(binary).replace(/\+/g, '-').replace(/\
-        }
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
 
-        decodeContentFromURL(value) {
+    decodeContentFromURL(value) {
+        try {
+            const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
+            const binary = atob(padded);
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        } catch (_) {
             try {
-                const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-                const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
-                const binary = atob(padded);
-                const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-                return new TextDecoder().decode(bytes);
-            } catch (_) {
-                try {
-                    return decodeURIComponent(escape(atob(value)));
-                } catch (__) {
-                    return '';
-                }
+                return decodeURIComponent(escape(atob(value)));
+            } catch (__) {
+                return '';
             }
         }
+    }
 
-        copyText(text) {
-            if (navigator.clipboard && window.isSecureContext) {
-                return navigator.clipboard.writeText(text);
-            }
-
-            return new Promise((resolve, reject) => {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.setAttribute('readonly', '');
-                textarea.style.position = 'fixed';
-                textarea.style.top = '-1000px';
-                document.body.appendChild(textarea);
-                textarea.select();
-
-                try {
-                    document.execCommand('copy') ? resolve() : reject(new Error('execCommand copy failed'));
-                } catch (error) {
-                    reject(error);
-                } finally {
-                    textarea.remove();
-                }
-            });
+    copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
         }
 
-        flashButton(button, iconClass, label) {
-            if (!button) return;
-            const originalNodes = [...button.childNodes].map((node) => node.cloneNode(true));
-            const icon = document.createElement('i');
-            icon.className = iconClass;
-            const text = document.createElement('span');
-            text.textContent = label;
-
-            button.replaceChildren(icon, text);
-            button.classList.add('is-success');
-            setTimeout(() => {
-                button.replaceChildren(...originalNodes);
-                button.classList.remove('is-success');
-            }, 1600);
-        }
-
-        restoreState() {
-            const params = new URLSearchParams(location.search);
-            const encodedContent = params.get('c');
-            if (encodedContent) {
-                const decoded = this.decodeContentFromURL(encodedContent);
-                if (decoded) {
-                    this.input.value = decoded;
-                    return;
-                }
-            }
+        return new Promise((resolve, reject) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-1000px';
+            document.body.appendChild(textarea);
+            textarea.select();
 
             try {
-                const saved = localStorage.getItem(this.storageKey) || localStorage.getItem(this.legacyStorageKey);
-                if (saved) {
-                    this.input.value = saved;
-                }
-            } catch (_) {
+                document.execCommand('copy') ? resolve() : reject(new Error('execCommand copy failed'));
+            } catch (error) {
+                reject(error);
+            } finally {
+                textarea.remove();
+            }
+        });
+    }
 
+    flashButton(button, iconClass, label) {
+        if (!button) return;
+        const originalNodes = [...button.childNodes].map((node) => node.cloneNode(true));
+        const icon = document.createElement('i');
+        icon.className = iconClass;
+        const text = document.createElement('span');
+        text.textContent = label;
+
+        button.replaceChildren(icon, text);
+        button.classList.add('is-success');
+        setTimeout(() => {
+            button.replaceChildren(...originalNodes);
+            button.classList.remove('is-success');
+        }, 1600);
+    }
+
+    restoreState() {
+        const params = new URLSearchParams(location.search);
+        const encodedContent = params.get('c');
+        if (encodedContent) {
+            const decoded = this.decodeContentFromURL(encodedContent);
+            if (decoded) {
+                this.input.value = decoded;
+                return;
             }
         }
 
-        saveState() {
-            try {
-                localStorage.setItem(this.storageKey, this.input.value);
-            } catch (_) {
-
+        try {
+            const saved = localStorage.getItem(this.storageKey) || localStorage.getItem(this.legacyStorageKey);
+            if (saved) {
+                this.input.value = saved;
             }
+        } catch (_) {
+
         }
+    }
 
-        initResizing() {
-            if (!this.divider || !this.splitContainer) return;
+    saveState() {
+        try {
+            localStorage.setItem(this.storageKey, this.input.value);
+        } catch (_) {
 
-            const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
-            const applySplit = () => {
-                const first = Math.max(0.2, Math.min(0.8, this.splitRatio));
-                const second = 1 - first;
-                if (isMobile()) {
-                    this.splitContainer.style.gridTemplateColumns = '';
-                    this.splitContainer.style.gridTemplateRows = `${first}fr 6px ${second}fr`;
-                } else {
-                    this.splitContainer.style.gridTemplateRows = '';
-                    this.splitContainer.style.gridTemplateColumns = `${first}fr 6px ${second}fr`;
-                }
-            };
+        }
+    }
 
-            const setRatio = (ratio) => {
-                this.splitRatio = Math.max(0.2, Math.min(0.8, ratio));
-                applySplit();
-            };
+    initResizing() {
+        if (!this.divider || !this.splitContainer) return;
 
-            let dragging = false;
-            let activePointer = null;
+        const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+        const applySplit = () => {
+            const first = Math.max(0.2, Math.min(0.8, this.splitRatio));
+            const second = 1 - first;
+            if (isMobile()) {
+                this.splitContainer.style.gridTemplateColumns = '';
+                this.splitContainer.style.gridTemplateRows = `${first}fr 6px ${second}fr`;
+            } else {
+                this.splitContainer.style.gridTemplateRows = '';
+                this.splitContainer.style.gridTemplateColumns = `${first}fr 6px ${second}fr`;
+            }
+        };
 
-            this.divider.addEventListener('pointerdown', (event) => {
-                dragging = true;
-                activePointer = event.pointerId;
-                this.divider.setPointerCapture?.(event.pointerId);
-                event.preventDefault();
-            });
-
-            window.addEventListener('pointermove', (event) => {
-                if (!dragging) return;
-                const rect = this.splitContainer.getBoundingClientRect();
-                const ratio = isMobile() ?
-                    (event.clientY - rect.top) / rect.height :
-                    (event.clientX - rect.left) / rect.width;
-                setRatio(ratio);
-            });
-
-            window.addEventListener('pointerup', () => {
-                if (!dragging) return;
-                dragging = false;
-                if (activePointer !== null) {
-                    this.divider.releasePointerCapture?.(activePointer);
-                }
-                activePointer = null;
-                this.announce('Panels resized');
-            });
-
-            this.divider.addEventListener('keydown', (event) => {
-                const horizontalKey = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
-                const verticalKey = event.key === 'ArrowUp' || event.key === 'ArrowDown';
-                if (!horizontalKey && !verticalKey && event.key !== 'Home' && event.key !== 'End') return;
-
-                event.preventDefault();
-                if (event.key === 'Home') {
-                    setRatio(0.2);
-                } else if (event.key === 'End') {
-                    setRatio(0.8);
-                } else {
-                    const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -0.05 : 0.05;
-                    setRatio(this.splitRatio + direction);
-                }
-                this.announce('Panels resized');
-            });
-
-            this.divider.addEventListener('dblclick', () => {
-                setRatio(0.5);
-                this.announce('Panels reset');
-            });
-
-            window.addEventListener('resize', applySplit);
+        const setRatio = (ratio) => {
+            this.splitRatio = Math.max(0.2, Math.min(0.8, ratio));
             applySplit();
-        }
+        };
 
-        announce(message) {
-            if (this.srStatus) {
-                this.srStatus.textContent = message;
+        let dragging = false;
+        let activePointer = null;
+
+        this.divider.addEventListener('pointerdown', (event) => {
+            dragging = true;
+            activePointer = event.pointerId;
+            this.divider.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+        });
+
+        window.addEventListener('pointermove', (event) => {
+            if (!dragging) return;
+            const rect = this.splitContainer.getBoundingClientRect();
+            const ratio = isMobile() ?
+                (event.clientY - rect.top) / rect.height :
+                (event.clientX - rect.left) / rect.width;
+            setRatio(ratio);
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (!dragging) return;
+            dragging = false;
+            if (activePointer !== null) {
+                this.divider.releasePointerCapture?.(activePointer);
             }
-        }
+            activePointer = null;
+            this.announce('Panels resized');
+        });
 
-        handleKeyboardShortcuts(event) {
-            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                event.preventDefault();
-                this.renderLatex();
-                return;
+        this.divider.addEventListener('keydown', (event) => {
+            const horizontalKey = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+            const verticalKey = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+            if (!horizontalKey && !verticalKey && event.key !== 'Home' && event.key !== 'End') return;
+
+            event.preventDefault();
+            if (event.key === 'Home') {
+                setRatio(0.2);
+            } else if (event.key === 'End') {
+                setRatio(0.8);
+            } else {
+                const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -0.05 : 0.05;
+                setRatio(this.splitRatio + direction);
             }
+            this.announce('Panels resized');
+        });
 
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-                event.preventDefault();
-                this.clearContent();
-                return;
-            }
+        this.divider.addEventListener('dblclick', () => {
+            setRatio(0.5);
+            this.announce('Panels reset');
+        });
 
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
-                event.preventDefault();
-                this.wrapSelection('$', '$');
-                return;
-            }
+        window.addEventListener('resize', applySplit);
+        applySplit();
+    }
 
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'm') {
-                event.preventDefault();
-                this.wrapSelection('$$\n', '\n$$');
-                return;
-            }
+    announce(message) {
+        if (this.srStatus) {
+            this.srStatus.textContent = message;
+        }
+    }
 
-            if (event.key === 'Tab') {
-                event.preventDefault();
-                const start = this.input.selectionStart;
-                const end = this.input.selectionEnd;
-                this.input.setRangeText('    ', start, end, 'end');
-                this.handleInputChange();
-            }
+    handleKeyboardShortcuts(event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            this.renderLatex();
+            return;
         }
 
-        initQuickReference() {
-            if (!this.quickRefList) return;
-
-            this.quickRefItems = [...this.quickRefList.querySelectorAll('.latex-snippet')].map((element) => {
-                element.setAttribute('tabindex', '0');
-                element.setAttribute('role', 'button');
-                element.addEventListener('click', () => this.insertSnippet(element.dataset.snippet));
-                element.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        this.insertSnippet(element.dataset.snippet);
-                    }
-                });
-
-                return {
-                    element,
-                    row: element.closest('li'),
-                    column: element.closest('.help-column'),
-                    text: element.textContent.toLowerCase()
-                };
-            });
-
-            this.quickRefFilter?.addEventListener('input', () => this.filterQuickRef());
-            this.updateQuickRefCount();
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            this.clearContent();
+            return;
         }
 
-        insertSnippet(snippet) {
-            if (!snippet) return;
-
-            const decoded = snippet.replace(/&amp;/g, '&');
-            const trimmed = decoded.trim();
-            const isEnvironment = /^\\begin\{/.test(trimmed);
-            const isDelimited = /\$|\\\[|\\\]/.test(trimmed);
-            const shouldWrapInline = !isEnvironment && !isDelimited;
-            const finalSnippet = shouldWrapInline ? `$${decoded}$` : decoded;
-
-            this.insertAtCursor(finalSnippet);
-            this.announce('Inserted snippet');
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+            event.preventDefault();
+            this.wrapSelection('$', '$');
+            return;
         }
 
-        filterQuickRef() {
-            if (!this.quickRefItems) return;
-
-            const query = (this.quickRefFilter.value || '').trim().toLowerCase();
-            let visibleCount = 0;
-
-            this.quickRefItems.forEach((item) => {
-                const visible = !query || item.text.includes(query);
-                item.row?.classList.toggle('hidden', !visible);
-                if (visible) visibleCount++;
-            });
-
-            [...this.quickRefList.querySelectorAll('.help-column')].forEach((column) => {
-                const hasVisibleSnippet = [...column.querySelectorAll('li')].some((row) => !row.classList.contains('hidden'));
-                column.classList.toggle('hidden', !hasVisibleSnippet);
-            });
-
-            this.updateQuickRefCount(visibleCount);
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'm') {
+            event.preventDefault();
+            this.wrapSelection('$$\n', '\n$$');
+            return;
         }
 
-        updateQuickRefCount(count) {
-            if (!this.quickRefCount) return;
-
-            const total = count === undefined ?
-                this.quickRefList.querySelectorAll('.latex-snippet').length :
-                count;
-            const suffix = this.quickRefFilter?.value ? ' match' : '';
-            this.quickRefCount.textContent = `${total} snippet${total === 1 ? '' : 's'}${suffix}`;
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            const start = this.input.selectionStart;
+            const end = this.input.selectionEnd;
+            this.input.setRangeText('    ', start, end, 'end');
+            this.handleInputChange();
         }
+    }
 
-        initDrawingLayer() {
-            this.drawingMode = null;
-            this.isDrawing = false;
-            this.activeCtx = null;
-            this.drawingWrapper = document.createElement('div');
-            this.drawingWrapper.className = 'drawing-canvas-wrapper';
+    initQuickReference() {
+        if (!this.quickRefList) return;
 
-            this.highlightCanvas = document.createElement('canvas');
-            this.highlightCanvas.className = 'drawing-canvas highlight-layer';
-            this.penCanvas = document.createElement('canvas');
-            this.penCanvas.className = 'drawing-canvas pen-layer';
-            this.highlightMaskCanvas = document.createElement('canvas');
-
-            this.highlightMaskCtx = this.highlightMaskCanvas.getContext('2d');
-            this.highlightCtx = this.highlightCanvas.getContext('2d');
-            this.penCtx = this.penCanvas.getContext('2d');
-
-            this.drawingWrapper.append(this.highlightCanvas, this.penCanvas);
-            this.attachDrawingLayer();
-
-            this.resizeDrawingCanvas = () => {
-                if (!this.output || !this.highlightCanvas || !this.penCanvas) return;
-
-                const width = Math.max(1, this.output.clientWidth);
-                const height = Math.max(1, this.output.scrollHeight);
-                const previousMask = document.createElement('canvas');
-                previousMask.width = this.highlightMaskCanvas.width;
-                previousMask.height = this.highlightMaskCanvas.height;
-
-                if (previousMask.width && previousMask.height) {
-                    previousMask.getContext('2d').drawImage(this.highlightMaskCanvas, 0, 0);
+        this.quickRefItems = [...this.quickRefList.querySelectorAll('.latex-snippet')].map((element) => {
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('role', 'button');
+            element.addEventListener('click', () => this.insertSnippet(element.dataset.snippet));
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.insertSnippet(element.dataset.snippet);
                 }
+            });
 
-                [this.highlightCanvas, this.penCanvas, this.highlightMaskCanvas].forEach((canvas) => {
-                    if (canvas.width !== width) canvas.width = width;
-                    if (canvas.height !== height) canvas.height = height;
-                    canvas.style.width = `${width}px`;
-                    canvas.style.height = `${height}px`;
-                });
-
-                if (previousMask.width && previousMask.height) {
-                    this.highlightMaskCtx.drawImage(previousMask, 0, 0, width, height);
-                    this.renderHighlightTint();
-                }
+            return {
+                element,
+                row: element.closest('li'),
+                column: element.closest('.help-column'),
+                text: element.textContent.toLowerCase()
             };
+        });
 
-            if (window.ResizeObserver) {
-                new ResizeObserver(() => this.resizeDrawingCanvas()).observe(this.output);
+        this.quickRefFilter?.addEventListener('input', () => this.filterQuickRef());
+        this.updateQuickRefCount();
+    }
+
+    insertSnippet(snippet) {
+        if (!snippet) return;
+
+        const decoded = snippet.replace(/&amp;/g, '&');
+        const trimmed = decoded.trim();
+        const isEnvironment = /^\\begin\{/.test(trimmed);
+        const isDelimited = /\$|\\\[|\\\]/.test(trimmed);
+        const shouldWrapInline = !isEnvironment && !isDelimited;
+        const finalSnippet = shouldWrapInline ? `$${decoded}$` : decoded;
+
+        this.insertAtCursor(finalSnippet);
+        this.announce('Inserted snippet');
+    }
+
+    filterQuickRef() {
+        if (!this.quickRefItems) return;
+
+        const query = (this.quickRefFilter.value || '').trim().toLowerCase();
+        let visibleCount = 0;
+
+        this.quickRefItems.forEach((item) => {
+            const visible = !query || item.text.includes(query);
+            item.row?.classList.toggle('hidden', !visible);
+            if (visible) visibleCount++;
+        });
+
+        [...this.quickRefList.querySelectorAll('.help-column')].forEach((column) => {
+            const hasVisibleSnippet = [...column.querySelectorAll('li')].some((row) => !row.classList.contains('hidden'));
+            column.classList.toggle('hidden', !hasVisibleSnippet);
+        });
+
+        this.updateQuickRefCount(visibleCount);
+    }
+
+    updateQuickRefCount(count) {
+        if (!this.quickRefCount) return;
+
+        const total = count === undefined ?
+            this.quickRefList.querySelectorAll('.latex-snippet').length :
+            count;
+        const suffix = this.quickRefFilter?.value ? ' match' : '';
+        this.quickRefCount.textContent = `${total} snippet${total === 1 ? '' : 's'}${suffix}`;
+    }
+
+    initDrawingLayer() {
+        this.drawingMode = null;
+        this.isDrawing = false;
+        this.activeCtx = null;
+        this.drawingWrapper = document.createElement('div');
+        this.drawingWrapper.className = 'drawing-canvas-wrapper';
+
+        this.highlightCanvas = document.createElement('canvas');
+        this.highlightCanvas.className = 'drawing-canvas highlight-layer';
+        this.penCanvas = document.createElement('canvas');
+        this.penCanvas.className = 'drawing-canvas pen-layer';
+        this.highlightMaskCanvas = document.createElement('canvas');
+
+        this.highlightMaskCtx = this.highlightMaskCanvas.getContext('2d');
+        this.highlightCtx = this.highlightCanvas.getContext('2d');
+        this.penCtx = this.penCanvas.getContext('2d');
+
+        this.drawingWrapper.append(this.highlightCanvas, this.penCanvas);
+        this.attachDrawingLayer();
+
+        this.resizeDrawingCanvas = () => {
+            if (!this.output || !this.highlightCanvas || !this.penCanvas) return;
+
+            const width = Math.max(1, this.output.clientWidth);
+            const height = Math.max(1, this.output.scrollHeight);
+            const previousMask = document.createElement('canvas');
+            previousMask.width = this.highlightMaskCanvas.width;
+            previousMask.height = this.highlightMaskCanvas.height;
+
+            if (previousMask.width && previousMask.height) {
+                previousMask.getContext('2d').drawImage(this.highlightMaskCanvas, 0, 0);
             }
-            window.addEventListener('resize', () => this.resizeDrawingCanvas());
 
-            const start = (event) => {
-                if (!this.drawingMode) return;
-                this.isDrawing = true;
-                const {
-                    x,
-                    y
-                } = this.getPointerPos(event);
+            [this.highlightCanvas, this.penCanvas, this.highlightMaskCanvas].forEach((canvas) => {
+                if (canvas.width !== width) canvas.width = width;
+                if (canvas.height !== height) canvas.height = height;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            });
 
-                if (this.drawingMode === 'eraser') {
-                    this.eraserTargets = [this.penCtx, this.highlightMaskCtx];
-                    this.eraserTargets.forEach((ctx) => {
-                        ctx.save();
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.globalAlpha = 1;
-                        ctx.strokeStyle = '#000';
-                        ctx.lineWidth = 30;
-                        ctx.globalCompositeOperation = 'destination-out';
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                    });
-                } else {
-                    const ctx = this.drawingMode === 'highlight' ? this.highlightMaskCtx : this.penCtx;
+            if (previousMask.width && previousMask.height) {
+                this.highlightMaskCtx.drawImage(previousMask, 0, 0, width, height);
+                this.renderHighlightTint();
+            }
+        };
+
+        if (window.ResizeObserver) {
+            new ResizeObserver(() => this.resizeDrawingCanvas()).observe(this.output);
+        }
+        window.addEventListener('resize', () => this.resizeDrawingCanvas());
+
+        const start = (event) => {
+            if (!this.drawingMode) return;
+            this.isDrawing = true;
+            const {
+                x,
+                y
+            } = this.getPointerPos(event);
+
+            if (this.drawingMode === 'eraser') {
+                this.eraserTargets = [this.penCtx, this.highlightMaskCtx];
+                this.eraserTargets.forEach((ctx) => {
                     ctx.save();
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
-                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 30;
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                });
+            } else {
+                const ctx = this.drawingMode === 'highlight' ? this.highlightMaskCtx : this.penCtx;
+                ctx.save();
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalCompositeOperation = 'source-over';
 
-                    if (this.drawingMode === 'highlight') {
-                        ctx.globalAlpha = 1;
-                        ctx.strokeStyle = '#000';
-                        ctx.lineWidth = 18;
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.globalAlpha = 1;
-                        ctx.strokeStyle = this.drawColorInput?.value || '#e11d48';
-                        ctx.lineWidth = 2.5;
-                        this.penPoints = [{
-                            x,
-                            y
-                        }];
-                    }
-
-                    this.activeCtx = ctx;
-                }
-
-                event.preventDefault();
-            };
-
-            const move = (event) => {
-                if (!this.isDrawing) return;
-                const {
-                    x,
-                    y
-                } = this.getPointerPos(event);
-
-                if (this.drawingMode === 'pen') {
-                    this.penPoints.push({
+                if (this.drawingMode === 'highlight') {
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 18;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = this.drawColorInput?.value || '#e11d48';
+                    ctx.lineWidth = 2.5;
+                    this.penPoints = [{
                         x,
                         y
-                    });
-                    const points = this.penPoints;
-                    const count = points.length;
-
-                    if (count === 2) {
-                        this.penCtx.beginPath();
-                        this.penCtx.moveTo(points[0].x, points[0].y);
-                        this.penCtx.lineTo(points[1].x, points[1].y);
-                        this.penCtx.stroke();
-                    } else if (count >= 3) {
-                        const p0 = points[count - 3];
-                        const p1 = points[count - 2];
-                        const p2 = points[count - 1];
-                        const mid1 = {
-                            x: (p0.x + p1.x) / 2,
-                            y: (p0.y + p1.y) / 2
-                        };
-                        const mid2 = {
-                            x: (p1.x + p2.x) / 2,
-                            y: (p1.y + p2.y) / 2
-                        };
-                        this.penCtx.beginPath();
-                        this.penCtx.moveTo(mid1.x, mid1.y);
-                        this.penCtx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
-                        this.penCtx.stroke();
-                    }
-                } else if (this.drawingMode === 'eraser') {
-                    (this.eraserTargets || []).forEach((ctx) => {
-                        ctx.lineTo(x, y);
-                        ctx.stroke();
-                    });
-                    this.renderHighlightTint();
-                } else if (this.drawingMode === 'highlight') {
-                    this.activeCtx.lineTo(x, y);
-                    this.activeCtx.stroke();
-                    this.renderHighlightTint();
+                    }];
                 }
 
-                event.preventDefault();
-            };
+                this.activeCtx = ctx;
+            }
 
-            const end = () => {
-                if (!this.isDrawing) return;
+            event.preventDefault();
+        };
 
-                if (this.drawingMode === 'pen' && this.penPoints && this.penPoints.length >= 2) {
-                    const points = this.penPoints;
-                    const last = points[points.length - 1];
-                    const previous = points[points.length - 2];
+        const move = (event) => {
+            if (!this.isDrawing) return;
+            const {
+                x,
+                y
+            } = this.getPointerPos(event);
+
+            if (this.drawingMode === 'pen') {
+                this.penPoints.push({
+                    x,
+                    y
+                });
+                const points = this.penPoints;
+                const count = points.length;
+
+                if (count === 2) {
                     this.penCtx.beginPath();
-                    this.penCtx.moveTo(previous.x, previous.y);
-                    this.penCtx.lineTo(last.x, last.y);
+                    this.penCtx.moveTo(points[0].x, points[0].y);
+                    this.penCtx.lineTo(points[1].x, points[1].y);
+                    this.penCtx.stroke();
+                } else if (count >= 3) {
+                    const p0 = points[count - 3];
+                    const p1 = points[count - 2];
+                    const p2 = points[count - 1];
+                    const mid1 = {
+                        x: (p0.x + p1.x) / 2,
+                        y: (p0.y + p1.y) / 2
+                    };
+                    const mid2 = {
+                        x: (p1.x + p2.x) / 2,
+                        y: (p1.y + p2.y) / 2
+                    };
+                    this.penCtx.beginPath();
+                    this.penCtx.moveTo(mid1.x, mid1.y);
+                    this.penCtx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
                     this.penCtx.stroke();
                 }
+            } else if (this.drawingMode === 'eraser') {
+                (this.eraserTargets || []).forEach((ctx) => {
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                });
+                this.renderHighlightTint();
+            } else if (this.drawingMode === 'highlight') {
+                this.activeCtx.lineTo(x, y);
+                this.activeCtx.stroke();
+                this.renderHighlightTint();
+            }
 
-                if (this.drawingMode === 'eraser') {
-                    (this.eraserTargets || []).forEach((ctx) => {
-                        try {
-                            ctx.closePath();
-                            ctx.restore();
-                        } catch (_) {}
-                    });
-                    this.eraserTargets = null;
-                    this.renderHighlightTint();
-                } else if (this.activeCtx) {
+            event.preventDefault();
+        };
+
+        const end = () => {
+            if (!this.isDrawing) return;
+
+            if (this.drawingMode === 'pen' && this.penPoints && this.penPoints.length >= 2) {
+                const points = this.penPoints;
+                const last = points[points.length - 1];
+                const previous = points[points.length - 2];
+                this.penCtx.beginPath();
+                this.penCtx.moveTo(previous.x, previous.y);
+                this.penCtx.lineTo(last.x, last.y);
+                this.penCtx.stroke();
+            }
+
+            if (this.drawingMode === 'eraser') {
+                (this.eraserTargets || []).forEach((ctx) => {
                     try {
-                        this.activeCtx.closePath();
-                        this.activeCtx.restore();
+                        ctx.closePath();
+                        ctx.restore();
                     } catch (_) {}
-                    this.renderHighlightTint();
-                }
-
-                this.isDrawing = false;
-                this.activeCtx = null;
-                this.penPoints = null;
-            };
-
-            [this.highlightCanvas, this.penCanvas].forEach((canvas) => {
-                canvas.addEventListener('pointerdown', start);
-                canvas.addEventListener('pointermove', move);
-                canvas.addEventListener('pointerup', end);
-                canvas.addEventListener('pointercancel', end);
-                canvas.addEventListener('pointerleave', end);
-            });
-
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape' && this.drawingMode) {
-                    this.toggleDrawingMode(null);
-                }
-            });
-
-            this.resizeDrawingCanvas();
-        }
-
-        attachDrawingLayer() {
-            if (!this.output || !this.drawingWrapper) return;
-            if (this.drawingWrapper.parentNode !== this.output) {
-                this.output.appendChild(this.drawingWrapper);
-            }
-            this.resizeDrawingCanvas?.();
-        }
-
-        getPointerPos(event) {
-            const rect = this.output.getBoundingClientRect();
-            const point = event.touches?.[0] || event;
-
-            return {
-                x: point.clientX - rect.left + this.output.scrollLeft,
-                y: point.clientY - rect.top + this.output.scrollTop
-            };
-        }
-
-        toggleDrawingMode(mode) {
-            if (this.drawingMode === mode) {
-                mode = null;
+                });
+                this.eraserTargets = null;
+                this.renderHighlightTint();
+            } else if (this.activeCtx) {
+                try {
+                    this.activeCtx.closePath();
+                    this.activeCtx.restore();
+                } catch (_) {}
+                this.renderHighlightTint();
             }
 
-            this.drawingMode = mode;
-            const active = Boolean(mode);
-            this.output.classList.toggle('drawing-active', active);
-            this.output.classList.toggle('drawing-layer-active', active);
+            this.isDrawing = false;
+            this.activeCtx = null;
+            this.penPoints = null;
+        };
 
-            [
-                [this.penBtn, 'pen'],
-                [this.highlightBtn, 'highlight'],
-                [this.eraserBtn, 'eraser']
-            ].forEach(([button, name]) => {
-                const isActive = this.drawingMode === name;
-                button?.classList.toggle('active', isActive);
-                button?.setAttribute('aria-pressed', String(isActive));
-            });
+        [this.highlightCanvas, this.penCanvas].forEach((canvas) => {
+            canvas.addEventListener('pointerdown', start);
+            canvas.addEventListener('pointermove', move);
+            canvas.addEventListener('pointerup', end);
+            canvas.addEventListener('pointercancel', end);
+            canvas.addEventListener('pointerleave', end);
+        });
 
-            this.announce(this.drawingMode ? `${this.drawingMode} mode enabled` : 'Drawing mode off');
-        }
-
-        clearDrawing(silent) {
-            if (!this.highlightCtx || !this.penCtx) return;
-
-            this.highlightCtx.clearRect(0, 0, this.highlightCanvas.width, this.highlightCanvas.height);
-            this.highlightMaskCtx.clearRect(0, 0, this.highlightMaskCanvas.width, this.highlightMaskCanvas.height);
-            this.penCtx.clearRect(0, 0, this.penCanvas.width, this.penCanvas.height);
-
-            if (!silent) {
-                this.setStatus('Drawing cleared', 'success');
-                this.announce('Cleared drawing layer');
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.drawingMode) {
+                this.toggleDrawingMode(null);
             }
+        });
+
+        this.resizeDrawingCanvas();
+    }
+
+    attachDrawingLayer() {
+        if (!this.output || !this.drawingWrapper) return;
+        if (this.drawingWrapper.parentNode !== this.output) {
+            this.output.appendChild(this.drawingWrapper);
+        }
+        this.resizeDrawingCanvas?.();
+    }
+
+    getPointerPos(event) {
+        const rect = this.output.getBoundingClientRect();
+        const point = event.touches?.[0] || event;
+
+        return {
+            x: point.clientX - rect.left + this.output.scrollLeft,
+            y: point.clientY - rect.top + this.output.scrollTop
+        };
+    }
+
+    toggleDrawingMode(mode) {
+        if (this.drawingMode === mode) {
+            mode = null;
         }
 
-        renderHighlightTint() {
-            if (!this.highlightCtx || !this.highlightMaskCanvas) return;
+        this.drawingMode = mode;
+        const active = Boolean(mode);
+        this.output.classList.toggle('drawing-active', active);
+        this.output.classList.toggle('drawing-layer-active', active);
 
-            const width = this.highlightCanvas.width;
-            const height = this.highlightCanvas.height;
-            const color = this.drawColorInput?.value || '#f5c542';
+        [
+            [this.penBtn, 'pen'],
+            [this.highlightBtn, 'highlight'],
+            [this.eraserBtn, 'eraser']
+        ].forEach(([button, name]) => {
+            const isActive = this.drawingMode === name;
+            button?.classList.toggle('active', isActive);
+            button?.setAttribute('aria-pressed', String(isActive));
+        });
 
-            this.highlightCtx.clearRect(0, 0, width, height);
-            this.highlightCtx.drawImage(this.highlightMaskCanvas, 0, 0);
-            this.highlightCtx.globalCompositeOperation = 'source-in';
-            this.highlightCtx.globalAlpha = 0.28;
-            this.highlightCtx.fillStyle = color;
-            this.highlightCtx.fillRect(0, 0, width, height);
-            this.highlightCtx.globalCompositeOperation = 'source-over';
-            this.highlightCtx.globalAlpha = 1;
-        }
+        this.announce(this.drawingMode ? `${this.drawingMode} mode enabled` : 'Drawing mode off');
+    }
 
-        toggleFullscreen() {
-            const element = this.previewPanel || this.output;
-            if (!document.fullscreenElement) {
-                element.requestFullscreen?.();
-                this.announce('Entered fullscreen');
-            } else {
-                document.exitFullscreen?.();
-                this.announce('Exited fullscreen');
-            }
+    clearDrawing(silent) {
+        if (!this.highlightCtx || !this.penCtx) return;
+
+        this.highlightCtx.clearRect(0, 0, this.highlightCanvas.width, this.highlightCanvas.height);
+        this.highlightMaskCtx.clearRect(0, 0, this.highlightMaskCanvas.width, this.highlightMaskCanvas.height);
+        this.penCtx.clearRect(0, 0, this.penCanvas.width, this.penCanvas.height);
+
+        if (!silent) {
+            this.setStatus('Drawing cleared', 'success');
+            this.announce('Cleared drawing layer');
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => new LatexRenderer());
+    renderHighlightTint() {
+        if (!this.highlightCtx || !this.highlightMaskCanvas) return;
 
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = LatexRenderer;
+        const width = this.highlightCanvas.width;
+        const height = this.highlightCanvas.height;
+        const color = this.drawColorInput?.value || '#f5c542';
+
+        this.highlightCtx.clearRect(0, 0, width, height);
+        this.highlightCtx.drawImage(this.highlightMaskCanvas, 0, 0);
+        this.highlightCtx.globalCompositeOperation = 'source-in';
+        this.highlightCtx.globalAlpha = 0.28;
+        this.highlightCtx.fillStyle = color;
+        this.highlightCtx.fillRect(0, 0, width, height);
+        this.highlightCtx.globalCompositeOperation = 'source-over';
+        this.highlightCtx.globalAlpha = 1;
     }
+
+    toggleFullscreen() {
+        const element = this.previewPanel || this.output;
+        if (!document.fullscreenElement) {
+            element.requestFullscreen?.();
+            this.announce('Entered fullscreen');
+        } else {
+            document.exitFullscreen?.();
+            this.announce('Exited fullscreen');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => new LatexRenderer());
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LatexRenderer;
+}

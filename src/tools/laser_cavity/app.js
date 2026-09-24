@@ -1,12 +1,6 @@
 "use strict";
 
-/*
- * Laser cavity simulator UI.
- * Physics lives in ../shared/optics/laserCavity.js (four-level rate equations,
- * fixed-step RK4 in physical time, pump sweep, relaxation analysis, passive-cavity
- * mode numbers). This file converts UI units, advances the model, and draws.
- * Atom and photon dots are an illustrative view of the model state (N, q).
- */
+
 (function() {
     const UI = window.OpticsUI;
     const core = window.OpticsModels.core;
@@ -29,7 +23,7 @@
         beam: "239, 68, 68"
     };
 
-    // ------------------------------------------------------------------ elements
+
     const sliders = {
         pump: $("pumpSlider"),
         R2: $("reflectivitySlider"),
@@ -52,11 +46,11 @@
     const cavityPanel = $("cavityPanel");
     const ro = (id) => $(id);
 
-    // ------------------------------------------------------------------ parameters
-    // Exact parameter values (SI). Sliders display them; presets may set values finer than a
-    // slider step so that "At threshold" is exactly at threshold.
+
+
+
     const cavity = {
-        pumpPower: 0, // absorbed pump power [W]
+        pumpPower: 0,
         R2: 0.95,
         L: 0.10,
         gainLength: 0.05,
@@ -84,23 +78,23 @@
         derivedParams = model.derived(params);
     }
 
-    // ------------------------------------------------------------------ simulation state
-    let simTime = 0; // s
-    let state = [0, 0]; // [N, q]
+
+    let simTime = 0;
+    let state = [0, 0];
     const HISTORY_BINS = 480;
-    let history = []; // {t, N, g, q (bin peak), pOut (bin peak)}
+    let history = [];
     let binPeakQ = 0;
     let binEnd = 0;
     let peakTrack = {
         a: NaN,
         b: NaN,
         times: []
-    }; // full-resolution spike detection
-    let cursorT = null; // shared time cursor (s)
+    };
+    let cursorT = null;
     let qSteady = 0;
 
-    const speedFactor = () => (+speedSelect.value) * 1e-6; // simulated seconds per wall second
-    const plotWindow = () => 5 * speedFactor(); // 5 s of wall-clock time
+    const speedFactor = () => (+speedSelect.value) * 1e-6;
+    const plotWindow = () => 5 * speedFactor();
     const binWidth = () => plotWindow() / HISTORY_BINS;
 
     function advance(duration) {
@@ -159,7 +153,7 @@
         pushSample(0);
     }
 
-    // ------------------------------------------------------------------ formatting
+
     function formatCount(q) {
         if (!Number.isFinite(q)) return "—";
         if (q < 1000) return q.toFixed(q < 10 ? 2 : 0);
@@ -184,7 +178,7 @@
         return String(n).split("").map((c) => map[c]).join("");
     }
 
-    /** Pick a display unit for powers up to pMax. */
+
     function powerUnit(pMax) {
         if (pMax >= 1) return {
             s: 1,
@@ -204,7 +198,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ controls
+
     UI.enhanceSlider(sliders.pump, {
         unit: "W"
     });
@@ -263,7 +257,7 @@
     }
 
     function applyPreset(name, opts) {
-        // The pump is derived from the model's threshold for the preset cavity.
+
         const p = model.preset(name);
         cavity.R2 = p.R2;
         cavity.L = p.L;
@@ -345,7 +339,7 @@
         if (!levelsPanel.hidden) levelsPlot.resize();
     }
 
-    // ------------------------------------------------------------------ readouts
+
     function updateDisplays() {
         refreshModel();
         const d = derivedParams;
@@ -414,7 +408,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ pump sweep (L–I)
+
     const sweep = {
         job: null,
         timer: 0,
@@ -471,7 +465,7 @@
     }
     sweepBtn.addEventListener("click", startSweep);
 
-    // ------------------------------------------------------------------ relaxation analysis
+
     const relax = {
         result: null,
         timer: 0
@@ -494,10 +488,10 @@
         }, 120);
     }
 
-    // ------------------------------------------------------------------ illustrative particle view
+
     const MAX_DOTS = 40;
-    let photons = []; // {x in [0,1] between mirrors, y, dir}
-    let sparks = []; // spontaneous emission, random direction (not into the mode)
+    let photons = [];
+    let sparks = [];
     const numAtoms = 12;
     let atoms = [];
     const rng = core.createRng ? core.createRng(1064) : null;
@@ -512,13 +506,13 @@
         });
     }
 
-    /** Mode-photon dots: 0 for q ≤ 10⁴, MAX_DOTS at q = 10¹², logarithmic between. */
+
     function targetPhotonDots(q) {
         if (q <= 1e4) return 0;
         return Math.min(MAX_DOTS, Math.round(MAX_DOTS * (Math.log10(q) - 4) / 8));
     }
 
-    /** Red atoms: fraction N/(2 N_th) of the drawn atoms (half red at threshold). */
+
     function targetExcited(N) {
         return Math.min(numAtoms, Math.round(numAtoms * N / (2 * derivedParams.thresholdInversion)));
     }
@@ -557,7 +551,7 @@
         while (photons.length < target) {
             const src = photons.length ? photons[Math.floor(rand() * photons.length)] : null;
             photons.push({
-                // stimulated emission copies the direction of an existing mode photon
+
                 x: gr.x0 + rand() * (gr.x1 - gr.x0),
                 y: src ? Math.min(0.8, Math.max(0.2, src.y + (rand() - 0.5) * 0.08)) : 0.35 + rand() * 0.3,
                 dir: src ? src.dir : (rand() < 0.5 ? 1 : -1),
@@ -572,11 +566,11 @@
             }
         });
 
-        const speed = 0.9 * wallDt; // cavity widths per wall second (illustrative; real photons cross in L/c)
+        const speed = 0.9 * wallDt;
         photons = photons.filter((ph) => {
             ph.x += ph.dir * speed;
             if (ph.x >= 1) {
-                if (ph.leaving) return false; // a surplus dot leaves at a mirror
+                if (ph.leaving) return false;
                 ph.x = 2 - ph.x;
                 ph.dir = -1;
             } else if (ph.x <= 0) {
@@ -594,7 +588,7 @@
         sparks = sparks.filter((s) => s.life > 0);
     }
 
-    // ------------------------------------------------------------------ drawing: schematic
+
     function setFont(ctx, size, weight) {
         ctx.font = (weight ? weight + " " : "") + size + "px " + PAL.font;
     }
@@ -611,7 +605,7 @@
         const regime = model.classify(params);
         const midY = (top + bottom) / 2;
 
-        // cavity length dimension line
+
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -628,7 +622,7 @@
         ctx.textBaseline = "bottom";
         ctx.fillText("L = " + (params.L * 100).toFixed(1) + " cm, T_rt = 2L/c = " + fmt(derivedParams.roundTripTime, "s"), (left + right) / 2, 24);
 
-        // gain medium, to scale
+
         const gr = gainRegion();
         const gx0 = left + gr.x0 * span,
             gx1 = left + gr.x1 * span;
@@ -642,7 +636,7 @@
         ctx.textBaseline = "top";
         ctx.fillText("gain medium l_g = " + (params.gainLength * 100).toFixed(1) + " cm", (gx0 + gx1) / 2, bottom - 10);
 
-        // output beam from Pout = T2 · Pcirc of the model state
+
         const pw = model.powers(params, state[1]);
         if (pw.output > 1e-6) {
             const a = Math.min(1, Math.max(0.1, Math.log10(pw.output / 1e-6) / 6));
@@ -663,14 +657,14 @@
         ctx.textBaseline = "top";
         ctx.fillText(params.R2 >= 1 ? "0" : fmt(pw.output, "W"), outX, midY + 16);
 
-        // sparks: spontaneous emission, random directions
+
         sparks.forEach((s) => {
             ctx.fillStyle = "rgba(248, 212, 119, " + (0.6 * s.life) + ")";
             ctx.beginPath();
             ctx.arc(left + s.x * span, top + s.y * (bottom - top), 2.5, 0, Math.PI * 2);
             ctx.fill();
         });
-        // mode photons (turning points are exactly the mirror lines)
+
         photons.forEach((ph) => {
             const px = left + ph.x * span,
                 py = top + ph.y * (bottom - top);
@@ -687,7 +681,7 @@
             ctx.fill();
         });
 
-        // mirrors
+
         ctx.lineWidth = 6;
         ctx.strokeStyle = COLORS.mirror1;
         ctx.beginPath();
@@ -800,7 +794,7 @@
         ctx.fillText("N/N_th = " + (state[0] / derivedParams.thresholdInversion).toFixed(3), left, h - 16);
     }
 
-    // ------------------------------------------------------------------ drawing: time traces
+
     function timeAxis() {
         const W = plotWindow();
         const tMax = Math.max(W, simTime);
@@ -993,14 +987,14 @@
         });
     }
 
-    // ------------------------------------------------------------------ drawing: L–I and relaxation
+
     function drawLI(ctx, w, h) {
         ctx.fillStyle = PAL.background;
         ctx.fillRect(0, 0, w, h);
         const d = derivedParams;
         const pMax = sweep.maxPower || Math.max(3 * d.thresholdPumpPower, 1);
         const log = logLI.checked;
-        // exact algebraic steady state (β included) on a dense grid
+
         const xs = [],
             exact = [],
             analytic = [];
@@ -1085,7 +1079,7 @@
             ctx.textBaseline = "middle";
             ctx.fillText("T₂ = 0: P_out = 0 at every pump", m.plot.x + m.plot.w / 2, m.plot.y + m.plot.h * 0.3);
         }
-        // threshold label near the bottom, clear of the legend and the lasing line
+
         const tx = m.xToPx(d.thresholdPumpPower);
         if (tx >= m.plot.x && tx <= m.plot.x + m.plot.w) {
             setFont(ctx, 12);
@@ -1185,7 +1179,7 @@
         lines.forEach((l, i) => ctx.fillText(l, x, y + (i - (lines.length - 1) / 2) * lh));
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const cavityPlot = UI.setupCanvas($("cavityCanvas"), {
         aspect: 2.1,
         minHeight: 230,
@@ -1258,7 +1252,7 @@
         });
     });
 
-    // text equivalents
+
     const descCavity = UI.describeCanvas(cavityPlot.canvas, "Cavity schematic", {
         label: "Laser cavity schematic with mirrors, gain medium and output beam"
     });
@@ -1325,7 +1319,7 @@
         describeTime();
     }
 
-    // ------------------------------------------------------------------ loop
+
     function setButton(running) {
         startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause' : '<span aria-hidden="true">▶</span> Start';
         startStopBtn.setAttribute("aria-pressed", running ? "true" : "false");
@@ -1363,7 +1357,7 @@
 
     UI.onThemeChange(() => drawAll());
 
-    // ------------------------------------------------------------------ URL state + export
+
     const url = UI.urlState({
         get: () => ({
             P: cavity.pumpPower,
@@ -1394,7 +1388,7 @@
             if (s.lv != null) showEnergyLevels.checked = s.lv;
             if (s.lq != null) logPhotons.checked = s.lq;
             if (s.ll != null) logLI.checked = s.ll;
-            // a preset stays "active" only if the restored values still match it
+
             if (activePreset) {
                 const p = model.preset(activePreset);
                 const same = Math.abs(p.pumpRate * PUMP_PHOTON_ENERGY - cavity.pumpPower) < 1e-9 * (1 + cavity.pumpPower) &&
@@ -1455,7 +1449,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ init
+
     applyPreset("below", {
         silentUrl: true
     });

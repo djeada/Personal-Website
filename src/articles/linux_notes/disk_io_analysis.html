@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Disk I/O Analysis and Performance Monitoring</title>
+    <title>Disk I/O Analysis and Performance Monitoring | Adam Djellouli</title>
     <meta content="Disk I/O analysis is the process of observing how data is read from and written to storage devices." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/disk_io_analysis",
             "description": "Disk I/O analysis is the process of observing how data is read from and written to storage devices.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-06-01",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Disk I/O Analysis and Performance Monitoring" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Disk I/O analysis is the process of observing how data is read from and written to storage devices." property="og:description" />
+    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,137 +80,137 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#disk-i-o-analysis-and-performance-monitoring">Disk I/O Analysis and Performance Monitoring</a>
-                    <ol>
-                        <li><a href="#how-disk-i-o-works">How Disk I/O Works</a></li>
-                        <li><a href="#read-operations">Read Operations</a></li>
-                        <li><a href="#write-operations">Write Operations</a></li>
-                        <li><a href="#important-disk-i-o-concepts">Important Disk I/O Concepts</a></li>
-                        <li><a href="#latency">Latency</a></li>
-                        <li><a href="#throughput">Throughput</a></li>
-                        <li><a href="#iops">IOPS</a></li>
-                        <li><a href="#queue-depth">Queue Depth</a></li>
-                        <li><a href="#i-o-wait">I/O Wait</a></li>
-                        <li><a href="#sequential-vs-random-i-o">Sequential vs Random I/O</a></li>
-                        <li><a href="#hdd-ssd-and-nvme-performance">HDD, SSD, and NVMe Performance</a></li>
-                        <li><a href="#disk-scheduling">Disk Scheduling</a></li>
-                        <li><a href="#elevator-algorithm">Elevator Algorithm</a></li>
-                        <li><a href="#useful-disk-i-o-tools">Useful Disk I/O Tools</a></li>
-                        <li><a href="#installing-common-tools">Installing Common Tools</a></li>
-                        <li><a href="#using-iostat">Using iostat</a></li>
-                        <li><a href="#using-vmstat">Using vmstat</a></li>
-                        <li><a href="#using-iotop">Using iotop</a></li>
-                        <li><a href="#using-pidstat">Using pidstat</a></li>
-                        <li><a href="#using-sar">Using sar</a></li>
-                        <li><a href="#using-fio">Using fio</a></li>
-                        <li><a href="#scenario-1-simulate-a-sequential-write-bottleneck">Scenario 1: Simulate a Sequential Write Bottleneck</a>
-                            <ol>
-                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
-                                <li><a href="#check-with-iostat">Check with iostat</a></li>
-                                <li><a href="#check-with-iotop">Check with iotop</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-2-simulate-a-random-read-bottleneck">Scenario 2: Simulate a Random Read Bottleneck</a>
-                            <ol>
-                                <li><a href="#prepare-a-test-file">Prepare a Test File</a></li>
-                                <li><a href="#simulate-random-reads">Simulate Random Reads</a></li>
-                                <li><a href="#check-with-iostat">Check with iostat</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-3-simulate-a-random-write-bottleneck">Scenario 3: Simulate a Random Write Bottleneck</a>
-                            <ol>
-                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
-                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
-                                <li><a href="#check-with-pidstat">Check with pidstat</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-4-simulate-high-i-o-wait">Scenario 4: Simulate High I/O Wait</a>
-                            <ol>
-                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
-                                <li><a href="#check-with-top">Check with top</a></li>
-                                <li><a href="#confirm-with-iostat">Confirm with iostat</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-5-simulate-a-background-job-interfering-with-foreground-work">Scenario 5: Simulate a Background Job Interfering with Foreground Work</a>
-                            <ol>
-                                <li><a href="#simulate-the-background-job">Simulate the Background Job</a></li>
-                                <li><a href="#run-a-foreground-test">Run a Foreground Test</a></li>
-                                <li><a href="#check-disk-usage">Check Disk Usage</a></li>
-                                <li><a href="#reduce-background-impact-with-ionice">Reduce Background Impact with ionice</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-6-simulate-slow-disk-with-i-o-throttling-using-ionice">Scenario 6: Simulate Slow Disk with I/O Throttling Using ionice</a>
-                            <ol>
-                                <li><a href="#run-a-low-priority-job">Run a Low-Priority Job</a></li>
-                                <li><a href="#run-a-normal-job-at-the-same-time">Run a Normal Job at the Same Time</a></li>
-                                <li><a href="#check-with-iotop">Check with iotop</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-7-simulate-cache-effects">Scenario 7: Simulate Cache Effects</a>
-                            <ol>
-                                <li><a href="#create-a-test-file">Create a Test File</a></li>
-                                <li><a href="#first-read">First Read</a></li>
-                                <li><a href="#second-read">Second Read</a></li>
-                                <li><a href="#drop-cache-for-testing">Drop Cache for Testing</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-8-simulate-many-small-files">Scenario 8: Simulate Many Small Files</a>
-                            <ol>
-                                <li><a href="#simulate-the-workload">Simulate the Workload</a></li>
-                                <li><a href="#check-with-iostat">Check with iostat</a></li>
-                                <li><a href="#clean-up">Clean Up</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#scenario-9-simulate-swap-related-disk-pressure">Scenario 9: Simulate Swap-Related Disk Pressure</a>
-                            <ol>
-                                <li><a href="#safer-simulation-method">Safer Simulation Method</a></li>
-                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#process-states-and-disk-i-o">Process States and Disk I/O</a></li>
-                        <li><a href="#i-o-priority-with-ionice">I/O Priority with ionice</a></li>
-                        <li><a href="#filesystem-choices">Filesystem Choices</a></li>
-                        <li><a href="#mount-options-for-i-o-performance">Mount Options for I/O Performance</a>
-                            <ol>
-                                <li><a href="#noatime">noatime</a></li>
-                                <li><a href="#data-writeback">data=writeback</a></li>
-                                <li><a href="#discard">discard</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#raid-and-disk-i-o">RAID and Disk I/O</a></li>
-                        <li><a href="#bottleneck-interpretation-guide">Bottleneck Interpretation Guide</a>
-                            <ol>
-                                <li><a href="#high-util">High %util</a></li>
-                                <li><a href="#high-await">High await</a></li>
-                                <li><a href="#high-aqu-sz">High aqu-sz</a></li>
-                                <li><a href="#high-wa">High wa</a></li>
-                                <li><a href="#high-r-s-or-w-s-with-low-throughput">High r/s or w/s with Low Throughput</a></li>
-                                <li><a href="#high-throughput-with-moderate-iops">High Throughput with Moderate IOPS</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#practical-troubleshooting-workflow">Practical Troubleshooting Workflow</a></li>
-                        <li><a href="#step-1-check-overall-system-load">Step 1: Check Overall System Load</a></li>
-                        <li><a href="#step-2-check-cpu-i-o-wait">Step 2: Check CPU I/O Wait</a></li>
-                        <li><a href="#step-3-check-disk-level-metrics">Step 3: Check Disk-Level Metrics</a></li>
-                        <li><a href="#step-4-identify-the-process">Step 4: Identify the Process</a></li>
-                        <li><a href="#step-5-determine-the-workload-type">Step 5: Determine the Workload Type</a></li>
-                        <li><a href="#step-6-check-memory-and-swap">Step 6: Check Memory and Swap</a></li>
-                        <li><a href="#step-7-check-disk-errors">Step 7: Check Disk Errors</a></li>
-                        <li><a href="#step-8-mitigate-the-bottleneck">Step 8: Mitigate the Bottleneck</a></li>
-                        <li><a href="#common-disk-i-o-problems-and-fixes">Common Disk I/O Problems and Fixes</a>
-                            <ol>
-                                <li><a href="#problem-backup-job-slows-everything-down">Problem: Backup Job Slows Everything Down</a></li>
-                                <li><a href="#problem-database-has-high-latency">Problem: Database Has High Latency</a></li>
-                                <li><a href="#problem-system-is-swapping">Problem: System Is Swapping</a></li>
-                                <li><a href="#problem-many-small-files-are-slow">Problem: Many Small Files Are Slow</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
+                <ol>
+                    <li><a href="#how-disk-i-o-works">How Disk I/O Works</a></li>
+                    <li><a href="#read-operations">Read Operations</a></li>
+                    <li><a href="#write-operations">Write Operations</a></li>
+                    <li><a href="#important-disk-i-o-concepts">Important Disk I/O Concepts</a></li>
+                    <li><a href="#latency">Latency</a></li>
+                    <li><a href="#throughput">Throughput</a></li>
+                    <li><a href="#iops">IOPS</a></li>
+                    <li><a href="#queue-depth">Queue Depth</a></li>
+                    <li><a href="#i-o-wait">I/O Wait</a></li>
+                    <li><a href="#sequential-vs-random-i-o">Sequential vs Random I/O</a></li>
+                    <li><a href="#hdd-ssd-and-nvme-performance">HDD, SSD, and NVMe Performance</a></li>
+                    <li><a href="#disk-scheduling">Disk Scheduling</a></li>
+                    <li><a href="#elevator-algorithm">Elevator Algorithm</a></li>
+                    <li><a href="#useful-disk-i-o-tools">Useful Disk I/O Tools</a></li>
+                    <li><a href="#installing-common-tools">Installing Common Tools</a></li>
+                    <li><a href="#using-iostat">Using iostat</a></li>
+                    <li><a href="#using-vmstat">Using vmstat</a></li>
+                    <li><a href="#using-iotop">Using iotop</a></li>
+                    <li><a href="#using-pidstat">Using pidstat</a></li>
+                    <li><a href="#using-sar">Using sar</a></li>
+                    <li><a href="#using-fio">Using fio</a></li>
+                    <li><a href="#scenario-1-simulate-a-sequential-write-bottleneck">Scenario 1: Simulate a Sequential Write Bottleneck</a>
+                        <ol>
+                            <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                            <li><a href="#check-with-iostat">Check with iostat</a></li>
+                            <li><a href="#check-with-iotop">Check with iotop</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-2-simulate-a-random-read-bottleneck">Scenario 2: Simulate a Random Read Bottleneck</a>
+                        <ol>
+                            <li><a href="#prepare-a-test-file">Prepare a Test File</a></li>
+                            <li><a href="#simulate-random-reads">Simulate Random Reads</a></li>
+                            <li><a href="#check-with-iostat-2">Check with iostat</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-3-simulate-a-random-write-bottleneck">Scenario 3: Simulate a Random Write Bottleneck</a>
+                        <ol>
+                            <li><a href="#simulate-the-bottleneck-2">Simulate the Bottleneck</a></li>
+                            <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                            <li><a href="#check-with-pidstat">Check with pidstat</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-4-simulate-high-i-o-wait">Scenario 4: Simulate High I/O Wait</a>
+                        <ol>
+                            <li><a href="#simulate-the-bottleneck-3">Simulate the Bottleneck</a></li>
+                            <li><a href="#check-with-top">Check with top</a></li>
+                            <li><a href="#confirm-with-iostat">Confirm with iostat</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-5-simulate-a-background-job-interfering-with-foreground-work">Scenario 5: Simulate a Background Job Interfering with Foreground Work</a>
+                        <ol>
+                            <li><a href="#simulate-the-background-job">Simulate the Background Job</a></li>
+                            <li><a href="#run-a-foreground-test">Run a Foreground Test</a></li>
+                            <li><a href="#check-disk-usage">Check Disk Usage</a></li>
+                            <li><a href="#reduce-background-impact-with-ionice">Reduce Background Impact with ionice</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-6-simulate-slow-disk-with-i-o-throttling-using-ionice">Scenario 6: Simulate Slow Disk with I/O Throttling Using ionice</a>
+                        <ol>
+                            <li><a href="#run-a-low-priority-job">Run a Low-Priority Job</a></li>
+                            <li><a href="#run-a-normal-job-at-the-same-time">Run a Normal Job at the Same Time</a></li>
+                            <li><a href="#check-with-iotop-2">Check with iotop</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-7-simulate-cache-effects">Scenario 7: Simulate Cache Effects</a>
+                        <ol>
+                            <li><a href="#create-a-test-file">Create a Test File</a></li>
+                            <li><a href="#first-read">First Read</a></li>
+                            <li><a href="#second-read">Second Read</a></li>
+                            <li><a href="#drop-cache-for-testing">Drop Cache for Testing</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-8-simulate-many-small-files">Scenario 8: Simulate Many Small Files</a>
+                        <ol>
+                            <li><a href="#simulate-the-workload">Simulate the Workload</a></li>
+                            <li><a href="#check-with-iostat-3">Check with iostat</a></li>
+                            <li><a href="#clean-up">Clean Up</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scenario-9-simulate-swap-related-disk-pressure">Scenario 9: Simulate Swap-Related Disk Pressure</a>
+                        <ol>
+                            <li><a href="#safer-simulation-method">Safer Simulation Method</a></li>
+                            <li><a href="#check-with-vmstat-2">Check with vmstat</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#process-states-and-disk-i-o">Process States and Disk I/O</a></li>
+                    <li><a href="#i-o-priority-with-ionice">I/O Priority with ionice</a></li>
+                    <li><a href="#filesystem-choices">Filesystem Choices</a></li>
+                    <li><a href="#mount-options-for-i-o-performance">Mount Options for I/O Performance</a>
+                        <ol>
+                            <li><a href="#noatime">noatime</a></li>
+                            <li><a href="#data-writeback">data=writeback</a></li>
+                            <li><a href="#discard">discard</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#raid-and-disk-i-o">RAID and Disk I/O</a></li>
+                    <li><a href="#bottleneck-interpretation-guide">Bottleneck Interpretation Guide</a>
+                        <ol>
+                            <li><a href="#high-util">High %util</a></li>
+                            <li><a href="#high-await">High await</a></li>
+                            <li><a href="#high-aqu-sz">High aqu-sz</a></li>
+                            <li><a href="#high-wa">High wa</a></li>
+                            <li><a href="#high-r-s-or-w-s-with-low-throughput">High r/s or w/s with Low Throughput</a></li>
+                            <li><a href="#high-throughput-with-moderate-iops">High Throughput with Moderate IOPS</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#practical-troubleshooting-workflow">Practical Troubleshooting Workflow</a></li>
+                    <li><a href="#step-1-check-overall-system-load">Step 1: Check Overall System Load</a></li>
+                    <li><a href="#step-2-check-cpu-i-o-wait">Step 2: Check CPU I/O Wait</a></li>
+                    <li><a href="#step-3-check-disk-level-metrics">Step 3: Check Disk-Level Metrics</a></li>
+                    <li><a href="#step-4-identify-the-process">Step 4: Identify the Process</a></li>
+                    <li><a href="#step-5-determine-the-workload-type">Step 5: Determine the Workload Type</a></li>
+                    <li><a href="#step-6-check-memory-and-swap">Step 6: Check Memory and Swap</a></li>
+                    <li><a href="#step-7-check-disk-errors">Step 7: Check Disk Errors</a></li>
+                    <li><a href="#step-8-mitigate-the-bottleneck">Step 8: Mitigate the Bottleneck</a></li>
+                    <li><a href="#common-disk-i-o-problems-and-fixes">Common Disk I/O Problems and Fixes</a>
+                        <ol>
+                            <li><a href="#problem-backup-job-slows-everything-down">Problem: Backup Job Slows Everything Down</a></li>
+                            <li><a href="#problem-database-has-high-latency">Problem: Database Has High Latency</a></li>
+                            <li><a href="#problem-system-is-swapping">Problem: System Is Swapping</a></li>
+                            <li><a href="#problem-many-small-files-are-slow">Problem: Many Small Files Are Slow</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#challenges">Challenges</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -263,7 +270,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -282,7 +289,7 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="disk-i-o-analysis-and-performance-monitoring">Disk I/O Analysis and Performance Monitoring</h2>
+            <h1>Disk I/O Analysis and Performance Monitoring</h1>
             <p>Disk I/O analysis is the process of observing how data is read from and written to storage devices.</p>
             <p>Disk I/O matters because many applications depend heavily on storage performance. Databases, file servers, virtual machines, build systems, backup jobs, logging systems, and data-processing workloads can all slow down if the disk cannot keep up.</p>
             <p>A system can have plenty of CPU and memory but still feel slow if processes are waiting for disk reads or writes to finish.</p>
@@ -396,38 +403,40 @@ Application receives confirmation</code></pre>
             </div>
             <h3 id="important-disk-i-o-concepts">Important Disk I/O Concepts</h3>
             <p>Disk I/O performance is usually described using a few important metrics.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Metric</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><strong>Latency</strong></td>
-                    <td>How long one I/O request takes</td>
-                </tr>
-                <tr>
-                    <td><strong>Throughput</strong></td>
-                    <td>How much data is transferred per second</td>
-                </tr>
-                <tr>
-                    <td><strong>IOPS</strong></td>
-                    <td>Input/output operations per second</td>
-                </tr>
-                <tr>
-                    <td><strong>Queue depth</strong></td>
-                    <td>How many I/O requests are waiting or active</td>
-                </tr>
-                <tr>
-                    <td><strong>Utilization</strong></td>
-                    <td>How busy the device is</td>
-                </tr>
-                <tr>
-                    <td><strong>iowait</strong></td>
-                    <td>CPU idle time while waiting for I/O</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Latency</strong></td>
+                        <td>How long one I/O request takes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Throughput</strong></td>
+                        <td>How much data is transferred per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IOPS</strong></td>
+                        <td>Input/output operations per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Queue depth</strong></td>
+                        <td>How many I/O requests are waiting or active</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Utilization</strong></td>
+                        <td>How busy the device is</td>
+                    </tr>
+                    <tr>
+                        <td><strong>iowait</strong></td>
+                        <td>CPU idle time while waiting for I/O</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="latency">Latency</h3>
             <p>Latency is the delay for an I/O operation to complete.</p>
             <p>For example, if a program asks the disk for a small file and waits 20 milliseconds, the read latency is about 20 ms.</p>
@@ -600,50 +609,52 @@ Disk arm starts at 20 and moves upward:
             <p>This matters more for HDDs than SSDs because HDDs have mechanical seek time.</p>
             <h3 id="useful-disk-i-o-tools">Useful Disk I/O Tools</h3>
             <p>Linux has many tools for monitoring disk I/O.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Tool</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><strong>iostat</strong></td>
-                    <td>Device-level I/O statistics</td>
-                </tr>
-                <tr>
-                    <td><strong>vmstat</strong></td>
-                    <td>CPU, memory, process, and block I/O overview</td>
-                </tr>
-                <tr>
-                    <td><strong>iotop</strong></td>
-                    <td>Per-process live I/O usage</td>
-                </tr>
-                <tr>
-                    <td><strong>pidstat</strong></td>
-                    <td>Per-process I/O over time</td>
-                </tr>
-                <tr>
-                    <td><strong>sar</strong></td>
-                    <td>Historical system activity reports</td>
-                </tr>
-                <tr>
-                    <td><strong>dstat</strong></td>
-                    <td>Combined live system statistics</td>
-                </tr>
-                <tr>
-                    <td><strong>fio</strong></td>
-                    <td>Generate controlled I/O workloads</td>
-                </tr>
-                <tr>
-                    <td><strong>blktrace</strong></td>
-                    <td>Detailed block layer tracing</td>
-                </tr>
-                <tr>
-                    <td><strong>perf</strong></td>
-                    <td>Performance event tracing</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Tool</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>iostat</strong></td>
+                        <td>Device-level I/O statistics</td>
+                    </tr>
+                    <tr>
+                        <td><strong>vmstat</strong></td>
+                        <td>CPU, memory, process, and block I/O overview</td>
+                    </tr>
+                    <tr>
+                        <td><strong>iotop</strong></td>
+                        <td>Per-process live I/O usage</td>
+                    </tr>
+                    <tr>
+                        <td><strong>pidstat</strong></td>
+                        <td>Per-process I/O over time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>sar</strong></td>
+                        <td>Historical system activity reports</td>
+                    </tr>
+                    <tr>
+                        <td><strong>dstat</strong></td>
+                        <td>Combined live system statistics</td>
+                    </tr>
+                    <tr>
+                        <td><strong>fio</strong></td>
+                        <td>Generate controlled I/O workloads</td>
+                    </tr>
+                    <tr>
+                        <td><strong>blktrace</strong></td>
+                        <td>Detailed block layer tracing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>perf</strong></td>
+                        <td>Performance event tracing</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>The most useful beginner tools are:</p>
             <ul>
                 <li>iostat</li>
@@ -680,76 +691,80 @@ sudo apt install sysstat iotop fio</code></pre>
             </div>
             <p>This shows extended disk statistics every second.</p>
             <p>Important columns include:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Metric</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><strong>r/s</strong></td>
-                    <td>Reads per second</td>
-                </tr>
-                <tr>
-                    <td><strong>w/s</strong></td>
-                    <td>Writes per second</td>
-                </tr>
-                <tr>
-                    <td><strong>rkB/s</strong></td>
-                    <td>Kilobytes read per second</td>
-                </tr>
-                <tr>
-                    <td><strong>wkB/s</strong></td>
-                    <td>Kilobytes written per second</td>
-                </tr>
-                <tr>
-                    <td><strong>await</strong></td>
-                    <td>Average time for I/O requests</td>
-                </tr>
-                <tr>
-                    <td><strong>aqu-sz</strong></td>
-                    <td>Average queue size</td>
-                </tr>
-                <tr>
-                    <td><strong>%util</strong></td>
-                    <td>How busy the device is</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>r/s</strong></td>
+                        <td>Reads per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>w/s</strong></td>
+                        <td>Writes per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>rkB/s</strong></td>
+                        <td>Kilobytes read per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>wkB/s</strong></td>
+                        <td>Kilobytes written per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>await</strong></td>
+                        <td>Average time for I/O requests</td>
+                    </tr>
+                    <tr>
+                        <td><strong>aqu-sz</strong></td>
+                        <td>Average queue size</td>
+                    </tr>
+                    <tr>
+                        <td><strong>%util</strong></td>
+                        <td>How busy the device is</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-text">Device            r/s     w/s     rkB/s    wkB/s   await  aqu-sz  %util
 sda              2.00  950.00     80.0  98000.0   45.20   12.40  99.80</code></pre>
             </div>
             <p>Interpretation:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Observation</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td><strong>w/s is high</strong></td>
-                    <td>Many writes are happening</td>
-                </tr>
-                <tr>
-                    <td><strong>wkB/s is high</strong></td>
-                    <td>Large amount of data is being written</td>
-                </tr>
-                <tr>
-                    <td><strong>await is 45.20 ms</strong></td>
-                    <td>Requests are taking noticeable time</td>
-                </tr>
-                <tr>
-                    <td><strong>aqu-sz is 12.40</strong></td>
-                    <td>Queue is building</td>
-                </tr>
-                <tr>
-                    <td><strong>%util is 99.80</strong></td>
-                    <td>Disk is almost fully busy</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Observation</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>w/s is high</strong></td>
+                        <td>Many writes are happening</td>
+                    </tr>
+                    <tr>
+                        <td><strong>wkB/s is high</strong></td>
+                        <td>Large amount of data is being written</td>
+                    </tr>
+                    <tr>
+                        <td><strong>await is 45.20 ms</strong></td>
+                        <td>Requests are taking noticeable time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>aqu-sz is 12.40</strong></td>
+                        <td>Queue is building</td>
+                    </tr>
+                    <tr>
+                        <td><strong>%util is 99.80</strong></td>
+                        <td>Disk is almost fully busy</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>This suggests the disk is saturated by write activity.</p>
             <h3 id="using-vmstat">Using <code>vmstat</code></h3>
             <p><code>vmstat</code> gives a broad system overview.</p>
@@ -758,46 +773,48 @@ sda              2.00  950.00     80.0  98000.0   45.20   12.40  99.80</code></p
                 <pre><code class="language-bash">vmstat 1</code></pre>
             </div>
             <p>Important columns include:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Field</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><strong>r</strong></td>
-                    <td>Runnable processes</td>
-                </tr>
-                <tr>
-                    <td><strong>b</strong></td>
-                    <td>Blocked processes</td>
-                </tr>
-                <tr>
-                    <td><strong>bi</strong></td>
-                    <td>Blocks received from block device</td>
-                </tr>
-                <tr>
-                    <td><strong>bo</strong></td>
-                    <td>Blocks sent to block device</td>
-                </tr>
-                <tr>
-                    <td><strong>us</strong></td>
-                    <td>User CPU time</td>
-                </tr>
-                <tr>
-                    <td><strong>sy</strong></td>
-                    <td>System CPU time</td>
-                </tr>
-                <tr>
-                    <td><strong>id</strong></td>
-                    <td>Idle CPU time</td>
-                </tr>
-                <tr>
-                    <td><strong>wa</strong></td>
-                    <td>I/O wait time</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>r</strong></td>
+                        <td>Runnable processes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>b</strong></td>
+                        <td>Blocked processes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>bi</strong></td>
+                        <td>Blocks received from block device</td>
+                    </tr>
+                    <tr>
+                        <td><strong>bo</strong></td>
+                        <td>Blocks sent to block device</td>
+                    </tr>
+                    <tr>
+                        <td><strong>us</strong></td>
+                        <td>User CPU time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>sy</strong></td>
+                        <td>System CPU time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>id</strong></td>
+                        <td>Idle CPU time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>wa</strong></td>
+                        <td>I/O wait time</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-text">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
@@ -1002,7 +1019,7 @@ fio --name=prepare-file \
 --numjobs=4      four worker jobs
 --iodepth=32     many outstanding requests</code></pre>
             </div>
-            <h4 id="check-with-iostat">Check with <code>iostat</code></h4>
+            <h4 id="check-with-iostat-2">Check with <code>iostat</code></h4>
             <div>
                 <pre><code class="language-bash">iostat -xz 1</code></pre>
             </div>
@@ -1012,40 +1029,42 @@ fio --name=prepare-file \
 sda           5800.00    0.00 23200.0    0.00   22.80   31.50  99.60</code></pre>
             </div>
             <p>Interpretation:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Observation</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td><strong>r/s is high</strong></td>
-                    <td>Many read operations per second</td>
-                </tr>
-                <tr>
-                    <td><strong>rkB/s is moderate</strong></td>
-                    <td>Small reads, not huge throughput</td>
-                </tr>
-                <tr>
-                    <td><strong>await is high</strong></td>
-                    <td>Reads are taking time</td>
-                </tr>
-                <tr>
-                    <td><strong>aqu-sz is high</strong></td>
-                    <td>Queue is building</td>
-                </tr>
-                <tr>
-                    <td><strong>%util is near 100</strong></td>
-                    <td>Device is saturated</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Observation</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>r/s is high</strong></td>
+                        <td>Many read operations per second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>rkB/s is moderate</strong></td>
+                        <td>Small reads, not huge throughput</td>
+                    </tr>
+                    <tr>
+                        <td><strong>await is high</strong></td>
+                        <td>Reads are taking time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>aqu-sz is high</strong></td>
+                        <td>Queue is building</td>
+                    </tr>
+                    <tr>
+                        <td><strong>%util is near 100</strong></td>
+                        <td>Device is saturated</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>This is typical of random I/O bottlenecks.</p>
             <p>On an HDD, this workload may perform very poorly. On an SSD or NVMe drive, it should perform much better.</p>
             <h3 id="scenario-3-simulate-a-random-write-bottleneck">Scenario 3: Simulate a Random Write Bottleneck</h3>
             <p>Random writes are common in databases, logs, virtual machines, and metadata-heavy workloads.</p>
             <p>Generate small random writes and observe queueing and latency.</p>
-            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <h4 id="simulate-the-bottleneck-2">Simulate the Bottleneck</h4>
             <div>
                 <pre><code class="language-bash">fio --name=random-write-test \
     --directory=~/fio-test \
@@ -1071,26 +1090,28 @@ sda           5800.00    0.00 23200.0    0.00   22.80   31.50  99.60</code></pre
  2 10      0 200000  40000 800000    0    0     0 72000 3500 7000  5  8 15 72  0</code></pre>
             </div>
             <p>Interpretation:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Observation</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td><strong>b = 10</strong></td>
-                    <td>Many blocked processes</td>
-                </tr>
-                <tr>
-                    <td><strong>bo = 72000</strong></td>
-                    <td>Heavy block output</td>
-                </tr>
-                <tr>
-                    <td><strong>wa = 72</strong></td>
-                    <td>High I/O wait</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Observation</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>b = 10</strong></td>
+                        <td>Many blocked processes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>bo = 72000</strong></td>
+                        <td>Heavy block output</td>
+                    </tr>
+                    <tr>
+                        <td><strong>wa = 72</strong></td>
+                        <td>High I/O wait</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>This indicates that processes are waiting on disk writes.</p>
             <h4 id="check-with-pidstat">Check with <code>pidstat</code></h4>
             <div>
@@ -1110,7 +1131,7 @@ sda           5800.00    0.00 23200.0    0.00   22.80   31.50  99.60</code></pre
             <h3 id="scenario-4-simulate-high-i-o-wait">Scenario 4: Simulate High I/O Wait</h3>
             <p>High I/O wait appears when the CPU is idle but the system has pending disk operations.</p>
             <p>Create enough disk pressure that CPU time shifts into I/O wait.</p>
-            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <h4 id="simulate-the-bottleneck-3">Simulate the Bottleneck</h4>
             <p>Use a random read/write workload:</p>
             <div>
                 <pre><code class="language-bash">fio --name=high-iowait-test \
@@ -1253,7 +1274,7 @@ sda           3200.00 3100.00 12800.0 12400.0   55.30   45.00 100.00</code></pre
     --runtime=60 \
     --time_based</code></pre>
             </div>
-            <h4 id="check-with-iotop">Check with <code>iotop</code></h4>
+            <h4 id="check-with-iotop-2">Check with <code>iotop</code></h4>
             <div>
                 <pre><code class="language-bash">sudo iotop -o</code></pre>
             </div>
@@ -1322,7 +1343,7 @@ for i in $(seq 1 50000); do
     echo "test $i" &gt; ~/small-files-test/file_$i.txt
 done</code></pre>
             </div>
-            <h4 id="check-with-iostat">Check with <code>iostat</code></h4>
+            <h4 id="check-with-iostat-3">Check with <code>iostat</code></h4>
             <div>
                 <pre><code class="language-bash">iostat -xz 1</code></pre>
             </div>
@@ -1355,7 +1376,7 @@ sda             20.00 1800.00   500.0  9000.0   18.40    8.20  88.00</code></pre
             <div>
                 <pre><code class="language-bash">stress-ng --vm 2 --vm-bytes 70% --timeout 60s</code></pre>
             </div>
-            <h4 id="check-with-vmstat">Check with <code>vmstat</code></h4>
+            <h4 id="check-with-vmstat-2">Check with <code>vmstat</code></h4>
             <div>
                 <pre><code class="language-bash">vmstat 1</code></pre>
             </div>
@@ -1779,23 +1800,33 @@ nvme timeout</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -1812,21 +1843,5 @@ nvme timeout</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

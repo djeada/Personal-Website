@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>GPU Programming</title>
+    <title>GPU Programming | Adam Djellouli</title>
     <meta content="GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming",
             "description": "GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-09-12",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="GPU Programming" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel." property="og:description" />
+    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,100 +80,111 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+    <script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#gpu-programming">GPU Programming</a>
-                    <ol>
-                        <li><a href="#time-space-duality">Time-Space Duality</a>
-                            <ol>
-                                <li><a href="#i-array-processors-spatial-parallelism">I. Array Processors: Spatial Parallelism</a></li>
-                                <li><a href="#ii-vector-processors-temporal-parallelism">II. Vector Processors: Temporal Parallelism</a></li>
-                                <li><a href="#how-this-relates-to-gpus">How This Relates to GPUs</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#vector-processor">Vector Processor</a></li>
-                        <li><a href="#strides">Strides</a>
-                            <ol>
-                                <li><a href="#row-major-layout-example">Row-Major Layout Example</a></li>
-                                <li><a href="#matrix-multiplication-example">Matrix Multiplication Example</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#loading-and-storing-vectors-from-memory">Loading and Storing Vectors from Memory</a>
-                            <ol>
-                                <li><a href="#why-memory-layout-matters">Why Memory Layout Matters</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#memory-banking">Memory Banking</a>
-                            <ol>
-                                <li><a href="#example-shared-memory-bank-conflict">Example: Shared Memory Bank Conflict</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#vectorizable-loops">Vectorizable Loops</a>
-                            <ol>
-                                <li><a href="#vectorizable-loop">Vectorizable Loop</a></li>
-                                <li><a href="#not-safely-vectorizable-without-transformation">Not Safely Vectorizable Without Transformation</a></li>
-                                <li><a href="#average-example">Average Example</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#gpus-are-simt-engines">GPUs Are SIMT Engines</a>
-                            <ol>
-                                <li><a href="#good-gpu-workload">Good GPU Workload</a></li>
-                                <li><a href="#less-efficient-gpu-workload">Less Efficient GPU Workload</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#simd-vs-simt">SIMD vs. SIMT</a>
-                            <ol>
-                                <li><a href="#simd">SIMD</a></li>
-                                <li><a href="#simt">SIMT</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#fine-grained-multithreading">Fine-Grained Multithreading</a>
-                            <ol>
-                                <li><a href="#benefits">Benefits</a></li>
-                                <li><a href="#costs">Costs</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#high-level-gpu-architecture">High-Level GPU Architecture</a>
-                            <ol>
-                                <li><a href="#main-components">Main Components</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#general-purpose-programming-on-gpus">General-Purpose Programming on GPUs</a>
-                            <ol>
-                                <li><a href="#typical-gpu-execution-flow">Typical GPU Execution Flow</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#warps-and-blocks">Warps and Blocks</a>
-                            <ol>
-                                <li><a href="#grid">Grid</a></li>
-                                <li><a href="#block">Block</a></li>
-                                <li><a href="#thread">Thread</a></li>
-                                <li><a href="#warp-wavefront">Warp / Wavefront</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#warp-based-simd">Warp-Based SIMD</a>
-                            <ol>
-                                <li><a href="#efficient-warp-execution">Efficient Warp Execution</a></li>
-                                <li><a href="#divergent-warp-execution">Divergent Warp Execution</a></li>
-                                <li><a href="#traditional-simd-vs-warp-based-simt">Traditional SIMD vs. Warp-Based SIMT</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#program-structure-in-cuda">Program Structure in CUDA</a>
-                            <ol>
-                                <li><a href="#a-simple-kernel">A Simple Kernel</a></li>
-                                <li><a href="#allocate-device-memory">Allocate Device Memory</a></li>
-                                <li><a href="#copy-data-to-the-gpu">Copy Data to the GPU</a></li>
-                                <li><a href="#launch-the-kernel">Launch the Kernel</a></li>
-                                <li><a href="#copy-results-back-and-free-memory">Copy Results Back and Free Memory</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</a></li>
-                        <li><a href="#common-cuda-concepts">Common CUDA Concepts</a></li>
-                        <li><a href="#performance-checklist">Performance Checklist</a></li>
-                        <li><a href="#common-mistakes">Common Mistakes</a></li>
-                    </ol>
+                <ol>
+                    <li><a href="#time-space-duality">Time-Space Duality</a>
+                        <ol>
+                            <li><a href="#i-array-processors-spatial-parallelism">I. Array Processors: Spatial Parallelism</a></li>
+                            <li><a href="#ii-vector-processors-temporal-parallelism">II. Vector Processors: Temporal Parallelism</a></li>
+                            <li><a href="#how-this-relates-to-gpus">How This Relates to GPUs</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#vector-processor">Vector Processor</a></li>
+                    <li><a href="#strides">Strides</a>
+                        <ol>
+                            <li><a href="#row-major-layout-example">Row-Major Layout Example</a></li>
+                            <li><a href="#matrix-multiplication-example">Matrix Multiplication Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#loading-and-storing-vectors-from-memory">Loading and Storing Vectors from Memory</a>
+                        <ol>
+                            <li><a href="#why-memory-layout-matters">Why Memory Layout Matters</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#memory-banking">Memory Banking</a>
+                        <ol>
+                            <li><a href="#example-shared-memory-bank-conflict">Example: Shared Memory Bank Conflict</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#vectorizable-loops">Vectorizable Loops</a>
+                        <ol>
+                            <li><a href="#vectorizable-loop">Vectorizable Loop</a></li>
+                            <li><a href="#not-safely-vectorizable-without-transformation">Not Safely Vectorizable Without Transformation</a></li>
+                            <li><a href="#average-example">Average Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#gpus-are-simt-engines">GPUs Are SIMT Engines</a>
+                        <ol>
+                            <li><a href="#good-gpu-workload">Good GPU Workload</a></li>
+                            <li><a href="#less-efficient-gpu-workload">Less Efficient GPU Workload</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#simd-vs-simt">SIMD vs. SIMT</a>
+                        <ol>
+                            <li><a href="#simd">SIMD</a></li>
+                            <li><a href="#simt">SIMT</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#fine-grained-multithreading">Fine-Grained Multithreading</a>
+                        <ol>
+                            <li><a href="#benefits">Benefits</a></li>
+                            <li><a href="#costs">Costs</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#high-level-gpu-architecture">High-Level GPU Architecture</a>
+                        <ol>
+                            <li><a href="#main-components">Main Components</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#general-purpose-programming-on-gpus">General-Purpose Programming on GPUs</a>
+                        <ol>
+                            <li><a href="#typical-gpu-execution-flow">Typical GPU Execution Flow</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#warps-and-blocks">Warps and Blocks</a>
+                        <ol>
+                            <li><a href="#grid">Grid</a></li>
+                            <li><a href="#block">Block</a></li>
+                            <li><a href="#thread">Thread</a></li>
+                            <li><a href="#warp-wavefront">Warp / Wavefront</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#warp-based-simd">Warp-Based SIMD</a>
+                        <ol>
+                            <li><a href="#efficient-warp-execution">Efficient Warp Execution</a></li>
+                            <li><a href="#divergent-warp-execution">Divergent Warp Execution</a></li>
+                            <li><a href="#traditional-simd-vs-warp-based-simt">Traditional SIMD vs. Warp-Based SIMT</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#program-structure-in-cuda">Program Structure in CUDA</a>
+                        <ol>
+                            <li><a href="#a-simple-kernel">A Simple Kernel</a></li>
+                            <li><a href="#allocate-device-memory">Allocate Device Memory</a></li>
+                            <li><a href="#copy-data-to-the-gpu">Copy Data to the GPU</a></li>
+                            <li><a href="#launch-the-kernel">Launch the Kernel</a></li>
+                            <li><a href="#copy-results-back-and-free-memory">Copy Results Back and Free Memory</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</a></li>
+                    <li><a href="#common-cuda-concepts">Common CUDA Concepts</a></li>
+                    <li><a href="#performance-checklist">Performance Checklist</a></li>
+                    <li><a href="#common-mistakes">Common Mistakes</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -186,7 +204,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -205,7 +223,7 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="gpu-programming">GPU Programming</h2>
+            <h1>GPU Programming</h1>
             <p>GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel. They were originally built for graphics workloads, where millions of pixels or vertices must be processed, but the same architecture is also effective for scientific simulation, image processing, machine learning, numerical computing, and other data-parallel workloads.</p>
             <p><strong>What makes GPU programming different?</strong></p>
             <ul>
@@ -281,30 +299,32 @@ Each element moves through pipeline stages over time.</code></pre>
                 C[i] = A[i] + B[i] \quad \text{for many values of } i
                 $$</p>
             <p>Important vector-processor concepts include:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Concept</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td><strong>Vector register</strong></td>
-                    <td>A register that stores multiple elements instead of one scalar value.</td>
-                </tr>
-                <tr>
-                    <td><strong>Vector length</strong></td>
-                    <td>The number of elements to process in the current vector instruction.</td>
-                </tr>
-                <tr>
-                    <td><strong>Vector stride</strong></td>
-                    <td>The spacing between consecutive elements in memory.</td>
-                </tr>
-                <tr>
-                    <td><strong>Vector pipeline</strong></td>
-                    <td>A pipeline that processes one or more vector elements per cycle after startup.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Vector register</strong></td>
+                        <td>A register that stores multiple elements instead of one scalar value.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vector length</strong></td>
+                        <td>The number of elements to process in the current vector instruction.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vector stride</strong></td>
+                        <td>The spacing between consecutive elements in memory.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vector pipeline</strong></td>
+                        <td>A pipeline that processes one or more vector elements per cycle after startup.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><strong>Benefits</strong></p>
             <ul>
                 <li>Fewer loop-control instructions.</li>
@@ -343,25 +363,27 @@ A(1,0), A(1,1), A(1,2), A(1,3),
 A(2,0), A(2,1), A(2,2), A(2,3),
 A(3,0), A(3,1), A(3,2), A(3,3)</code></pre>
             </div>
-            <p>
             <table>
-                <tr>
-                    <td>Access pattern</td>
-                    <td>Example</td>
-                    <td>Stride</td>
-                </tr>
-                <tr>
-                    <td>Row access</td>
-                    <td><code>A(2,0), A(2,1), A(2,2), A(2,3)</code></td>
-                    <td><code>1</code></td>
-                </tr>
-                <tr>
-                    <td>Column access</td>
-                    <td><code>A(0,1), A(1,1), A(2,1), A(3,1)</code></td>
-                    <td>number of columns</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Access pattern</th>
+                        <th>Example</th>
+                        <th>Stride</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Row access</td>
+                        <td><code>A(2,0), A(2,1), A(2,2), A(2,3)</code></td>
+                        <td><code>1</code></td>
+                    </tr>
+                    <tr>
+                        <td>Column access</td>
+                        <td><code>A(0,1), A(1,1), A(2,1), A(3,1)</code></td>
+                        <td>number of columns</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>So in a row-major $N \times M$ matrix, moving across a row has stride <code>1</code>, while moving down a column has stride <code>M</code>.</p>
             <h4 id="matrix-multiplication-example">Matrix Multiplication Example</h4>
             <p>For matrix multiplication,</p>
@@ -387,30 +409,32 @@ A(3,0), A(3,1), A(3,2), A(3,3)</code></pre>
             <p><strong>GPU performance note:</strong> A single thread walking down a column of a row-major matrix performs strided accesses. Whether those accesses are coalesced at the GPU level also depends on how neighboring threads map to matrix rows and columns. Optimized matrix multiplication usually uses tiling so that blocks load contiguous tiles of $A$ and $B$ into shared memory and reuse those values many times.</p>
             <h3 id="loading-and-storing-vectors-from-memory">Loading and Storing Vectors from Memory</h3>
             <p>Vector loads and stores move multiple elements between memory and registers. A closely related GPU concern is <strong>coalesced memory access</strong>, where threads in the same warp access nearby addresses that the hardware can serve with a small number of memory transactions.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Pattern</td>
-                    <td>Effect</td>
-                </tr>
-                <tr>
-                    <td>Consecutive addresses</td>
-                    <td>Usually efficient and coalesced.</td>
-                </tr>
-                <tr>
-                    <td>Large stride</td>
-                    <td>May require more memory transactions.</td>
-                </tr>
-                <tr>
-                    <td>Random addresses</td>
-                    <td>Often slow because requests cannot be combined well.</td>
-                </tr>
-                <tr>
-                    <td>Aligned addresses</td>
-                    <td>Usually better than misaligned addresses.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Pattern</th>
+                        <th>Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Consecutive addresses</td>
+                        <td>Usually efficient and coalesced.</td>
+                    </tr>
+                    <tr>
+                        <td>Large stride</td>
+                        <td>May require more memory transactions.</td>
+                    </tr>
+                    <tr>
+                        <td>Random addresses</td>
+                        <td>Often slow because requests cannot be combined well.</td>
+                    </tr>
+                    <tr>
+                        <td>Aligned addresses</td>
+                        <td>Usually better than misaligned addresses.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="why-memory-layout-matters">Why Memory Layout Matters</h4>
             <div>
                 <pre><code class="language-text">Good pattern: consecutive threads read consecutive elements
@@ -423,7 +447,7 @@ Address:  A0   A8   A16  A24  A32  A40  A48  A56</code></pre>
             </div>
             <p>Efficient GPU programs often organize data so adjacent threads access adjacent elements. This is one reason an array of structures is sometimes converted into a structure of arrays.</p>
             <div>
-                <pre><code class="language-clike">// Array of Structures: convenient, but fields may be interleaved
+                <pre><code class="language-cpp">// Array of Structures: convenient, but fields may be interleaved
 typedef struct {
   float x, y, z;
 } Particle;
@@ -475,21 +499,21 @@ T3 -&gt; Bank 0</code></pre>
             <p>A loop is <strong>vectorizable</strong> when its iterations are sufficiently independent to execute in parallel without changing the program's result.</p>
             <h4 id="vectorizable-loop">Vectorizable Loop</h4>
             <div>
-                <pre><code class="language-clike">for (int i = 0; i &lt; n; ++i) {
+                <pre><code class="language-cpp">for (int i = 0; i &lt; n; ++i) {
   C[i] = A[i] + B[i];
 }</code></pre>
             </div>
             <p>Each iteration reads <code>A[i]</code> and <code>B[i]</code> and writes <code>C[i]</code>. No iteration depends on another, so the loop can be vectorized or mapped to GPU threads.</p>
             <h4 id="not-safely-vectorizable-without-transformation">Not Safely Vectorizable Without Transformation</h4>
             <div>
-                <pre><code class="language-clike">for (int i = 1; i &lt; n; ++i) {
+                <pre><code class="language-cpp">for (int i = 1; i &lt; n; ++i) {
   C[i] = C[i - 1] + A[i];
 }</code></pre>
             </div>
             <p>Here, <code>C[i]</code> depends on <code>C[i - 1]</code>, which was computed by the previous iteration. This loop has a loop-carried dependency.</p>
             <h4 id="average-example">Average Example</h4>
             <div>
-                <pre><code class="language-clike">for (int i = 0; i &lt; 50; ++i) {
+                <pre><code class="language-cpp">for (int i = 0; i &lt; 50; ++i) {
   C[i] = (A[i] + B[i]) / 2;
 }</code></pre>
             </div>
@@ -511,12 +535,12 @@ T3 -&gt; Bank 0</code></pre>
             </ul>
             <h4 id="good-gpu-workload">Good GPU Workload</h4>
             <div>
-                <pre><code class="language-clike">C[i] = A[i] + B[i];</code></pre>
+                <pre><code class="language-cpp">C[i] = A[i] + B[i];</code></pre>
             </div>
             <p>All threads perform the same operation on different elements.</p>
             <h4 id="less-efficient-gpu-workload">Less Efficient GPU Workload</h4>
             <div>
-                <pre><code class="language-clike">if (A[i] &gt; threshold) {
+                <pre><code class="language-cpp">if (A[i] &gt; threshold) {
   C[i] = expensive_path(A[i]);
 } else {
   C[i] = cheap_path(A[i]);
@@ -524,40 +548,42 @@ T3 -&gt; Bank 0</code></pre>
             </div>
             <p>If neighboring threads choose different branches, the warp may have to run both paths with different active lanes.</p>
             <h3 id="simd-vs-simt">SIMD vs. SIMT</h3>
-            <p>
             <table>
-                <tr>
-                    <td>Feature</td>
-                    <td>SIMD</td>
-                    <td>SIMT</td>
-                </tr>
-                <tr>
-                    <td>Programming view</td>
-                    <td>Explicit vector operations</td>
-                    <td>Many scalar-looking threads</td>
-                </tr>
-                <tr>
-                    <td>Execution group</td>
-                    <td>Vector lanes</td>
-                    <td>Warps / wavefronts</td>
-                </tr>
-                <tr>
-                    <td>Control flow</td>
-                    <td>One instruction stream for all lanes</td>
-                    <td>Threads have their own logical control flow, but warp execution is masked/serialized on divergence</td>
-                </tr>
-                <tr>
-                    <td>Programmer controls</td>
-                    <td>Vector width and vector instructions</td>
-                    <td>Grid, blocks, and threads</td>
-                </tr>
-                <tr>
-                    <td>Example</td>
-                    <td>AVX vector add</td>
-                    <td>CUDA kernel with many threads</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>SIMD</th>
+                        <th>SIMT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Programming view</td>
+                        <td>Explicit vector operations</td>
+                        <td>Many scalar-looking threads</td>
+                    </tr>
+                    <tr>
+                        <td>Execution group</td>
+                        <td>Vector lanes</td>
+                        <td>Warps / wavefronts</td>
+                    </tr>
+                    <tr>
+                        <td>Control flow</td>
+                        <td>One instruction stream for all lanes</td>
+                        <td>Threads have their own logical control flow, but warp execution is masked/serialized on divergence</td>
+                    </tr>
+                    <tr>
+                        <td>Programmer controls</td>
+                        <td>Vector width and vector instructions</td>
+                        <td>Grid, blocks, and threads</td>
+                    </tr>
+                    <tr>
+                        <td>Example</td>
+                        <td>AVX vector add</td>
+                        <td>CUDA kernel with many threads</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="simd">SIMD</h4>
             <div>
                 <pre><code class="language-text">===============================================
@@ -643,42 +669,44 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
 +------------------------------------------------------------------+</code></pre>
             </div>
             <h4 id="main-components">Main Components</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Component</td>
-                    <td>Role</td>
-                </tr>
-                <tr>
-                    <td><strong>SM / CU</strong></td>
-                    <td>Executes thread blocks using warps or wavefronts.</td>
-                </tr>
-                <tr>
-                    <td><strong>Warp scheduler</strong></td>
-                    <td>Chooses ready warps to issue each cycle.</td>
-                </tr>
-                <tr>
-                    <td><strong>Registers</strong></td>
-                    <td>Fast per-thread storage. High register use can reduce occupancy.</td>
-                </tr>
-                <tr>
-                    <td><strong>Shared memory</strong></td>
-                    <td>Fast per-block memory for cooperation among threads.</td>
-                </tr>
-                <tr>
-                    <td><strong>L1 / texture / constant caches</strong></td>
-                    <td>Accelerate specific access patterns.</td>
-                </tr>
-                <tr>
-                    <td><strong>L2 cache</strong></td>
-                    <td>Shared cache across the GPU.</td>
-                </tr>
-                <tr>
-                    <td><strong>Memory controllers</strong></td>
-                    <td>Connect the GPU to high-bandwidth device memory such as GDDR or HBM.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SM / CU</strong></td>
+                        <td>Executes thread blocks using warps or wavefronts.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Warp scheduler</strong></td>
+                        <td>Chooses ready warps to issue each cycle.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Registers</strong></td>
+                        <td>Fast per-thread storage. High register use can reduce occupancy.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Shared memory</strong></td>
+                        <td>Fast per-block memory for cooperation among threads.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>L1 / texture / constant caches</strong></td>
+                        <td>Accelerate specific access patterns.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>L2 cache</strong></td>
+                        <td>Shared cache across the GPU.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Memory controllers</strong></td>
+                        <td>Connect the GPU to high-bandwidth device memory such as GDDR or HBM.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="general-purpose-programming-on-gpus">General-Purpose Programming on GPUs</h3>
             <p><strong>General-purpose GPU programming (GPGPU)</strong> uses GPUs for non-graphics computation. It works best when a workload exposes substantial data parallelism.</p>
             <p>Good GPU workloads usually have:</p>
@@ -742,7 +770,7 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
             </div>
             <p>A kernel launch specifies a <strong>grid</strong> of <strong>blocks</strong>, and each block contains <strong>threads</strong>.</p>
             <div>
-                <pre><code class="language-clike">kernel&lt;&lt;&lt;numBlocks, threadsPerBlock&gt;&gt;&gt;(args);</code></pre>
+                <pre><code class="language-cpp">kernel&lt;&lt;&lt;numBlocks, threadsPerBlock&gt;&gt;&gt;(args);</code></pre>
             </div>
             <h4 id="grid">Grid</h4>
             <p>The grid is the full set of blocks launched for one kernel. It represents the whole problem.</p>
@@ -784,13 +812,13 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
             <p>A warp executes one instruction across many threads. When all lanes are active and follow the same path, the warp behaves like a SIMD vector operation.</p>
             <h4 id="efficient-warp-execution">Efficient Warp Execution</h4>
             <div>
-                <pre><code class="language-clike">int i = blockIdx.x * blockDim.x + threadIdx.x;
+                <pre><code class="language-cpp">int i = blockIdx.x * blockDim.x + threadIdx.x;
 C[i] = A[i] + B[i];</code></pre>
             </div>
             <p>Every thread executes the same instruction sequence.</p>
             <h4 id="divergent-warp-execution">Divergent Warp Execution</h4>
             <div>
-                <pre><code class="language-clike">if (threadIdx.x % 2 == 0) {
+                <pre><code class="language-cpp">if (threadIdx.x % 2 == 0) {
   C[i] = A[i] + B[i];
 } else {
   C[i] = A[i] - B[i];
@@ -798,30 +826,32 @@ C[i] = A[i] + B[i];</code></pre>
             </div>
             <p>Threads in the same warp take different branches. The hardware may execute both paths while masking off inactive lanes, reducing efficiency.</p>
             <h4 id="traditional-simd-vs-warp-based-simt">Traditional SIMD vs. Warp-Based SIMT</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Traditional SIMD</td>
-                    <td>Warp-Based SIMT</td>
-                </tr>
-                <tr>
-                    <td>Programmer uses explicit vector instructions.</td>
-                    <td>Programmer writes scalar thread code.</td>
-                </tr>
-                <tr>
-                    <td>Vector width is visible in software.</td>
-                    <td>Warp width is mostly hidden from source code.</td>
-                </tr>
-                <tr>
-                    <td>One instruction controls vector lanes.</td>
-                    <td>One warp instruction controls active thread lanes.</td>
-                </tr>
-                <tr>
-                    <td>Best for regular vector loops.</td>
-                    <td>Best for large thread-parallel workloads.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Traditional SIMD</th>
+                        <th>Warp-Based SIMT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Programmer uses explicit vector instructions.</td>
+                        <td>Programmer writes scalar thread code.</td>
+                    </tr>
+                    <tr>
+                        <td>Vector width is visible in software.</td>
+                        <td>Warp width is mostly hidden from source code.</td>
+                    </tr>
+                    <tr>
+                        <td>One instruction controls vector lanes.</td>
+                        <td>One warp instruction controls active thread lanes.</td>
+                    </tr>
+                    <tr>
+                        <td>Best for regular vector loops.</td>
+                        <td>Best for large thread-parallel workloads.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="program-structure-in-cuda">Program Structure in CUDA</h3>
             <p>A CUDA program usually has two parts:</p>
             <ol>
@@ -831,7 +861,7 @@ C[i] = A[i] + B[i];</code></pre>
             <h4 id="a-simple-kernel">A Simple Kernel</h4>
             <p>A CUDA kernel is marked with <code>__global__</code>. It runs on the GPU and is launched from host code.</p>
             <div>
-                <pre><code class="language-clike">__global__ void scale(float* d, float s, int n) {
+                <pre><code class="language-cpp">__global__ void scale(float* d, float s, int n) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i &lt; n) {
     d[i] *= s;
@@ -840,7 +870,7 @@ C[i] = A[i] + B[i];</code></pre>
             </div>
             <h4 id="allocate-device-memory">Allocate Device Memory</h4>
             <div>
-                <pre><code class="language-clike">float* d_data = nullptr;
+                <pre><code class="language-cpp">float* d_data = nullptr;
 size_t bytes = n * sizeof(float);
 
 cudaError_t err = cudaMalloc(&amp;d_data, bytes);
@@ -851,12 +881,12 @@ if (err != cudaSuccess) {
             <p>The CPU variable <code>d_data</code> is a device pointer that refers to memory allocated in the GPU's address space.</p>
             <h4 id="copy-data-to-the-gpu">Copy Data to the GPU</h4>
             <div>
-                <pre><code class="language-clike">cudaMemcpy(d_data, h_data, bytes, cudaMemcpyHostToDevice);</code></pre>
+                <pre><code class="language-cpp">cudaMemcpy(d_data, h_data, bytes, cudaMemcpyHostToDevice);</code></pre>
             </div>
             <p>The copy direction must be specified explicitly.</p>
             <h4 id="launch-the-kernel">Launch the Kernel</h4>
             <div>
-                <pre><code class="language-clike">int block = 256;
+                <pre><code class="language-cpp">int block = 256;
 int grid  = (n + block - 1) / block;
 
 scale&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, 2.0f, n);
@@ -865,13 +895,13 @@ cudaDeviceSynchronize();</code></pre>
             <p>The grid size is rounded up so every element is covered. The bounds check inside the kernel prevents out-of-range memory access.</p>
             <h4 id="copy-results-back-and-free-memory">Copy Results Back and Free Memory</h4>
             <div>
-                <pre><code class="language-clike">cudaMemcpy(h_data, d_data, bytes, cudaMemcpyDeviceToHost);
+                <pre><code class="language-cpp">cudaMemcpy(h_data, d_data, bytes, cudaMemcpyDeviceToHost);
 cudaFree(d_data);</code></pre>
             </div>
             <h3 id="shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</h3>
             <p>Shared memory lets threads in a block cooperate. The example below computes one partial sum per block.</p>
             <div>
-                <pre><code class="language-clike">__global__ void blockSum(const float* in, float* out, int n) {
+                <pre><code class="language-cpp">__global__ void blockSum(const float* in, float* out, int n) {
   extern __shared__ float buf[];
 
   int t = threadIdx.x;
@@ -894,7 +924,7 @@ cudaFree(d_data);</code></pre>
             </div>
             <p>Launch example:</p>
             <div>
-                <pre><code class="language-clike">int block = 256;
+                <pre><code class="language-cpp">int block = 256;
 int grid = (n + block - 1) / block;
 size_t sharedBytes = block * sizeof(float);
 
@@ -907,181 +937,187 @@ blockSum&lt;&lt;&lt;grid, block, sharedBytes&gt;&gt;&gt;(d_in, d_partial, n);</c
             </ul>
             <p>The halving reduction shown here assumes a power-of-two block size, such as the <code>256</code> threads used in the launch example.</p>
             <h3 id="common-cuda-concepts">Common CUDA Concepts</h3>
-            <p>
             <table>
-                <tr>
-                    <td>Concept</td>
-                    <td>Description</td>
-                    <td>Typical Syntax / Example</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td><strong>Kernel</strong></td>
-                    <td>GPU function executed by many threads.</td>
-                    <td><code>__global__ void kernel(...)</code></td>
-                    <td>Launched from host with <code>&lt;&lt;&lt;grid, block&gt;&gt;&gt;</code>.</td>
-                </tr>
-                <tr>
-                    <td><strong>Thread</strong></td>
-                    <td>Smallest programming unit.</td>
-                    <td><code>threadIdx.x</code></td>
-                    <td>Usually handles one or more data elements.</td>
-                </tr>
-                <tr>
-                    <td><strong>Block</strong></td>
-                    <td>Group of cooperating threads.</td>
-                    <td><code>blockDim.x</code></td>
-                    <td>Threads in a block share memory and can synchronize.</td>
-                </tr>
-                <tr>
-                    <td><strong>Grid</strong></td>
-                    <td>All blocks launched for one kernel.</td>
-                    <td><code>gridDim.x</code></td>
-                    <td>Can be 1D, 2D, or 3D.</td>
-                </tr>
-                <tr>
-                    <td><strong>Warp / Wavefront</strong></td>
-                    <td>Hardware execution group.</td>
-                    <td>32 threads on many NVIDIA GPUs</td>
-                    <td>Important for divergence and coalescing.</td>
-                </tr>
-                <tr>
-                    <td><strong>Shared Memory</strong></td>
-                    <td>Fast per-block memory.</td>
-                    <td><code>__shared__ float tile[256];</code></td>
-                    <td>Useful for tiling and reductions.</td>
-                </tr>
-                <tr>
-                    <td><strong>Global Memory</strong></td>
-                    <td>Main device memory visible to kernels.</td>
-                    <td><code>cudaMalloc</code>, pointer access</td>
-                    <td>Large but relatively high latency. Coalescing matters.</td>
-                </tr>
-                <tr>
-                    <td><strong>Register</strong></td>
-                    <td>Fast per-thread storage.</td>
-                    <td>Local scalar variables</td>
-                    <td>Excessive register use can reduce occupancy.</td>
-                </tr>
-                <tr>
-                    <td><strong>Barrier</strong></td>
-                    <td>Synchronizes threads in one block.</td>
-                    <td><code>__syncthreads()</code></td>
-                    <td>Does not synchronize across blocks.</td>
-                </tr>
-                <tr>
-                    <td><strong>Device Function</strong></td>
-                    <td>GPU function called from GPU code.</td>
-                    <td><code>__device__ float f(float x)</code></td>
-                    <td>Cannot be called directly from host.</td>
-                </tr>
-                <tr>
-                    <td><strong>Host Function</strong></td>
-                    <td>CPU function.</td>
-                    <td>normal C/C++ function</td>
-                    <td>Orchestrates allocation, copies, launches.</td>
-                </tr>
-                <tr>
-                    <td><strong>Stream</strong></td>
-                    <td>Ordered queue of GPU work.</td>
-                    <td><code>cudaStream_t</code></td>
-                    <td>Enables overlap of copies and kernels.</td>
-                </tr>
-                <tr>
-                    <td><strong>Event</strong></td>
-                    <td>Timing or synchronization marker.</td>
-                    <td><code>cudaEvent_t</code></td>
-                    <td>Useful for measuring GPU time.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>Description</th>
+                        <th>Typical Syntax / Example</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Kernel</strong></td>
+                        <td>GPU function executed by many threads.</td>
+                        <td><code>__global__ void kernel(...)</code></td>
+                        <td>Launched from host with <code>&lt;&lt;&lt;grid, block&gt;&gt;&gt;</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Thread</strong></td>
+                        <td>Smallest programming unit.</td>
+                        <td><code>threadIdx.x</code></td>
+                        <td>Usually handles one or more data elements.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Block</strong></td>
+                        <td>Group of cooperating threads.</td>
+                        <td><code>blockDim.x</code></td>
+                        <td>Threads in a block share memory and can synchronize.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grid</strong></td>
+                        <td>All blocks launched for one kernel.</td>
+                        <td><code>gridDim.x</code></td>
+                        <td>Can be 1D, 2D, or 3D.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Warp / Wavefront</strong></td>
+                        <td>Hardware execution group.</td>
+                        <td>32 threads on many NVIDIA GPUs</td>
+                        <td>Important for divergence and coalescing.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Shared Memory</strong></td>
+                        <td>Fast per-block memory.</td>
+                        <td><code>__shared__ float tile[256];</code></td>
+                        <td>Useful for tiling and reductions.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Global Memory</strong></td>
+                        <td>Main device memory visible to kernels.</td>
+                        <td><code>cudaMalloc</code>, pointer access</td>
+                        <td>Large but relatively high latency. Coalescing matters.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Register</strong></td>
+                        <td>Fast per-thread storage.</td>
+                        <td>Local scalar variables</td>
+                        <td>Excessive register use can reduce occupancy.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Barrier</strong></td>
+                        <td>Synchronizes threads in one block.</td>
+                        <td><code>__syncthreads()</code></td>
+                        <td>Does not synchronize across blocks.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Device Function</strong></td>
+                        <td>GPU function called from GPU code.</td>
+                        <td><code>__device__ float f(float x)</code></td>
+                        <td>Cannot be called directly from host.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Host Function</strong></td>
+                        <td>CPU function.</td>
+                        <td>normal C/C++ function</td>
+                        <td>Orchestrates allocation, copies, launches.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stream</strong></td>
+                        <td>Ordered queue of GPU work.</td>
+                        <td><code>cudaStream_t</code></td>
+                        <td>Enables overlap of copies and kernels.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Event</strong></td>
+                        <td>Timing or synchronization marker.</td>
+                        <td><code>cudaEvent_t</code></td>
+                        <td>Useful for measuring GPU time.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="performance-checklist">Performance Checklist</h3>
             <p>Use this checklist when improving a GPU kernel:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Question</td>
-                    <td>Why It Matters</td>
-                </tr>
-                <tr>
-                    <td>Are there enough threads?</td>
-                    <td>GPUs need many active warps to hide latency.</td>
-                </tr>
-                <tr>
-                    <td>Are memory accesses coalesced?</td>
-                    <td>Coalescing reduces global-memory transactions.</td>
-                </tr>
-                <tr>
-                    <td>Is branch divergence low?</td>
-                    <td>Divergent branches serialize work within a warp.</td>
-                </tr>
-                <tr>
-                    <td>Is shared memory used safely?</td>
-                    <td>Bank conflicts and missing barriers cause slowdowns or bugs.</td>
-                </tr>
-                <tr>
-                    <td>Are host-device transfers minimized?</td>
-                    <td>On discrete GPUs, transfers can dominate runtime for small workloads.</td>
-                </tr>
-                <tr>
-                    <td>Is occupancy reasonable?</td>
-                    <td>Too many registers or too much shared memory can limit resident warps.</td>
-                </tr>
-                <tr>
-                    <td>Is arithmetic intensity high?</td>
-                    <td>More computation per byte of memory helps performance.</td>
-                </tr>
-                <tr>
-                    <td>Are errors checked?</td>
-                    <td>CUDA errors can otherwise go unnoticed.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Why It Matters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Are there enough threads?</td>
+                        <td>GPUs need many active warps to hide latency.</td>
+                    </tr>
+                    <tr>
+                        <td>Are memory accesses coalesced?</td>
+                        <td>Coalescing reduces global-memory transactions.</td>
+                    </tr>
+                    <tr>
+                        <td>Is branch divergence low?</td>
+                        <td>Divergent branches serialize work within a warp.</td>
+                    </tr>
+                    <tr>
+                        <td>Is shared memory used safely?</td>
+                        <td>Bank conflicts and missing barriers cause slowdowns or bugs.</td>
+                    </tr>
+                    <tr>
+                        <td>Are host-device transfers minimized?</td>
+                        <td>On discrete GPUs, transfers can dominate runtime for small workloads.</td>
+                    </tr>
+                    <tr>
+                        <td>Is occupancy reasonable?</td>
+                        <td>Too many registers or too much shared memory can limit resident warps.</td>
+                    </tr>
+                    <tr>
+                        <td>Is arithmetic intensity high?</td>
+                        <td>More computation per byte of memory helps performance.</td>
+                    </tr>
+                    <tr>
+                        <td>Are errors checked?</td>
+                        <td>CUDA errors can otherwise go unnoticed.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="common-mistakes">Common Mistakes</h3>
-            <p>
             <table>
-                <tr>
-                    <td>Mistake</td>
-                    <td>Why It Is a Problem</td>
-                    <td>Fix</td>
-                </tr>
-                <tr>
-                    <td>No bounds check in the kernel</td>
-                    <td>Extra threads may access invalid memory.</td>
-                    <td>Use <code>if (i &lt; n)</code>.</td>
-                </tr>
-                <tr>
-                    <td>Copying data back after every kernel</td>
-                    <td>On discrete GPUs, host-device transfers can be expensive.</td>
-                    <td>Keep data on the GPU across multiple kernels when possible.</td>
-                </tr>
-                <tr>
-                    <td>Assuming all GPU threads run independently</td>
-                    <td>Warps execute together.</td>
-                    <td>Consider divergence and memory coalescing.</td>
-                </tr>
-                <tr>
-                    <td>Using too many registers per thread</td>
-                    <td>Reduces occupancy.</td>
-                    <td>Inspect compiler reports and tune kernel resource use.</td>
-                </tr>
-                <tr>
-                    <td>Synchronizing across blocks inside one kernel</td>
-                    <td>Standard CUDA has no simple global barrier inside a normal kernel.</td>
-                    <td>Split work into multiple kernel launches or use cooperative groups where supported.</td>
-                </tr>
-                <tr>
-                    <td>Ignoring CUDA return codes</td>
-                    <td>Errors may remain hidden.</td>
-                    <td>Check every CUDA API call and synchronize when debugging.</td>
-                </tr>
-                <tr>
-                    <td>Confusing shared memory with global memory</td>
-                    <td>They have different scope, size, and latency.</td>
-                    <td>Use shared memory only for per-block cooperation.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Mistake</th>
+                        <th>Why It Is a Problem</th>
+                        <th>Fix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>No bounds check in the kernel</td>
+                        <td>Extra threads may access invalid memory.</td>
+                        <td>Use <code>if (i &lt; n)</code>.</td>
+                    </tr>
+                    <tr>
+                        <td>Copying data back after every kernel</td>
+                        <td>On discrete GPUs, host-device transfers can be expensive.</td>
+                        <td>Keep data on the GPU across multiple kernels when possible.</td>
+                    </tr>
+                    <tr>
+                        <td>Assuming all GPU threads run independently</td>
+                        <td>Warps execute together.</td>
+                        <td>Consider divergence and memory coalescing.</td>
+                    </tr>
+                    <tr>
+                        <td>Using too many registers per thread</td>
+                        <td>Reduces occupancy.</td>
+                        <td>Inspect compiler reports and tune kernel resource use.</td>
+                    </tr>
+                    <tr>
+                        <td>Synchronizing across blocks inside one kernel</td>
+                        <td>Standard CUDA has no simple global barrier inside a normal kernel.</td>
+                        <td>Split work into multiple kernel launches or use cooperative groups where supported.</td>
+                    </tr>
+                    <tr>
+                        <td>Ignoring CUDA return codes</td>
+                        <td>Errors may remain hidden.</td>
+                        <td>Check every CUDA API call and synchronize when debugging.</td>
+                    </tr>
+                    <tr>
+                        <td>Confusing shared memory with global memory</td>
+                        <td>They have different scope, size, and latency.</td>
+                        <td>Use shared memory only for per-block cooperation.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
         </article-section>
     </div>
     <footer>
@@ -1107,23 +1143,33 @@ blockSum&lt;&lt;&lt;grid, block, sharedBytes&gt;&gt;&gt;(d_in, d_partial, n);</c
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -1140,21 +1186,5 @@ blockSum&lt;&lt;&lt;grid, block, sharedBytes&gt;&gt;&gt;(d_in, d_partial, n);</c
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

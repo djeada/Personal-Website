@@ -1,14 +1,6 @@
 "use strict";
 
-/*
- * Two-beam interference, coherence, polarization overlap and beats.
- * Physics: ../shared/optics/interference.js (window.OpticsModels.interference).
- * UI helpers: ../shared/optics/ui.js (window.OpticsUI).
- *
- * Normalized units: lambda1 = 1, c = 1 (so T1 = 1, f1 = 1), A1 = 1.
- * Intensities are displayed in units of I1 = A1^2 / 2. Angles are degrees at
- * the UI boundary only.
- */
+
 (function() {
     const model = window.OpticsModels.interference;
     const UI = window.OpticsUI;
@@ -19,10 +11,10 @@
     const C = 1;
     const A1 = 1;
     const I1_UNIT = model.singleIntensity(A1);
-    const FIXED_FIELD = 3.2; // max A1 + A2 = 3 over the slider range
-    const FIXED_INTENSITY = 9.4; // max (A1 + A2)^2 / 2 / I1 = 9
+    const FIXED_FIELD = 3.2;
+    const FIXED_INTENSITY = 9.4;
 
-    // One colour per quantity, used by every canvas and the DOM legend.
+
     const COLORS = {
         wave1: PAL.series[6],
         wave2: PAL.series[4],
@@ -36,7 +28,7 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // ---------------------------------------------------------------- controls
+
     const DEFAULTS = {
         ph: 0,
         a2: 1,
@@ -223,7 +215,7 @@
 
     presetButtons.forEach((b) => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
 
-    // ---------------------------------------------------------------- state
+
     function buildState() {
         const s = ctl.get();
         const phi = s.ph * DEG,
@@ -231,12 +223,12 @@
             gArg = s.ga * DEG,
             alpha = s.al * DEG;
         const w1 = model.makeWave(A1, LAMBDA1, 0, C);
-        // Representative realization: relative phase phi + arg(gamma), the ensemble-mean phase.
+
         const w2 = model.makeWave(s.a2, LAMBDA1 * s.lr, phi + gArg, C);
         const w2par = model.makeWave(s.a2 * Math.cos(theta), LAMBDA1 * s.lr, phi + gArg, C);
         const beams = model.detectorBeams(A1, s.a2, theta, s.an ? alpha : null);
         const mu = model.crossFactor(model.complexGamma(s.g, gArg), beams.overlap);
-        // Detector waves: phases phi only; arg(gamma) and the overlap sign enter through mu.
+
         const d1 = model.makeWave(beams.A1, LAMBDA1, 0, C);
         const d2 = model.makeWave(beams.A2, LAMBDA1 * s.lr, phi, C);
         const beat = model.beat(w1, w2);
@@ -290,7 +282,7 @@
         };
     }
 
-    // ---------------------------------------------------------------- canvases
+
     let spatialMap = null,
         intensityMap = null;
     const narrow = (w) => w < 460;
@@ -623,7 +615,7 @@
         const q2 = model.phasor(w2par, s.xp, t);
         const q2full = model.phasor(w2, s.xp, t);
         const r = model.resultantPhasor([w1, w2par], s.xp, t);
-        // projection of the resultant on the real axis = instantaneous field along e1
+
         ctx.strokeStyle = COLORS.resultant;
         ctx.globalAlpha = 0.6;
         ctx.setLineDash([2, 3]);
@@ -678,7 +670,7 @@
         } = st;
         ctx.fillStyle = PAL.panel;
         ctx.fillRect(0, 0, w, h);
-        // leave room for two text lines on top and one at the bottom
+
         const top = 44,
             bottom = 30;
         const cx = w / 2,
@@ -689,7 +681,7 @@
             y: cy - (k || R) * v
         });
         ctx.font = `12px ${PAL.font}`;
-        // axes
+
         ctx.strokeStyle = PAL.grid;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -711,7 +703,7 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
         ctx.fillText("z", cx, cy - R - 12);
-        // analyser axis
+
         if (s.an) {
             const a = P(Math.cos(alpha), Math.sin(alpha), R + 10),
                 b = P(-Math.cos(alpha), -Math.sin(alpha), R + 10);
@@ -733,7 +725,7 @@
             ctx.textAlign = "left";
             ctx.fillText(txt, lx, Math.max(top + 4, Math.min(h - bottom - 4, lab.y)));
         }
-        // theta arc
+
         ctx.strokeStyle = PAL.textMuted;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -746,7 +738,7 @@
             const lp = P(Math.cos(theta / 2), Math.sin(theta / 2), R * 0.28 + 8);
             ctx.fillText(`θ=${s.th.toFixed(0)}°`, lp.x, lp.y);
         }
-        // projection of e2 on e1
+
         const ct = Math.cos(theta);
         const tip2 = P(Math.cos(theta), Math.sin(theta));
         const foot = P(ct, 0);
@@ -757,7 +749,7 @@
         ctx.lineTo(foot.x, foot.y);
         ctx.stroke();
         ctx.setLineDash([]);
-        // interfering projection (thick, on the e1 axis)
+
         ctx.strokeStyle = COLORS.resultant;
         ctx.lineWidth = 6;
         ctx.globalAlpha = 0.8;
@@ -785,7 +777,7 @@
         if (s.an) ctx.fillText(`after analyser: A₁′=${st.beams.A1.toFixed(2)}, A₂′=${st.beams.A2.toFixed(2)}`, 8, h - 20);
     }
 
-    // Declare handles before setupCanvas (it draws immediately).
+
     const cvSpatial = $("canvas"),
         cvTime = $("timeCanvas"),
         cvInt = $("intensityCanvas"),
@@ -843,7 +835,7 @@
         }),
     ];
 
-    // Pointer interactions: click/drag the spatial plot to move the probe; hover the detector plot to read values.
+
     function setProbeFromPointer(e) {
         if (!spatialMap) return;
         const r = cvSpatial.getBoundingClientRect();
@@ -875,7 +867,7 @@
         views[2].redraw();
     });
 
-    // ---------------------------------------------------------------- readouts
+
     const fmt = (v, d) => (Number.isFinite(v) ? v.toFixed(d === undefined ? 3 : d) : "∞");
     const statPhase = $("stat-phase"),
         statIntensity = $("stat-intensity"),
@@ -969,12 +961,12 @@
         updateText(lastState);
     }
 
-    // ---------------------------------------------------------------- legend colours (single source)
+
     document.querySelectorAll("#plotLegend .swatch").forEach((el) => {
         el.style.borderTopColor = COLORS[el.dataset.key];
     });
 
-    // ---------------------------------------------------------------- animation
+
     const startStopBtn = $("startStopBtn");
     const loop = UI.createLoop((dt) => {
         t += dt * ctl.get().sp;
@@ -1002,7 +994,7 @@
         render();
     });
 
-    // ---------------------------------------------------------------- URL state + export
+
     const url = UI.urlState({
         get: ctl.get,
         set: ctl.set

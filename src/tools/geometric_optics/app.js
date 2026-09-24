@@ -1,4 +1,3 @@
-/* Geometrical optics bench: page glue for OpticsModels.geometricOptics (physics lives in the model). */
 (function() {
     "use strict";
     const UI = window.OpticsUI;
@@ -9,7 +8,7 @@
         DEG = Math.PI / 180;
     const $ = (id) => document.getElementById(id);
 
-    // ------------------------------------------------------------------ colours (dark canvas)
+
     const COL = {
         lens: "#8ab4ff",
         lensFill: "rgba(138, 180, 255, 0.16)",
@@ -45,8 +44,8 @@
         achromat: true
     };
 
-    // ------------------------------------------------------------------ state
-    let els = []; // elements in mm: {id, type, z, f, R1, R2, t, R, material, semi, after, name}
+
+    let els = [];
     let nextId = 1;
     let selected = "obj";
     let presetKey = "single";
@@ -60,9 +59,9 @@
     let hitTargets = [];
     let drag = null;
     let rafPending = false;
-    let labelBounds = null; // plot rect that canvas labels are kept inside
+    let labelBounds = null;
 
-    // ------------------------------------------------------------------ helpers
+
     const fmt = (v, d = 4) => {
         if (v === Infinity) return "∞";
         if (v === -Infinity) return "−∞";
@@ -154,7 +153,7 @@
         return p;
     }
 
-    // ------------------------------------------------------------------ controls
+
     const ctlMap = {
         inf: "#objInf",
         so: "#objDist",
@@ -247,7 +246,8 @@
                 selected = "obj";
             }
         } catch (e) {
-            /* ignore malformed URL state */ }
+
+        }
     }
 
     function readState() {
@@ -270,7 +270,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ physics (model calls)
+
     function firstZ(list) {
         return list.length ? list[0].z : 0;
     }
@@ -319,7 +319,7 @@
             lambda: l,
             rays: GO.rayFan(sys, obj, st.nRays, l)
         }));
-        // paraxial marginal and chief rays
+
         if (res.sp.stop >= 0) {
             const mIn = res.sp.marginalIn;
             res.parMarg = {
@@ -335,7 +335,7 @@
                 };
             }
         }
-        // spot diagram
+
         const fieldObj = obj.atInfinity ? {
             atInfinity: true,
             angle: obj.angle * st.spotField
@@ -375,9 +375,9 @@
         res.spot.planeLabel = angleMode ? "output angles" : planeLabel;
         res.spot.zPlaneImage = imField.zImage;
         res.airy = GO.airy(lamRef, res.sp.naImage);
-        // angular Airy radius for images at infinity: 0.61 λ / r_XP
+
         res.airyAngle = Number.isFinite(res.sp.rXP) && res.sp.rXP > 0 ? 0.6098 * lamRef / res.sp.rXP : NaN;
-        // aberration curves
+
         res.lsa = GO.longitudinalAberration(sysOpt, obj, lams, {
             n: 41,
             lambdaRef: lamRef
@@ -393,7 +393,7 @@
         return res;
     }
 
-    // ------------------------------------------------------------------ view fitting
+
     function fitView() {
         const list = ordered();
         const st = readState();
@@ -421,7 +421,8 @@
                 }
             }
         } catch (e) {
-            /* fit without the image */ }
+
+        }
         let zMin = Math.min(...zs),
             zMax = Math.max(...zs);
         if (zMax - zMin < 20) {
@@ -467,7 +468,7 @@
         return changed;
     }
 
-    // ------------------------------------------------------------------ bench drawing
+
     function sag(y, R) {
         if (!R || !Number.isFinite(R)) return 0;
         const a = Math.abs(R);
@@ -519,7 +520,7 @@
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
         ctx.font = "12px " + TH.font;
-        // optical axis
+
         ctx.strokeStyle = TH.gridStrong;
         ctx.lineWidth = 1;
         ctx.setLineDash([6, 4]);
@@ -536,7 +537,7 @@
         const stopEl = r.sys && sp.stop >= 0 ? r.sys.surfaces[sp.stop] : null;
         const fsEl = r.sys && sp.fieldStop >= 0 ? r.sys.surfaces[sp.fieldStop] : null;
 
-        // elements
+
         r.list.forEach((e) => {
             const sel = selected === e.id;
             const s = semiOr(e);
@@ -701,14 +702,14 @@
             return;
         }
 
-        // stop markers
+
         if (st.showPupils) {
             if (stopEl) markStop(ctx, map, stopEl, "AS");
             if (fsEl) markStop(ctx, map, fsEl, "FS");
             if (sp.stop >= 0 && !sp.epAtInfinity) pupilMark(ctx, map, sp.zEP / MM, sp.rEP / MM, "EP");
             if (sp.stop >= 0 && !sp.xpAtInfinity) pupilMark(ctx, map, sp.zXP / MM, sp.rXP / MM, "XP");
         }
-        // cardinal points
+
         if (st.showCard && r.cp && !r.cp.afocal) {
             const cp = r.cp;
             const planeY = view.yMax * 0.78;
@@ -736,20 +737,20 @@
             ].forEach(([n, z]) => axisMark(ctx, map, z / MM, n, "tri"));
             if (Math.abs(cp.zN - cp.zH) > 1e-9)[["N", cp.zN], ["N′", cp.zNp]].forEach(([n, z]) => axisMark(ctx, map, z / MM, n, "dot"));
         }
-        // construction rays
+
         if (st.showConstr) drawConstruction(ctx, map, r);
-        // paraxial rays
+
         if (st.showParax) {
             if (r.parMarg) drawParaxial(ctx, map, r, r.parMarg, [1, -1]);
             if (r.parChief) drawParaxial(ctx, map, r, r.parChief, [1]);
         }
-        // exact ray fans
+
         if (st.showExact) drawFans(ctx, map, r);
-        // object and image
+
         drawObject(ctx, map, r);
         drawImage(ctx, map, r);
         ctx.restore();
-        // legend (outside clip, top-left inside the frame)
+
         const items = [];
         if (st.showExact) r.lams.forEach((l) => items.push([nmColor(l), "exact " + fmt(l / NM, 4) + " nm", []]));
         if (st.showParax) items.push([COL.paraxial, "paraxial", [6, 4]]);
@@ -877,7 +878,7 @@
         label(ctx, text, p.x, p.y + (kind === "tri" ? 20 : -9), COL.cardinal);
     }
 
-    /** Extend a ray from (z, y) with physical direction (dz, dy) to the view edge. Returns end point. */
+
     function extendToEdge(z, y, dz, dy) {
         if (Math.abs(dz) < 1e-15) return [z, y + Math.sign(dy) * view.yMax * 3];
         const zEnd = dz > 0 ? view.zMax : view.zMin;
@@ -1013,7 +1014,7 @@
             });
         }
         rays.forEach((ry) => {
-            const thOut = (n1 * ry.th - Pw * ry.yH) / n2; // unfolded slope after H′
+            const thOut = (n1 * ry.th - Pw * ry.yH) / n2;
             polyline(ctx, map, [
                 [ry.z0 / MM, ry.y0 / MM],
                 [cp.zH / MM, ry.yH / MM]
@@ -1104,7 +1105,7 @@
         label(ctx, im.virtual ? "virtual image" : "image", tip.x, h >= 0 ? tip.y - 8 : tip.y + 22, COL.image);
     }
 
-    // ------------------------------------------------------------------ plot panels
+
     function plotMessage(ctx, w, h, xAxis, yAxis, text) {
         const map = UI.plot(ctx, {
             x: 0,
@@ -1423,7 +1424,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ readouts
+
     function setText(id, t) {
         const el = $(id);
         if (el && el.textContent !== t) el.textContent = t;
@@ -1459,7 +1460,7 @@
         const im = r.im,
             cp = r.cp,
             sp = r.sp;
-        // image
+
         let imgTxt, siTxt, mTxt, mLabel = "Magnification";
         if (im.atInfinity) {
             siTxt = "∞";
@@ -1530,7 +1531,7 @@
         if (sp.fieldStop >= 0 && Number.isFinite(sp.fieldLimit)) {
             setText("rField", r.obj.atInfinity ? "α ≤ " + fmt(Math.atan(sp.fieldLimit) / DEG, 3) + "°" : "|h| ≤ " + fmm(sp.fieldLimit, 4));
         } else setText("rField", "—");
-        // warnings
+
         let tir = 0,
             vig = 0,
             total = 0;
@@ -1546,7 +1547,7 @@
         const wb = $("warnBox");
         wb.textContent = warn.join(" ");
         wb.hidden = !warn.length;
-        // convergence table
+
         const convRows = r.conv.rows;
         const slope = r.conv.imageAtInfinity;
         setText("convDeltaHead", slope ? "Exact − paraxial output slope" : "Exact − paraxial axial crossing");
@@ -1557,7 +1558,7 @@
             const kTxt = !Number.isFinite(d) ? "—" : slope ? fmt(d / row.rho ** 2 * 1e6, 4) + " µrad" : fmt(d / row.rho ** 2 / 1e-6, 4) + " µm";
             return "<tr><td>" + row.rho + "</td><td>" + fmm(row.height, 4) + "</td><td>" + dTxt + "</td><td>" + kTxt + "</td></tr>";
         }).join("");
-        // surfaces table
+
         const ix = GO.indicesAt(r.sys, lamRef);
         const marg = r.parMarg ? r.parMarg.trace : null;
         $("surfTable").querySelector("tbody").innerHTML = r.sys.surfaces.map((s2, k) => {
@@ -1593,7 +1594,7 @@
         } else distDesc.update("Distortion unavailable: zero field.");
     }
 
-    // ------------------------------------------------------------------ element list + editor
+
     function optionLabel(e, i) {
         const t = TYPE_NAMES[e.type];
         const extra = e.type === "thin" ? " f " + fmt(e.f, 4) : e.type === "mirror" ? " R " + fmt(e.R || Infinity, 4) : e.type === "lens" ? " " + (e.material || "") : "";
@@ -1816,7 +1817,7 @@
         commitChange(true);
     }
 
-    // ------------------------------------------------------------------ presets
+
     function buildPresetButtons() {
         const host = $("presetButtons");
         if (!host.children.length) {
@@ -1872,7 +1873,7 @@
         render();
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const benchCanvas = $("benchCanvas");
     const benchDesc = UI.describeCanvas(benchCanvas, "Optical bench", {
         label: "Optical bench: elements, exact and paraxial rays, object and image"
@@ -1932,7 +1933,8 @@
             return;
         }
         if (ensureVisible(result)) {
-            /* view grew */ }
+
+        }
         [bench, spotC, lsaC, fieldC, distC].forEach((c) => c.redraw());
         updateReadouts(result);
         describe(result);
@@ -1946,7 +1948,7 @@
         requestAnimationFrame(render);
     }
 
-    // ------------------------------------------------------------------ pointer + keyboard
+
     function hitTest(px, py) {
         let best = null,
             bestD = 14;
@@ -1995,7 +1997,8 @@
         try {
             benchCanvas.setPointerCapture(e.pointerId);
         } catch (err) {
-            /* ignore */ }
+
+        }
         benchCanvas.focus({
             preventScroll: true
         });
@@ -2070,7 +2073,7 @@
         }
     });
 
-    // ------------------------------------------------------------------ wiring
+
     $("elSelect").addEventListener("change", (e) => {
         const v = e.target.value;
         selected = v === "obj" ? "obj" : Number(v);
@@ -2173,6 +2176,6 @@
         caption: () => GO.PRESETS[presetKey].label + " · λ = " + fmt(readState().lam / NM, 4) + " nm · Cartesian sign convention"
     });
 
-    // initial state: default preset, then any URL state (restored in a microtask)
+
     loadPreset("single", false);
 })();

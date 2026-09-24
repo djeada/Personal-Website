@@ -1,43 +1,3 @@
-/*
- * Thin films and multilayer coatings: planar stacks of isotropic, nonmagnetic, homogeneous
- * layers between a lossless incident medium and a (possibly absorbing) substrate.
- *
- * Geometry and conventions (identical to fresnel.js)
- * ---------------------------------------------------
- *  - Layers are parallel to the x-y plane; light arrives from the incident medium (index n0,
- *    real, z < 0), crosses layers 1..L in order, and enters the substrate (index Ns).
- *    The plane of incidence is x-z.
- *  - Time convention E(r, t) = Re{E0 exp[i(k·r − ωt)]}. A complex refractive index is
- *    N = n + iκ with κ ≥ 0 for an absorbing medium, so exp(i k0 N z) decays for +z.
- *  - kx = k0 n0 sin θ0 is shared by every layer (Snell). Normal wavenumbers per unit k0:
- *        q_j = sqrt(N_j² − (n0 sin θ0)²),   branch chosen with Im q ≥ 0 (and Re q ≥ 0 if real).
- *  - Tilted optical admittances (in units of the vacuum admittance Y0 = 1/η0):
- *        s (TE):  η_j = q_j              p (TM):  η_j = N_j² / q_j
- *    With E_t the tangential electric field and H_t the tangential magnetic field (scaled so a
- *    forward wave has H_t = η E_t), the normal power flux is S_z = ½ Y0 Re(E_t H_t*).
- *  - Reflection/transmission amplitudes are returned in the fresnel.js bases:
- *        s: ratios of E_y.   p: ratios of the complex amplitude along ê_p = ŷ × k̂,
- *        so r_p = −r_s at normal incidence and r_p = −r_tan (ratio of tangential E).
- *    R = |r|², T = Re(η_s)|t_tan|² / Re(η_0), A = 1 − R − T (power absorbed in the films).
- *
- * Methods
- * -------
- *  1. Characteristic (Abelès) matrices. For layer j with phase thickness δ_j = k0 q_j d_j,
- *        [E_t; H_t]_front = M_j [E_t; H_t]_back,   M_j = [[cos δ, −i sin δ / η], [−i η sin δ, cos δ]]
- *     (derived for exp(−iωt); Macleod writes +i sin δ because he uses exp(+iωt)).
- *     [B; C] = M_1 M_2 … M_L [1; η_s],  Y = C / B,  r_tan = (η0 − Y)/(η0 + Y),
- *     t_tan = 2 η0 / (η0 B + C). For absorbing or evanescent layers |cos δ|, |sin δ| grow like
- *     exp(Im δ): the product overflows (NaN) once Σ Im δ ≳ 700 and loses precision earlier.
- *  2. Recursive Airy/Rouard (a scattering formulation). Starting at the substrate,
- *        ρ_j = (r_{j,j+1} + ρ_{j+1} e^{2iδ_{j+1}}) / (1 + r_{j,j+1} ρ_{j+1} e^{2iδ_{j+1}}),
- *     with interface coefficients r_ab = (η_a − η_b)/(η_a + η_b), t_ab = 1 + r_ab. Only the
- *     decaying factors e^{iδ}, |e^{iδ}| ≤ 1, ever appear, so the result is finite for any
- *     thickness. Forward amplitudes a_{j+1} = a_j e^{iδ_j} t_{j,j+1} / (1 + r_{j,j+1} ρ'_{j+1}) give
- *     the internal field profile.
- *  "auto" uses Abelès when Σ|Im δ| < ABELES_LIMIT and the stable recursion otherwise.
- *
- * All lengths are SI metres, angles radians. Pure and DOM-free.
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -48,7 +8,7 @@
 })(typeof self !== "undefined" ? self : this, function() {
     "use strict";
 
-    // ---------------------------------------------------------------- complex helpers
+
     const cx = (re, im = 0) => ({
         re,
         im
@@ -60,7 +20,7 @@
     const conj = (a) => cx(a.re, -a.im);
     const abs2 = (a) => a.re * a.re + a.im * a.im;
     const abs = (a) => Math.hypot(a.re, a.im);
-    const div = (a, b) => { // Smith's algorithm
+    const div = (a, b) => {
         if (Math.abs(b.re) >= Math.abs(b.im)) {
             const r = b.im / b.re,
                 d = b.re + b.im * r;
@@ -70,7 +30,7 @@
             d = b.re * r + b.im;
         return cx((a.re * r + a.im) / d, (a.im * r - a.re) / d);
     };
-    /** exp(i z) for complex z. */
+
     const expi = (z) => {
         const m = Math.exp(-z.im);
         return cx(m * Math.cos(z.re), m * Math.sin(z.re));
@@ -80,7 +40,7 @@
 
     function csqrt(a) {
         if (a.re === 0 && a.im === 0) return cx(0, 0);
-        // cancellation-free principal root (weak absorption k ≪ n keeps full relative accuracy)
+
         const m = Math.hypot(a.re, a.im);
         if (a.re >= 0) {
             const t = Math.sqrt((m + a.re) / 2);
@@ -89,19 +49,19 @@
         const t = Math.sqrt((m - a.re) / 2);
         return cx(Math.abs(a.im) / (2 * t), a.im < 0 ? -t : t);
     }
-    /** Normal wavenumber branch: Im q ≥ 0 (decay/absorption along +z), Re q ≥ 0 if Im q = 0. */
+
     function kzBranch(N2, kx) {
         let q = csqrt(cx(N2.re - kx * kx, N2.im));
         if (q.im < 0 || (q.im === 0 && q.re < 0)) q = scale(q, -1);
-        if (abs(q) < 1e-12) q = cx(0, 1e-12); // exactly grazing inside a layer: keep η_p finite
+        if (abs(q) < 1e-12) q = cx(0, 1e-12);
         return q;
     }
 
     const I_ = cx(0, 1);
-    const ABELES_LIMIT = 20; // Σ|Im δ| above which "auto" switches to the stable recursion
+    const ABELES_LIMIT = 20;
 
-    // ---------------------------------------------------------------- media
-    /** Normalise an index: number → n + 0i; {n, k} → n + ik; {re, im} unchanged. */
+
+
     function toIndex(v) {
         if (typeof v === "number") return cx(v, 0);
         if (v && typeof v.n === "number") return cx(v.n, v.k || 0);
@@ -109,10 +69,7 @@
         throw new TypeError("refractive index must be a number or {n, k}");
     }
 
-    /**
-     * Normalise a stack description.
-     * stack = { n0: number (real, > 0), layers: [{ d (m), n, k = 0, name }], ns: number | {n, k} }
-     */
+
     function normalizeStack(stack) {
         const n0 = Number(stack.n0);
         if (!(n0 > 0)) throw new RangeError("incident index n0 must be real and positive");
@@ -143,7 +100,7 @@
         return pol === "s" ? q : div(mul(N, N), q);
     }
 
-    /** Per-medium quantities for one (λ0, kx, polarisation). Index 0 = incident, L+1 = substrate. */
+
     function mediaFor(st, lambda0, kx, pol) {
         const k0 = 2 * Math.PI / lambda0;
         const Ns = [cx(st.n0, 0), ...st.layers.map((l) => l.N), st.Ns];
@@ -166,12 +123,12 @@
         };
     }
 
-    // ---------------------------------------------------------------- solvers (tangential basis)
+
     function abelesTan(M) {
         const L = M.L;
         let B = cx(1, 0),
             C = M.eta[L + 1];
-        for (let j = L; j >= 1; j--) { // [B; C] ← M_j [B; C]
+        for (let j = L; j >= 1; j--) {
             const c = ccos(M.delta[j]),
                 s = csin(M.delta[j]);
             const is = mul(I_, s);
@@ -208,7 +165,7 @@
             rhoR[j] = div(add(rI[j], rp), add(cx(1, 0), mul(rI[j], rp)));
             if (j >= 1) rhoL[j] = mul(rhoR[j], expi(scale(M.delta[j], 2)));
         }
-        // forward amplitudes (tangential E of the forward wave) at the left of each medium
+
         const aL = new Array(L + 2),
             aR = new Array(L + 2);
         aR[0] = cx(1, 0);
@@ -228,7 +185,7 @@
         return out;
     }
 
-    /** Convert tangential-basis amplitudes to fresnel.js bases and power coefficients. */
+
     function finish(M, tan, pol, method) {
         const L = M.L;
         const e0 = M.eta[0],
@@ -239,7 +196,7 @@
             t = tan.tTan;
         } else {
             r = scale(tan.rTan, -1);
-            // E_x = (q/N)·A for the ê_p basis: t_p = t_tan (q0/N0)(Ns/qs)
+
             t = mul(tan.tTan, div(mul(M.q[0], M.N[L + 1]), mul(M.N[0], M.q[L + 1])));
         }
         const R = abs2(tan.rTan);
@@ -257,11 +214,7 @@
         };
     }
 
-    /**
-     * Solve a stack for one wavelength, angle and polarisation.
-     * opts.method: "auto" (default) | "abeles" | "airy". opts.kx overrides n0 sin θ0 (per k0).
-     * Returns { r, t, rTan, tTan, R, T, A, method, sumImDelta }.
-     */
+
     function solve(stack, lambda0, theta0, pol = "s", opts = {}) {
         const st = stack.__norm ? stack : normalizeStack(stack);
         if (!(lambda0 > 0)) throw new RangeError("lambda0 must be positive (m)");
@@ -274,7 +227,7 @@
         return finish(M, tan, pol, method);
     }
 
-    /** Unpolarised (incoherent 50/50 s+p) power coefficients. */
+
     function solveUnpolarized(stack, lambda0, theta0, opts = {}) {
         const s = solve(stack, lambda0, theta0, "s", opts),
             p = solve(stack, lambda0, theta0, "p", opts);
@@ -293,22 +246,14 @@
         return st;
     }
 
-    /** Power coefficients for pol ∈ {"s", "p", "u"} (u = unpolarised). */
+
     function power(stack, lambda0, theta0, pol, opts) {
         if (pol === "u") return solveUnpolarized(stack, lambda0, theta0, opts);
         return solve(stack, lambda0, theta0, pol, opts);
     }
 
-    // ---------------------------------------------------------------- incoherent / coherent backside
-    /**
-     * Stack on a substrate of finite thickness D with an exit medium ne behind it.
-     * mode "incoherent": intensities of the multiply reflected substrate passes add (phase averaged):
-     *    R = R_f + T_f² τ² R_b / (1 − R_f' R_b τ²),  T = T_f τ T_b / (1 − R_f' R_b τ²)
-     *   where τ = exp(−2 k0 Im(q_s) D) is the single-pass power transmission of the substrate,
-     *   R_f' is the stack reflectance seen from the substrate and R_b, T_b the bare back interface.
-     *   T_f from both sides is equal (reciprocity). R_f' uses Re(N_s) (weak-absorption approximation).
-     * mode "coherent": the substrate is one more coherent layer (fringes of period ≈ λ²/(2 n D cos θ)).
-     */
+
+
     function withBackside(stack, lambda0, theta0, pol, back) {
         const st = prepared(stack);
         const D = back.thickness,
@@ -350,7 +295,7 @@
             A: front.A,
             front,
             tau: 0
-        }; // evanescent in substrate
+        };
         const tau = Math.exp(-2 * k0 * qs.im * D);
         const rev = {
             n0: nsr,
@@ -384,7 +329,7 @@
         };
     }
 
-    // ---------------------------------------------------------------- spectra and scans
+
     function spectrum(stack, lambdas, theta0, opts = {}) {
         const st = prepared(stack);
         const n = lambdas.length;
@@ -421,7 +366,7 @@
         return out;
     }
 
-    /** |ΔR|, |ΔT| between Abelès and the stable recursion (s and p). NaN in Abelès → Infinity. */
+
     function compareMethods(stack, lambda0, theta0) {
         let maxDiff = 0,
             sumIm = 0;
@@ -466,14 +411,8 @@
         return out;
     }
 
-    // ---------------------------------------------------------------- internal field
-    /**
-     * Field profile through the stack (stable recursion) for incident |E| = 1.
-     * Returns { z (m, 0 = first interface), E2 (|E|²/|E_inc|²), Et2 (tangential only),
-     * interfaces (m), layerOf[i] (0 = incident, L+1 = substrate), absorbed[j] (fraction of incident
-     * power absorbed in layer j, from the flux difference), flux[j] (normalised S_z at interface j),
-     * R, T }. pad: length of incident medium and substrate shown (m).
-     */
+
+
     function fieldProfile(stack, lambda0, theta0, pol = "s", opts = {}) {
         const st = normalizeStack(stack);
         const kx = st.n0 * Math.sin(Math.min(theta0, Math.PI / 2 * 0.99999));
@@ -484,15 +423,15 @@
         const total = st.layers.reduce((s, l) => s + l.d, 0);
         const pad = opts.pad != null ? opts.pad : Math.max(lambda0 * 0.75, total * 0.15);
         const nSamp = opts.samples || 800;
-        // incident tangential amplitude: s → 1; p → q0/n0 so that |E_inc| = 1
+
         const a0 = pol === "s" ? cx(1, 0) : cx(M.q[0].re / st.n0, 0);
         const inc2 = abs2(a0);
         const interfaces = [0];
         for (let j = 1; j <= L; j++) interfaces.push(interfaces[j - 1] + st.layers[j - 1].d);
-        // tangential E and H̃ at a point in medium j with local coordinate u (from its left boundary)
+
         function fields(j, u) {
             let fwd, bwd;
-            if (j === 0) { // u ≤ 0 measured from the first interface
+            if (j === 0) {
                 fwd = expi(scale(M.q[0], k0 * u));
                 bwd = mul(f.rhoR[0], expi(scale(M.q[0], -k0 * u)));
             } else if (j === L + 1) {
@@ -523,7 +462,7 @@
                 Et2: abs2(Et)
             };
             const N2 = mul(M.N[j], M.N[j]);
-            const Ez = scale(div(Ht, N2), -kx); // E_z = −kx H̃ / N²
+            const Ez = scale(div(Ht, N2), -kx);
             return {
                 E2: abs2(Et) + abs2(Ez),
                 Et2: abs2(Et)
@@ -542,7 +481,7 @@
             Et2.push(e.Et2 / inc2);
             layerOf.push(j);
         };
-        // sample each region, including both ends of every region (discontinuous |E|² for p)
+
         const regions = [{
             j: 0,
             z0: zMin,
@@ -568,7 +507,7 @@
                 pushPoint(zz, R.j, u);
             }
         }
-        // normalised flux at each interface (just inside medium j+1 at its left boundary)
+
         const incFlux = M.eta[0].re * inc2;
         const flux = [];
         for (let j = 0; j <= L; j++) {
@@ -604,21 +543,17 @@
         };
     }
 
-    // ---------------------------------------------------------------- design helpers
-    /** Physical thickness of a quarter-wave optical thickness layer at normal incidence. */
+
+
     const quarterWave = (lambda0, n) => lambda0 / (4 * n);
 
-    /** Normal-incidence peak reflectance of (HL)^N H on a substrate (all quarter-wave). */
+
     function braggPeakR(n0, nH, nL, ns, N) {
         const Y = Math.pow(nH / nL, 2 * N) * nH * nH / ns;
         return ((n0 - Y) / (n0 + Y)) ** 2;
     }
 
-    /**
-     * Stop-band of a quarter-wave stack at normal incidence. In g = λ0/λ the band is centred on
-     * g = 1 with half-width Δg = (2/π) asin((nH − nL)/(nH + nL)) (exact for an infinite stack).
-     * Returns edges in wavelength and the common approximation Δλ/λ0 ≈ 4/π asin(…).
-     */
+
     function braggStopband(lambda0, nH, nL) {
         const dg = (2 / Math.PI) * Math.asin(Math.abs(nH - nL) / (nH + nL));
         const lamShort = lambda0 / (1 + dg),
@@ -633,10 +568,7 @@
         };
     }
 
-    /**
-     * Half-trace of the characteristic matrix of one period (layers given), at normal incidence.
-     * |½ Tr M| > 1 means an evanescent Bloch wave, i.e. a photonic stop band.
-     */
+
     function periodHalfTrace(periodLayers, lambda0, kx = 0, pol = "s") {
         const st = normalizeStack({
             n0: 1,
@@ -664,11 +596,11 @@
         return scale(add(A[0][0], A[1][1]), 0.5);
     }
 
-    /** Locate the edges of the stop band around λ0 numerically from |½ Tr M_period| = 1 (bisection). */
+
     function numericStopband(periodLayers, lambda0) {
         const f = (lam) => Math.abs(periodHalfTrace(periodLayers, lam).re) - 1;
         if (!(f(lambda0) > 0)) return null;
-        const edge = (lo, hi) => { // f(lo) > 0 side = lo
+        const edge = (lo, hi) => {
             for (let i = 0; i < 200; i++) {
                 const m = 0.5 * (lo + hi);
                 if (f(m) > 0) lo = m;
@@ -685,9 +617,9 @@
         };
     }
 
-    // ---------------------------------------------------------------- colour (display aid)
-    // CIE 1931 2° colour-matching functions: multi-lobe Gaussian fit of Wyman, Sloan & Shirley,
-    // JCGT 2(2), 2013 (≈1 % of peak accuracy). Wavelength in nm.
+
+
+
     const g = (x, mu, s1, s2) => {
         const t = (x - mu) / (x < mu ? s1 : s2);
         return Math.exp(-0.5 * t * t);
@@ -700,7 +632,7 @@
             1.217 * g(nm, 437.0, 11.8, 36.0) + 0.681 * g(nm, 459.0, 26.0, 13.8)
         ];
     }
-    /** Relative spectral power of a 6504 K blackbody (stand-in for daylight D65). */
+
     function illuminant(nm) {
         const l = nm * 1e-9,
             c2 = 1.438776877e-2;
@@ -733,12 +665,7 @@
     const WHITE_LIN = xyzToLin(WHITE.X / WHITE.Y, 1, WHITE.Z / WHITE.Y);
     const gammaEnc = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
 
-    /**
-     * Colour of light with spectral factor f(λ) (e.g. R(λ)) under the illuminant.
-     * Returns { X, Y, Z (Y = 1 for f ≡ 1), x, y, rgb: [0..255] }. `exposure` multiplies the linear
-     * values before encoding (to brighten dim reflections). RGB is white-balanced so f ≡ 1 is
-     * neutral white; out-of-gamut values are clipped. A display aid, not colorimetry.
-     */
+
     function colourOf(fOfNm, exposure = 1) {
         let X = 0,
             Y = 0,
@@ -764,16 +691,13 @@
             rgb: xyzToRGB(X, Y, Z, exposure)
         };
     }
-    /** White-balanced, clipped sRGB (0..255) of tristimulus values (Y = 1 ↔ the illuminant). */
+
     function xyzToRGB(X, Y, Z, exposure = 1) {
         const lin = xyzToLin(X, Y, Z).map((c, i) => c / WHITE_LIN[i] * exposure);
         return lin.map((c) => Math.round(255 * gammaEnc(Math.min(1, Math.max(0, c)))));
     }
 
-    /**
-     * Thickness scan of one layer (index `layer`, 0-based): R at probe λ and reflected colour.
-     * Returns { d (m), R, Rcol: [[r,g,b]], Y } with pol ∈ {"s","p","u"}.
-     */
+
     function thicknessScan(stack, layer, dMax, samples, lambda0, theta0, pol = "u", withColour = true) {
         const d = [],
             R = [],

@@ -1,7 +1,7 @@
 "use strict";
 
-// Physics lives in ../shared/optics/interferometers.js (pure, tested in
-// tests/optics/interferometers.test.js). This file maps it onto controls, plots and readouts.
+
+
 (function() {
     const UI = window.OpticsUI;
     const core = window.OpticsModels.core;
@@ -13,7 +13,7 @@
     const deg = (r) => r * 180 / Math.PI;
     const FS = 12;
 
-    // ------------------------------------------------------------------ state
+
     const DEFAULTS = Object.freeze({
         mode: "michelson",
         L1: 100,
@@ -202,7 +202,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ controls
+
     const sidebar = document.querySelector(".options-sidebar");
     const pow10 = (v) => Number(Math.pow(10, v).toPrecision(4));
     UI.enhanceAllSliders(sidebar, {
@@ -292,7 +292,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ animation
+
     const playBtn = $("playBtn");
     const loop = UI.createLoop((dt) => advance(dt * ctl.get().spd * 8), {
         onChange: (running) => {
@@ -300,7 +300,7 @@
             playBtn.setAttribute("aria-pressed", String(running));
         }
     });
-    // advance by n sixteenths of a fringe (λ0/16 of mirror travel each)
+
     function advance(nSixteenths) {
         const S = ctl.get();
         const lamUm = (S.spec === "sodium" ? M.spec.lambda0 * 1e6 : S.lam * 1e-3);
@@ -323,8 +323,8 @@
         presetNote.textContent = "Defaults restored: HeNe laser, balanced Michelson, d = 5 µm.";
     });
 
-    // ------------------------------------------------------------------ model evaluation
-    const M = {}; // current results
+
+    const M = {};
     let scanCache = {
             key: "",
             data: null
@@ -596,7 +596,7 @@
         M.scan = data;
     }
 
-    // ------------------------------------------------------------------ drawing helpers
+
     const beamColor = () => {
         const nm = M.lam0 * 1e9;
         if (nm < 400 || nm > 700) return PAL.series[0];
@@ -730,7 +730,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ interferometer schematic
+
     function drawDiagram(ctx, w, h) {
         ctx.fillStyle = PAL.background;
         ctx.fillRect(0, 0, w, h);
@@ -758,7 +758,7 @@
         const m1x = bx + len1,
             m2y = by - len2;
         const sx = 26;
-        // beams
+
         beam(ctx, sx, by, bx, by, 1, col);
         beam(ctx, bx, by - 3, m1x, by - 3, T, col);
         beam(ctx, bx, by + 3, m1x, by + 3, T * cfg.eta1, col);
@@ -767,7 +767,7 @@
         beam(ctx, bx, by, bx, h - 40, det.P[0], col);
         beam(ctx, bx, by + 7, sx + 30, by + 7, det.P[1], col);
         arrowHead(ctx, sx + 30, by + 7, Math.PI, 8, PAL.textMuted);
-        // source
+
         ctx.save();
         ctx.fillStyle = col;
         ctx.beginPath();
@@ -778,7 +778,7 @@
             size: 11,
             color: PAL.textMuted
         });
-        // components
+
         splitter(ctx, bx, by, 16, "");
         text(ctx, "BS R = " + S.R1 + " %", bx + 20, by + 22, {
             size: 11,
@@ -794,7 +794,7 @@
             size: 11,
             color: PAL.textMuted
         });
-        // displacement arrow
+
         ctx.save();
         ctx.strokeStyle = PAL.marker;
         ctx.lineWidth = 1.5;
@@ -811,7 +811,7 @@
             color: PAL.marker,
             bg: true
         });
-        // arm-2 elements
+
         const ey = (by + m2y) / 2;
         box(ctx, bx, ey - 16, 30, 20, "φ", Math.abs(S.phi) > 0);
         box(ctx, bx, ey + 12, 30, 20, "ψ", Math.abs(S.psi) > 0);
@@ -850,12 +850,12 @@
             yt = h * 0.26;
         const sx = 20;
         beam(ctx, sx, yb, x1, yb, 1, col);
-        beam(ctx, x1, yb, x2, yb, T1, col); // arm 1 lower
+        beam(ctx, x1, yb, x2, yb, T1, col);
         beam(ctx, x2, yb, x2, yt, T1 * cfg.eta1, col);
-        beam(ctx, x1, yb, x1, yt, R1, col); // arm 2 left/top
+        beam(ctx, x1, yb, x1, yt, R1, col);
         beam(ctx, x1, yt, x2, yt, R1 * cfg.eta2, col);
-        beam(ctx, x2, yt, x2, 26, det.P[0], col); // port 1 up
-        beam(ctx, x2, yt, w - 30, yt, det.P[1], col); // port 2 right
+        beam(ctx, x2, yt, x2, 26, det.P[0], col);
+        beam(ctx, x2, yt, w - 30, yt, det.P[1], col);
         ctx.save();
         ctx.fillStyle = col;
         ctx.beginPath();
@@ -874,7 +874,7 @@
             color: PAL.textMuted,
             align: "right"
         });
-        // mirrors ("/" orientation) at the two corners
+
         mirrorLine(ctx, x2 - 14, yb + 14, x2 + 14, yb - 14);
         mirrorLine(ctx, x1 - 14, yt + 14, x1 + 14, yt - 14);
         text(ctx, "arm 1: L₁ = " + S.L1.toFixed(3) + " mm", (x1 + x2) / 2 + 6, yb + 22, {
@@ -899,7 +899,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ phasors
+
     function drawPhasors(ctx, w, h) {
         ctx.fillStyle = PAL.background;
         ctx.fillRect(0, 0, w, h);
@@ -912,7 +912,7 @@
                 cyp = 30 + R + 8;
             const [c1, c2] = M.mono.contributions[p];
             const a1 = c1[0],
-                a2 = c2[0]; // x-components (arm 1 is x-polarised)
+                a2 = c2[0];
             const perp = c2[1].re * c2[1].re + c2[1].im * c2[1].im;
             const ref = core.complex.abs(a1) > 1e-9 ? core.complex.arg(a1) : core.complex.arg(a2);
             const rot = core.complex.expi(-ref);
@@ -1003,7 +1003,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ fringe plot
+
     let fringeMap = null;
 
     function drawFringe(ctx, w, h) {
@@ -1093,7 +1093,7 @@
             }
         });
         if (F.envelope) {
-            // shade between the envelopes: fringes too dense to draw
+
             ctx.save();
             ctx.beginPath();
             ctx.rect(fringeMap.plot.x, fringeMap.plot.y, fringeMap.plot.w, fringeMap.plot.h);
@@ -1121,7 +1121,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ detector image
+
     let imageMap = null;
 
     function drawImage(ctx, w, h) {
@@ -1191,7 +1191,7 @@
         }
     }
 
-    // ------------------------------------------------------------------ spectrum
+
     function drawSpectrum(ctx, w, h) {
         ctx.fillStyle = PAL.background;
         ctx.fillRect(0, 0, w, h);
@@ -1272,7 +1272,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ visibility scan
+
     let visMap = null;
 
     function drawVis(ctx, w, h) {
@@ -1405,7 +1405,7 @@
         });
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const cDiagram = UI.setupCanvas($("diagramCanvas"), {
         aspect: 1.45,
         minHeight: 280,
@@ -1463,7 +1463,7 @@
         label: "Fringe visibility scan"
     });
 
-    // pointer interaction: fringe plot sets d, visibility plot sets the scanned variable
+
     function dragOn(canvas, getMap, apply) {
         let down = false;
         const handle = (e) => {
@@ -1507,7 +1507,7 @@
         else setSlider("e2S", Math.round(x));
     });
 
-    // ------------------------------------------------------------------ readouts
+
     function setText(id, s) {
         const el = $(id);
         if (el && el.textContent !== s) el.textContent = s;
@@ -1593,14 +1593,14 @@
         setText("fringeCaption", F.envelope ?
             "Fringes are too dense to draw (" + Math.round(F.fringes) + " in the window), so the shaded band shows the envelope (solid P₁, dashed P₂) P = Ī ± 2|X||γ| of each port. Narrow the window to see individual fringes. The vertical line is the current d; click or drag to set it." :
             "Port powers as fractions of the input power (solid P₁, dashed P₂) while the mirror moves (" + F.fringes.toFixed(1) + " fringes, one per λ₀/2 = " + (M.lam0 / 2 * 1e9).toFixed(1) + " nm of travel). The vertical line is the current d; click or drag to set it.");
-        // stats bar
+
         setText("stat-opd", fmt(opd, "m", 4));
         setText("stat-p1", det.P[0].toFixed(3));
         setText("stat-p2", det.P[1].toFixed(3));
         setText("stat-vis", vis[0].V.toFixed(3));
         setText("stat-lc", Number.isFinite(L.halfVisibility) ? fmt(L.halfVisibility, "m", 3) : "∞");
 
-        // warnings
+
         const warns = [];
         if (spec.kind !== "mono" && Number.isFinite(spec.revivalOPD) && spec.revivalOPD < Math.max(M.vrM, Math.abs(opd)) * 1.05) {
             warns.push("The spectral grid (N = " + spec.N + ") would revive at OPD c/δν = " + fmt(spec.revivalOPD, "m") + ", inside the range shown. Bin integration suppresses the revival, but small residual fringes there are sampling artefacts.");
@@ -1639,7 +1639,7 @@
         dVis.update("Visibility scan over " + M.scan.label + ". Current measured visibility at port 1 is " + vis[0].V.toFixed(3) + ", theory " + (M.V0 * M.gAbs * M.Fsrc).toFixed(3) + ". Coherence length at half visibility " + (Number.isFinite(L.halfVisibility) ? fmt(L.halfVisibility, "m") : "infinite") + ".");
     }
 
-    // ------------------------------------------------------------------ render scheduling
+
     let pending = false;
 
     function scheduleRender() {
@@ -1659,7 +1659,7 @@
         updateDescriptions();
     }
 
-    // ------------------------------------------------------------------ export
+
     UI.addExportBar($("exportHost"), {
         name: "interferometer",
         url,

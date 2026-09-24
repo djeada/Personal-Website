@@ -1,26 +1,3 @@
-/*
- * Radiometry, throughput and detection model (pure, DOM-free).
- *
- * Browser: <script src="../shared/optics/radiometry.js"></script> → window.OpticsModels.radiometry
- * Node:    const R = require(".../shared/optics/radiometry.js")
- *
- * All quantities are SI: W, m, s, sr, rad. Radiance L in W m⁻² sr⁻¹ is the radiance in the medium
- * where it is quoted (index n); the basic (reduced) radiance is L/n².
- *
- * Contents
- * --------
- *  photonEnergy, photonRate, responsivity, expectedCounts, countDimensions (dimensional check)
- *  solidAngleCone, projectedSolidAngleCone
- *  Lambertian disk: lambertOnAxisIrradiance (analytic πL sin²θ), lambertOnAxisIrradianceNumeric
- *      (adaptive angular integral), lambertIrradianceAt (numerical angular integration for any
- *      receiver point), diskViewFactor (analytic coaxial disk → disk), diskToDiskPowerNumeric
- *  pointIrradianceAt, gaussianIrradianceAt, gaussianApertureFraction, gaussianBeamRadius
- *  airyEncircledEnergy, rayleighResolution, fresnelNormalReflectance, thinLensImaging
- *  radianceAlongRay (n² law with explicit transmissions)
- *  experiment(params): the source → aperture → lens → filter → detector power budget
- *  snr, simulateCounts (seeded), sampleStats, histogramEdges, histogram, countDistribution
- *  V1924 table (CIE 1924 photopic luminous efficiency), luminousEfficiency, luminousFlux
- */
 (function(root, factory) {
     const core = (typeof require === "function" && typeof module === "object") ? require("./core.js") : root.OpticsModels.core;
     const m = factory(core);
@@ -38,14 +15,14 @@
         e: qe
     } = core.constants;
 
-    // ------------------------------------------------------------------ photons and detectors
-    /** Photon energy hc/λ0 (J) for vacuum wavelength λ0 (m). */
+
+
     const photonEnergy = (lambda0) => h * c / lambda0;
-    /** Photon arrival rate (photons/s) carried by monochromatic power P (W). */
+
     const photonRate = (P, lambda0) => P * lambda0 / (h * c);
-    /** Current responsivity R = η q λ0/(hc) in A/W. */
+
     const responsivity = (eta, lambda0) => eta * qe * lambda0 / (h * c);
-    /** Mean detected photoelectrons N = η P t λ0/(hc). */
+
     function expectedCounts({
         power,
         eta = 1,
@@ -55,7 +32,7 @@
         return eta * power * time * lambda0 / (h * c);
     }
 
-    // Dimensional analysis in base SI exponents [kg, m, s, A].
+
     const DIM = Object.freeze({
         W: [1, 2, -3, 0],
         s: [0, 0, 1, 0],
@@ -68,39 +45,33 @@
     });
     const dimMul = (...ds) => ds.reduce((acc, d) => acc.map((v, i) => v + d[i]), [0, 0, 0, 0]);
     const dimInv = (d) => d.map((v) => -v);
-    /** Exponents of N = η P t λ0/(hc): must be all zero (a pure number). */
+
     function countDimensions() {
         return dimMul(DIM.one, DIM.W, DIM.s, DIM.m, dimInv(DIM.J_s), dimInv(DIM.m_per_s));
     }
-    /** Exponents of η q λ0/(hc): must equal A/W. */
+
     function responsivityDimensions() {
         return dimMul(DIM.C, DIM.m, dimInv(DIM.J_s), dimInv(DIM.m_per_s));
     }
 
-    // ------------------------------------------------------------------ solid angles
-    /** Solid angle of a cone of half-angle θ: Ω = 2π(1 − cos θ) sr. */
+
+
     const solidAngleCone = (theta) => 2 * Math.PI * (1 - Math.cos(theta));
-    /** Projected solid angle ∫cosθ dΩ of a cone: π sin²θ sr. */
+
     const projectedSolidAngleCone = (theta) => Math.PI * Math.sin(theta) ** 2;
 
-    // ------------------------------------------------------------------ Lambertian disk source
-    /** On-axis irradiance at distance d from a Lambertian disk (radius a, radiance L): E = πL sin²θ. */
+
+
     function lambertOnAxisIrradiance(L, a, d) {
         return Math.PI * L * a * a / (a * a + d * d);
     }
-    /** Same quantity by adaptive quadrature of E = ∫ L cosθ dΩ = 2πL ∫₀^θmax cosθ sinθ dθ. */
+
     function lambertOnAxisIrradianceNumeric(L, a, d, tol = 1e-13) {
         const thMax = Math.atan2(a, d);
         return 2 * Math.PI * L * core.integrateAdaptive((t) => Math.cos(t) * Math.sin(t), 0, thMax, tol);
     }
 
-    /**
-     * Irradiance at a receiver point a radial distance rho off-axis, on a plane parallel to a
-     * Lambertian disk (radius a, radiance L) at separation d, by numerical angular integration:
-     * E = ∫∫ L cosθ sinθ dθ dφ over the directions that hit the disk. For each azimuth φ the ray
-     * footprint t = d tanθ on the source plane lies in [t1, t2] (a chord of the disk), so the θ
-     * integral is done in closed form (½[sin²θ]) and the φ integral numerically (adaptive Simpson).
-     */
+
     function lambertIrradianceAt(L, a, d, rho, relTol = 1e-10) {
         rho = Math.abs(rho);
         const s2 = (t) => (t * t) / (t * t + d * d);
@@ -115,60 +86,53 @@
             if (t2 <= 0) return 0;
             return s2(t2) - s2(t1);
         };
-        // only azimuths within asin(a/ρ) of φ = π hit the disk when ρ ≥ a; integrate that wedge only
+
         const lo = rho < a ? 0 : Math.PI - Math.asin(Math.min(1, a / rho));
-        // integrateAdaptive takes an absolute tolerance: scale it by a coarse Simpson estimate
+
         const coarse = Math.abs(core.simpson(f, lo, Math.PI, 64)) || 1e-300;
         const integral = core.integrateAdaptive(f, lo, Math.PI, relTol * coarse);
-        return L * integral; // (L/2) × 2 (φ ∈ [0, π] doubled by symmetry)
+        return L * integral;
     }
 
-    /**
-     * Configuration (view) factor from a disk of radius a to a coaxial parallel disk of radius b at
-     * separation d (analytic; Howell's catalogue of configuration factors, disk to parallel coaxial disk). Fraction of the Lambertian source's
-     * hemispherical flux πLA₁ that lands on the receiver.
-     */
+
     function diskViewFactor(a, b, d) {
         const R1 = a / d,
             R2 = b / d;
         const X = 1 + (1 + R2 * R2) / (R1 * R1);
         const q2 = (R2 / R1) ** 2;
-        // ½[X − √(X² − 4q²)] written without the catastrophic cancellation for small sources
+
         return 2 * q2 / (X + Math.sqrt(Math.max(0, X * X - 4 * q2)));
     }
-    /** Analytic power from a Lambertian disk (radius a, radiance L) onto a coaxial disk (radius b, distance d). */
+
     function lambertDiskToDiskPower(L, a, b, d) {
         return Math.PI * L * Math.PI * a * a * diskViewFactor(a, b, d);
     }
-    /**
-     * Numerical cross-check: P = ∫₀ᵇ E(ρ) 2πρ dρ with E(ρ) from lambertIrradianceAt (Simpson, the
-     * range split at ρ = a where E has a kink).
-     */
+
     function diskToDiskPowerNumeric(L, a, b, d, n = 200) {
         const g = (rho) => lambertIrradianceAt(L, a, d, rho, 1e-11) * 2 * Math.PI * rho;
         if (b <= a) return core.simpson(g, 0, b, n);
         return core.simpson(g, 0, a, n) + core.simpson(g, a, b, n);
     }
 
-    // ------------------------------------------------------------------ point source and laser
-    /** Irradiance on a plane at distance d from an isotropic point source of intensity I: I cos³θ/d². */
+
+
     function pointIrradianceAt(I, d, rho) {
         return I * d / Math.pow(d * d + rho * rho, 1.5);
     }
-    /** Gaussian beam (power P, 1/e² radius w) irradiance at radius rho. */
+
     function gaussianIrradianceAt(P, w, rho) {
         return 2 * P / (Math.PI * w * w) * Math.exp(-2 * rho * rho / (w * w));
     }
-    /** Fraction of a centred Gaussian beam (1/e² radius w) passing a circular aperture of radius R. */
+
     const gaussianApertureFraction = (R, w) => 1 - Math.exp(-2 * R * R / (w * w));
-    /** 1/e² radius at distance z from the waist w0 in index n. */
+
     function gaussianBeamRadius(w0, z, lambda0, n = 1) {
         const zR = Math.PI * n * w0 * w0 / lambda0;
         return w0 * Math.sqrt(1 + (z / zR) ** 2);
     }
 
-    // ------------------------------------------------------------------ imaging
-    /** Fraction of an aberration-free Airy pattern inside radius r: 1 − J0²(v) − J1²(v), v = 2π NA r/λ0. */
+
+
     function airyEncircledEnergy(r, lambda0, NA) {
         const v = 2 * Math.PI * NA * r / lambda0;
         if (v <= 0) return 0;
@@ -176,17 +140,13 @@
             j1 = core.besselJ1(v);
         return Math.min(1, Math.max(0, 1 - j0 * j0 - j1 * j1));
     }
-    /** Rayleigh two-point resolution 0.61 λ0/NA (first Airy zero 3.8317/(2π) = 0.6098). */
+
     const RAYLEIGH_FACTOR = core.besselJZero ? core.besselJZero(1, 1) / (2 * Math.PI) : 0.6098;
     const rayleighResolution = (lambda0, NA) => RAYLEIGH_FACTOR * lambda0 / NA;
-    /** Normal-incidence Fresnel power reflectance between real indices. */
+
     const fresnelNormalReflectance = (n1, n2) => ((n1 - n2) / (n1 + n2)) ** 2;
 
-    /**
-     * Thin lens with object-space index no and image-space index ni and power Φ = 1/f (f is the
-     * focal length the lens would have in air): no/so + ni/si = Φ. Distances positive for a real
-     * object on the left and a real image on the right. Lateral magnification m = −(no si)/(ni so).
-     */
+
     function thinLensImaging({
         so,
         f,
@@ -207,11 +167,7 @@
         };
     }
 
-    /**
-     * Radiance along a ray through a sequence of media: segments = [{n, T}] where T is the power
-     * transmission of the interface/element entered at the start of that segment (first T is
-     * ignored). Returns per segment {n, L, reduced: L/n²}. Lossless → reduced radiance constant.
-     */
+
     function radianceAlongRay(L0, segments) {
         const out = [];
         let L = L0;
@@ -226,14 +182,10 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ the experiment
-    const COATED_R = 0.0025; // single-layer broadband AR coating, per surface (assumed)
 
-    /**
-     * Full source → aperture/lens → filter → detector budget. Parameters (SI):
-     * { source: "lambert" | "point" | "laser", L, a, I, P0, w0, lambda0, so, f, D, no, ni, ng,
-     *   coated, Tf, rd, eta, t, idark (e⁻/s), readNoise (e⁻ rms), fullWell (e⁻) }
-     */
+    const COATED_R = 0.0025;
+
+
     function experiment(p) {
         const R = p.D / 2;
         const no = p.no || 1,
@@ -259,7 +211,7 @@
             lambda0
         };
 
-        // source emission and geometric collection
+
         let Pemit, Pcoll, PcollApprox, imgRadius, fill, Ecenter, intensity, radiance, emitNote;
         if (p.source === "point") {
             Pemit = 4 * Math.PI * p.I;
@@ -278,11 +230,11 @@
             Pemit = p.P0;
             Pcoll = p.P0 * gaussianApertureFraction(R, w);
             PcollApprox = Pcoll;
-            imgRadius = img.real ? Math.abs(img.m) * p.w0 : NaN; // ABCD with B = 0: waist imaged ×|m|
+            imgRadius = img.real ? Math.abs(img.m) * p.w0 : NaN;
             fill = img.real ? gaussianApertureFraction(p.rd, imgRadius) : 0;
             Ecenter = gaussianIrradianceAt(p.P0, w, 0);
-            intensity = 2 * p.P0 / (Math.PI * out.divergence ** 2); // on-axis far-field W/sr
-            radiance = 4 * p.P0 * no * no / (lambda0 * lambda0); // peak radiance of a TEM00 beam
+            intensity = 2 * p.P0 / (Math.PI * out.divergence ** 2);
+            radiance = 4 * p.P0 * no * no / (lambda0 * lambda0);
             emitNote = "beam power";
         } else {
             const As = Math.PI * p.a * p.a;
@@ -292,12 +244,12 @@
             imgRadius = img.real ? Math.abs(img.m) * p.a : NaN;
             fill = img.real ? Math.min(1, (p.rd / imgRadius) ** 2) : 0;
             Ecenter = lambertOnAxisIrradiance(p.L, p.a, p.so);
-            intensity = p.L * As; // on-axis radiant intensity of a Lambertian disk
+            intensity = p.L * As;
             radiance = p.L;
             emitNote = "Lambertian, into 2π sr (πLA)";
         }
 
-        // explicit transmission losses
+
         const R1 = p.coated ? COATED_R : fresnelNormalReflectance(no, p.ng);
         const R2 = p.coated ? COATED_R : fresnelNormalReflectance(p.ng, ni);
         const T1 = 1 - R1,
@@ -337,14 +289,14 @@
             note: "e⁻/s = η P λ₀/(hc)"
         });
 
-        // étendue and radiance bookkeeping
+
         let Gobj = NaN,
             Gimg = NaN;
         if (p.source === "lambert" && img.real) {
             Gobj = no * no * Math.PI * p.a * p.a * projectedSolidAngleCone(thO);
             Gimg = ni * ni * Math.PI * imgRadius * imgRadius * projectedSolidAngleCone(thI);
         } else if (p.source === "laser") {
-            Gobj = lambda0 * lambda0 / 4; // TEM00 étendue (π w0²/2)(π θ²/2)n² = λ0²/4 — the diffraction limit
+            Gobj = lambda0 * lambda0 / 4;
         }
         const Ttot = Tlens * Tf;
         const ray = p.source === "point" ? null : radianceAlongRay(radiance, [{
@@ -400,8 +352,8 @@
         return out;
     }
 
-    // ------------------------------------------------------------------ noise and statistics
-    /** SNR = S / √(S + D + σr²) for shot noise on signal and dark counts plus Gaussian read noise. */
+
+
     function snr({
         signal,
         dark = 0,
@@ -414,10 +366,7 @@
         };
     }
 
-    /**
-     * Seeded Monte Carlo of one integrating detector: electrons = min(Poisson(S + D), FW), then
-     * Gaussian read noise σr (e⁻ rms) is added. Returns Float64Array of N readouts (e⁻).
-     */
+
     function simulateCounts({
         mean,
         readNoise = 0,
@@ -435,11 +384,7 @@
         return out;
     }
 
-    /**
-     * Sample statistics with their Monte Carlo standard errors: sem = s/√N and the standard error
-     * of the sample variance √[(m4 − s⁴ (N−3)/(N−1))/N]. These shrink as 1/√N; the physical noise
-     * σ does not.
-     */
+
     function sampleStats(xs) {
         const N = xs.length;
         let mean = 0;
@@ -471,10 +416,7 @@
         };
     }
 
-    /**
-     * Bin edges covering mean ± 5σ. Integer counts with small σ get unit-width bins centred on
-     * integers (so the Poisson pmf can be compared directly).
-     */
+
     function histogramEdges(mean, sigma, {
         integer = false,
         maxBins = 60,
@@ -496,7 +438,7 @@
         return edges;
     }
 
-    /** Counts per bin [edges[i], edges[i+1]); values outside go into the first/last bin. */
+
     function histogram(xs, edges) {
         const n = edges.length - 1,
             counts = new Float64Array(n);
@@ -511,8 +453,8 @@
         return counts;
     }
 
-    // error function (W. J. Cody-style rational fit via erfc continued fraction is overkill here:
-    // Abramowitz–Stegun 7.1.26 has |error| < 1.5e-7, adequate for bin probabilities).
+
+
     function erf(x) {
         const s = x < 0 ? -1 : 1;
         x = Math.abs(x);
@@ -523,11 +465,7 @@
     const normalCdf = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
     const poissonPmf = (k, mu) => (mu <= 0 ? (k === 0 ? 1 : 0) : Math.exp(k * Math.log(mu) - mu - core.logGamma(k + 1)));
 
-    /**
-     * Theoretical probability of each bin for readout = min(Poisson(mean), FW) + N(0, σr²).
-     * Exact Poisson sums for mean ≤ 2×10⁴; above that the Poisson part is replaced by a normal
-     * (skewness 1/√mean < 0.7 %). Returns { probs: Float64Array, approx: boolean }.
-     */
+
     function countDistribution({
         mean,
         readNoise = 0,
@@ -566,7 +504,7 @@
                 approx: false
             };
         }
-        // normal approximation of the Poisson part, convolved with read noise
+
         const s = Math.sqrt(mean + readNoise * readNoise);
         let clipped = 0;
         if (Number.isFinite(fullWell)) clipped = 1 - normalCdf((fullWell - mean) / Math.sqrt(mean));
@@ -575,7 +513,7 @@
                 hi = i === n - 1 ? Infinity : edges[i + 1];
             let pr = normalCdf((hi - mean) / s) - normalCdf((lo - mean) / s);
             if (clipped > 1e-12) {
-                // remove the part beyond the well from the smooth distribution and pile it up at FW
+
                 const loC = Math.max(lo, fullWell);
                 const cut = loC < hi ? normalCdf((hi - mean) / s) - normalCdf((loC - mean) / s) : 0;
                 pr -= cut;
@@ -597,10 +535,7 @@
         };
     }
 
-    /**
-     * Exact mean and variance of the readout min(Poisson(mean), FW) + N(0, σr²). Exact Poisson sums
-     * for mean ≤ 2×10⁴, a clipped normal (closed form) above.
-     */
+
     function readoutMoments({
         mean,
         readNoise = 0,
@@ -640,12 +575,8 @@
         };
     }
 
-    // ------------------------------------------------------------------ photometry
-    /**
-     * CIE 1924 photopic luminous efficiency V(λ), 10 nm steps 380–780 nm plus the 555 nm peak
-     * (CIE 018:2019 / Wyszecki & Stiles, Color Science, 2nd ed., Table I(4.3.2)). Linear
-     * interpolation between nodes; 0 outside 380–780 nm.
-     */
+
+
     const V1924 = Object.freeze([
         [380, 0.00004],
         [390, 0.00012],
@@ -690,7 +621,8 @@
         [770, 0.00003],
         [780, 0.000015]
     ]);
-    const KM = 683; // lm/W, maximum luminous efficacy (SI candela definition at 540 THz)
+    const KM = 683;
+
     function luminousEfficiency(lambda0) {
         const nm = lambda0 * 1e9;
         if (!(nm >= 380 && nm <= 780)) return 0;
@@ -702,7 +634,7 @@
         }
         return 0;
     }
-    /** Luminous flux (lm) of monochromatic radiant power P (W): Φv = 683 V(λ) P. */
+
     const luminousFlux = (P, lambda0) => KM * luminousEfficiency(lambda0) * P;
 
     return {

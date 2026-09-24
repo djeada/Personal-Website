@@ -1,8 +1,3 @@
-/*
- * Gaussian beams and beam transformation: page glue.
- * Physics lives in ../shared/optics/gaussianBeams.js (pure, tested in tests/optics/gaussian_beams.test.js).
- * Controls are in display units (nm, µm, mm, mW); everything is converted to SI before the model.
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -47,9 +42,9 @@
         zt: 1500
     };
 
-    // ------------------------------------------------------------------ state
-    let model = null; // last computed model (SI)
-    let exactCursor = null; // metres; set by buttons/presets so a waist can be hit exactly
+
+    let model = null;
+    let exactCursor = null;
     let renderPending = false;
     let envMap = null,
         drag = null;
@@ -130,13 +125,13 @@
         set: ctl.set
     });
 
-    // user edits of the cursor slider drop the exact cursor
+
     $("zc").addEventListener("input", (e) => {
         if (e.isTrusted || !exactCursorLocked) exactCursor = null;
     });
     let exactCursorLocked = false;
 
-    // ------------------------------------------------------------------ helpers
+
     const clampF = (fmm) => {
         const s = fmm < 0 ? -1 : 1;
         return s * Math.max(F_MIN_MM, Math.abs(fmm));
@@ -159,7 +154,7 @@
     function fmtIntensity(Iwm2) {
         return UI.formatSI(Iwm2 * 1e-4, "W/cm²");
     }
-    /** display unit for a peak intensity given in W/cm², so tick labels stay short */
+
     function intUnit(peakWcm2) {
         const U = [
             [1e9, "GW/cm²"],
@@ -222,7 +217,7 @@
             n,
             M2
         }, lenses);
-        // envelope samples, including the lens planes exactly (kinks)
+
         const N = 700;
         const zs = [];
         for (let i = 0; i <= N; i++) zs.push(L * i / N);
@@ -243,7 +238,7 @@
         let zc = exactCursor != null && Math.abs(exactCursor / MM - st.s.zc) < 0.051 ? exactCursor : st.s.zc * MM;
         zc = Math.min(Math.max(zc, 0), L);
         const cur = GB.stateAt(tr, zc);
-        // divergence / paraxial check for every segment that overlaps the bench
+
         let thetaMax = 0,
             thetaSeg = null;
         tr.segments.forEach((sg, k) => {
@@ -254,7 +249,7 @@
                 thetaSeg = k;
             }
         });
-        // per-lens transformation table
+
         const rows = tr.lenses.map((Ls, k) => {
             const before = tr.segments[k],
                 after = tr.segments[k + 1];
@@ -262,7 +257,7 @@
                 sOut = after.z0 - Ls.z;
             const self = GB.selfImaging(s, before.zR, Ls.f);
             const dSelf = Math.max(Math.abs(self.sOut - sOut) / Math.max(Math.abs(sOut), Math.abs(Ls.f)), Math.abs(self.m * before.w0 - after.w0) / after.w0);
-            // direct ABCD from the input plane z = min(0, first lens) to three planes after this lens
+
             const zA = Math.min(0, tr.lenses[0].z) - 1e-3;
             const qA = GB.qAt(zA, tr.beam);
             let dAbcd = 0;
@@ -286,7 +281,7 @@
                 dAbcd
             };
         });
-        // numerical power check at the cursor (Simpson over r ∈ [0, 6w])
+
         const nR = 400,
             rMax = 6 * cur.w,
             h = rMax / nR;
@@ -314,7 +309,7 @@
         return model;
     }
 
-    // ------------------------------------------------------------------ canvases
+
     const envCanvas = $("envCanvas"),
         curvCanvas = $("curvCanvas"),
         intCanvas = $("intCanvas"),
@@ -401,14 +396,14 @@
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
-        // Rayleigh-range strips
+
         ctx.fillStyle = COL.zr;
         for (const sg of tr.segments) {
             const a = Math.max(sg.z0 - sg.zR, sg.zStart, 0),
                 b = Math.min(sg.z0 + sg.zR, sg.zEnd, L);
             if (b > a) ctx.fillRect(map.xToPx(a / MM), P.y, map.xToPx(b / MM) - map.xToPx(a / MM), P.h);
         }
-        // beam band
+
         ctx.beginPath();
         zmm.forEach((z, i) => {
             const x = map.xToPx(z),
@@ -420,7 +415,7 @@
         ctx.closePath();
         ctx.fillStyle = "rgba(105, 245, 231, 0.16)";
         ctx.fill();
-        // wavefront arcs (constant-phase surfaces z = zi − r² invR / 2, sag exaggerated by E)
+
         let E = null;
         if (st.s.arcs) {
             const nA = 11,
@@ -463,7 +458,7 @@
             }
             ctx.globalAlpha = 1;
         }
-        // waists
+
         ctx.font = "12px " + TH.font;
         tr.segments.forEach((sg, k) => {
             if (!(sg.z0 >= Math.max(sg.zStart, 0) && sg.z0 <= Math.min(sg.zEnd, L))) return;
@@ -501,7 +496,7 @@
             ctx.textBaseline = "top";
             ctx.fillText(label, lx, y0 + 12);
         });
-        // lenses
+
         const top = map.yToPx(1.18 * wMax / wu.s),
             bot = map.yToPx(-1.18 * wMax / wu.s);
         for (const Ls of tr.lenses) {
@@ -718,7 +713,7 @@
             max: Math.PI
         };
         UI.imageFromArray(ctx, data, N, N, rect, cm, range);
-        // axes via plot overlay (no background, no series)
+
         UI.plot(ctx, {
             x: rect.x - m.l,
             y: rect.y - m.t,
@@ -749,7 +744,7 @@
                 b: m.b
             }
         });
-        // r = w circle
+
         ctx.save();
         ctx.strokeStyle = kind === "int" ? "rgba(255,255,255,0.85)" : TH.text;
         ctx.setLineDash([5, 4]);
@@ -925,7 +920,7 @@
         draw: drawCut
     });
 
-    // ------------------------------------------------------------------ DOM readouts
+
     function setText(id, t) {
         const el = $(id);
         if (el && el.textContent !== t) el.textContent = t;
@@ -997,7 +992,7 @@
         $("m2Warn").hidden = !(st.M2 > 1);
         $("m2Badge").hidden = !(st.M2 > 1);
 
-        // lens table
+
         const body = $("lensBody");
         body.textContent = "";
         if (!rows.length) {
@@ -1021,7 +1016,7 @@
             body.appendChild(trow);
         }
 
-        // text equivalents
+
         const wu = wUnit(model.wMax);
         const waistTxt = tr.segments.map((sg, k) => `${k === 0 ? "input" : "after L" + tr.lenses[k - 1].idx} waist ${fmtLen(sg.w0)} at ${(sg.z0 / MM).toFixed(1)} mm (zR ${fmtLen(sg.zR)})`).join("; ");
         descEnv.update(`Bench 0–${s.L} mm, ${st.nl} lens(es). ${waistTxt}. Largest radius on bench ${fmtLen(model.wMax)} (${wu.u} axis). Cursor at ${(zc / MM).toFixed(2)} mm: w = ${fmtLen(cur.w)}, R = ${Rtxt}.`);
@@ -1048,7 +1043,7 @@
         requestAnimationFrame(render);
     }
 
-    // ------------------------------------------------------------------ envelope interaction
+
     function hitTest(px, py) {
         if (!envMap || !model) return null;
         for (const Ls of model.tr.lenses) {
@@ -1130,7 +1125,7 @@
         });
     });
 
-    // ------------------------------------------------------------------ cursor helpers
+
     function setCursorExact(zMetres) {
         const st = readState();
         if (zMetres > st.L) ctl.set({
@@ -1166,7 +1161,7 @@
         setCursorExact(z);
     });
 
-    // ------------------------------------------------------------------ solvers
+
     const solveOut = $("solveOut");
 
     function showSolutions(msg, sols) {
@@ -1257,7 +1252,7 @@
                     }
                 })));
         } else {
-            // focus to spot: beam arriving at lens 1 (earlier lenses included, lens 1 excluded)
+
             const x1 = s.x1 * MM;
             const others = st.lenses.filter((Ls) => Ls.idx !== 1);
             const trNo = GB.traceLenses({
@@ -1306,7 +1301,7 @@
         solveOut.textContent = "";
     });
 
-    // ------------------------------------------------------------------ presets
+
     const PRESETS = {
         hene: {
             v: {
@@ -1470,7 +1465,7 @@
         url.update();
     });
 
-    // ------------------------------------------------------------------ export
+
     UI.addExportBar($("exportHost"), {
         name: "gaussian-beams",
         url,

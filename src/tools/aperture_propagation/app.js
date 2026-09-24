@@ -1,8 +1,3 @@
-/*
- * Aperture propagation (N5): page glue. Physics lives in ../shared/optics/propagation.js and runs
- * in worker.js (main-thread fallback when Workers are unavailable). SI units internally; lengths
- * are converted to µm/mm only for sliders and axis labels.
- */
 (function() {
     "use strict";
     const UI = window.OpticsUI,
@@ -14,18 +9,23 @@
         NP_MAX = 2048;
     const pal = UI.palette().canvas;
     const fmt = (v, u, d) => core.formatSI(v, u, d);
-    // areas: an SI prefix applies to the metre before squaring (1 mm² = 1e-6 m²), so formatSI(v, "m²") is wrong
+
     const fmtArea = (v) => {
         if (!Number.isFinite(v)) return "—";
         if (v === 0) return "0 m²";
-        const u = [[1, "m²"], [1e-6, "mm²"], [1e-12, "µm²"], [1e-18, "nm²"]].find(([f]) => Math.abs(v) >= f * 0.01) || [1e-18, "nm²"]; // e.g. 0.785 mm², not 785000 µm²
+        const u = [
+            [1, "m²"],
+            [1e-6, "mm²"],
+            [1e-12, "µm²"],
+            [1e-18, "nm²"]
+        ].find(([f]) => Math.abs(v) >= f * 0.01) || [1e-18, "nm²"];
         return Number((v / u[0]).toPrecision(3)) + " " + u[1];
     };
     const pct = (x) => (!Number.isFinite(x) ? "—" : x === 0 ? "0 %" : Math.abs(x) < 1e-4 ? (x * 100).toExponential(1) + " %" : (x * 100).toFixed(x < 0.01 ? 3 : 2) + " %");
     const lg = Math.log10;
 
-    // ------------------------------------------------------------------ presets
-    // Natural units: a, b, d, w in µm; L in mm; z in m; fzp in mm; lam in nm.
+
+
     const BASE = {
         sh: "circle",
         a: 1000,
@@ -184,7 +184,7 @@
         }
     ];
 
-    // natural → slider values
+
     function toControls(nat) {
         const o = {
             sh: nat.sh,
@@ -215,7 +215,7 @@
         return o;
     }
 
-    // ------------------------------------------------------------------ controls
+
     const logFmt = (scale) => ({
         format: (v) => Number((Math.pow(10, v) * scale).toPrecision(4)),
         parse: (d) => lg(Number(d) / scale)
@@ -289,7 +289,7 @@
         setCanvasMode();
     });
 
-    // strokes: array of groups (one per drag), each an array of {x, y, r, mode, t, p} in SI
+
     let strokes = [];
     const flatStrokes = () => strokes.flat();
 
@@ -410,7 +410,7 @@
         scheduleCompute();
     }
 
-    // ------------------------------------------------------------------ job runner (worker + cancellation)
+
     let seq = 0,
         worker = null,
         workerOK = typeof Worker === "function",
@@ -424,7 +424,7 @@
             w.onmessage = (e) => onWorkerMessage(e.data);
             w.onerror = (e) => {
                 e.preventDefault && e.preventDefault();
-                // worker could not load (e.g. file://): fall back to the main thread permanently
+
                 workerOK = false;
                 worker = null;
                 const job = running || pending;
@@ -457,9 +457,9 @@
             return;
         }
         if (running) {
-            pending = job; // latest wins; older pending jobs are discarded without running
+            pending = job;
             if (performance.now() - running.t0 > 250) {
-                // the running job is obsolete and slow: cancel it by terminating the worker
+
                 worker.terminate();
                 worker = spawnWorker();
                 running = null;
@@ -486,7 +486,7 @@
     }
 
     function onWorkerMessage(msg) {
-        if (!running || msg.id !== running.id) return; // result of a cancelled job
+        if (!running || msg.id !== running.id) return;
         const job = running;
         running = null;
         if (msg.ok) accept(job, msg.field, msg.res, msg.ms, "worker");
@@ -501,7 +501,7 @@
     function runOnMain(job) {
         setStatus("busy");
         setTimeout(() => {
-            if (job.id !== seq) return; // superseded
+            if (job.id !== seq) return;
             try {
                 const t0 = performance.now();
                 const grid = P.createGrid(job.N, job.L);
@@ -515,7 +515,7 @@
         }, 20);
     }
 
-    // display-only controls re-analyse the last result instead of recomputing
+
     const DISPLAY_KEYS = ["sc", "fl", "apv", "view", "zm", "ref"];
     let computeTimer = 0,
         analyseTimer = 0,
@@ -530,7 +530,7 @@
     function scheduleCompute() {
         const k = physKey();
         if (cur && k === lastPhysKey) {
-            // display-only change (or a repeat): re-analyse unless a recomputation is already queued
+
             if (!submitPending) {
                 clearTimeout(analyseTimer);
                 analyseTimer = setTimeout(analyse, 0);
@@ -595,8 +595,8 @@
         setStatus("idle");
     }
 
-    // ------------------------------------------------------------------ result analysis
-    let cur = null; // {job, grid, field, res, info, view, apAmp, apPhase, ref, ms, where}
+
+    let cur = null;
     let cursor = {
         x: 0,
         y: 0
@@ -664,7 +664,7 @@
         }
         cur.apAmp = amp;
         cur.apPhase = ph;
-        // the analytic Fraunhofer pattern is only a sensible comparison near the far field
+
         const nf = cur.info.NF;
         cur.refNote = "";
         cur.ref = st.ref ? P.fraunhoferAnalytic(job.spec, job.params.lambda, job.params.z) : null;
@@ -774,7 +774,7 @@
         };
     }
 
-    // ------------------------------------------------------------------ drawing
+
     const MARGIN_WIDE = {
         l: 56,
         r: 66,
@@ -1082,7 +1082,7 @@
         cutC.redraw();
     }
 
-    // ------------------------------------------------------------------ readouts & warnings
+
     const descAp = UI.describeCanvas($("apCanvas"), "Aperture amplitude map.", {
         label: "Aperture transmittance map (editable with the brush)"
     });
@@ -1115,7 +1115,7 @@
         set("rNF", Number.isFinite(info.NF) ? (info.NF < 0.01 ? info.NF.toExponential(2) : info.NF.toPrecision(3)) + " (a = " + fmt(info.a, "m") + ")" : "— (unbounded aperture)");
         set("rZc", fmt(info.zc, "m"));
         set("rSuggest", job.params.z <= info.zc ? "ASM or TF (z ≤ zc)" : "BL-ASM, IR or 1-FFT (z > zc)");
-        const perMm = (f) => Number((f * 1e-3).toPrecision(3)) + " mm⁻¹"; // no SI prefix on a reciprocal unit ("1.58 k mm⁻¹")
+        const perMm = (f) => Number((f * 1e-3).toPrecision(3)) + " mm⁻¹";
         set("rBL", Number.isFinite(res.bandLimit) ? perMm(res.bandLimit) + " (" + (info.bandFraction * 100).toFixed(0) + " %)" : "off (grid fmax " + perMm(info.fMax) + ")");
         set("rPx", Number.isFinite(info.pxPerFeature) ? info.pxPerFeature.toFixed(1) : "—");
         set("rPin", fmtArea(pw.input) + "·I₀");
@@ -1161,7 +1161,7 @@
         $("statPower").textContent = pct(pw.detector / pw.input);
         $("intBadge").textContent = (st.scale === "log" ? "log, floor 10^−" + st.floor + " × peak" : "linear") + " · I/I₀";
 
-        // warnings
+
         const host = $("warnHost");
         host.textContent = "";
         const warns = info.warnings.slice();
@@ -1185,14 +1185,14 @@
             p.textContent = (w.level === "warn" ? "⚠ " : "ℹ ") + w.text;
             host.appendChild(p);
         }
-        // canvas summaries
+
         descAp.update("Aperture on a " + job.N + "² grid, extent " + fmt(info.L, "m") + ", shape " + job.spec.shape + ", " + job.spec.strokes.length + " brush points; transmitted power " + fmtArea(pw.input) + " × I₀.");
         descInt.update("Intensity at z = " + fmt(job.params.z, "m") + " by " + job.params.method + ": peak " + view.max.toPrecision(3) + " I₀, on-axis " + onAxis.toPrecision(3) + " I₀, detector extent " + fmt(view.size * view.dx, "m") + ", " + pct(pw.detector / pw.input) + " of the power on the detector.");
         descPh.update("Phase map with carrier removed; undefined where intensity is below 10⁻³ of the peak. At the cross-hair: " + (Number.isFinite(vP) ? vP.toFixed(2) + " rad" : "undefined") + ".");
         descCut.update("Cuts through (" + fmt(cd.xc, "m") + ", " + fmt(cd.yc, "m") + "): x-cut max " + Math.max(...cd.Ix).toPrecision(3) + " I₀, y-cut max " + Math.max(...cd.Iy).toPrecision(3) + " I₀. Deviation from analytic Fraunhofer: " + refText + ".");
     }
 
-    // ------------------------------------------------------------------ interaction
+
     let hover = null,
         drawing = null;
 
@@ -1228,7 +1228,7 @@
         const g = drawing.group,
             last = g[g.length - 1];
         if (last) {
-            // interpolate so that successive discs overlap
+
             const dist = Math.hypot(s.x - last.x, s.y - last.y),
                 step = Math.max(s.r / 2, cur.grid.dx / 2);
             const k = Math.min(200, Math.floor(dist / step));
@@ -1243,7 +1243,7 @@
     function pushPoint(s) {
         drawing.group.push(s);
         if (!cur) return;
-        // preview in place on the displayed aperture (the worker result replaces it afterwards)
+
         const g = cur.grid,
             N = g.N,
             sp = cur.job.spec;
@@ -1384,7 +1384,7 @@
         updateReadouts();
     });
 
-    // ------------------------------------------------------------------ presets & reset
+
     const presetHost = $("presetButtons");
 
     function applyPreset(p) {
@@ -1453,7 +1453,7 @@
         }
     });
 
-    // ------------------------------------------------------------------ start
+
     const initial = toControls(BASE);
     ctl.set(initial);
     $("presetNote").textContent = "Expected: " + PRESETS[0].note;
@@ -1467,7 +1467,7 @@
     });
     scheduleCompute();
 
-    // expose a tiny hook for automated checks
+
     window.__apertureTool = {
         get state() {
             return {

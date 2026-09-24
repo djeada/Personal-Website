@@ -1,40 +1,3 @@
-/*
- * Diffraction grating and simple grating spectrometer (pure, DOM-free).
- *
- * Browser: <script src="../shared/optics/grating.js"></script> → window.OpticsModels.grating
- * Node:    const grating = require(".../shared/optics/grating.js")
- *
- * Geometry and sign convention
- * ----------------------------
- *  A plane transmission grating of N illuminated slits, pitch d and slit width a (a ≤ d), in air.
- *  All angles are measured from the grating normal, positive counter-clockwise, and describe the
- *  direction of travel of the incident beam (θi) and of the diffracted beam (θ) on the far side.
- *  The zero order is the undeviated beam θ0 = θi. With s = sin θ − sin θi the phase step between
- *  adjacent slits is 2π d s / λ, and the grating equation is
- *        d (sin θm − sin θi) = m λ .
- *  Orders with |sin θm| ≥ 1 do not propagate (evanescent or grazing) and are excluded.
- *
- * Fraunhofer (far-field) scalar model, no obliquity factor, no polarization, perfect coherence
- * across the illuminated width N d. Normalised intensity (1 at the zero order):
- *        I(s)/I0 = sinc²(α) · [sin(Nβ)/(N sin β)]²,   α = π a s/λ,   β = π d s/λ.
- *  The array factor is evaluated with the fractional order q = d s/λ reduced to ε = π(q − round q),
- *  which removes the 0/0 at every principal maximum: AF = (−1)^{m(N−1)} sin(Nε)/(N sin ε) with a
- *  Taylor series for |Nε| < 1e-4, so |AF| = 1 exactly at β = mπ.
- *
- * Spectra are incoherent sums over lines {lambda (m), weight}. A flat continuum between lo and hi
- * (unit integrated weight) uses the order-integrated result valid when the spectrum is smooth over
- * the grating bandwidth λ/(|m|N):  I_m(s) = S(λm) · sinc²(π m a/d) · λm/(|m| N),  λm = d s/m,
- * which follows from ∫AF² dε = π/N over one order (Fejér kernel). The zero order is integrated
- * over λ numerically.
- *
- * Spectrometer: entrance slit (width w) at the focus of a collimator (focal length fCol), grating,
- * camera lens fCam whose axis points at order m of the centre wavelength λc, and a linear detector
- * of nPix pixels of pitch p centred on that axis. Detector coordinate x = fCam tan(θ − θc).
- * Instrument line profile = (grating response in x) ⊗ rect(slit image w') ⊗ rect(pixel p), with
- * the anamorphic slit image width w' = w (fCam/fCol) cos θi / cos θc (linearised, incoherent slit).
- *
- * All quantities SI (m, rad).
- */
 (function(root, factory) {
     const m = factory();
     if (typeof module === "object" && module.exports) module.exports = m;
@@ -46,11 +9,11 @@
     "use strict";
 
     const PI = Math.PI;
-    /** Midpoint/peak intensity ratio of two equal sinc²-like lines at the Rayleigh separation. */
+
     const RAYLEIGH_DIP = 8 / (PI * PI);
 
-    // ------------------------------------------------------------------ basic functions
-    /** sin(x)/x with the removable singularity at 0 handled. */
+
+
     function sinc(x) {
         const ax = Math.abs(x);
         if (ax < 1e-4) {
@@ -60,10 +23,7 @@
         return Math.sin(x) / x;
     }
 
-    /**
-     * Normalised array factor sin(Nβ)/(N sin β) as a function of the fractional order q = β/π.
-     * Stable at every principal maximum (q integer), where it equals (−1)^{m(N−1)}.
-     */
+
     function arrayFactorQ(q, N) {
         const m = Math.round(q);
         const eps = PI * (q - m);
@@ -78,29 +38,24 @@
         return (Math.abs(m) * (N - 1)) % 2 === 0 ? v : -v;
     }
 
-    /** Array factor as a function of β (rad). */
+
     function arrayFactor(beta, N) {
         return arrayFactorQ(beta / PI, N);
     }
 
-    /** Normalised intensity at s = sin θ − sin θi for one wavelength. g = {N, d, a}. */
+
     function intensityS(s, lam, g) {
         const env = sinc(PI * g.a * s / lam);
         const af = arrayFactorQ(g.d * s / lam, g.N);
         return env * env * af * af;
     }
 
-    /** Normalised intensity at diffraction angle theta for incidence thetaI. */
+
     function intensity(theta, lam, g, thetaI = 0) {
         return intensityS(Math.sin(theta) - Math.sin(thetaI), lam, g);
     }
 
-    /**
-     * Independent check: coherent sum of N·M equal point sources (M per slit, midpoint rule across
-     * each slit), |Σ exp(i k s x)|² / (NM)². Converges to the analytic pattern as M grows. The
-     * sum over the lattice factorises exactly (positions n d + x_j), so both factors are summed
-     * explicitly as phasors instead of using any closed form.
-     */
+
     function directSum(s, lam, g, M = 32) {
         const k = 2 * PI / lam;
         let ar = 0,
@@ -121,19 +76,19 @@
         return (ar * ar + ai * ai) * (br * br + bi * bi) / (g.N * g.N * M * M);
     }
 
-    // ------------------------------------------------------------------ orders
-    /** sin θm for order m (may exceed 1 in magnitude = non-propagating). */
+
+
     function orderSin(m, lam, d, thetaI = 0) {
         return Math.sin(thetaI) + m * lam / d;
     }
 
-    /** θm (rad) from d(sin θm − sin θi) = mλ, or NaN when |sin θm| ≥ 1. */
+
     function orderAngle(m, lam, d, thetaI = 0) {
         const s = orderSin(m, lam, d, thetaI);
         return Math.abs(s) < 1 ? Math.asin(s) : NaN;
     }
 
-    /** All propagating orders (|sin θm| < 1), ascending. */
+
     function allowedOrders(lam, d, thetaI = 0) {
         const si = Math.sin(thetaI);
         const lo = Math.ceil((-1 - si) * d / lam - 1e-12),
@@ -144,16 +99,13 @@
         return out;
     }
 
-    /** Relative height of principal maximum m: single-slit envelope sinc²(π m a/d). */
+
     function orderEnvelope(m, g) {
         const v = sinc(PI * m * g.a / g.d);
         return v * v;
     }
 
-    /**
-     * Missing orders among the given list: m ≠ 0 with m·a/d within tol of a nonzero integer k,
-     * i.e. m = k d/a lands on a zero of the single-slit envelope.
-     */
+
     function missingOrders(orders, g, tol = 0.01) {
         return orders.filter((m) => {
             if (m === 0) return false;
@@ -163,23 +115,23 @@
         });
     }
 
-    /** Angular dispersion dθm/dλ = m/(d cos θm) (rad per metre); NaN if not propagating. */
+
     function angularDispersion(m, lam, d, thetaI = 0) {
         const th = orderAngle(m, lam, d, thetaI);
         return m / (d * Math.cos(th));
     }
 
-    /** Ideal (Rayleigh) resolving power λ/Δλ = |m| N. */
+
     function resolvingPower(m, N) {
         return Math.abs(m) * N;
     }
 
-    /** Free spectral range of order m: λ + Δλ in order m meets λ in order m+1 → Δλ = λ/|m|. */
+
     function freeSpectralRange(lam, m) {
         return lam / Math.abs(m);
     }
 
-    /** Half-width ε_h of AF² at half maximum: [sin(Nε)/(N sin ε)]² = 1/2 (Infinity for N = 1). */
+
     function halfMaxEps(N) {
         if (N <= 1) return Infinity;
         let lo = 0,
@@ -193,19 +145,19 @@
         return 0.5 * (lo + hi);
     }
 
-    /** FWHM (in wavelength) of the ideal grating response to one line in order m (≈ 0.886 λ/(mN)). */
+
     function idealFWHM(lam, m, N) {
         return lam * 2 * halfMaxEps(N) / (Math.abs(m) * PI);
     }
 
-    // ------------------------------------------------------------------ spectra
+
     const NM = 1e-9;
     const line = (nm, weight, label) => ({
         lambda: nm * NM,
         weight,
         label
     });
-    /** Relative line weights are illustrative (lamp- and detector-dependent). Air wavelengths. */
+
     const PRESET_LINES = {
         hg: [line(404.656, 0.45, "Hg 404.7"), line(435.833, 1, "Hg 435.8"), line(546.074, 1, "Hg 546.1"),
             line(576.960, 0.35, "Hg 577.0"), line(579.066, 0.35, "Hg 579.1")
@@ -216,12 +168,7 @@
         ]
     };
 
-    /**
-     * Build a spectrum. kind: "hg" | "na" | "balmer" | "two" | "mono" | "white".
-     * opts: {lambda0, dLambda} (m) for "two"/"mono"; {lo, hi} for "white" (default 400–700 nm).
-     * Returns {lines: [...], continuum: null | {lo, hi, S}} with the weights of lines normalised to
-     * sum 1 and the continuum to unit integral (S = 1/(hi − lo) per metre).
-     */
+
     function makeSpectrum(kind, opts = {}) {
         let lines = [],
             continuum = null;
@@ -265,17 +212,14 @@
         };
     }
 
-    /** Wavelength band [lo, hi] of a spectrum. */
+
     function spectrumBand(spec) {
         if (spec.continuum) return [spec.continuum.lo, spec.continuum.hi];
         const ls = spec.lines.map((l) => l.lambda);
         return [Math.min(...ls), Math.max(...ls)];
     }
 
-    /**
-     * Continuum contribution of one order at s. m ≠ 0: order-integrated (smooth-spectrum) result.
-     * m = 0: numerical λ integration of the zero-order lobe (|q| < 1/2).
-     */
+
     function continuumOrderTerm(s, m, cont, g) {
         if (m === 0) {
             if (Math.abs(g.d * s / cont.lo) >= 0.5) return 0;
@@ -297,7 +241,7 @@
         return cont.S * orderEnvelope(m, g) * lam / (Math.abs(m) * g.N);
     }
 
-    /** Orders m (including 0) whose continuum band reaches the s-interval [s0, s1]. */
+
     function continuumOrdersIn(s0, s1, cont, g) {
         const out = [];
         if (s0 <= cont.lo / (2 * g.d) && s1 >= -cont.lo / (2 * g.d)) out.push(0);
@@ -313,7 +257,7 @@
         return out;
     }
 
-    /** Total spectral intensity at s (sum of lines + continuum orders). */
+
     function spectrumIntensityS(s, spec, g) {
         let v = 0;
         for (const l of spec.lines) v += l.weight * intensityS(s, l.lambda, g);
@@ -322,13 +266,7 @@
         return v;
     }
 
-    /**
-     * Peak-preserving per-column maxima for plotting a pattern whose peaks may be narrower than a
-     * pixel. sEdges: ascending column edges (length ncol + 1). Each component's maximum over a column
-     * is taken from 5 samples plus every principal maximum inside it. Returns
-     * {total, comps: [{kind: "line", lambda, values} | {kind: "cont", order, values}]} (total = sum of
-     * component column maxima, an upper envelope used only for display).
-     */
+
     function columnMax(sEdges, spec, g) {
         const ncol = sEdges.length - 1;
         const comps = [];
@@ -379,20 +317,20 @@
         };
     }
 
-    // ------------------------------------------------------------------ helpers on sampled curves
-    /** Cumulative integral at cell edges of cell-centred samples f with spacing h. */
+
+
     function cumulative(f, h) {
         const C = new Float64Array(f.length + 1);
         for (let i = 0; i < f.length; i++) C[i + 1] = C[i] + f[i] * h;
         return C;
     }
-    /** Box-average of cell-centred samples f (spacing h) over width w: (1/w)∫_{x−w/2}^{x+w/2} f. */
+
     function boxFilter(f, h, w) {
         if (!(w > h * 1e-3)) return Float64Array.from(f);
         const n = f.length,
             C = cumulative(f, h),
             out = new Float64Array(n);
-        const Cat = (u) => { // u in cell-edge units (0..n), linear interpolation, clamped
+        const Cat = (u) => {
             if (u <= 0) return 0;
             if (u >= n) return C[n];
             const i = Math.floor(u),
@@ -407,7 +345,7 @@
         return out;
     }
 
-    /** FWHM of a single-peaked sampled curve (linear interpolation of the half-maximum crossings). */
+
     function fwhm(xs, ys) {
         let im = 0;
         for (let i = 1; i < ys.length; i++)
@@ -423,15 +361,11 @@
         return Math.abs(xr - xl);
     }
 
-    /**
-     * Dip test for two features expected near x1 and x2 on a sampled curve (xs monotonic). Finds the
-     * maxima within ±|x2 − x1|/2 of each position and the minimum between them.
-     * Returns {ratio = min / smaller peak (1 = no dip), resolved (ratio ≤ 8/π²), iPeak1, iPeak2, iMin}.
-     */
+
     function dipRatio(xs, ys, x1, x2) {
         const n = xs.length;
         const asc = xs[n - 1] >= xs[0];
-        const idx = (x) => { // nearest index
+        const idx = (x) => {
             let lo = 0,
                 hi = n - 1;
             while (hi - lo > 1) {
@@ -480,10 +414,7 @@
         };
     }
 
-    /**
-     * Ideal grating (point entrance slit) dip test for two lines in order m, sampled in s.
-     * Returns dipRatio(...) plus {s, I}.
-     */
+
     function twoLineDip(lam1, lam2, weights, g, m, samples = 4001) {
         const s1 = m * lam1 / g.d,
             s2 = m * lam2 / g.d;
@@ -502,11 +433,8 @@
         });
     }
 
-    // ------------------------------------------------------------------ spectrometer
-    /**
-     * Geometry of the spectrometer. cfg: {g, thetaI, m, lamC, fCol, fCam, slitW, pixel, nPix}.
-     * Returns null when order m of lamC does not propagate.
-     */
+
+
     function spectrometerGeometry(cfg) {
         const {
             g,
@@ -529,10 +457,10 @@
             cosC,
             nPix,
             width: nPix * pixel,
-            dispersion: fCam * m / (g.d * cosC), // dx/dλ at the detector centre (m/m)
+            dispersion: fCam * m / (g.d * cosC),
             slitImage: slitW * (fCam / fCol) * Math.cos(thetaI) / cosC,
-            slitAngle: slitW / fCol, // angular width of the entrance slit seen from the collimator
-            diffX: fCam * lamC / (g.N * g.d * cosC), // centre-to-first-zero of the grating response in x
+            slitAngle: slitW / fCol,
+            diffX: fCam * lamC / (g.N * g.d * cosC),
             xToTheta: (x) => thetaC + Math.atan(x / fCam),
             thetaToX: (th) => fCam * Math.tan(th - thetaC),
             xToS: (x) => Math.sin(thetaC + Math.atan(x / fCam)) - sinI,
@@ -545,14 +473,7 @@
         return geo;
     }
 
-    /**
-     * Simulate the detector. cfg: {spec, g, thetaI, m, lamC, fCol, fCam, slitW, pixel, nPix,
-     * maxFine = 250000}. Fine grid step h = pixel/k resolves the diffraction-limited response
-     * (h ≤ diffX/6 when possible). Every stage is in the same units (I/I0 of the zero order for a
-     * point slit, fixed total power), so the slit and pixel stages lower peaks but conserve area.
-     * Returns {ok, geo, x, ideal, slit, pixX, pixels, comps, h, k, underResolved} with x/ideal/slit
-     * trimmed to the detector.
-     */
+
     function simulateDetector(cfg) {
         const geo = spectrometerGeometry(cfg);
         if (!geo) return {
@@ -657,11 +578,7 @@
         };
     }
 
-    /**
-     * Instrument line profile for a single line at lamC (continuous, not pixel-phase dependent):
-     * grating response ⊗ slit image ⊗ pixel aperture, in detector x. Returns FWHMs in x and in λ,
-     * the ideal and instrument resolving powers and the stage curves.
-     */
+
     function instrumentProfile(cfg) {
         const geo = spectrometerGeometry(cfg);
         if (!geo) return null;
@@ -711,7 +628,7 @@
         };
     }
 
-    /** Max |analytic − direct sum| over the given s values. */
+
     function crossCheck(sArr, lam, g, M = 32) {
         let worst = 0;
         for (const s of sArr) worst = Math.max(worst, Math.abs(intensityS(s, lam, g) - directSum(s, lam, g, M)));

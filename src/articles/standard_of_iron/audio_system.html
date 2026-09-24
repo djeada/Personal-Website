@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Audio System | Adam Djellouli</title>
+    <meta content="Everything the player hears goes through one path: a cue is requested by gameplay or QML, the cue registry picks a resource from the manifest,…" name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/audio_system" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Audio System",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/audio_system"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/audio_system",
+            "description": "Everything the player hears goes through one path: a cue is requested by gameplay or QML, the cue registry picks a resource from the manifest,\u2026",
+            "dateModified": "2026-09-19",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Audio System" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/standard_of_iron/audio_system" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Everything the player hears goes through one path: a cue is requested by gameplay or QML, the cue registry picks a resource from the manifest,…" property="og:description" />
+    <meta content="2026-09-19" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#where-things-live">Where things live</a></li>
+                    <li><a href="#the-path-of-one-cue">The path of one cue</a></li>
+                    <li><a href="#the-two-catalogues">The two catalogues</a>
+                        <ol>
+                            <li><a href="#audio_manifest-json-the-files">audio_manifest.json — the files</a></li>
+                            <li><a href="#audio_cues-json-the-cues">audio_cues.json — the cues</a></li>
+                            <li><a href="#variant-choice">Variant choice</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#loading">Loading</a>
+                        <ol>
+                            <li><a href="#waiting-on-a-decode">Waiting on a decode</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#tag-driven-selection">Tag-driven selection</a></li>
+                    <li><a href="#spatial-audio">Spatial audio</a></li>
+                    <li><a href="#the-mix">The mix</a>
+                        <ol>
+                            <li><a href="#categories-and-channels">Categories and channels</a></li>
+                            <li><a href="#mix-buses">Mix buses</a></li>
+                            <li><a href="#listening-presets-and-the-limiter">Listening presets and the limiter</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#decode-time-mastering">Decode-time mastering</a>
+                        <ol>
+                            <li><a href="#loudness-is-matched-within-a-category-not-across-them">Loudness is matched within a category, not across them</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#packaging">Packaging</a></li>
+                    <li><a href="#asset-pipelines">Asset pipelines</a>
+                        <ol>
+                            <li><a href="#rebuild-traps">Rebuild traps</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#debugging">Debugging</a>
+                        <ol>
+                            <li><a href="#checks-and-tests">Checks and tests</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_licenses.html">Audio Licenses</a></li>
+                    <li><a aria-current="page" href="https://adamdjellouli.com/articles/standard_of_iron/audio_system.html">Audio System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/difficulty.html">Difficulty</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/farm_activity.html">Farm Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/home_activity.html">Home Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/marketplace.html">Marketplace</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/siege_presentation.html">Siege Presentation</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 19, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Audio System</h1>
+            <p>Everything the player hears goes through one path: a <strong>cue</strong> is requested by gameplay or QML, the cue registry picks a <strong>resource</strong> from the manifest, <code>AudioSystem</code> decides whether it may play, and the miniaudio backend mixes it. Music and ambience beds are chosen by <strong>tags</strong> in the manifest rather than by ID in code, so the asset set can change without touching C++ or QML.</p>
+            <p>Where each file came from and under what licence is in <a href="audio_licenses.html">AUDIO_LICENSES.md</a>.</p>
+            <h2 id="where-things-live">Where things live</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Path</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>assets/audio/audio_manifest.json</code></td>
+                        <td>Every shipped file: ID, path, category, load policy, tags, playback limits</td>
+                    </tr>
+                    <tr>
+                        <td><code>assets/audio/audio_cues.json</code></td>
+                        <td>Every gameplay cue: which resources answer it, volume, priority, cooldown, spatial</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/audio_cues.*</code></td>
+                        <td><code>CueRegistry</code>, <code>play_cue</code>, <code>play_cue_at</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/audio_system.*</code></td>
+                        <td><code>AudioSystem</code>: event queue, admission (cooldowns, priority, channel caps), volumes</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/audio_event_handler.*</code></td>
+                        <td>Turns engine events (selection, spawn, death, ambient state, hits) into cues</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/miniaudio_backend.*</code></td>
+                        <td>Decode worker, track table, device callback mixer</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/audio_mastering.*</code></td>
+                        <td>Decode-time loudness, tilt, resonance and limiter chain (<code>soi_audio_mastering</code>)</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/gameplay_mix.h</code></td>
+                        <td>Mix buses and their ducking</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/bus_limiter.h</code></td>
+                        <td>Output limiter and listening presets</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/spatial.h</code></td>
+                        <td>Distance attenuation and pan</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/cue_trace.*</code></td>
+                        <td>Per-request outcome counting, trace log, mission summary export</td>
+                    </tr>
+                    <tr>
+                        <td><code>game/audio/audio_settings.h</code></td>
+                        <td>Persisted volume sliders and listening preset</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/audio/audio_resource_loader.*</code></td>
+                        <td>Reads both JSON files, loads by policy, answers tag queries</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/audio/audio_coordinator.*</code></td>
+                        <td>Frontend music, mission ambience, voice and ambient-state mappings</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/audio/weather_audio.*</code></td>
+                        <td>Rain and snow layer over the mission bed</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/audio/audio_system_proxy.*</code></td>
+                        <td>QML entry point (<code>audioSystem.play_cue</code>, volume sliders)</td>
+                    </tr>
+                    <tr>
+                        <td><code>third_party/miniaudio.h</code>, <code>stb_vorbis</code></td>
+                        <td>Device output and Vorbis decoding</td>
+                    </tr>
+                    <tr>
+                        <td><code>tools/audio_synth</code>, <code>tools/audio_field</code>, <code>tools/audio_import</code></td>
+                        <td>The three asset pipelines, see <a href="#asset-pipelines">Asset pipelines</a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="the-path-of-one-cue">The path of one cue</h2>
+            <div>
+                <pre><code class="language-text">gameplay code / system            QML (ui/qml/design/UiSound.qml)
+  play_cue("combat.hit.sword")      audioSystem.play_cue("ui.click")
+  or publish AudioCueEvent                │ source tagged "qml"
+        │                                 │
+        ▼                                 ▼
+CueRegistry::play                                   caller thread, mutex
+  unbound? ─────────────► drop: unbound
+  cue cooldown? ────────► drop: cue_cooldown
+  choose a variant ─────► drop: no_loaded_resource (none loaded)
+        │
+        ▼
+AudioSystem::play_sound  ──► AudioEvent queue
+        │
+        ▼
+AudioSystem audio thread                            process_event
+  resource loaded? ─────► drop: resource_not_loaded
+  max_instances ────────► drop: instance_limit
+  resource cooldown ────► drop: resource_cooldown
+  spatialize + sliders ─► drop: muted (volume ≈ 0, incl. out of earshot)
+  32-channel priority ──► drop: global_priority
+  category cap ─────────► drop: category_priority
+  pick mix bus
+        │
+        ▼
+MiniaudioBackend::play_sound ──► lock-free command ring (256)
+        │
+        ▼
+device callback on_audio                            no locks
+  music channels + sound-effect slots
+  × per-bus gain (GameplayMix) → BusLimiter → device</code></pre>
+            </div>
+            <p><code>AudioEventHandler</code> also drops a request as <code>audience_filtered</code> before it reaches the registry when the event belongs to another player (you do not hear an AI opening its own gate). Every request ends in exactly one outcome, so requests always equal accepted plus drops.</p>
+            <p>The source location is captured with <code>std::source_location</code>, so no call site passes it. An <code>AudioCueEvent</code> records where it was <em>published</em>, not where the handler dispatched it.</p>
+            <h2 id="the-two-catalogues">The two catalogues</h2>
+            <h3 id="audio_manifest-json-the-files"><code>audio_manifest.json</code> — the files</h3>
+            <div>
+                <pre><code class="language-json">{
+    "id": "voice.roman.archer",
+    "aliases": ["archer_voice", "roman.archer"],
+    "path": "voices/roman/archer.ogg",
+    "category": "voice",
+    "load_policy": "mission",
+    "tags": { "faction": "roman", "unit": "archer" }
+}</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>id</code>, <code>aliases</code></td>
+                        <td>Resource ID; aliases resolve to the same resource</td>
+                    </tr>
+                    <tr>
+                        <td><code>path</code></td>
+                        <td>Relative to <code>assets/audio/</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>category</code></td>
+                        <td><code>sfx</code>, <code>voice</code>, <code>ambience</code> (or <code>ambient</code>), <code>music</code> — picks the volume slider, channel cap and mastering profile</td>
+                    </tr>
+                    <tr>
+                        <td><code>load_policy</code></td>
+                        <td>See <a href="#loading">Loading</a></td>
+                    </tr>
+                    <tr>
+                        <td><code>tags</code></td>
+                        <td>Free-form string pairs used by tag queries (<code>screen_context</code>, <code>ambient_state</code>, <code>faction</code>, <code>unit</code>, <code>biome</code>, <code>source</code>…)</td>
+                    </tr>
+                    <tr>
+                        <td><code>priority</code>, <code>cooldown_ms</code>, <code>max_instances</code>, <code>volume</code>, <code>loop</code></td>
+                        <td>Per-resource playback limits, applied on the audio thread</td>
+                    </tr>
+                    <tr>
+                        <td><code>provenance</code></td>
+                        <td>Origin and licence; required on every track and rendered into <a href="audio_licenses.html">AUDIO_LICENSES.md</a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3 id="audio_cues-json-the-cues"><code>audio_cues.json</code> — the cues</h3>
+            <div>
+                <pre><code class="language-json">{
+    "id": "ui.click",
+    "description": "Menu button, list row or combo box entry is activated.",
+    "category": "sfx",
+    "importance": "optional",
+    "volume": 0.85,
+    "priority": 5,
+    "cooldown_ms": 40,
+    "resources": ["ui.click.primary"],
+    "wanted": "Firm wood-on-leather confirm tap with a small low-mid body."
+}</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>resources</code>, <code>weights</code></td>
+                        <td>The pool. Unknown resource IDs are skipped with a warning; mismatched <code>weights</code> fall back to equal weights</td>
+                    </tr>
+                    <tr>
+                        <td><code>spatial</code></td>
+                        <td><code>true</code> places the cue at the world point passed to <code>play_cue_at</code>; everything else plays flat</td>
+                    </tr>
+                    <tr>
+                        <td><code>importance</code></td>
+                        <td><code>required</code>, <code>optional</code> or <code>ambient</code>. <code>make audio-check</code> fails when a <code>required</code> cue is silent or never fired</td>
+                    </tr>
+                    <tr>
+                        <td><code>wanted</code></td>
+                        <td>The sound's spec, in words — what a recipe or a replacement has to match</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Cue IDs used from C++ are constants in <code>game/audio/cue_ids.h</code>. A cue bound to nothing warns once (<code>audio cue requested but bound to nothing</code>); a cue whose resources exist but are not loaded warns <code>check its load_policy</code>.</p>
+            <h3 id="variant-choice">Variant choice</h3>
+            <p>With more than one resource, <code>CueRegistry</code> avoids the last <code>pool / 2</code> picks, prefers a variant whose own resource cooldown has elapsed, then draws by weight. A two-take cue therefore never repeats back to back, and a four-take cue never repeats within two plays.</p>
+            <h2 id="loading">Loading</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Policy</th>
+                        <th>Loaded</th>
+                        <th>Unloaded</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>startup</code></td>
+                        <td>At engine composition, before the menu</td>
+                        <td>Never</td>
+                    </tr>
+                    <tr>
+                        <td><code>screen</code></td>
+                        <td>When the audio event handler starts, and whenever frontend music is applied</td>
+                        <td>Never</td>
+                    </tr>
+                    <tr>
+                        <td><code>mission</code></td>
+                        <td>When a mission or skirmish starts, and when a save is loaded</td>
+                        <td>Mission teardown</td>
+                    </tr>
+                    <tr>
+                        <td><code>lazy</code></td>
+                        <td>Only on demand, through <code>AudioResourceLoader::ensure_audio_resource_loaded</code> (most music, some voices and beds)</td>
+                        <td>Mission teardown</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Loading only queues a decode; the decode worker does the work (see <a href="#decode-time-mastering">Decode-time mastering</a>). A one-shot asked for before its decode lands is skipped, and a looping bed is held and starts the moment it lands. <code>AudioSystem::is_resource_ready</code> does not mean decoded: it only says the resource is loaded, off cooldown and under its instance limit.</p>
+            <p>Resident decoded PCM is tracked against a budget (<code>SOI_AUDIO_PCM_BUDGET_MB</code> overrides it; the default is 320 MB); overruns are counted and logged, not refused.</p>
+            <p>Tracks are held as 32-bit float stereo at the device rate, so a minute of music costs about 22 MB at 48 kHz and twice that at 96 kHz. The two four-minute <code>peaceful</code> beds (<code>music.base.echoes_ancient_outpost</code>, <code>music.base.ancient_peak_fires</code>) are 88 MB each, and the <code>startup</code> and <code>mission</code> sets add roughly 20 MB more, which is why a mission that rotates onto its second long bed sits near 200 MB. The budget is a diagnostic: raise it (or shorten the long beds) rather than expecting the backend to evict anything.</p>
+            <h3 id="waiting-on-a-decode">Waiting on a decode</h3>
+            <p>There is one decode worker, and a scripted launch reaches the mission preload while the
+                startup set (about a hundred tracks) is still queued on it. <code>MiniaudioBackend::unload</code>
+                runs with <code>AudioSystem::resource_mutex</code> held, and every <code>load_sound</code> in the mission
+                preload needs that mutex, so any wait inside unload stalls the loading thread. Two rules
+                keep that wait short. <code>finish_job</code> wakes <code>m_decode_idle</code> after every job, so
+                <code>wait_for_track</code> returns when its own track lands instead of when the whole queue drains.
+                And <code>unload</code> first calls <code>cancel_queued_decode</code>, which drops a job that has not started
+                yet, so only a decode already in flight is ever waited for. Before this the mission
+                preload measured anywhere from under 1 ms to 5.6 s on the same map.
+            </p>
+            <h2 id="tag-driven-selection">Tag-driven selection</h2>
+            <p><code>AudioCoordinator</code> and <code>AudioEventHandler</code> pick music, beds and voices by querying manifest tags. No track ID for music or ambience appears in code except the final fallback bed.</p>
+            <p><strong>Frontend music.</strong> Tracks tagged <code>screen_context=&lt;context&gt;</code> rotate round-robin per context. The context <code>battle</code> (or empty) stops music.</p>
+            <p><strong>Mission music.</strong> For each ambient state (<code>peaceful</code>, <code>tense</code>, <code>combat</code>, <code>victory</code>, <code>defeat</code>) the handler holds the tracks tagged <code>ambient_state=&lt;state&gt;</code>; for combat, victory and defeat the player's own <code>faction</code> is queried first. A state change rotates to the next track, plays one of the SFX tagged <code>state=&lt;state&gt;</code> (priority 7, two-second group cooldown) and, for victory and defeat, fires <code>state.victory</code> / <code>state.defeat</code>.</p>
+            <p><strong>Mission ambience.</strong> One looping bed, chosen by the first query below that matches anything:</p>
+            <ol>
+                <li>Words in the map path, map name, mission ID, title, summary and terrain: <code>harbor</code>/<code>port</code> → <code>biome=harbor</code>; <code>city</code>/<code>market</code> → <code>city</code>; <code>village</code>/<code>hamlet</code> → <code>village</code>; <code>siege</code> → <code>biome=camp, context=siege</code>; <code>road</code>/<code>crossroads</code> (Roman players only) → <code>biome=plains, context=road, faction=roman</code>; <code>desert</code>/<code>zama</code> → <code>biome=plains, faction=carthage</code>.</li>
+                <li>The biome: the mission's <code>terrain_type</code> if set, otherwise the map — rivers or lakes → <code>river</code>, <code>AlpineMix</code> → <code>mountain</code>, <code>GrassDry</code> → <code>plains</code>, <code>SoilRocky</code> → <code>battlefield</code>, <code>SoilFertile</code> → <code>camp</code>, anything else → <code>forest</code>. <code>camp</code> and <code>plains</code> try the player's faction first.</li>
+                <li><code>biome=battlefield</code>.</li>
+            </ol>
+            <p>Among the matches the bed is picked by a hash of map path, faction and mission ID, so the same mission always gets the same bed. If nothing matches, <code>ambient.battlefield_dry_wind_distant_march_01</code> plays.</p>
+            <p><strong>Weather.</strong> Weather is a layer, not a bed per sky. <code>WeatherAudio</code> plays <code>ambient.weather_rain</code> or <code>ambient.weather_snow</code> on top of the mission bed at <code>intensity × 0.85</code>, and stops below 0.02. Those two beds carry only the weather, never ground sound.</p>
+            <p><strong>Unit voices.</strong> Selecting or spawning a unit plays the voice resolved in this order: the <code>faction.unit</code> mapping built from tags <code>faction</code> + <code>unit</code>, the unit-type mapping, the manifest ID <code>voice.&lt;faction&gt;.&lt;unit&gt;</code>, then the legacy alias <code>&lt;unit&gt;_voice</code>. Commanders are matched by <code>unit_def</code>. Selection voices play at least 120 ms apart, or 300 ms when the same line would repeat; spawn voices share a 1.5 s group cooldown.</p>
+            <p><strong>Cues chosen by who is acting.</strong> Some actions pick their cue from the units doing them, because a resource pool is drawn at random and a mixed pool plays the wrong animal. A run order counts the selection's foot, cavalry and elephants (<code>CommandController::selection_mounts</code>) and plays <code>combat.charge_elephant</code> if any elephant is selected, <code>combat.charge_cavalry</code> if any cavalry is, and <code>combat.charge</code> otherwise (<code>CommandController::charge_cue</code>). An accepted move order plays <code>order.move_mounted</code> — horses moving off at a walk — only when every selected unit is cavalry (<code>CommandController::move_order_cue</code>). A Roman medicus binds wounds with <code>combat.heal_bind</code>; every other healer plays <code>combat.heal</code>.</p>
+            <p><strong>Commander chatter.</strong> The banks in <code>assets/data/commanders/voices/*.json</code> are on-screen lines. Each line may name a <code>voice_cue</code>, but no bank sets one today, so commanders speak in text only; the three files in <code>voices/commanders/</code> are their selection barks.</p>
+            <h2 id="spatial-audio">Spatial audio</h2>
+            <p>A cue with <code>"spatial": true</code> fired through <code>play_cue_at</code> is heard relative to the camera. The engine publishes the listener every frame from the render camera (<code>app/core/game_engine.cpp</code>).</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Distance to listener</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>≤ 14 m</td>
+                        <td>full</td>
+                    </tr>
+                    <tr>
+                        <td>14–90 m</td>
+                        <td><code>(1 − reach)²</code>, quadratic fade</td>
+                    </tr>
+                    <tr>
+                        <td>≥ 90 m</td>
+                        <td>silent, reported as <code>muted</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Pan is the source's offset along the camera's right vector divided by 26 m, clamped, scaled to ±0.85. Before a camera exists the listener is invalid and every cue plays flat at full volume.</p>
+            <p>Distant fighting is not simply lost: <code>AudioEventHandler</code> counts impacts that distance silenced, and six inside three seconds become one <code>combat.distant_battle</code> cue. <code>tests/core/audio_battle_load_test.cpp</code> measures this against a paced melee.</p>
+            <h2 id="the-mix">The mix</h2>
+            <h3 id="categories-and-channels">Categories and channels</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Slider (first run)</th>
+                        <th>Concurrent cap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>master</td>
+                        <td>0.70</td>
+                        <td>32 channels</td>
+                    </tr>
+                    <tr>
+                        <td>sfx</td>
+                        <td>1.00</td>
+                        <td>16</td>
+                    </tr>
+                    <tr>
+                        <td>voice</td>
+                        <td>1.00</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>ambience</td>
+                        <td>0.30</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>music</td>
+                        <td>0.45</td>
+                        <td>4 music channels, crossfaded</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A new sound above the 32-channel or category cap evicts the lowest-priority, oldest sound only if it outranks it; otherwise it is dropped. Sliders and the listening preset persist through <code>QSettings</code> (INI, organisation <code>djeada</code>, application <code>StandardOfIron</code>, keys <code>audio/*</code>). Invalid saved values are clamped with a warning.</p>
+            <h3 id="mix-buses">Mix buses</h3>
+            <p>Every playing sound sits on a bus chosen from its cue ID, then its resource ID (a leading <code>sound_</code> or <code>sfx.</code> is ignored). Voice-category sounds always use the Voice bus.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bus</th>
+                        <th>ID prefixes</th>
+                        <th>Base gain</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Music</td>
+                        <td>music channels</td>
+                        <td>0.50</td>
+                    </tr>
+                    <tr>
+                        <td>Ambience</td>
+                        <td>ambience category fallback</td>
+                        <td>0.50</td>
+                    </tr>
+                    <tr>
+                        <td>Combat</td>
+                        <td><code>combat.</code>, <code>move.</code>, <code>movement.</code>; sfx fallback</td>
+                        <td>0.40</td>
+                    </tr>
+                    <tr>
+                        <td>Voice</td>
+                        <td><code>voice.</code>; voice category</td>
+                        <td>0.89</td>
+                    </tr>
+                    <tr>
+                        <td>Interface</td>
+                        <td><code>ui.</code>, <code>order.</code>, <code>command.</code></td>
+                        <td>0.63</td>
+                    </tr>
+                    <tr>
+                        <td>Economy</td>
+                        <td><code>build.</code>, <code>economy.</code></td>
+                        <td>0.32</td>
+                    </tr>
+                    <tr>
+                        <td>Weather</td>
+                        <td><code>weather.</code>, <code>ambience.weather.</code>, <code>ambient.weather_</code></td>
+                        <td>0.32</td>
+                    </tr>
+                    <tr>
+                        <td>Environment</td>
+                        <td><code>wildlife.</code>, <code>environment.</code></td>
+                        <td>0.25</td>
+                    </tr>
+                    <tr>
+                        <td>Alert</td>
+                        <td><code>alert.</code>, <code>state.</code></td>
+                        <td>0.79</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>GameplayMix</code> retargets the gains every mix block (256 frames) and glides toward them (20 ms attack, 350 ms release):</p>
+            <ul>
+                <li><strong>Density.</strong> Combat, Economy and Environment scale by <code>1 / √(max(1, active / 3))</code> across those three buses, so a large melee does not sum to a wall.</li>
+                <li><strong>Voice ducking.</strong> While any voice plays, Music, Ambience, Weather, Combat, Economy and Environment drop to 0.85×.</li>
+                <li><strong>Critical ducking.</strong> A Voice or Alert sound at priority ≥ 7 drops the same buses to 0.63×.</li>
+                <li><strong>Stacking.</strong> Voice and Alert divide by <code>√count</code>, so simultaneous callouts stay intelligible.</li>
+            </ul>
+            <h3 id="listening-presets-and-the-limiter">Listening presets and the limiter</h3>
+            <p>The bus sum goes through <code>BusLimiter</code>: 3 ms look-ahead, 120 ms release, 6 dB soft knee, hard ceiling 0.79. The preset in the settings menu sets how much it compresses below the ceiling:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Preset</th>
+                        <th>Threshold</th>
+                        <th>Ratio</th>
+                        <th>Also</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Headphones</td>
+                        <td>ceiling</td>
+                        <td>1:1</td>
+                        <td>limiter only</td>
+                    </tr>
+                    <tr>
+                        <td>Speakers (default)</td>
+                        <td>0.35</td>
+                        <td>2:1</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Night</td>
+                        <td>0.18</td>
+                        <td>4:1</td>
+                        <td>Combat/Economy/Environment × 0.7</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="decode-time-mastering">Decode-time mastering</h2>
+            <p>Each track is processed once, on the decode worker, when it is loaded:</p>
+            <ol>
+                <li>Decode to 32-bit float stereo.</li>
+                <li>Resample to the device rate (48 kHz by default) with a polyphase filter (90 dB stopband).</li>
+                <li>Analyse: integrated loudness, presence and air bands, up to four resonances.</li>
+                <li>Apply the material's profile: loudness gain, spectral tilt, resonance notches, limiter to the ceiling.</li>
+                <li>Music and ambience only: seal the loop with a 0.12 s crossfade (at most 10% of the length), so the wrap does not click.</li>
+                <li>Store a mono file once if both channels are identical, then convert to 16-bit.</li>
+            </ol>
+            <p>The device callback only reads finished tracks through an atomic table; decoding never blocks the caller or the mixer.</p>
+            <h3 id="loudness-is-matched-within-a-category-not-across-them">Loudness is matched within a category, not across them</h3>
+            <p>The material comes from the category; SFX resources whose ID starts with <code>ui.</code> (or contains <code>.ui.</code> or <code>/ui/</code>) count as Interface.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Loudness</th>
+                        <th>Ceiling</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Music</td>
+                        <td>toward −15 LUFS, at most ±6 dB</td>
+                        <td>−1 dBTP</td>
+                    </tr>
+                    <tr>
+                        <td>Ambience</td>
+                        <td>toward −16.5 LUFS, at most ±6 dB</td>
+                        <td>−1.5 dBTP</td>
+                    </tr>
+                    <tr>
+                        <td>Voice</td>
+                        <td>toward −15.5 LUFS</td>
+                        <td>−1 dBTP</td>
+                    </tr>
+                    <tr>
+                        <td>Interface</td>
+                        <td>not normalised; fixed make-up gain</td>
+                        <td>−1 dBTP</td>
+                    </tr>
+                    <tr>
+                        <td>Effect</td>
+                        <td>attenuate only: files louder than −18 LUFS come down, quieter ones are left alone</td>
+                        <td>−1 dBTP</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>What this means when authoring a file:</p>
+            <ul>
+                <li><strong>The level baked into an effect is the design decision.</strong> The chain never lifts a quiet effect, so a replacement has to land at the RMS of the file it replaces or the mix changes. <code>import_cues.py</code> and <code>tools/audio_field/battle.py</code> both match RMS for this reason.</li>
+                <li><strong>Music has limited authority.</strong> The lift is capped at 6 dB and by the headroom under the ceiling, so a track baked much below about −19 LUFS stays quiet for good. <code>import_music.py</code> bakes to −14.1 LUFS at −1 dBTP.</li>
+                <li><strong>Beds need headroom.</strong> A bed delivered near full scale makes the limiter pull several dB, audible as the bed ducking under itself. The recorded beds are levelled to −19.3 LUFS with peaks held well under full scale.</li>
+                <li><strong>Nothing may decode above 0 dBFS.</strong> Vorbis overshoots peaks. The build tools measure the decoded file and re-encode at lower gain until it lands under the ceiling.</li>
+            </ul>
+            <p><code>audio_master_preview</code> (<code>make audio-preview</code>) links the same <code>soi_audio_mastering</code> library, so what it renders to <code>artifacts/audio_preview</code> is what the game plays. <code>scripts/promo-edit.py</code> uses it to score reels with mastered audio.</p>
+            <h2 id="packaging">Packaging</h2>
+            <ul>
+                <li><code>assets.qrc</code> embeds every <code>sfx/</code> and <code>voices/</code> file plus both JSON catalogues.</li>
+                <li>Music and ambience are <strong>not</strong> embedded. <code>install(DIRECTORY assets/)</code> installs them beside the binary, and a player's package always carries them.</li>
+                <li>The loader looks for <code>assets/audio/</code> at <code>&lt;app&gt;/assets/audio</code>, <code>&lt;app&gt;/../Resources/assets/audio</code> (macOS bundle) and <code>&lt;app&gt;/../../assets/audio</code>, then falls back to <code>:/assets/audio/</code>. A file on disk wins over the embedded copy.</li>
+                <li>The eight synthesised ambience beds are not committed (<code>.gitignore</code>). The <code>synthesize_ambience_assets</code> target renders them into both <code>assets/audio/ambience</code> and the staged build copy. Without Python or an ffmpeg that writes Vorbis the build warns and those beds are missing at runtime; the game runs without them.</li>
+            </ul>
+            <h2 id="asset-pipelines">Asset pipelines</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Recipe or record</th>
+                        <th>Rebuild</th>
+                        <th>Committed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Synthesised cues (<code>source: synth</code>)</td>
+                        <td><code>tools/audio_synth/cues.py</code></td>
+                        <td><code>make audio-assets</code> or <code>synthesize_cues.py &lt;cue&gt;</code></td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>Synthesised beds</td>
+                        <td><code>tools/audio_synth/ambience.py</code></td>
+                        <td><code>make audio-ambience</code>, and every build</td>
+                        <td>no</td>
+                    </tr>
+                    <tr>
+                        <td>Recorded beds</td>
+                        <td><code>tools/audio_field/sources.py</code></td>
+                        <td><code>make audio-field-ambience</code> (network)</td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>Recorded one-shots (hits, footsteps)</td>
+                        <td><code>tools/audio_field/oneshots.py</code></td>
+                        <td><code>python3 tools/audio_field/build_oneshots.py</code> (network)</td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>Composed battle cues (<code>source: field</code>)</td>
+                        <td><code>tools/audio_field/battle.py</code></td>
+                        <td><code>make audio-battle</code> (network)</td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>ElevenLabs cues (<code>source: generated</code>)</td>
+                        <td><code>PLAN</code> in <code>tools/audio_import/import_cues.py</code></td>
+                        <td><code>import_cues.py --source DIR</code></td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>ElevenLabs music</td>
+                        <td><code>BATCHES</code> in <code>tools/audio_import/import_music.py</code></td>
+                        <td><code>import_music.py --source DIR --batch NAME</code></td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>Voices</td>
+                        <td>none</td>
+                        <td>none</td>
+                        <td>yes</td>
+                    </tr>
+                    <tr>
+                        <td>New drop-ins</td>
+                        <td>files in <code>new sfx/</code></td>
+                        <td><code>make audio-import</code>, then <code>AUDIO_IMPORT_ARGS=--apply</code></td>
+                        <td>—</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>tools/audio_synth/README.md</code> and <code>tools/audio_field/README.md</code> cover recipes, takes and window selection in detail.</p>
+            <h3 id="rebuild-traps">Rebuild traps</h3>
+            <ul>
+                <li><strong>A recipe can outlive its file.</strong> When a cue is replaced by an import, its recipe still names the path. <code>synthesize_cues.py</code>, <code>register_cues.py</code> and <code>build_battle.py</code> therefore read the manifest's <code>source</code> tag and skip any file another pipeline owns (<code>--force</code> overrides the two renderers). Recipes for replaced files were deleted in September 2026; delete a recipe when its file is replaced rather than relying on the guard.</li>
+                <li><strong>ffmpeg picks a random Ogg stream serial</strong>, so re-encoding an unchanged recipe still changes a few header bytes. Regenerate the cue you are working on, not the set.</li>
+            </ul>
+            <p>After any rebuild, <code>git status assets/audio</code> shows what was actually touched.</p>
+            <h2 id="debugging">Debugging</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>SOI_AUDIO_TRACE=1</code></td>
+                        <td>One log line per cue request</td>
+                    </tr>
+                    <tr>
+                        <td><code>SOI_AUDIO_TRACE_SUMMARY=&lt;path&gt;</code></td>
+                        <td>JSON summary per mission, written at mission teardown and at shutdown; later exports in the same process get an index suffix</td>
+                    </tr>
+                    <tr>
+                        <td><code>SOI_AUDIO_HUD=1</code></td>
+                        <td>In-game overlay: volumes, active channels, the last cue request and its outcome; refreshed every 250 ms</td>
+                    </tr>
+                    <tr>
+                        <td><code>SOI_AUDIO_OFFLINE=1</code></td>
+                        <td>Opens no audio device; the mixer is driven by offline rendering (reels, preview)</td>
+                    </tr>
+                    <tr>
+                        <td><code>SOI_AUDIO_PCM_BUDGET_MB=&lt;n&gt;</code></td>
+                        <td>Resident decoded-PCM budget (default 320)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A trace line reads:</p>
+            <div>
+                <pre><code class="language-text">audio cue [30.838s rts -318.9,69.6,-196.4] alert.commander_message -&gt; sfx.alert.commander_message: accepted (app/core/game_engine.cpp:1996)</code></pre>
+            </div>
+            <p>Time since the trace last reset, listener mode (<code>rts</code>, <code>commander</code>, or <code>none</code>), listener position, cue, the resource the pool chose (<code>-</code> if the drop happened before selection), the outcome, and the call site. The summary's <code>never_accepted</code> list is the cues a mission asked for that the player never heard. A cue never requested does not appear at all, which is what the static report covers.</p>
+            <p>Throttles are wall-clock and not scoped to a mission: cue cooldowns in <code>CueRegistry</code> and resource cooldowns in <code>AudioSystem</code> carry across restarts, scenarios and tests. <code>CueRegistry::reset_cooldowns()</code> and <code>AudioSystem::reset_playback_throttles()</code> clear them without touching bindings or loaded resources. Sounds outlive a test in the same way: the tails of earlier tests can fill a category, and the next low-priority cue is dropped as <code>category_priority</code>. <code>AudioSystem::stop_all_sounds()</code> silences them; the scenario tests call it in <code>SetUp</code>. Two cues sharing one resource share its cooldown too, and the loser is reported as <code>resource_cooldown</code>.</p>
+            <h3 id="checks-and-tests">Checks and tests</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>What it proves</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>make audio-check</code></td>
+                        <td>Cues, manifest, files, QRC and direct references agree; required cues are bound and fired; every track has provenance, every shipped <code>.ogg</code> is in the manifest, and <code>docs/AUDIO_LICENSES.md</code> matches the manifest</td>
+                    </tr>
+                    <tr>
+                        <td><code>make audio-scan</code></td>
+                        <td>Every shipped clip decoded and scanned for leading silence and boundary clicks (report only)</td>
+                    </tr>
+                    <tr>
+                        <td><code>make audio-report</code></td>
+                        <td>The wiring matrix — declared, fired, loaded, verified — in <code>artifacts/audio/AUDIO_WISHLIST.md</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>python3 scripts/audio_provenance.py --doc</code></td>
+                        <td>Re-renders <code>docs/AUDIO_LICENSES.md</code> from the manifest after a provenance change</td>
+                    </tr>
+                    <tr>
+                        <td><code>make audio-preview</code></td>
+                        <td>Mastered renders of the library in <code>artifacts/audio_preview</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Tests: <code>audio_system_test</code>, <code>audio_cues_test</code>, <code>audio_backend_test</code>, <code>audio_command_ring_test</code>, <code>audio_mastering_test</code>, <code>audio_gameplay_scenarios_test</code> (production gameplay paths; clears both throttles in <code>SetUp</code>), <code>command_controller_test</code> (a run order never trumpets without elephants), <code>audio_battle_load_test</code>, <code>ambience_assets_test</code> (every bed at the mixer rate, 2–6 kHz at least 3 dB under 100–800 Hz), <code>weather_audio_test</code>, and the <code>commander_voice_*</code> tests.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Log Files, Journals, and Logging Systems</title>
+    <title>Log Files, Journals, and Logging Systems | Adam Djellouli</title>
     <meta content="Understanding how logging works in Linux is like learning the language your system uses to communicate." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,11 +13,10 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/log_files_and_journals",
             "description": "Understanding how logging works in Linux is like learning the language your system uses to communicate.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-05-03",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="Log Files, Journals, and Logging Systems" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Understanding how logging works in Linux is like learning the language your system uses to communicate." property="og:description" />
+    <meta content="2026-05-03" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,126 +80,137 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+    <script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#log-files-journals-and-logging-systems">Log Files, Journals, and Logging Systems</a>
-                    <ol>
-                        <li><a href="#what-is-a-log-">What Is a Log?</a>
-                            <ol>
-                                <li><a href="#important-parts-of-a-log-entry">Important Parts of a Log Entry</a></li>
-                                <li><a href="#why-logs-matter">Why Logs Matter</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#the-linux-logging-landscape">The Linux Logging Landscape</a></li>
-                        <li><a href="#common-linux-log-locations">Common Linux Log Locations</a></li>
-                        <li><a href="#plain-text-logs">Plain Text Logs</a>
-                            <ol>
-                                <li><a href="#anatomy-of-a-syslog-line">Anatomy of a Syslog Line</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#journald-and-journalctl">Journald and journalctl</a>
-                            <ol>
-                                <li><a href="#basic-journalctl-commands">Basic journalctl Commands</a></li>
-                                <li><a href="#filter-by-service">Filter by Service</a></li>
-                                <li><a href="#filter-by-severity">Filter by Severity</a></li>
-                                <li><a href="#journal-output-formats">Journal Output Formats</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#linux-logs-by-system-layer">Linux Logs by System Layer</a>
-                            <ol>
-                                <li><a href="#kernel-logs">Kernel Logs</a></li>
-                                <li><a href="#authentication-logs">Authentication Logs</a></li>
-                                <li><a href="#systemd-service-logs">Systemd Service Logs</a></li>
-                                <li><a href="#cron-logs">Cron Logs</a></li>
-                                <li><a href="#package-manager-logs">Package Manager Logs</a></li>
-                                <li><a href="#web-server-logs">Web Server Logs</a></li>
-                                <li><a href="#database-logs">Database Logs</a></li>
-                                <li><a href="#docker-logs">Docker Logs</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#creating-logs-from-python-applications">Creating Logs from Python Applications</a>
-                            <ol>
-                                <li><a href="#basic-python-logging">Basic Python Logging</a></li>
-                                <li><a href="#log-to-a-file">Log to a File</a></li>
-                                <li><a href="#log-to-console-for-systemd">Log to Console for systemd</a></li>
-                                <li><a href="#python-rotating-file-logs">Python Rotating File Logs</a></li>
-                                <li><a href="#python-timed-rotating-logs">Python Timed Rotating Logs</a></li>
-                                <li><a href="#python-json-logs">Python JSON Logs</a></li>
-                                <li><a href="#python-logging-exceptions-properly">Python Logging Exceptions Properly</a></li>
-                                <li><a href="#python-app-logging-to-syslog">Python App Logging to Syslog</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#creating-logs-from-shell-scripts">Creating Logs from Shell Scripts</a>
-                            <ol>
-                                <li><a href="#using-logger">Using logger</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#rsyslog">Rsyslog</a>
-                            <ol>
-                                <li><a href="#rsyslog-rule-format">Rsyslog Rule Format</a></li>
-                                <li><a href="#custom-rsyslog-rule">Custom Rsyslog Rule</a></li>
-                                <li><a href="#remote-logging-with-rsyslog">Remote Logging with Rsyslog</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#log-housekeeping">Log Housekeeping</a>
-                            <ol>
-                                <li><a href="#logrotate">Logrotate</a></li>
-                                <li><a href="#check-logrotate-status">Check Logrotate Status</a></li>
-                                <li><a href="#how-logrotate-runs-automatically">How Logrotate Runs Automatically</a></li>
-                                <li><a href="#journald-housekeeping">Journald Housekeeping</a></li>
-                                <li><a href="#persistent-vs-volatile-journals">Persistent vs Volatile Journals</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#quickly-searching-and-parsing-logs">Quickly Searching and Parsing Logs</a>
-                            <ol>
-                                <li><a href="#basic-tools">Basic Tools</a></li>
-                                <li><a href="#fast-examples">Fast Examples</a></li>
-                                <li><a href="#using-journalctl-for-fast-filtering">Using journalctl for Fast Filtering</a></li>
-                                <li><a href="#json-log-parsing-with-jq">JSON Log Parsing with jq</a></li>
-                                <li><a href="#lnav">lnav</a></li>
-                                <li><a href="#gathering-logs-together">Gathering Logs Together</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#centralized-log-collection">Centralized Log Collection</a></li>
-                        <li><a href="#debugging-with-logs-practical-playbooks">Debugging with Logs: Practical Playbooks</a>
-                            <ol>
-                                <li><a href="#service-will-not-start">Service Will Not Start</a></li>
-                                <li><a href="#ssh-login-problems">SSH Login Problems</a></li>
-                                <li><a href="#disk-full-because-of-logs">Disk Full Because of Logs</a></li>
-                                <li><a href="#web-app-returns-502-503-504">Web App Returns 502 / 503 / 504</a></li>
-                                <li><a href="#system-rebooted-unexpectedly">System Rebooted Unexpectedly</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#security-focused-log-examples">Security-Focused Log Examples</a>
-                            <ol>
-                                <li><a href="#failed-ssh-attempts">Failed SSH Attempts</a></li>
-                                <li><a href="#sudo-usage">Sudo Usage</a></li>
-                                <li><a href="#fail2ban-logs">Fail2ban Logs</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#best-practices">Best Practices</a>
-                            <ol>
-                                <li><a href="#for-linux-admins">For Linux Admins</a></li>
-                                <li><a href="#for-application-developers">For Application Developers</a></li>
-                                <li><a href="#what-not-to-log">What Not to Log</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#quick-command-cheat-sheet">Quick Command Cheat Sheet</a>
-                            <ol>
-                                <li><a href="#general">General</a></li>
-                                <li><a href="#journald">Journald</a></li>
-                                <li><a href="#kernel">Kernel</a></li>
-                                <li><a href="#services">Services</a></li>
-                                <li><a href="#auth">Auth</a></li>
-                                <li><a href="#logrotate">Logrotate</a></li>
-                                <li><a href="#disk-usage">Disk Usage</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#best-practices">Best Practices</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
+                <ol>
+                    <li><a href="#what-is-a-log">What Is a Log?</a>
+                        <ol>
+                            <li><a href="#important-parts-of-a-log-entry">Important Parts of a Log Entry</a></li>
+                            <li><a href="#why-logs-matter">Why Logs Matter</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#the-linux-logging-landscape">The Linux Logging Landscape</a></li>
+                    <li><a href="#common-linux-log-locations">Common Linux Log Locations</a></li>
+                    <li><a href="#plain-text-logs">Plain Text Logs</a>
+                        <ol>
+                            <li><a href="#anatomy-of-a-syslog-line">Anatomy of a Syslog Line</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#journald-and-journalctl">Journald and journalctl</a>
+                        <ol>
+                            <li><a href="#basic-journalctl-commands">Basic journalctl Commands</a></li>
+                            <li><a href="#filter-by-service">Filter by Service</a></li>
+                            <li><a href="#filter-by-severity">Filter by Severity</a></li>
+                            <li><a href="#journal-output-formats">Journal Output Formats</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#linux-logs-by-system-layer">Linux Logs by System Layer</a>
+                        <ol>
+                            <li><a href="#kernel-logs">Kernel Logs</a></li>
+                            <li><a href="#authentication-logs">Authentication Logs</a></li>
+                            <li><a href="#systemd-service-logs">Systemd Service Logs</a></li>
+                            <li><a href="#cron-logs">Cron Logs</a></li>
+                            <li><a href="#package-manager-logs">Package Manager Logs</a></li>
+                            <li><a href="#web-server-logs">Web Server Logs</a></li>
+                            <li><a href="#database-logs">Database Logs</a></li>
+                            <li><a href="#docker-logs">Docker Logs</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#creating-logs-from-python-applications">Creating Logs from Python Applications</a>
+                        <ol>
+                            <li><a href="#basic-python-logging">Basic Python Logging</a></li>
+                            <li><a href="#log-to-a-file">Log to a File</a></li>
+                            <li><a href="#log-to-console-for-systemd">Log to Console for systemd</a></li>
+                            <li><a href="#python-rotating-file-logs">Python Rotating File Logs</a></li>
+                            <li><a href="#python-timed-rotating-logs">Python Timed Rotating Logs</a></li>
+                            <li><a href="#python-json-logs">Python JSON Logs</a></li>
+                            <li><a href="#python-logging-exceptions-properly">Python Logging Exceptions Properly</a></li>
+                            <li><a href="#python-app-logging-to-syslog">Python App Logging to Syslog</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#creating-logs-from-shell-scripts">Creating Logs from Shell Scripts</a>
+                        <ol>
+                            <li><a href="#using-logger">Using logger</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#rsyslog">Rsyslog</a>
+                        <ol>
+                            <li><a href="#rsyslog-rule-format">Rsyslog Rule Format</a></li>
+                            <li><a href="#custom-rsyslog-rule">Custom Rsyslog Rule</a></li>
+                            <li><a href="#remote-logging-with-rsyslog">Remote Logging with Rsyslog</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#log-housekeeping">Log Housekeeping</a>
+                        <ol>
+                            <li><a href="#logrotate">Logrotate</a></li>
+                            <li><a href="#check-logrotate-status">Check Logrotate Status</a></li>
+                            <li><a href="#how-logrotate-runs-automatically">How Logrotate Runs Automatically</a></li>
+                            <li><a href="#journald-housekeeping">Journald Housekeeping</a></li>
+                            <li><a href="#persistent-vs-volatile-journals">Persistent vs Volatile Journals</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#quickly-searching-and-parsing-logs">Quickly Searching and Parsing Logs</a>
+                        <ol>
+                            <li><a href="#basic-tools">Basic Tools</a></li>
+                            <li><a href="#fast-examples">Fast Examples</a></li>
+                            <li><a href="#using-journalctl-for-fast-filtering">Using journalctl for Fast Filtering</a></li>
+                            <li><a href="#json-log-parsing-with-jq">JSON Log Parsing with jq</a></li>
+                            <li><a href="#lnav">lnav</a></li>
+                            <li><a href="#gathering-logs-together">Gathering Logs Together</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#centralized-log-collection">Centralized Log Collection</a></li>
+                    <li><a href="#debugging-with-logs-practical-playbooks">Debugging with Logs: Practical Playbooks</a>
+                        <ol>
+                            <li><a href="#service-will-not-start">Service Will Not Start</a></li>
+                            <li><a href="#ssh-login-problems">SSH Login Problems</a></li>
+                            <li><a href="#disk-full-because-of-logs">Disk Full Because of Logs</a></li>
+                            <li><a href="#web-app-returns-502-503-504">Web App Returns 502 / 503 / 504</a></li>
+                            <li><a href="#system-rebooted-unexpectedly">System Rebooted Unexpectedly</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#security-focused-log-examples">Security-Focused Log Examples</a>
+                        <ol>
+                            <li><a href="#failed-ssh-attempts">Failed SSH Attempts</a></li>
+                            <li><a href="#sudo-usage">Sudo Usage</a></li>
+                            <li><a href="#fail2ban-logs">Fail2ban Logs</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#best-practices">Best Practices</a>
+                        <ol>
+                            <li><a href="#for-linux-admins">For Linux Admins</a></li>
+                            <li><a href="#for-application-developers">For Application Developers</a></li>
+                            <li><a href="#what-not-to-log">What Not to Log</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#quick-command-cheat-sheet">Quick Command Cheat Sheet</a>
+                        <ol>
+                            <li><a href="#general">General</a></li>
+                            <li><a href="#journald">Journald</a></li>
+                            <li><a href="#kernel">Kernel</a></li>
+                            <li><a href="#services">Services</a></li>
+                            <li><a href="#auth">Auth</a></li>
+                            <li><a href="#logrotate-2">Logrotate</a></li>
+                            <li><a href="#disk-usage">Disk Usage</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#best-practices-2">Best Practices</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -252,7 +270,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -271,9 +289,9 @@
                         </svg>
                     </button></div>
             </div>
-            <h2 id="log-files-journals-and-logging-systems">Log Files, Journals, and Logging Systems</h2>
+            <h1>Log Files, Journals, and Logging Systems</h1>
             <p>Understanding how logging works in Linux is like learning the language your system uses to communicate. Logs are the detailed records that your system keeps about its activities, and they are invaluable for troubleshooting, monitoring performance, and ensuring security. Let's embark on a journey to demystify log files, journals, and the various logging systems used in Linux.</p>
-            <h3 id="what-is-a-log-">What Is a Log?</h3>
+            <h3 id="what-is-a-log">What Is a Log?</h3>
             <p>A <strong>log</strong> is a record of events produced by an operating system, application, service, script, device, or security component.</p>
             <p>Logs answer questions like:</p>
             <ul>
@@ -305,38 +323,40 @@
             </div>
             <h4 id="why-logs-matter">Why Logs Matter</h4>
             <p>Logs are used for:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Purpose</td>
-                    <td>Example</td>
-                </tr>
-                <tr>
-                    <td>Troubleshooting</td>
-                    <td>Why did nginx fail to start?</td>
-                </tr>
-                <tr>
-                    <td>Security</td>
-                    <td>Who tried to SSH into the server?</td>
-                </tr>
-                <tr>
-                    <td>Auditing</td>
-                    <td>Who used sudo?</td>
-                </tr>
-                <tr>
-                    <td>Monitoring</td>
-                    <td>Is disk space filling up?</td>
-                </tr>
-                <tr>
-                    <td>Performance</td>
-                    <td>Why is the app slow?</td>
-                </tr>
-                <tr>
-                    <td>Compliance</td>
-                    <td>Can we prove access attempts were recorded?</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Purpose</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Troubleshooting</td>
+                        <td>Why did nginx fail to start?</td>
+                    </tr>
+                    <tr>
+                        <td>Security</td>
+                        <td>Who tried to SSH into the server?</td>
+                    </tr>
+                    <tr>
+                        <td>Auditing</td>
+                        <td>Who used sudo?</td>
+                    </tr>
+                    <tr>
+                        <td>Monitoring</td>
+                        <td>Is disk space filling up?</td>
+                    </tr>
+                    <tr>
+                        <td>Performance</td>
+                        <td>Why is the app slow?</td>
+                    </tr>
+                    <tr>
+                        <td>Compliance</td>
+                        <td>Can we prove access attempts were recorded?</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <ul>
                 <li>Without logs, you can't really debug, you can only guess.</li>
                 <li>With logs, debugging becomes investigation.</li>
@@ -369,42 +389,44 @@
                          +----------------------+</code></pre>
             </div>
             <p>Modern Linux systems commonly use:</p>
-            <p>
             <table>
-                <tr>
-                    <td>System</td>
-                    <td>Purpose</td>
-                </tr>
-                <tr>
-                    <td>journald</td>
-                    <td>Collects structured logs from systemd, kernel, apps</td>
-                </tr>
-                <tr>
-                    <td>journalctl</td>
-                    <td>Reads and filters journald logs</td>
-                </tr>
-                <tr>
-                    <td>rsyslog</td>
-                    <td>Routes logs into text files or remote log servers</td>
-                </tr>
-                <tr>
-                    <td>/var/log</td>
-                    <td>Directory where many plain-text logs live</td>
-                </tr>
-                <tr>
-                    <td>logrotate</td>
-                    <td>Rotates, compresses, and deletes old text logs</td>
-                </tr>
-                <tr>
-                    <td>logger</td>
-                    <td>Sends custom log messages from shell scripts</td>
-                </tr>
-                <tr>
-                    <td>dmesg</td>
-                    <td>Reads kernel ring buffer messages</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>System</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>journald</td>
+                        <td>Collects structured logs from systemd, kernel, apps</td>
+                    </tr>
+                    <tr>
+                        <td>journalctl</td>
+                        <td>Reads and filters journald logs</td>
+                    </tr>
+                    <tr>
+                        <td>rsyslog</td>
+                        <td>Routes logs into text files or remote log servers</td>
+                    </tr>
+                    <tr>
+                        <td>/var/log</td>
+                        <td>Directory where many plain-text logs live</td>
+                    </tr>
+                    <tr>
+                        <td>logrotate</td>
+                        <td>Rotates, compresses, and deletes old text logs</td>
+                    </tr>
+                    <tr>
+                        <td>logger</td>
+                        <td>Sends custom log messages from shell scripts</td>
+                    </tr>
+                    <tr>
+                        <td>dmesg</td>
+                        <td>Reads kernel ring buffer messages</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="common-linux-log-locations">Common Linux Log Locations</h3>
             <p>Most traditional logs live under:</p>
             <div>
@@ -701,55 +723,57 @@ May 03 10:42:18 server systemd[1]: docker.service: Failed with result 'exit-code
                 <li>Can be combined with <code>-u</code> to filter errors for a specific service.</li>
             </ul>
             <p>Priority levels:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Name</td>
-                    <td>Code</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td>emerg</td>
-                    <td>0</td>
-                    <td>System unusable</td>
-                </tr>
-                <tr>
-                    <td>alert</td>
-                    <td>1</td>
-                    <td>Immediate action required</td>
-                </tr>
-                <tr>
-                    <td>crit</td>
-                    <td>2</td>
-                    <td>Critical condition</td>
-                </tr>
-                <tr>
-                    <td>err</td>
-                    <td>3</td>
-                    <td>Error</td>
-                </tr>
-                <tr>
-                    <td>warning</td>
-                    <td>4</td>
-                    <td>Warning</td>
-                </tr>
-                <tr>
-                    <td>notice</td>
-                    <td>5</td>
-                    <td>Normal but important</td>
-                </tr>
-                <tr>
-                    <td>info</td>
-                    <td>6</td>
-                    <td>Informational</td>
-                </tr>
-                <tr>
-                    <td>debug</td>
-                    <td>7</td>
-                    <td>Debug messages</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>emerg</td>
+                        <td>0</td>
+                        <td>System unusable</td>
+                    </tr>
+                    <tr>
+                        <td>alert</td>
+                        <td>1</td>
+                        <td>Immediate action required</td>
+                    </tr>
+                    <tr>
+                        <td>crit</td>
+                        <td>2</td>
+                        <td>Critical condition</td>
+                    </tr>
+                    <tr>
+                        <td>err</td>
+                        <td>3</td>
+                        <td>Error</td>
+                    </tr>
+                    <tr>
+                        <td>warning</td>
+                        <td>4</td>
+                        <td>Warning</td>
+                    </tr>
+                    <tr>
+                        <td>notice</td>
+                        <td>5</td>
+                        <td>Normal but important</td>
+                    </tr>
+                    <tr>
+                        <td>info</td>
+                        <td>6</td>
+                        <td>Informational</td>
+                    </tr>
+                    <tr>
+                        <td>debug</td>
+                        <td>7</td>
+                        <td>Debug messages</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Examples:</p>
             <div>
                 <pre><code class="language-bash">journalctl -p warning</code></pre>
@@ -904,34 +928,36 @@ PRIORITY=6</code></pre>
             <p>This is useful when feeding logs into scripts or log aggregation systems. JSON formats allow tools to read fields such as service name, priority, process ID, hostname, and message without relying on text parsing. For quick manual troubleshooting, normal or short output is usually easier to read. For automation and structured logging workflows, JSON output is usually better.</p>
             <h3 id="linux-logs-by-system-layer">Linux Logs by System Layer</h3>
             <p>A useful way to understand logs is by layers.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Layer</td>
-                    <td>Components</td>
-                </tr>
-                <tr>
-                    <td>Application Layer</td>
-                    <td>Python apps, nginx, Apache, PostgreSQL, Docker apps</td>
-                </tr>
-                <tr>
-                    <td>Service Layer</td>
-                    <td>systemd services, cron, SSH, NetworkManager</td>
-                </tr>
-                <tr>
-                    <td>OS Layer</td>
-                    <td>package manager, sudo, auth, syslog</td>
-                </tr>
-                <tr>
-                    <td>Kernel Layer</td>
-                    <td>drivers, hardware, memory, disk, CPU, networking</td>
-                </tr>
-                <tr>
-                    <td>Boot Layer</td>
-                    <td>bootloader, initramfs, systemd startup</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Components</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Application Layer</td>
+                        <td>Python apps, nginx, Apache, PostgreSQL, Docker apps</td>
+                    </tr>
+                    <tr>
+                        <td>Service Layer</td>
+                        <td>systemd services, cron, SSH, NetworkManager</td>
+                    </tr>
+                    <tr>
+                        <td>OS Layer</td>
+                        <td>package manager, sudo, auth, syslog</td>
+                    </tr>
+                    <tr>
+                        <td>Kernel Layer</td>
+                        <td>drivers, hardware, memory, disk, CPU, networking</td>
+                    </tr>
+                    <tr>
+                        <td>Boot Layer</td>
+                        <td>bootloader, initramfs, systemd startup</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="kernel-logs">Kernel Logs</h4>
             <p>Kernel logs are useful for debugging:</p>
             <ul>
@@ -1647,50 +1673,52 @@ mail.info            /var/log/mail.info
 *.err                /var/log/errors.log</code></pre>
             </div>
             <p>Facilities:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Facility</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td>auth</td>
-                    <td>Authentication</td>
-                </tr>
-                <tr>
-                    <td>authpriv</td>
-                    <td>Private auth messages</td>
-                </tr>
-                <tr>
-                    <td>cron</td>
-                    <td>Cron jobs</td>
-                </tr>
-                <tr>
-                    <td>daemon</td>
-                    <td>System daemons</td>
-                </tr>
-                <tr>
-                    <td>kern</td>
-                    <td>Kernel messages</td>
-                </tr>
-                <tr>
-                    <td>mail</td>
-                    <td>Mail system</td>
-                </tr>
-                <tr>
-                    <td>syslog</td>
-                    <td>Syslog internal messages</td>
-                </tr>
-                <tr>
-                    <td>user</td>
-                    <td>User-level messages</td>
-                </tr>
-                <tr>
-                    <td>local0-7</td>
-                    <td>Custom use</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Facility</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>auth</td>
+                        <td>Authentication</td>
+                    </tr>
+                    <tr>
+                        <td>authpriv</td>
+                        <td>Private auth messages</td>
+                    </tr>
+                    <tr>
+                        <td>cron</td>
+                        <td>Cron jobs</td>
+                    </tr>
+                    <tr>
+                        <td>daemon</td>
+                        <td>System daemons</td>
+                    </tr>
+                    <tr>
+                        <td>kern</td>
+                        <td>Kernel messages</td>
+                    </tr>
+                    <tr>
+                        <td>mail</td>
+                        <td>Mail system</td>
+                    </tr>
+                    <tr>
+                        <td>syslog</td>
+                        <td>Syslog internal messages</td>
+                    </tr>
+                    <tr>
+                        <td>user</td>
+                        <td>User-level messages</td>
+                    </tr>
+                    <tr>
+                        <td>local0-7</td>
+                        <td>Custom use</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Priorities:</p>
             <div>
                 <pre><code class="language-text">debug &lt; info &lt; notice &lt; warning &lt; err &lt; crit &lt; alert &lt; emerg</code></pre>
@@ -1761,22 +1789,24 @@ input(type="imtcp" port="514")</code></pre>
                 <li>archive important logs</li>
             </ul>
             <p>There are two major housekeeping systems:</p>
-            <p>
             <table>
-                <tr>
-                    <td>System</td>
-                    <td>Manages</td>
-                </tr>
-                <tr>
-                    <td>logrotate</td>
-                    <td>Plain text logs in /var/log</td>
-                </tr>
-                <tr>
-                    <td>journald config</td>
-                    <td>systemd journal size and retention</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>System</th>
+                        <th>Manages</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>logrotate</td>
+                        <td>Plain text logs in /var/log</td>
+                    </tr>
+                    <tr>
+                        <td>journald config</td>
+                        <td>systemd journal size and retention</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="logrotate">Logrotate</h4>
             <p><code>logrotate</code> manages traditional log files.</p>
             <p>Config locations:</p>
@@ -1921,66 +1951,68 @@ journalctl --list-boots</code></pre>
             <h3 id="quickly-searching-and-parsing-logs">Quickly Searching and Parsing Logs</h3>
             <p>This is where practical debugging happens.</p>
             <h4 id="basic-tools">Basic Tools</h4>
-            <p>
             <table>
-                <tr>
-                    <td>Tool</td>
-                    <td>Use</td>
-                </tr>
-                <tr>
-                    <td>less</td>
-                    <td>Read large files interactively</td>
-                </tr>
-                <tr>
-                    <td>tail</td>
-                    <td>Show last lines / follow live logs</td>
-                </tr>
-                <tr>
-                    <td>grep</td>
-                    <td>Search text</td>
-                </tr>
-                <tr>
-                    <td>awk</td>
-                    <td>Extract columns / summarize</td>
-                </tr>
-                <tr>
-                    <td>sed</td>
-                    <td>Transform/filter text</td>
-                </tr>
-                <tr>
-                    <td>cut</td>
-                    <td>Extract fields</td>
-                </tr>
-                <tr>
-                    <td>sort</td>
-                    <td>Sort results</td>
-                </tr>
-                <tr>
-                    <td>uniq</td>
-                    <td>Count repeated lines</td>
-                </tr>
-                <tr>
-                    <td>wc</td>
-                    <td>Count lines</td>
-                </tr>
-                <tr>
-                    <td>jq</td>
-                    <td>Parse JSON logs</td>
-                </tr>
-                <tr>
-                    <td>journalctl</td>
-                    <td>Query systemd journal</td>
-                </tr>
-                <tr>
-                    <td>zgrep</td>
-                    <td>Search compressed .gz logs</td>
-                </tr>
-                <tr>
-                    <td>lnav</td>
-                    <td>Interactive log viewer</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Tool</th>
+                        <th>Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>less</td>
+                        <td>Read large files interactively</td>
+                    </tr>
+                    <tr>
+                        <td>tail</td>
+                        <td>Show last lines / follow live logs</td>
+                    </tr>
+                    <tr>
+                        <td>grep</td>
+                        <td>Search text</td>
+                    </tr>
+                    <tr>
+                        <td>awk</td>
+                        <td>Extract columns / summarize</td>
+                    </tr>
+                    <tr>
+                        <td>sed</td>
+                        <td>Transform/filter text</td>
+                    </tr>
+                    <tr>
+                        <td>cut</td>
+                        <td>Extract fields</td>
+                    </tr>
+                    <tr>
+                        <td>sort</td>
+                        <td>Sort results</td>
+                    </tr>
+                    <tr>
+                        <td>uniq</td>
+                        <td>Count repeated lines</td>
+                    </tr>
+                    <tr>
+                        <td>wc</td>
+                        <td>Count lines</td>
+                    </tr>
+                    <tr>
+                        <td>jq</td>
+                        <td>Parse JSON logs</td>
+                    </tr>
+                    <tr>
+                        <td>journalctl</td>
+                        <td>Query systemd journal</td>
+                    </tr>
+                    <tr>
+                        <td>zgrep</td>
+                        <td>Search compressed .gz logs</td>
+                    </tr>
+                    <tr>
+                        <td>lnav</td>
+                        <td>Interactive log viewer</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h4 id="fast-examples">Fast Examples</h4>
             <p>Follow a file live:</p>
             <div>
@@ -2135,70 +2167,72 @@ tar -czf debug-logs.tar.gz debug-logs</code></pre>
 +-------------------------------+</code></pre>
             </div>
             <p>Common tools:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Tool</td>
-                    <td>Purpose</td>
-                </tr>
-                <tr>
-                    <td>rsyslog</td>
-                    <td>Classic syslog forwarding and routing</td>
-                </tr>
-                <tr>
-                    <td>syslog-ng</td>
-                    <td>Alternative syslog daemon</td>
-                </tr>
-                <tr>
-                    <td>Fluent Bit</td>
-                    <td>Lightweight log collector/forwarder</td>
-                </tr>
-                <tr>
-                    <td>Fluentd</td>
-                    <td>Heavier log collector/processor</td>
-                </tr>
-                <tr>
-                    <td>Vector</td>
-                    <td>Fast log/event pipeline</td>
-                </tr>
-                <tr>
-                    <td>Logstash</td>
-                    <td>Processing pipeline for Elastic/OpenSearch</td>
-                </tr>
-                <tr>
-                    <td>Filebeat</td>
-                    <td>Ships log files to Elastic/OpenSearch</td>
-                </tr>
-                <tr>
-                    <td>Promtail</td>
-                    <td>Ships logs to Loki</td>
-                </tr>
-                <tr>
-                    <td>Loki</td>
-                    <td>Log storage/query system by Grafana ecosystem</td>
-                </tr>
-                <tr>
-                    <td>Elasticsearch</td>
-                    <td>Search/index log storage</td>
-                </tr>
-                <tr>
-                    <td>OpenSearch</td>
-                    <td>Open-source Elasticsearch alternative</td>
-                </tr>
-                <tr>
-                    <td>Splunk</td>
-                    <td>Commercial log analytics platform</td>
-                </tr>
-                <tr>
-                    <td>Grafana</td>
-                    <td>Dashboards for logs and metrics</td>
-                </tr>
-                <tr>
-                    <td>Kibana</td>
-                    <td>Elasticsearch visualization UI</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Tool</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>rsyslog</td>
+                        <td>Classic syslog forwarding and routing</td>
+                    </tr>
+                    <tr>
+                        <td>syslog-ng</td>
+                        <td>Alternative syslog daemon</td>
+                    </tr>
+                    <tr>
+                        <td>Fluent Bit</td>
+                        <td>Lightweight log collector/forwarder</td>
+                    </tr>
+                    <tr>
+                        <td>Fluentd</td>
+                        <td>Heavier log collector/processor</td>
+                    </tr>
+                    <tr>
+                        <td>Vector</td>
+                        <td>Fast log/event pipeline</td>
+                    </tr>
+                    <tr>
+                        <td>Logstash</td>
+                        <td>Processing pipeline for Elastic/OpenSearch</td>
+                    </tr>
+                    <tr>
+                        <td>Filebeat</td>
+                        <td>Ships log files to Elastic/OpenSearch</td>
+                    </tr>
+                    <tr>
+                        <td>Promtail</td>
+                        <td>Ships logs to Loki</td>
+                    </tr>
+                    <tr>
+                        <td>Loki</td>
+                        <td>Log storage/query system by Grafana ecosystem</td>
+                    </tr>
+                    <tr>
+                        <td>Elasticsearch</td>
+                        <td>Search/index log storage</td>
+                    </tr>
+                    <tr>
+                        <td>OpenSearch</td>
+                        <td>Open-source Elasticsearch alternative</td>
+                    </tr>
+                    <tr>
+                        <td>Splunk</td>
+                        <td>Commercial log analytics platform</td>
+                    </tr>
+                    <tr>
+                        <td>Grafana</td>
+                        <td>Dashboards for logs and metrics</td>
+                    </tr>
+                    <tr>
+                        <td>Kibana</td>
+                        <td>Elasticsearch visualization UI</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <h3 id="debugging-with-logs-practical-playbooks">Debugging with Logs: Practical Playbooks</h3>
             <h4 id="service-will-not-start">Service Will Not Start</h4>
             <p>Example: nginx fails.</p>
@@ -2461,7 +2495,7 @@ systemctl restart nginx</code></pre>
 grep "sudo" /var/log/auth.log
 journalctl _COMM=sshd</code></pre>
             </div>
-            <h4 id="logrotate">Logrotate</h4>
+            <h4 id="logrotate-2">Logrotate</h4>
             <div>
                 <pre><code class="language-bash">cat /etc/logrotate.conf
 ls /etc/logrotate.d/
@@ -2476,7 +2510,7 @@ du -sh /var/log/*
 find /var/log -type f -size +100M -exec ls -lh {} \;
 journalctl --disk-usage</code></pre>
             </div>
-            <h3 id="best-practices">Best Practices</h3>
+            <h3 id="best-practices-2">Best Practices</h3>
             <ul>
                 <li>Regular log analysis should be automated using tools like <code>Logwatch</code> or <code>Splunk</code> to enhance efficiency and reduce manual oversight.</li>
                 <li>It is important to set up alerts for critical events, which can be configured using tools such as <code>Nagios</code> or <code>Prometheus</code> to ensure rapid response to incidents.</li>
@@ -2527,23 +2561,33 @@ journalctl --disk-usage</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -2560,21 +2604,5 @@ journalctl --disk-usage</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>

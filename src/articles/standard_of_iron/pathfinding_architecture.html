@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>The Grid</title>
+    <title>How Pathfinding Works | Adam Djellouli</title>
     <meta content="Pathfinding in Standard of Iron is deliberately simple at the core: the game keeps one flat 2D navigation grid, and A* searches that grid." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -13,17 +13,16 @@
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture" rel="canonical" />
     <script id="structured-data" type="application/ld+json">
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "The Grid",
+            "headline": "How Pathfinding Works",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -34,15 +33,23 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture",
             "description": "Pathfinding in Standard of Iron is deliberately simple at the core: the game keeps one flat 2D navigation grid, and A* searches that grid.",
-            "dateModified": "2026-09-13"
+            "dateModified": "2026-09-22",
+            "inLanguage": "en"
         }
     </script>
+    <meta content="How Pathfinding Works" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Pathfinding in Standard of Iron is deliberately simple at the core: the game keeps one flat 2D navigation grid, and A* searches that grid." property="og:description" />
+    <meta content="2026-09-22" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
     <nav aria-label="Main navigation">
         <a class="logo" href="../../index.html">
-            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="/resources/brand/logo.webp" />
         </a>
         <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
         <ul aria-labelledby="navbar-toggle" role="menu">
@@ -73,6 +80,8 @@
             </li>
         </ul>
     </nav>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
@@ -103,8 +112,10 @@
                     <li><a href="#a-search">A* Search</a>
                         <ol>
                             <li><a href="#what-a-step-costs">What a step costs</a></li>
-                            <li><a href="#is-this-straight-line-clear-">Is this straight line clear?</a></li>
+                            <li><a href="#is-this-straight-line-clear">Is this straight line clear?</a></li>
+                            <li><a href="#one-clearance-for-every-hard-walkability-test">One clearance for every hard walkability test</a></li>
                             <li><a href="#the-path-is-pulled-taut-before-it-is-followed">The path is pulled taut before it is followed</a></li>
+                            <li><a href="#clearance-checks-at-cell-centres">Clearance checks at cell centres</a></li>
                         </ol>
                     </li>
                     <li><a href="#formations-and-group-movement">Formations And Group Movement</a></li>
@@ -134,6 +145,8 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_licenses.html">Audio Licenses</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_system.html">Audio System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
@@ -141,6 +154,7 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/difficulty.html">Difficulty</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
@@ -164,12 +178,16 @@
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/farm_activity.html">Farm Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/home_activity.html">Home Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/marketplace.html">Marketplace</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/siege_presentation.html">Siege Presentation</a></li>
                 </ol>
             </div>
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -188,12 +206,12 @@
                         </svg>
                     </button></div>
             </div>
-            <header>How Pathfinding Works</header>
+            <h1>How Pathfinding Works</h1>
             <p>Pathfinding in Standard of Iron is deliberately simple at the core: the game keeps one flat 2D navigation grid, and A* searches that grid. The grid is not a physics simulation, not a unit occupancy map, and not a navmesh. It is a compact answer to one question:</p>
             <p>Per-tick navigation counters -- position tests, standability tests and the cells they
                 scan, nearest-standable searches, group and individual routes, cache hits, cells
                 expanded, heap operations and dirty cells rebuilt -- are described in
-                <a href="PERFORMANCE_INSTRUMENTATION.md">PERFORMANCE_INSTRUMENTATION.md</a>. Enable them with
+                <a href="https://github.com/djeada/Standard-of-Iron/blob/main/docs/PERFORMANCE_INSTRUMENTATION.md">PERFORMANCE_INSTRUMENTATION.md</a>. Enable them with
                 <code>arena --profile</code>, <code>sim_benchmark</code>, or a runtime benchmark run before claiming any
                 navigation cost has changed.
             </p>
@@ -237,40 +255,42 @@
                 <pre><code class="language-text">[0,0,0,0,0, 0,1,1,1,0, 0,0,0,1,0, 0,2,0,0,0]</code></pre>
             </div>
             <p>The current values are:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Value</td>
-                    <td>Name</td>
-                    <td>Meaning</td>
-                </tr>
-                <tr>
-                    <td><code>0</code></td>
-                    <td><code>Walkable</code></td>
-                    <td>Free movement cell</td>
-                </tr>
-                <tr>
-                    <td><code>1</code></td>
-                    <td><code>Blocked</code></td>
-                    <td>Mountain, river, bridge edge, building, or generic blocker</td>
-                </tr>
-                <tr>
-                    <td><code>2</code></td>
-                    <td><code>Tree</code></td>
-                    <td>Harvestable tree blocker</td>
-                </tr>
-                <tr>
-                    <td><code>3</code></td>
-                    <td><code>Boulder</code></td>
-                    <td>Harvestable boulder blocker</td>
-                </tr>
-                <tr>
-                    <td><code>4</code></td>
-                    <td><code>IronOre</code></td>
-                    <td>Harvestable iron ore blocker</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Value</th>
+                        <th>Name</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>0</code></td>
+                        <td><code>Walkable</code></td>
+                        <td>Free movement cell</td>
+                    </tr>
+                    <tr>
+                        <td><code>1</code></td>
+                        <td><code>Blocked</code></td>
+                        <td>Mountain, river, bridge edge, building, or generic blocker</td>
+                    </tr>
+                    <tr>
+                        <td><code>2</code></td>
+                        <td><code>Tree</code></td>
+                        <td>Harvestable tree blocker</td>
+                    </tr>
+                    <tr>
+                        <td><code>3</code></td>
+                        <td><code>Boulder</code></td>
+                        <td>Harvestable boulder blocker</td>
+                    </tr>
+                    <tr>
+                        <td><code>4</code></td>
+                        <td><code>IronOre</code></td>
+                        <td>Harvestable iron ore blocker</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>Only <code>Walkable</code> is traversable. Resource cells are intentionally blocked but named, because the collect cursor must know whether the blocked thing is a tree, boulder, or iron ore.</p>
             <h2 id="world-space-and-grid-space">World Space And Grid Space</h2>
             <p>Units move in world space with floating-point positions. Pathfinding runs in grid space with integer cells.</p>
@@ -284,30 +304,32 @@ CommandService::world_to_grid()
 grid cell:       ( 112, 91 )</code></pre>
             </div>
             <p><code>CommandService</code> owns this conversion. Gameplay code should not independently round world coordinates and query terrain/pathfinding by hand. Use the shared query functions instead:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Function</td>
-                    <td>Use</td>
-                </tr>
-                <tr>
-                    <td><code>is_grid_walkable(point)</code></td>
-                    <td>Test one grid cell against the current navigation grid.</td>
-                </tr>
-                <tr>
-                    <td><code>is_world_position_walkable(position)</code></td>
-                    <td>Convert world to grid, then test.</td>
-                </tr>
-                <tr>
-                    <td><code>find_nearest_walkable_grid(origin, max_search_radius)</code></td>
-                    <td>Find a nearby valid cell without changing the grid.</td>
-                </tr>
-                <tr>
-                    <td><code>snap_to_walkable_ground(position, max_search_radius)</code></td>
-                    <td>Snap orders, exits, formation slots, and delivery positions.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>is_grid_walkable(point)</code></td>
+                        <td>Test one grid cell against the current navigation grid.</td>
+                    </tr>
+                    <tr>
+                        <td><code>is_world_position_walkable(position)</code></td>
+                        <td>Convert world to grid, then test.</td>
+                    </tr>
+                    <tr>
+                        <td><code>find_nearest_walkable_grid(origin, max_search_radius)</code></td>
+                        <td>Find a nearby valid cell without changing the grid.</td>
+                    </tr>
+                    <tr>
+                        <td><code>snap_to_walkable_ground(position, max_search_radius)</code></td>
+                        <td>Snap orders, exits, formation slots, and delivery positions.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>This boundary matters. <code>Pathfinding</code> owns cell values and A*. <code>CommandService</code> owns coordinate conversion and high-level navigation queries. Movement, formations, production, resource gathering, and UI helpers call <code>CommandService</code>.</p>
             <h2 id="building-the-grid">Building The Grid</h2>
             <p>Every full rebuild starts with an all-free grid, then layers blockers in a fixed order:</p>
@@ -409,7 +431,7 @@ Legend:
             <p><code>CellValue::Forest</code> marks the open ground inside an authored forest (<code>forests</code> in the map
                 file). It is the one cell value whose walkability depends on who is asking:</p>
             <div>
-                <pre><code class="language-clike">enum class Passability : std::uint8_t { Light, Heavy };</code></pre>
+                <pre><code class="language-cpp">enum class Passability : std::uint8_t { Light, Heavy };</code></pre>
             </div>
             <p><code>Light</code> treats <code>Forest</code> as walkable; <code>Heavy</code> does not. Everything else — <code>Walkable</code>,
                 <code>Blocked</code>, <code>Tree</code>, <code>Boulder</code>, <code>IronOre</code> — reads the same for both. <code>find_path</code>,
@@ -466,38 +488,40 @@ Result:
   Rendering, picking, targeting, AI, and combat can see an enemy entity there.</code></pre>
             </div>
             <p>The game distinguishes enemy troops from empty ground through the entity layer:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Question</td>
-                    <td>System</td>
-                </tr>
-                <tr>
-                    <td>Can I path through this terrain cell?</td>
-                    <td><code>Pathfinding::NavigationGrid</code></td>
-                </tr>
-                <tr>
-                    <td>Is an enemy standing here?</td>
-                    <td><code>World</code> entity queries and <code>UnitComponent::owner_id</code></td>
-                </tr>
-                <tr>
-                    <td>Is that enemy visible to me?</td>
-                    <td><code>VisibilityService</code></td>
-                </tr>
-                <tr>
-                    <td>Did I right-click an enemy?</td>
-                    <td><code>PickingService::pick_unit_first()</code></td>
-                </tr>
-                <tr>
-                    <td>Should AI react to this enemy?</td>
-                    <td><code>AISnapshotBuilder::visible_enemies</code></td>
-                </tr>
-                <tr>
-                    <td>Should the renderer draw this enemy?</td>
-                    <td><code>SceneRenderer</code> + fog visibility</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>System</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Can I path through this terrain cell?</td>
+                        <td><code>Pathfinding::NavigationGrid</code></td>
+                    </tr>
+                    <tr>
+                        <td>Is an enemy standing here?</td>
+                        <td><code>World</code> entity queries and <code>UnitComponent::owner_id</code></td>
+                    </tr>
+                    <tr>
+                        <td>Is that enemy visible to me?</td>
+                        <td><code>VisibilityService</code></td>
+                    </tr>
+                    <tr>
+                        <td>Did I right-click an enemy?</td>
+                        <td><code>PickingService::pick_unit_first()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Should AI react to this enemy?</td>
+                        <td><code>AISnapshotBuilder::visible_enemies</code></td>
+                    </tr>
+                    <tr>
+                        <td>Should the renderer draw this enemy?</td>
+                        <td><code>SceneRenderer</code> + fog visibility</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>This gives us the missing distinction without polluting pathfinding:</p>
             <div>
                 <pre><code class="language-text">Cell state:
@@ -527,25 +551,27 @@ Entity/visibility systems see:
             <h2 id="what-keeps-bodies-out-of-each-other">What Keeps Bodies Out Of Each Other</h2>
             <p>Since the grid knows nothing about units, something beside it has to. Two stages
                 do, and they are deliberately kept apart:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Stage</td>
-                    <td>File</td>
-                    <td>Job</td>
-                </tr>
-                <tr>
-                    <td><code>LocalAvoidanceSystem</code></td>
-                    <td><code>game/systems/local_avoidance_system.cpp</code></td>
-                    <td>Traffic. Decides how fast a body may go and whether it leans aside. Moves nothing.</td>
-                </tr>
-                <tr>
-                    <td><code>BodyContactSystem</code></td>
-                    <td><code>game/systems/body_contact_system.cpp</code></td>
-                    <td>Contact. Pulls bodies that ended up inside each other apart. The only authority on overlap.</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Stage</th>
+                        <th>File</th>
+                        <th>Job</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>LocalAvoidanceSystem</code></td>
+                        <td><code>game/systems/local_avoidance_system.cpp</code></td>
+                        <td>Traffic. Decides how fast a body may go and whether it leans aside. Moves nothing.</td>
+                    </tr>
+                    <tr>
+                        <td><code>BodyContactSystem</code></td>
+                        <td><code>game/systems/body_contact_system.cpp</code></td>
+                        <td>Contact. Pulls bodies that ended up inside each other apart. The only authority on overlap.</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><code>MovementPipeline</code> runs route following, then avoidance, then the motor, then
                 contact, then the traversal layout — contact after the motor, because only then
                 is it known where bodies actually ended up.</p>
@@ -609,30 +635,32 @@ Entity/visibility systems see:
             <p>There is one traversal model, and the camera the player is looking through does
                 not select between variants of it. In RPG mode the player replaces the route
                 follower and nothing else:</p>
-            <p>
             <table>
-                <tr>
-                    <td>question</td>
-                    <td>answered by</td>
-                </tr>
-                <tr>
-                    <td>where does the body want to go?</td>
-                    <td>the player, via <code>CommanderControlController</code></td>
-                </tr>
-                <tr>
-                    <td>how wide is the body, what can it cross?</td>
-                    <td><code>Game::Systems::body_profile_for()</code></td>
-                </tr>
-                <tr>
-                    <td>may it stand here? may it step there?</td>
-                    <td><code>Walkability::can_stand</code> / <code>can_traverse</code></td>
-                </tr>
-                <tr>
-                    <td>what happens when bodies overlap?</td>
-                    <td><code>BodyContactSystem</code></td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>question</th>
+                        <th>answered by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>where does the body want to go?</td>
+                        <td>the player, via <code>CommanderControlController</code></td>
+                    </tr>
+                    <tr>
+                        <td>how wide is the body, what can it cross?</td>
+                        <td><code>Game::Systems::body_profile_for()</code></td>
+                    </tr>
+                    <tr>
+                        <td>may it stand here? may it step there?</td>
+                        <td><code>Walkability::can_stand</code> / <code>can_traverse</code></td>
+                    </tr>
+                    <tr>
+                        <td>what happens when bodies overlap?</td>
+                        <td><code>BodyContactSystem</code></td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><code>body_profile_for()</code> (<code>game/systems/body_profile.cpp</code>) is the only place a body's
                 radius, passability and facade rule are derived from its entity. <code>MovementSystem</code>,
                 <code>BodyContactSystem</code> and <code>App::Core::CommanderMotor</code> all call it, so an RPG
@@ -860,13 +888,65 @@ diagonal step        14      (a diagonal really is longer)
                 <li><strong>Straightness</strong> breaks the remaining ties, so a staircase between two points
                     becomes the straight line a player expects rather than an arbitrary zigzag.</li>
             </ul>
-            <h3 id="is-this-straight-line-clear-">Is this straight line clear?</h3>
+            <h3 id="is-this-straight-line-clear">Is this straight line clear?</h3>
             <p><code>is_world_segment_walkable</code> answers the question movement asks before taking a
                 shortcut, and it answers it with the grid: it walks every cell the segment
                 actually touches and refuses a diagonal that squeezes between two blocked
                 corners — the same rule the search applies to its own neighbours. Sampling the
                 line at fixed intervals is a second, weaker rule that steps over the thin corner
                 of an obstacle and hands out a shortcut through a wall that has no gap in it.</p>
+            <h3 id="one-clearance-for-every-hard-walkability-test">One clearance for every hard walkability test</h3>
+            <p>A formation carries two radii. <code>formation_navigation_clearance()</code> is the lateral
+                half-extent of the whole body (3 m or more for a wide line) and is what A<em> <em>costs</em>
+                    against: cells within that distance of an obstacle get an overlap penalty so a wide
+                    body prefers the middle of a street. <code>Pathfinding::routing_clearance()</code> (the same
+                    value capped at <code>k_person_body_radius</code>, 0.34 m) is what A</em> <em>blocks</em> against: a cell is
+                open when one man fits, and the lane fitter folds the formation into whatever width
+                the corridor actually has.</p>
+            <p>Every yes/no walkability test that decides whether a single body needs a route
+                uses <code>routing_clearance()</code>: the direct-line test in
+                <code>MovementSystem::assign_navigation_target</code> (<code>is_direct_path_walkable</code>), the
+                formation-move and slot-follow direct tests, and the taut-pull. The corridor
+                planner is the deliberate exception: <code>RouteCorridorPlanner::fit_lane</code> places a
+                lane for a whole formation and folds it toward the centreline when the street
+                is too narrow for the full lateral offset, so its position and segment tests
+                must use the formation clearance — with the one-man radius the lanes stop
+                folding, a squad gets pressed into a house wall and never sets off
+                (<code>MovementPaceTest.AnArmyReorderedThroughATownHoldsPace</code> pins this). The reason
+                for the single-body rule is a feedback loop that was measured, not imagined. When the direct test was made with the full formation
+                clearance, any goal within one formation width of a map edge, a wall, or a tree
+                failed it, so the order fell through to a corridor plan whose A<em> (blocking on
+                    the one-man radius) found a trivial straight path, the taut-pull reduced it to
+                    one waypoint, and the next chase re-issue a few ticks later found no
+                    multi-waypoint route to keep and planned again. On <code>sim_benchmark --units 1000</code>
+                    that was 0.22 A</em> searches per unit per tick, 2.3 cells expanded per unit per
+                tick, and nearly every "group" corridor plan being bought by a single unit.
+                With one rule for the hard tests the same run makes 0.004 searches per unit
+                per tick, all of them from units whose target genuinely has no straight line.
+            </p>
+            <p>The remaining searches on that benchmark are mostly <code>melee_walk_around_length</code>,
+                the detour-length query the opportunity scan asks before it lets an idle unit
+                engage an enemy whose straight line crosses an obstacle. That query is a
+                "how far" question, not a "which corridor" question, so it searches with the
+                routing clearance rather than the formation clearance: with the formation
+                clearance the overlap costing (<code>k_rigid_overlap_cost</code> over a
+                <code>k_max_cost_clearance</code> band) treats a 3 m strip along every obstacle and the map
+                edge as nearly impassable and expands about 150 cells per search; with the
+                one-man radius the same detours take about 80. It also asks <code>can_reach()</code> first,
+                so a target in another connected region, or off the grid, is "walled off"
+                without exhausting the attacker's whole region in A*; the only behaviour that
+                changes is an enemy standing on an unwalkable cell, which now counts as walled
+                off rather than reachable through the nearest open cell (pairs within
+                <code>k_contact_separation_exemption</code> never reach this test anyway).
+            </p>
+            <p>The path cache holds <code>k_max_cached_paths</code> = 2048 entries. At 256 the 1000-unit
+                benchmark filled it and cold-evicted a quarter of it five times in 240 ticks
+                (320 evictions) while locked melee pairs re-asked the walled-off question every
+                rescan; at 2048 both fixtures run with zero evictions and the 2000-unit run
+                answers 62% of its 2816 searches from the cache. The 1000-unit hit and miss
+                counts do not move with the larger cache, because its remaining searches are
+                genuinely new start/goal pairs. Each entry is a short cell list plus a bounding
+                box, so the whole cache is well under a megabyte.</p>
             <h3 id="the-path-is-pulled-taut-before-it-is-followed">The path is pulled taut before it is followed</h3>
             <p>An 8-connected grid path is a staircase: a goal 27 degrees off-axis comes back
                 as a run of diagonal cells, then a run of straight cells, then diagonals again.
@@ -894,6 +974,18 @@ diagonal step        14      (a diagonal really is longer)
                 waypoint and goal onto the new position instead of re-pathing. A goal that has
                 moved further, or a unit without an active multi-waypoint route, re-paths as
                 before.</p>
+            <h3 id="clearance-checks-at-cell-centres">Clearance checks at cell centres</h3>
+            <p>A<em> asks, for every neighbour it expands, whether the cell centre is walkable with the
+                    one-man routing clearance (<code>routing_clearance()</code>, capped at <code>k_person_body_radius</code> =
+                    0.34 m). A foreign cell is never closer to a point than one cell minus the point's offset
+                    from its own cell centre, minus half a cell. So when the radius is below that bound no
+                    neighbouring cell can block, and <code>is_world_position_walkable</code> returns straight after the
+                    centre-cell test instead of scanning its 3x3 box. At a cell centre with 1 m cells the
+                    bound is 0.5 m, so every A</em> node check takes this path, and <code>find_path_internal</code> calls
+                <code>is_walkable</code> directly when <code>centre_clear_of_neighbours</code> holds. The answer is identical;
+                <code>ClearanceEarlyOutAgreesWithTheFullCellScan</code> pins that against a brute-force scan. On
+                Zama this took the simulation from about 9 ms to 3.6 ms a frame on average.
+            </p>
             <h2 id="formations-and-group-movement">Formations And Group Movement</h2>
             <p>The navigation grid is unit-agnostic. Formations add only initial target offsets:</p>
             <div>
@@ -979,34 +1071,36 @@ Recovery exception:
             <p>Recovery does not use stop reasons, cooldowns, pending path requests, or a separate recovery state. It assigns ordinary movement target/path data on the unit.</p>
             <h2 id="animated-but-not-progressing">Animated But Not Progressing</h2>
             <p>The current system is leaner, but a unit can still appear to be "moving forever" if animation state and physical progress disagree. That is possible because these are separate facts:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Fact</td>
-                    <td>Owner</td>
-                </tr>
-                <tr>
-                    <td>Unit has active movement target/path</td>
-                    <td><code>MovementComponent</code></td>
-                </tr>
-                <tr>
-                    <td>Unit has non-zero velocity</td>
-                    <td><code>MovementSystem</code></td>
-                </tr>
-                <tr>
-                    <td>Unit actually changed world position this frame</td>
-                    <td><code>World</code> motion presentation snapshot</td>
-                </tr>
-                <tr>
-                    <td>Unit is on a walkable cell</td>
-                    <td><code>CommandService</code> / <code>Pathfinding</code></td>
-                </tr>
-                <tr>
-                    <td>Unit is visually playing walk animation</td>
-                    <td>render motion presentation</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Fact</th>
+                        <th>Owner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Unit has active movement target/path</td>
+                        <td><code>MovementComponent</code></td>
+                    </tr>
+                    <tr>
+                        <td>Unit has non-zero velocity</td>
+                        <td><code>MovementSystem</code></td>
+                    </tr>
+                    <tr>
+                        <td>Unit actually changed world position this frame</td>
+                        <td><code>World</code> motion presentation snapshot</td>
+                    </tr>
+                    <tr>
+                        <td>Unit is on a walkable cell</td>
+                        <td><code>CommandService</code> / <code>Pathfinding</code></td>
+                    </tr>
+                    <tr>
+                        <td>Unit is visually playing walk animation</td>
+                        <td>render motion presentation</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>The dangerous state is:</p>
             <div>
                 <pre><code class="language-text">has_target = true
@@ -1027,54 +1121,59 @@ recovery does not produce a different reachable cell</code></pre>
             <h3 id="the-stuck-clock">The Stuck Clock</h3>
             <p><code>RouteFollowSystem::track_objective_stall</code> runs before anything else in <code>follow()</code> and owns <code>MovementStallFacts</code> on <code>MovementFactsComponent</code>. It exists because <code>MovementProgressFacts::no_progress_seconds</code> is measured against the current route and therefore restarts every time anything repaths: a unit that is replanned once a second can stand still forever without ever tripping it.</p>
             <p>Two clocks run instead, and neither can be reset by route churn, order churn, or an AI re-issuing the same march:</p>
-            <p>
             <table>
-                <tr>
-                    <td>Clock</td>
-                    <td>Measured against</td>
-                    <td>Catches</td>
-                </tr>
-                <tr>
-                    <td><code>stalled_seconds</code></td>
-                    <td>net world displacement over a rolling one-second window</td>
-                    <td>wedged in place</td>
-                </tr>
-                <tr>
-                    <td><code>no_closer_seconds</code></td>
-                    <td>the closest the unit has ever come to its objective</td>
-                    <td>walking laps</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Clock</th>
+                        <th>Measured against</th>
+                        <th>Catches</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>stalled_seconds</code></td>
+                        <td>net world displacement over a rolling one-second window</td>
+                        <td>wedged in place</td>
+                    </tr>
+                    <tr>
+                        <td><code>no_closer_seconds</code></td>
+                        <td>the closest the unit has ever come to its objective</td>
+                        <td>walking laps</td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p>The objective is the <em>requested</em> goal, never the resolved one. Both clocks reset when the objective itself moves by more than 1.5 m, when a new order arrives, and when the unit is gated out of route following -- melee lock, hold mode, direct control and builder bypass mean standing still is the order, so the clock is not the unit's to run.</p>
             <h3 id="the-recovery-ladder">The Recovery Ladder</h3>
             <p>Whichever clock is further along picks the rung, and a rung only ever fires on the way up. Escalation costs a full rung interval of going nowhere (2.5 s of standstill, or 9 s of never getting closer), so a unit that starts moving again de-escalates without acting.</p>
-            <p>
             <table>
-                <tr>
-                    <td>Rung</td>
-                    <td>Action</td>
-                </tr>
-                <tr>
-                    <td><code>Replan</code></td>
-                    <td>recompute the route to the requested goal</td>
-                </tr>
-                <tr>
-                    <td><code>Sidestep</code></td>
-                    <td>local recovery move to a nearby free cell, then continue</td>
-                </tr>
-                <tr>
-                    <td><code>RelaxFormation</code></td>
-                    <td>drop navigation clearance to 35% and replan, so a block can pass as a column</td>
-                </tr>
-                <tr>
-                    <td><code>Abandoned</code></td>
-                    <td>stop, clear the order intent, state <code>Unreachable</code>, latch <code>objective_abandoned</code></td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Rung</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Replan</code></td>
+                        <td>recompute the route to the requested goal</td>
+                    </tr>
+                    <tr>
+                        <td><code>Sidestep</code></td>
+                        <td>local recovery move to a nearby free cell, then continue</td>
+                    </tr>
+                    <tr>
+                        <td><code>RelaxFormation</code></td>
+                        <td>drop navigation clearance to 35% and replan, so a block can pass as a column</td>
+                    </tr>
+                    <tr>
+                        <td><code>Abandoned</code></td>
+                        <td>stop, clear the order intent, state <code>Unreachable</code>, latch <code>objective_abandoned</code></td>
+                    </tr>
+                </tbody>
             </table>
-            </p>
             <p><code>RouteFollowSystem::abandon_objective</code> is the single implementation of the last rung, shared with the <code>Recovering</code> -&gt; <code>Unreachable</code> path in <code>update_progress</code>, so there is exactly one way an objective is given up on and exactly one place that records it.</p>
             <p>Two rules keep this from oscillating. Recovery may not edit the requested goal: a sidestep resolves <code>goal_x/goal_y</code> to a cell metres away, and repathing against <em>that</em> is how a unit forgets where it was sent and reports <code>Arrived</code> somewhere it was never ordered to. And before an objective is written off, reachability is re-checked at the relaxed frontage -- a gate too narrow for a block is still a gate, and refusing it is how a formation ends up standing outside its own objective.</p>
+            <p>An order that lands on ground the unit may not stand on -- a hill slope, a wall, water -- is resolved to standable ground on the unit's own side before any route is planned (<code>resolve_walkable_target_toward</code>), and it is resolved the same way for a single order and for every member of a group order, so a group lane never ends on the slope itself and the member's requested goal is the point it can actually reach.</p>
             <h3 id="what-the-ai-does-with-it">What The AI Does With It</h3>
             <p><code>MovementSnapshot</code> carries the stall facts to the AI worker. A unit that is going nowhere counts as idle rather than busy in the census -- counting it as busy is what let a wedged formation sit out the rest of a match -- and <code>Game::Systems::AI::update_stall_recovery</code> gives it a small fixed number of approaches from alternating sides before standing it down from its task and dropping it from the wave, so the next planning cycle gives it something else to do. Workers are out of scope there: a builder at a site holds a movement target without moving as a matter of course.</p>
             <h3 id="still-open">Still Open</h3>
@@ -1238,23 +1337,33 @@ Only cells inside the brackets are recomputed.</code></pre>
                 <h2>Follow</h2>
                 <ul class="social-media">
                     <li>
-                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
                         <span class="social-label">YouTube</span>
                     </li>
                     <li>
-                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
                         <span class="social-label">LinkedIn</span>
                     </li>
                     <li>
-                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
                         <span class="social-label">Instagram</span>
                     </li>
                     <li>
-                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
                         <span class="social-label">GitHub</span>
                     </li>
                 </ul>
-                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+                <img alt="" aria-hidden="true" class="footer-mark" src="/resources/brand/symbol.webp" />
             </div>
         </div>
         <div class="footer-bottom">
@@ -1271,21 +1380,5 @@ Only cells inside the brackets are recomputed.</code></pre>
         <div class="spinner"></div>
     </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
 
 </html>
