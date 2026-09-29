@@ -71,11 +71,24 @@ ARTICLE_PATHS: Dict[tuple, Path] = {}
 
 CODE_PLACEHOLDER = "CODEBLOCKPLACEHOLDER{:04d}END"
 MATH_PLACEHOLDER = "MATHPLACEHOLDER{:04d}END"
-DISPLAY_MATH_PATTERN = re.compile(r"\$\$[^`]+?\$\$", re.DOTALL)
-INLINE_MATH_PATTERN = re.compile(r"(?<![\\$\w])\$(?=\S)[^$\n`]+?(?<=\S)\$(?![\w$])")
-MATH_PRESENCE_PATTERN = re.compile(
-    r"\$\$|\\\(|(?<![\\$\w])\$(?=\S)[^$\n<]+?(?<=\S)\$(?![\w$])"
+DISPLAY_MATH_PATTERN = re.compile(
+    r"\$\$[^`]+?\$\$|(?<!\\)\\\[.*?(?<!\\)\\\]", re.DOTALL
 )
+INLINE_MATH_PATTERN = re.compile(
+    r"(?<![\\$\w])\$(?=\S)[^$\n`]+?(?<=\S)\$(?![\w$])"
+    r"|(?<!\\)\\\([^`\n]+?(?<!\\)\\\)"
+)
+MATH_PRESENCE_PATTERN = re.compile(
+    r"\$\$|(?<!\\)\\\(|(?<!\\)\\\[|"
+    r"(?<![\\$\w])\$(?=\S)[^$\n<]+?(?<=\S)\$(?![\w$])"
+)
+DOUBLE_ESCAPED_TEX_COMMAND_PATTERN = re.compile(
+    r"(?<!\\)\\\\(?:frac|dfrac|tfrac|left|right|bigl|bigr|Bigl|Bigr|xi|"
+    r"theta|begin|end|text|mathrm|mathcal|mathbb|sum|prod|sqrt|boxed)\b"
+)
+LEADING_TEX_ACCENT_PATTERN = re.compile(r"^\s*\\=(?:\s|$)")
+NESTED_TEX_DISPLAY_DELIMITER_PATTERN = re.compile(r"(?<!\\)\\[\[\]]")
+CODE_FENCE_PATTERN = re.compile(r"```.*?```", re.DOTALL)
 
 LANGUAGE_ALIASES = {
     "c++": "cpp",
@@ -155,6 +168,57 @@ class MarkdownProcessor:
         markdown_text = DISPLAY_MATH_PATTERN.sub(stash, markdown_text)
         markdown_text = INLINE_MATH_PATTERN.sub(stash, markdown_text)
         return markdown_text, formulas
+
+    @classmethod
+    def find_math_source_issues(cls, markdown_text: str) -> List[tuple[int, str]]:
+        """Find common malformed TeX patterns before a site rebuild starts."""
+        # Preserve newlines so reported source line numbers remain accurate.
+        source = CODE_FENCE_PATTERN.sub(
+            lambda match: "\n" * match.group(0).count("\n"), markdown_text
+        )
+        matches = []
+        for pattern in (DISPLAY_MATH_PATTERN, INLINE_MATH_PATTERN):
+            matches.extend(pattern.finditer(source))
+
+        issues = []
+        for match in sorted(matches, key=lambda item: item.start()):
+            formula = match.group(0)
+            line_number = source.count("\n", 0, match.start()) + 1
+            if formula.startswith("$$"):
+                body = formula[2:-2]
+            elif formula.startswith("$"):
+                body = formula[1:-1]
+            elif formula.startswith((r"\[", r"\(")):
+                body = formula[2:-2]
+            else:
+                continue
+
+            if NESTED_TEX_DISPLAY_DELIMITER_PATTERN.search(body):
+                issues.append(
+                    (line_number, "display delimiter used inside another math expression")
+                )
+            if DOUBLE_ESCAPED_TEX_COMMAND_PATTERN.search(body):
+                issues.append((line_number, "doubled backslash before a TeX command"))
+            if LEADING_TEX_ACCENT_PATTERN.search(body):
+                issues.append(
+                    (line_number, "accent command used where an equation should start")
+                )
+
+        return issues
+
+    @classmethod
+    def validate_math_sources(cls, urls: List["UrlData"], texts: Dict[str, str]) -> None:
+        """Stop before cleaning generated pages if imported TeX looks malformed."""
+        issues = []
+        for url_data in urls:
+            for line_number, message in cls.find_math_source_issues(texts[url_data.url]):
+                issues.append(f"{url_data.url}:{line_number}: {message}")
+        if issues:
+            details = "\n".join(f"  - {issue}" for issue in issues)
+            raise ValueError(
+                "Malformed math found in Markdown sources; existing article output "
+                f"was left untouched:\n{details}"
+            )
 
     @classmethod
     def convert_markdown_to_html(cls, markdown_text: str) -> str:
@@ -382,7 +446,7 @@ class HtmlEnhancer:
                 'jax: ["input/TeX", "output/HTML-CSS"],',
                 'extensions: ["tex2jax.js"],',
                 '"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },',
-                'tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },',
+                r'tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },',
                 'TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },',
                 'messageStyle: "none"',
                 "});",
@@ -705,6 +769,7 @@ def main():
     global SOURCE_DATES, ARTICLE_PATHS
     urls = read_urls()
     texts = fetch_markdown(urls)
+    MarkdownProcessor.validate_math_sources(urls, texts)
 
     if not RANDOM_DATE_RANGE:
         SOURCE_DATES = source_dates.upstream_dates(url.url for url in urls)

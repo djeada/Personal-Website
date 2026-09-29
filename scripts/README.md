@@ -16,7 +16,7 @@ This dir contains a set of Python scripts designed to build and maintain a perso
 
 - `generate_article_list.py`: Compiles a list of all articles or blog posts rendered on a specific section of the website (blog).
 
-- `generate_from_markdown.py`: Converts the Markdown notes into article pages. It fetches every source first (with retries), stamps each article with the date of its last upstream commit (see `source_dates.py`), turns links between notes into links between articles, and only loads Prism and MathJax on pages with code or math.
+- `generate_from_markdown.py`: Converts the Markdown notes into article pages. It fetches every source first (with retries), checks common malformed TeX escapes before clearing generated articles, stamps each article with the date of its last upstream commit (see `source_dates.py`), turns links between notes into links between articles, and only loads Prism and MathJax on pages with code or math. Math is protected during Markdown conversion and supports `$...$`, `$$...$$`, `\(...\)`, and `\[...\]`.
 
 - `source_dates.py`: Keeps blobless clones of the note repositories in `scripts/.source-cache/` (git-ignored) and reads the last commit date of each markdown file. Articles only show a new "Last modified" date when their source actually changed.
 
