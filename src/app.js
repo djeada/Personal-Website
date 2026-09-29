@@ -885,3 +885,40 @@ function initBackToTop() {
 
 
 document.addEventListener("DOMContentLoaded", main);
+// Keep the full directory available when JavaScript is disabled.
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('tool-filters');
+    if (!form) return;
+    const query = document.getElementById('tool-query');
+    const category = document.getElementById('tool-category-filter');
+    const status = document.getElementById('tool-results');
+    const groups = Array.from(document.querySelectorAll('.tool-category')).map(group => ({
+        group,
+        name: group.querySelector('h2').textContent.trim(),
+        initiallyOpen: group.open,
+        cards: Array.from(group.querySelectorAll('.tool-card')).map(card => ({ card, text: card.textContent.toLocaleLowerCase() }))
+    }));
+    groups.forEach(({ name }) => category.add(new Option(name, name)));
+    function filter() {
+        const terms = query.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+        const filtering = terms.length > 0 || category.value !== '';
+        let count = 0;
+        groups.forEach(({ group, name, cards, initiallyOpen }) => {
+            let visible = 0;
+            cards.forEach(({ card, text }) => {
+                card.hidden = (category.value !== '' && category.value !== name) || !terms.every(term => text.includes(term));
+                if (!card.hidden) visible++;
+            });
+            count += visible;
+            group.hidden = visible === 0;
+            group.open = filtering ? visible > 0 : initiallyOpen;
+        });
+        status.textContent = count === 0 ? 'No tools found. Try a different search or clear the filters.' : `${count} tool${count === 1 ? '' : 's'} found.`;
+    }
+    form.hidden = false;
+    form.addEventListener('submit', event => event.preventDefault());
+    query.addEventListener('input', filter);
+    category.addEventListener('change', filter);
+    form.addEventListener('reset', () => { query.value = ''; category.value = ''; filter(); });
+    filter();
+});
