@@ -140,6 +140,7 @@ def run_all():
     run_script("./format.sh", [])
 
     run_script("python3 bundle_css.py", [])
+    run_script("python3 improve_site_experience.py", [])
     logging.info("All scripts executed successfully.")
 
 

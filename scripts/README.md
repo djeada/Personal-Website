@@ -6,6 +6,8 @@ This dir contains a set of Python scripts designed to build and maintain a perso
 
 - `apply_common_elements.py`: Integrates common elements (like headers and footers) across all HTML files in the website, ensuring consistency in design and navigation.
 
+- `improve_site_experience.py`: Runs last in the build to apply descriptive title overrides, synchronized metadata, active navigation, skip links and main landmarks, breadcrumbs, nearby article recommendations, local image dimensions, and deferred Prism scripts. It preserves existing tool container IDs and is safe to run repeatedly. Run `python scripts/improve_site_experience.py` from the repository root after standalone generation commands.
+
 - `bundle_css.py`: Consolidates multiple CSS files from the `resources/assets` directory into a single `style.css` file. This improves page load times by reducing the number of HTTP requests.
 
 - `clean_output_dirs.py`: Clears the generated article directories. `generate_from_markdown.py` calls it only after every markdown source downloaded successfully, so a failed fetch never leaves the site half-built.
