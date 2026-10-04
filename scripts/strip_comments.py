@@ -22,6 +22,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 
 EXCLUDED_DIRS = {"reels", ".source-cache", "node_modules"}
+EXCLUDED_FILES = {"judge_harness.py"}
 
 
 def strip_python_comments(content: str) -> str:
@@ -212,7 +213,8 @@ def find_files(directory: Path, extension: str) -> List[Path]:
     return [
         path
         for path in directory.rglob(f"*{extension}")
-        if not any(part in EXCLUDED_DIRS for part in path.relative_to(directory).parts)
+        if path.name not in EXCLUDED_FILES
+        and not any(part in EXCLUDED_DIRS for part in path.relative_to(directory).parts)
     ]
 
 
