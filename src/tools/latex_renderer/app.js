@@ -39,6 +39,7 @@ class LatexRenderer {
         this.saveTimeout = null;
         this.renderVersion = 0;
         this.mathJaxLoadPromise = null;
+        this.typesetQueue = Promise.resolve();
         this.storageKey = 'latex_renderer_content_v2';
         this.legacyStorageKey = 'latex_renderer_content_v1';
         this.splitRatio = 0.5;
@@ -138,7 +139,7 @@ class LatexRenderer {
                 if (!window.MathJax || typeof window.MathJax.typesetPromise !== 'function') {
                     throw new Error('MathJax is not available');
                 }
-                return window.MathJax.typesetPromise([this.output]);
+                return this.typesetElements([this.output]);
             })
             .then(() => {
                 if (renderId !== this.renderVersion) return;
@@ -227,6 +228,12 @@ class LatexRenderer {
         });
 
         return this.mathJaxLoadPromise;
+    }
+
+    typesetElements(elements) {
+        const pending = this.typesetQueue.then(() => window.MathJax.typesetPromise(elements));
+        this.typesetQueue = pending.catch(() => {});
+        return pending;
     }
 
     renderSourceContent(source) {
@@ -1107,6 +1114,17 @@ class LatexRenderer {
         if (!this.quickRefList) return;
 
         this.quickRefItems = [...this.quickRefList.querySelectorAll('.latex-snippet')].map((element) => {
+            const searchText = element.textContent.toLowerCase();
+            const source = document.createElement('span');
+            source.className = 'snippet-source';
+            source.append(...element.childNodes);
+
+            const preview = document.createElement('span');
+            preview.className = 'snippet-preview';
+            preview.setAttribute('aria-hidden', 'true');
+            preview.textContent = this.prepareMathJaxSource(element.dataset.snippet);
+            element.append(source, preview);
+
             element.setAttribute('tabindex', '0');
             element.setAttribute('role', 'button');
             element.addEventListener('click', () => this.insertSnippet(element.dataset.snippet));
@@ -1121,12 +1139,20 @@ class LatexRenderer {
                 element,
                 row: element.closest('li'),
                 column: element.closest('.help-column'),
-                text: element.textContent.toLowerCase()
+                text: searchText
             };
         });
 
         this.quickRefFilter?.addEventListener('input', () => this.filterQuickRef());
         this.updateQuickRefCount();
+        this.waitForMathJax()
+            .then(() => this.typesetElements([this.quickRefList]))
+            .catch(() => {
+                // Keep the source commands usable if the rendering library is unavailable.
+                this.quickRefList.querySelectorAll('.snippet-preview').forEach((preview) => {
+                    preview.hidden = true;
+                });
+            });
     }
 
     insertSnippet(snippet) {
