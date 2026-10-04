@@ -2,6 +2,23 @@ const { test, expect } = require("@playwright/test");
 
 const tool = "/tools/strip_chatgpt_fluff/";
 
+for (const darkMode of [false, true]) {
+  test(`LaTeX annotation overlays stay transparent in ${darkMode ? "dark" : "light"} mode`, async ({ page, context }) => {
+    await context.addCookies([{ name: "darkMode", value: String(darkMode), domain: "127.0.0.1", path: "/" }]);
+    await page.goto("/tools/latex_renderer/", { waitUntil: "domcontentloaded" });
+
+    // Visibility depends on both annotation layers, even before MathJax loads.
+    const layers = page.locator("#latex-output .drawing-canvas");
+    await expect(layers).toHaveCount(2);
+    for (const layer of await layers.all()) {
+      await expect(layer).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(layer).toHaveCSS("background-image", "none");
+      await expect(layer).toHaveCSS("border-top-width", "0px");
+      await expect(layer).toHaveCSS("box-shadow", "none");
+    }
+  });
+}
+
 for (const viewport of [
   { name: "phone", width: 390, height: 844 },
   { name: "desktop", width: 1280, height: 800 },
