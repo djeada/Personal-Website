@@ -23,6 +23,43 @@ for (const viewport of [
   { name: "phone", width: 390, height: 844 },
   { name: "desktop", width: 1280, height: 800 },
 ]) {
+  test(`LaTeX diagnostics never shift the workspace on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/tools/latex_renderer/", { waitUntil: "domcontentloaded" });
+    const editor = page.locator("#latex-input");
+    const diagnostics = page.locator("#diagnostics-panel");
+    const workspaceBounds = () => page.locator("#split-container").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top + window.scrollY, height: rect.height, width: rect.width };
+    });
+    const originalBounds = await workspaceBounds();
+
+    await editor.fill(String.raw`$$\frac{a}{`);
+    await expect(page.locator("#diagnostics-count")).toHaveText("1 error · 1 warning");
+    await expect(diagnostics).not.toHaveAttribute("open");
+    await expect(page.locator("#diagnostics li").first()).not.toBeVisible();
+    await expect(editor).toBeFocused();
+    expect(await workspaceBounds()).toEqual(originalBounds);
+    await expect(page.locator("#sr-status")).toBeEmpty();
+
+    // Opening the details is explicit, and typing never changes that choice.
+    await page.locator("#diagnostics-summary").press("Space");
+    await expect(page.locator("#diagnostics li.error")).toBeVisible();
+    expect(await workspaceBounds()).toEqual(originalBounds);
+
+    await editor.fill("{\n".repeat(16));
+    await expect(page.locator("#diagnostics-count")).toHaveText("12 warnings");
+    await expect(diagnostics).toHaveAttribute("open", "");
+    expect(await workspaceBounds()).toEqual(originalBounds);
+
+    await editor.fill("$$x^2$$");
+    await expect(page.locator("#diagnostics-count")).toHaveText("No issues");
+    await expect(page.locator("#diagnostics li")).toHaveCount(0);
+    expect(await workspaceBounds()).toEqual(originalBounds);
+    const pageWidth = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth }));
+    expect(pageWidth.width).toBeLessThanOrEqual(pageWidth.viewport + 1);
+  });
+
   test(`AI text cleaner follows the shared layout on ${viewport.name}`, async ({ page, context }) => {
     await context.addCookies([{ name: "darkMode", value: "true", domain: "127.0.0.1", path: "/" }]);
     await page.setViewportSize(viewport);
