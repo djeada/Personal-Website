@@ -7,6 +7,7 @@ class LatexRenderer {
         this.lineNumbers = document.getElementById('line-numbers');
         this.srStatus = document.getElementById('sr-status');
         this.diagnosticsEl = document.getElementById('diagnostics');
+        this.diagnosticsCount = document.getElementById('diagnostics-count');
 
         this.renderBtn = document.getElementById('render-btn');
         this.clearBtn = document.getElementById('clear-btn');
@@ -670,13 +671,20 @@ class LatexRenderer {
     renderDiagnostics(issues) {
         if (!this.diagnosticsEl) return;
 
-        this.diagnosticsEl.replaceChildren();
-        this.diagnosticsEl.className = 'diagnostics empty';
+        this.clearDiagnostics();
 
         if (!issues.length) return;
 
         const hasError = issues.some((issue) => issue.severity === 'error');
         this.diagnosticsEl.className = `diagnostics ${hasError ? 'has-error' : 'has-warning'}`;
+        if (this.diagnosticsCount) {
+            const errorCount = issues.filter((issue) => issue.severity === 'error').length;
+            const warningCount = issues.length - errorCount;
+            const counts = [];
+            if (errorCount) counts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`);
+            if (warningCount) counts.push(`${warningCount} warning${warningCount === 1 ? '' : 's'}`);
+            this.diagnosticsCount.textContent = counts.join(' · ');
+        }
 
         const list = document.createElement('ul');
         issues.forEach((issue) => {
@@ -695,14 +703,13 @@ class LatexRenderer {
         });
 
         this.diagnosticsEl.appendChild(list);
-        const first = issues.find((issue) => issue.severity === 'error') || issues[0];
-        this.announce(`${issues.length} diagnostic${issues.length === 1 ? '' : 's'}. First: ${first.message}`);
     }
 
     clearDiagnostics() {
         if (!this.diagnosticsEl) return;
         this.diagnosticsEl.replaceChildren();
         this.diagnosticsEl.className = 'diagnostics empty';
+        if (this.diagnosticsCount) this.diagnosticsCount.textContent = 'No issues';
     }
 
     showPlaceholder() {
