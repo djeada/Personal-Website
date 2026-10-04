@@ -1,0 +1,44 @@
+name: Course tasks
+
+on:
+  pull_request:
+    paths:
+      - "scripts/generate_course_tasks.py"
+      - "scripts/sync_course_tasks.py"
+      - "scripts/course_data/**"
+      - "src/courses/kurs_podstaw_pythona/**"
+      - "src/courses/python_intro/**"
+      - "src/resources/assets/19_course.css"
+      - "tests/test_course_tasks.py"
+      - "tests/course-tasks.spec.js"
+      - ".github/workflows/course-tasks.yml"
+  push:
+    branches: [master]
+    paths:
+      - "scripts/generate_course_tasks.py"
+      - "scripts/sync_course_tasks.py"
+      - "scripts/course_data/**"
+      - "src/courses/kurs_podstaw_pythona/**"
+      - "src/courses/python_intro/**"
+      - "tests/test_course_tasks.py"
+      - "tests/course-tasks.spec.js"
+
+jobs:
+  course-tasks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Snapshot, judge and generated pages are consistent
+        run: python3 -m unittest tests.test_course_tasks -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Tasks are solvable in the browser (Pyodide)
+        run: npx playwright test tests/course-tasks.spec.js

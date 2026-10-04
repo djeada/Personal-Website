@@ -7,7 +7,7 @@
     const TESTS = TASK.tests || [];
     const STARTER = TASK.starter || '';
     const PREFIX = 'pyk:';
-    const WORKER_URL = new URL('judge-worker.js', document.currentScript.src).href;
+    const WORKER_URL = new URL('judge-worker.js?v=' + encodeURIComponent(TASK.harness || 'dev'), document.currentScript.src).href;
     const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
     const RUN_SHORTCUT = IS_MAC ? 'Cmd+Enter' : 'Ctrl+Enter';
 
@@ -35,6 +35,25 @@
             }
         },
     };
+
+    function migrateProgress() {
+        const progress = TASK.progress;
+        if (!progress || store.get('version') === String(progress.version)) return;
+        const stale = (slug) => (progress.reset || []).some((prefix) => String(slug).indexOf(prefix) === 0);
+        try {
+            const list = JSON.parse(store.get('solved') || '[]');
+            if (Array.isArray(list)) store.set('solved', JSON.stringify(list.filter((slug) => !stale(slug))));
+            if (stale(store.get('last') || '')) store.remove('last');
+            Object.keys(window.localStorage).forEach((key) => {
+                if (key.indexOf(PREFIX + 'code:') === 0 && stale(key.slice(PREFIX.length + 5))) window.localStorage.removeItem(key);
+            });
+        } catch (err) {
+            return;
+        }
+        store.set('version', String(progress.version));
+    }
+
+    migrateProgress();
 
     function solvedSet() {
         try {
@@ -452,6 +471,36 @@
         return null;
     }
 
+    function sameLines(output, expected) {
+        return normalizeOutput(output).join('\n') === normalizeOutput(expected).join('\n');
+    }
+
+    function fileText(spec) {
+        if (spec && typeof spec === 'object') return String(spec.repeat || '').repeat(spec.times || 0);
+        return spec;
+    }
+
+    function fileDiffBlock(files) {
+        const wrap = el('div', 'pyk-io pyk-files');
+        wrap.appendChild(el('div', 'pyk-io-label', 'Różnice w plikach'));
+        const list = el('ul', 'pyk-file-list');
+        files.forEach((f) => {
+            const item = el('li');
+            item.appendChild(el('code', null, f.path));
+            let text;
+            if (f.expected === null) text = 'ten plik powinien zostać usunięty, ale nadal istnieje';
+            else if (f.got === null) text = 'brak pliku (oczekiwano, że program go utworzy)';
+            else text = 'inna treść niż oczekiwana';
+            item.appendChild(el('span', 'pyk-file-meta', text));
+            if (f.got !== null && f.expected !== null) {
+                item.appendChild(outputBlock('Treść pliku', f.got, fileText(f.expected)));
+            }
+            list.appendChild(item);
+        });
+        wrap.appendChild(list);
+        return wrap;
+    }
+
     function plural(n, one, few, many) {
         if (n === 1) return one;
         const d = n % 10;
@@ -546,10 +595,15 @@
         setBusy(true, 'tests');
         resetCards();
         summary('running', runtime === 'ready' ? 'Sprawdzanie rozwiązania…' : 'Ładowanie Pythona…', runtime === 'ready' ? null : 'Testy uruchomią się automatycznie, gdy Python będzie gotowy.');
-        const res = await execute(TESTS.map((t) => ({
-            input: t.input,
-            expected: t.expected
-        })));
+        const res = await execute(TESTS.map((t) => {
+            const job = {
+                input: t.input,
+                expected: t.expected
+            };
+            if (t.files) job.files = t.files;
+            if (t.expected_files) job.expected_files = t.expected_files;
+            return job;
+        }));
         setBusy(false);
         errorLine = null;
 
@@ -580,9 +634,12 @@
                     errorBlock(r.error),
                 ]);
             } else {
-                const hint = wrongAnswerHint(r.output, expected);
+                const badFiles = (r.files || []).filter((f) => !f.ok);
+                const outputOk = !badFiles.length || sameLines(r.output, expected);
+                const hint = outputOk && badFiles.length ? 'Wyjście się zgadza, ale pliki po uruchomieniu wyglądają inaczej, niż oczekiwano.' : wrongAnswerHint(r.output, expected);
                 setCard(idx, 'fail', 'Niezaliczony', [
-                    outputBlock('Twój wynik (różnice zaznaczone)', r.output, expected, r.truncated),
+                    outputBlock(outputOk ? 'Twój wynik' : 'Twój wynik (różnice zaznaczone)', r.output, expected, r.truncated),
+                    badFiles.length ? fileDiffBlock(badFiles) : null,
                     hint ? el('p', 'pyk-hint', hint) : null,
                     r.stderr ? outputBlock('stderr', r.stderr) : null,
                 ]);
@@ -612,9 +669,11 @@
         setBusy(true, 'custom');
         customOut.textContent = '';
         customOut.appendChild(el('p', 'pyk-note', runtime === 'ready' ? 'Uruchamianie…' : 'Ładowanie Pythona…'));
-        const res = await execute([{
+        const job = {
             input: stdinEl ? stdinEl.value : ''
-        }]);
+        };
+        if (TASK.sample_files) job.files = TASK.sample_files;
+        const res = await execute([job]);
         setBusy(false);
         customOut.textContent = '';
         errorLine = null;
@@ -665,6 +724,24 @@
         doneBtn.addEventListener('click', () => {
             markSolved();
             summary('pass', 'Zadanie oznaczone jako ukończone.', null, [nextLink()].filter(Boolean));
+        });
+    }
+
+    if (window.renderMathInElement) {
+        document.querySelectorAll('.pyk-statement, .pyk-details').forEach((node) => {
+            window.renderMathInElement(node, {
+                delimiters: [{
+                    left: '$$',
+                    right: '$$',
+                    display: true
+                }, {
+                    left: '$',
+                    right: '$',
+                    display: false
+                }],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                throwOnError: false
+            });
         });
     }
 
