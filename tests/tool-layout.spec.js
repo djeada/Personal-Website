@@ -3,6 +3,34 @@ const { test, expect } = require("@playwright/test");
 const tool = "/tools/strip_chatgpt_fluff/";
 
 for (const darkMode of [false, true]) {
+  test(`LaTeX cheat sheet renders every example in ${darkMode ? "dark" : "light"} mode`, async ({ page, context }) => {
+    await context.addCookies([{ name: "darkMode", value: String(darkMode), domain: "127.0.0.1", path: "/" }]);
+    await page.goto("/tools/latex_renderer/", { waitUntil: "domcontentloaded" });
+    const snippets = page.locator("#quick-ref-list .latex-snippet");
+    const count = await snippets.count();
+    expect(count).toBeGreaterThan(0);
+    await expect(page.locator(".snippet-preview mjx-container")).toHaveCount(count, { timeout: 15000 });
+    await expect(page.locator(".snippet-preview mjx-merror")).toHaveCount(0);
+
+    await page.locator("#quick-ref-filter").fill("fraction");
+    await expect(page.locator("#quick-ref-count")).toHaveText("1 snippet match");
+    await page.locator("#latex-input").fill("");
+    await snippets.first().press("Enter");
+    await expect(page.locator("#latex-input")).toHaveValue(String.raw`$\frac{a}{b}$`);
+    await expect(page.locator("#render-status")).toHaveText("Rendered");
+    await expect(page.locator("#latex-output mjx-container")).toHaveCount(1);
+
+    await page.locator("#quick-ref-filter").fill("");
+    await page.setViewportSize({ width: 390, height: 844 });
+    const layout = await page.locator("#quick-ref-list").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, pageWidth: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth };
+    });
+    expect(layout.left).toBeGreaterThanOrEqual(0);
+    expect(layout.right).toBeLessThanOrEqual(layout.viewport);
+    expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
+  });
+
   test(`LaTeX annotation overlays stay transparent in ${darkMode ? "dark" : "light"} mode`, async ({ page, context }) => {
     await context.addCookies([{ name: "darkMode", value: String(darkMode), domain: "127.0.0.1", path: "/" }]);
     await page.goto("/tools/latex_renderer/", { waitUntil: "domcontentloaded" });
