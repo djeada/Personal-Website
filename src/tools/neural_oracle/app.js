@@ -280,16 +280,53 @@
         element.classList.add(className);
     }
 
-    function matrix(id, weights, biases, updated, updatedBiases, labels, rows) {
-        let largest = 0;
+    // KaTeX loads deferred from a CDN; until it arrives (or if it never does) each formula shows a plain-text fallback.
+    const texOptions = { throwOnError: false, strict: 'ignore', trust: context => context.command === '\\htmlClass' };
+    const narrow = matchMedia('(max-width: 640px)');
+    const texClass = ['tx-o', 'tx-p', 'tx-s'];
+    const tint = (name, body) => `\\htmlClass{${name}}{${body}}`;
+    const num = (value, digits = 3) => (Math.abs(value) < .5 * 10 ** -digits ? 0 : value).toFixed(digits);
+    const factor = (value, digits) => (value < 0 && num(value, digits) !== num(0, digits) ? `(${num(value, digits)})` : num(value, digits));
+    const sign = value => (value >= 0 ? 'tx-pos' : 'tx-neg');
+    const percent = p => `${(p * 100).toFixed(1)}\\%`;
+
+    function tex(element, source, fallback) {
+        if (window.katex) window.katex.render(source, element, { ...texOptions, displayMode: element.tagName === 'DIV' });
+        else element.textContent = fallback;
+    }
+
+    function renderStaticTex() {
+        document.querySelectorAll('[data-tex]').forEach(element => tex(element, element.dataset.tex, element.textContent));
+    }
+
+    function logits(current) {
+        return current.weights.w2.map((row, k) => row.reduce((sum, weight, j) => sum + weight * current.hidden[j], current.weights.b2[k]));
+    }
+
+    function tanhPlot(current) {
+        const z = current.weights.w1.map((row, j) => row.reduce((sum, weight, i) => sum + weight * current.input[i], current.weights.b1[j]));
+        const x = value => 140 + Math.max(-3, Math.min(3, value)) * 42, y = value => 64 - value * 46;
+        const curve = Array.from({ length: 61 }, (_, i) => -3 + i / 10).map((v, i) => `${i ? 'L' : 'M'}${x(v).toFixed(1)} ${y(Math.tanh(v)).toFixed(1)}`).join('');
+        const dots = current.hidden.map((h, j) => `<g class="${h >= 0 ? 'pos' : 'neg'}"><circle cx="${x(z[j]).toFixed(1)}" cy="${y(h).toFixed(1)}" r="5.5"/><text x="${x(z[j]).toFixed(1)}" y="${(y(h) + (h >= 0 ? -9 : 15)).toFixed(1)}">${j + 1}</text></g>`).join('');
+        $('tanh-plot').innerHTML = `<line class="axis" x1="14" y1="64" x2="266" y2="64"/><line class="axis" x1="140" y1="8" x2="140" y2="120"/>` +
+            `<line class="guide" x1="14" y1="18" x2="266" y2="18"/><line class="guide" x1="14" y1="110" x2="266" y2="110"/>` +
+            `<text class="tick" x="144" y="15">+1</text><text class="tick" x="144" y="124">−1</text><text class="tick" x="262" y="78">z</text>` +
+            `<path class="curve" d="${curve}"/>${dots}`;
+    }
+
+    function matrix(id, weights, biases, updated, updatedBiases, columns, rows, groups) {
+        let largest = 0, strongest = 1e-9;
         weights.forEach((row, j) => [...row, biases[j]].forEach((weight, i) => {
             largest = Math.max(largest, Math.abs((i === row.length ? updatedBiases[j] : updated[j][i]) - weight));
+            strongest = Math.max(strongest, Math.abs(weight));
         }));
         // Labels are internal constants; all numeric values come from the model.
-        $(id).innerHTML = `<thead><tr><th scope="col">To ↓ / From →</th>${labels.map(label => `<th scope="col">${label}</th>`).join('')}<th scope="col">Bias</th></tr></thead><tbody>${weights.map((row, j) => `<tr><th scope="row">${rows[j]}</th>${[...row, biases[j]].map((weight, i) => {
-            const next = i === row.length ? updatedBiases[j] : updated[j][i];
-            const big = largest > 1e-9 && Math.abs(next - weight) >= largest * .6 ? ' big-change' : '';
-            return `<td class="${weight >= 0 ? 'positive' : 'negative'}${big}">${signed(weight)}<small>Δ ${signed(next - weight)}</small></td>`;
+        const groupRow = groups ? `<tr class="oracle-groups"><th></th>${groups.map(group => `<th scope="colgroup" colspan="3">${group}</th>`).join('')}<th></th></tr>` : '';
+        $(id).innerHTML = `<thead>${groupRow}<tr><th scope="col" class="oracle-corner">to ↓ from →</th>${columns.map(label => `<th scope="col">${label}</th>`).join('')}<th scope="col">bias</th></tr></thead><tbody>${weights.map((row, j) => `<tr><th scope="row">${rows[j]}</th>${[...row, biases[j]].map((weight, i) => {
+            const change = (i === row.length ? updatedBiases[j] : updated[j][i]) - weight;
+            const big = largest > 1e-9 && Math.abs(change) >= largest * .6 ? ' big-change' : '';
+            const still = Math.abs(change) < .0005 ? ' still' : '';
+            return `<td class="${weight >= 0 ? 'positive' : 'negative'}${big}${still}" style="--strength:${Math.round(Math.abs(weight) / strongest * 100)}%">${signed(weight)}<small>Δ ${signed(change)}</small></td>`;
         }).join('')}</tr>`).join('')}</tbody>`;
     }
 
@@ -297,39 +334,85 @@
         const current = state();
         const k = Number($('inspect-output').value);
         const row = current.weights.w2[k];
-        const logit = row.reduce((sum, weight, j) => sum + weight * current.hidden[j], current.weights.b2[k]);
-        $('neuron-equation').textContent = `a(${names[k]}) = ${row.map((weight, j) => `(${fixed(weight)} × ${fixed(current.hidden[j])})`).join(' + ')} + (${fixed(current.weights.b2[k])}) = ${fixed(logit)} → softmax = ${(current.probabilities[k] * 100).toFixed(1)}%`;
-        if (last) {
-            const target = Number(last.choice === k);
-            const gradient = (current.probabilities[k] - target) * current.hidden[0];
-            $('gradient-equation').textContent = `Example: ∂L/∂W²(${names[k]}, h1) = (p − target) × h1 = (${fixed(current.probabilities[k])} − ${target}) × ${fixed(current.hidden[0])} = ${fixed(gradient)}. New weight = ${fixed(row[0])} − 0.22 × (${fixed(gradient)}) = ${fixed(game.network.w2[k][0])}.`;
-        } else $('gradient-equation').textContent = 'The target is 1 for your chosen symbol and 0 for the other outputs. Play a move to see the gradient.';
+        const a = logits(current);
+        const name = `\\text{${names[k]}}`;
+        const perLine = narrow.matches ? 2 : 3;
+        const terms = row.map((weight, j) => tint(sign(weight * current.hidden[j]), `${factor(weight)}\\cdot${factor(current.hidden[j])}`));
+        const lines = [];
+        for (let i = 0; i < terms.length; i += perLine) lines.push(terms.slice(i, i + perLine).join(' + '));
+        lines[lines.length - 1] += ` + ${tint(sign(current.weights.b2[k]), factor(current.weights.b2[k]))}`;
+        tex($('neuron-equation'), `\\begin{aligned}
+            a_{${name}} &= \\sum_{j=1}^{8} W^{(2)}_{${names[k][0]}j}\\,h_j + b^{(2)}_{${names[k][0]}} \\\\
+            &= ${lines.join(' \\\\ &\\quad + ')} \\\\
+            &= ${tint(texClass[k], num(a[k]))} \\\\[4pt]
+            p_{${name}} &= \\frac{e^{${num(a[k])}}}{${a.map(value => `e^{${num(value)}}`).join(' + ')}} = ${tint(texClass[k], percent(current.probabilities[k]))}
+        \\end{aligned}`, `a(${names[k]}) = ${row.map((weight, j) => `(${fixed(weight)} × ${fixed(current.hidden[j])})`).join(' + ')} + (${fixed(current.weights.b2[k])}) = ${fixed(a[k])} → softmax = ${(current.probabilities[k] * 100).toFixed(1)}%`);
+
+        const votes = [...row.map((weight, j) => ({ label: `h<sub>${j + 1}</sub>`, value: weight * current.hidden[j] })), { label: 'bias', value: current.weights.b2[k] }];
+        const loudest = Math.max(1e-9, ...votes.map(vote => Math.abs(vote.value)));
+        $('votes-title').textContent = `Who voted for ${names[k]}?`;
+        $('contributions').innerHTML = votes.map(vote => `<div class="oracle-vote"><span>${vote.label}</span><span class="oracle-vote-track"><i class="${vote.value >= 0 ? 'pos' : 'neg'}" style="--size:${(Math.abs(vote.value) / loudest * 50).toFixed(1)}%"></i></span><b class="${vote.value >= 0 ? 'pos' : 'neg'}">${signed(vote.value)}</b></div>`).join('');
+
+        if (!last) {
+            tex($('gradient-tex'), `\\frac{\\partial L}{\\partial W^{(2)}_{${names[k][0]}j}} = (p_{${name}} - y_{${name}})\\,h_j, \\qquad y_{${name}} = \\begin{cases} 1 & \\text{if you click ${names[k]}} \\\\ 0 & \\text{otherwise} \\end{cases}`,
+                '∂L/∂W² = (p − y) × h, where y = 1 for your chosen symbol and 0 for the others.');
+            $('gradient-equation').textContent = 'Play a move to watch a real weight change.';
+            return;
+        }
+        const target = Number(last.choice === k);
+        const error = current.probabilities[k] - target;
+        // Use the most active hidden neuron so the example is not a zero on the cold start.
+        const j = current.hidden.reduce((top, h, i) => (Math.abs(h) > Math.abs(current.hidden[top]) ? i : top), 0);
+        const gradient = error * current.hidden[j];
+        const sub = `${names[k][0]}${j + 1}`;
+        tex($('gradient-tex'), `\\begin{aligned}
+            \\frac{\\partial L}{\\partial W^{(2)}_{${sub}}} &= (p_{${name}} - y_{${name}})\\,h_{${j + 1}} \\\\
+            &= (${num(current.probabilities[k])} - ${target})\\cdot${factor(current.hidden[j])} = ${num(gradient)} \\\\
+            W^{(2)}_{${sub}} &\\leftarrow ${num(row[j])} - 0.22\\cdot${factor(gradient)} = ${tint('tx-gold', num(game.network.w2[k][j]))} \\\\[4pt]
+            b^{(2)}_{${names[k][0]}} &\\leftarrow ${num(current.weights.b2[k])} - 0.22\\cdot${factor(error)} = ${tint('tx-gold', num(game.network.b2[k]))}
+        \\end{aligned}`, `∂L/∂W²(${names[k]}, h${j + 1}) = (p − y) × h${j + 1} = (${fixed(current.probabilities[k])} − ${target}) × ${fixed(current.hidden[j])} = ${fixed(gradient)}`);
+        const direction = target ? `You clicked ${names[k]}, so y = 1 and the update raises its score.` : `You did not click ${names[k]}, so y = 0 and the update lowers its score.`;
+        $('gradient-equation').textContent = `New weight ${fixed(game.network.w2[k][j])} (Δ ${signed(game.network.w2[k][j] - row[j])}), new bias ${fixed(game.network.b2[k])}. ${direction}${current.hidden[j] === 0 ? ' With no history every h is 0, so only the bias can move.' : ''}`;
     }
 
     function updateLab() {
         const current = state();
+        const a = logits(current);
         $('lab-step').textContent = last ? `Move ${game.results.length} · prediction → update` : 'Untrained brain';
-        $('input-values').textContent = `x = [${current.input.join(', ')}]`;
-        $('hidden-values').textContent = `h = [${current.hidden.map(fixed).join(', ')}]`;
-        $('probability-values').textContent = current.probabilities.map((p, i) => `${names[i]} ${(p * 100).toFixed(1)}%`).join(' · ');
+        const slot = ['\\text{newest}', '\\text{previous}', '\\text{oldest}'];
+        tex($('input-values'), `\\mathbf{x} = \\big[\\;${[0, 1, 2].map(g => `\\underbrace{${current.input.slice(g * 3, g * 3 + 3).map((on, i) => (on ? tint(texClass[i], '\\mathbf{1}') : tint('tx-muted', '0'))).join('\\;')}}_{${slot[g]}}`).join('\\;\\big|\\;')}\\;\\big]`,
+            `x = [${current.input.join(', ')}]`);
+        tanhPlot(current);
+        const half = from => current.hidden.slice(from, from + 4).map(h => tint(sign(h), num(h, 2))).join(',\\ ');
+        tex($('hidden-values'), `\\begin{aligned} (h_1, \\dots, h_4) &= \\big(${half(0)}\\big) \\\\ (h_5, \\dots, h_8) &= \\big(${half(4)}\\big) \\end{aligned}`, `h = [${current.hidden.map(fixed).join(', ')}]`);
+        tex($('probability-values'), `\\begin{aligned} \\mathbf{a} &= \\big(${a.map((value, i) => tint(texClass[i], num(value, 2))).join(',\\ ')}\\big) \\\\ \\mathbf{p} = \\operatorname{softmax}(\\mathbf{a}) &= \\big(${current.probabilities.map((p, i) => tint(texClass[i], percent(p))).join(',\\ ')}\\big) \\end{aligned}`,
+            current.probabilities.map((p, i) => `${names[i]} ${(p * 100).toFixed(1)}%`).join(' · '));
         $('probability-bars').replaceChildren(...current.probabilities.map((p, i) => {
             const bar = document.createElement('span');
             bar.style.setProperty('--p', `${(p * 100).toFixed(1)}%`);
             bar.style.setProperty('--c', colors[i]);
             if (last && last.choice === i) bar.className = 'chosen';
-            bar.textContent = symbols[i];
+            bar.innerHTML = `<b>${symbols[i]}</b>${names[i]}<em>${(p * 100).toFixed(1)}%</em>`;
             return bar;
         }));
-        $('loss-values').textContent = last ? `L = −ln(${fixed(current.probabilities[last.choice])}) = ${fixed(last.loss)} nats. ${last.points} points of surprise. Higher loss means this choice surprised the network more.` : 'Click a symbol to see its loss and a real gradient update.';
+        if (last) {
+            const error = current.probabilities.map((p, i) => p - Number(i === last.choice));
+            tex($('loss-tex'), `\\begin{aligned} L &= -\\ln p_{\\text{${names[last.choice]}}} = -\\ln(${num(current.probabilities[last.choice])}) = ${tint('tx-gold', num(last.loss))} \\\\ \\mathbf{p} - \\mathbf{y} &= \\big(${error.map((e, i) => tint(texClass[i], num(e))).join(',\\ ')}\\big) \\end{aligned}`,
+                `L = −ln(${fixed(current.probabilities[last.choice])}) = ${fixed(last.loss)}`);
+            $('loss-values').textContent = `Loss ${fixed(last.loss)} nats = ${last.points} points of surprise. The error p − y flows backward through every weight.`;
+        } else {
+            tex($('loss-tex'), 'L = -\\ln p_{\\text{you}}', 'L = −ln p(you)');
+            $('loss-values').textContent = 'Click a symbol to see its loss and a real gradient update.';
+        }
         if (!last) $('lesson').textContent = 'Try repeating Orbit a few times, then switch. Watch the probability rise, the surprise spike, and the weights adapt.';
-        else if (game.results.length === 1) $('lesson').textContent = 'Cold start: no history means all hidden activations are zero. Only the biases can learn on this first move. Look for nonzero Δ in the Bias columns.';
+        else if (game.results.length === 1) $('lesson').textContent = 'Cold start: no history means all hidden activations are zero. Only the biases can learn on this first move. Look for nonzero Δ in the bias columns.';
         else if (last.loss > 1.5) $('lesson').textContent = 'You broke its expectation. High loss pushes probability toward the symbol you just chose. Inspect the output weights to see the correction.';
         else if (last.snapshot.probabilities[last.choice] > .6) $('lesson').textContent = 'It is learning your pattern. A confident correct guess gives you fewer points. Can you bait the network, then switch?';
         else $('lesson').textContent = 'Its memory covers only three clicks. It can learn local patterns, but it cannot read your mind. Try a repeating cycle and inspect the hidden activations.';
-        const inputLabels = [1, 2, 3].flatMap(n => ['O', 'P', 'S'].map(symbol => `${n}:${symbol}`));
-        const hiddenLabels = Array.from({ length: 8 }, (_, i) => `h${i + 1}`);
-        matrix('weights-one', current.weights.w1, current.weights.b1, game.network.w1, game.network.b1, inputLabels, hiddenLabels);
-        matrix('weights-two', current.weights.w2, current.weights.b2, game.network.w2, game.network.b2, hiddenLabels, names);
+        const symbolHeads = symbols.map((symbol, i) => `<span class="sym-${i}" title="${names[i]}">${symbol}</span>`);
+        const hiddenLabels = Array.from({ length: 8 }, (_, i) => `h<sub>${i + 1}</sub>`);
+        matrix('weights-one', current.weights.w1, current.weights.b1, game.network.w1, game.network.b1, [0, 1, 2].flatMap(() => symbolHeads), hiddenLabels, ['newest click', 'previous', 'oldest']);
+        matrix('weights-two', current.weights.w2, current.weights.b2, game.network.w2, game.network.b2, hiddenLabels, symbolHeads.map((head, i) => `${head} ${names[i]}`));
         inspect();
     }
 
@@ -612,6 +695,9 @@
     $('restart').addEventListener('click', () => { reset(); document.querySelector('[data-choice]').focus({ preventScroll: true }); });
     $('sound').addEventListener('click', () => { sound.set(!sound.enabled); syncSoundButton(); });
     $('inspect-output').addEventListener('change', inspect);
+    narrow.addEventListener('change', inspect);
+    if (window.katex) renderStaticTex();
+    else if ($('katex-script')) $('katex-script').addEventListener('load', () => { renderStaticTex(); updateLab(); });
     $('share').addEventListener('click', () => copy(shareText()));
     $('native-share').addEventListener('click', async () => {
         try { await navigator.share({ title: 'Outclick the Oracle', text: shareText().split('\n').slice(0, 5).join('\n'), url: shareUrl() }); } catch (error) { if (error.name !== 'AbortError') copy(shareText()); }
