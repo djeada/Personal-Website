@@ -30,6 +30,8 @@
     <link href="/favicon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/base.css" rel="stylesheet" type="text/css" />
+    <link crossorigin="anonymous" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" rel="stylesheet" />
+    <script crossorigin="anonymous" defer="" id="katex-script" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
     <link href="style.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -180,24 +182,62 @@
             <p id="lesson">Try repeating Orbit a few times, then switch. Watch the probability rise, the surprise spike, and the weights adapt.</p>
             <ol class="oracle-steps" aria-label="One move, step by step">
                 <li><b>Predict</b> Your last 3 clicks flow forward through the network. It commits to a bet.</li>
-                <li><b>Reveal</b> You click. Points = how unlikely it thought your choice was.</li>
-                <li><b>Measure</b> Loss = −ln(probability of your choice). Big surprise, big loss.</li>
-                <li><b>Learn</b> Backpropagation nudges all 107 parameters to make that choice likelier next time.</li>
+                <li><b>Reveal</b> You click and score <span data-tex="100\,(1 - p_{\text{you}})">100 × (1 − p)</span> points: the less it expected you, the more you earn.</li>
+                <li><b>Measure</b> Its loss is <span data-tex="L = -\ln p_{\text{you}}">L = −ln p</span>. Big surprise, big loss.</li>
+                <li><b>Learn</b> Backpropagation nudges all 107 parameters to make your choice likelier next time.</li>
             </ol>
-            <p class="oracle-lab-note">These are the values <strong>before the last click’s update</strong>. Δ shows what learning changed afterward. No future guesses are revealed.</p>
-            <div class="oracle-formulas">
-                <article><h3>01 · Remember</h3><code>x = one-hot(last 3 clicks)</code><p id="input-values"></p><small>9 inputs · newest click first · no history = 0</small></article>
-                <article><h3>02 · Mix patterns</h3><code>zⱼ = Σᵢ W¹ⱼᵢxᵢ + b¹ⱼ<br>hⱼ = tanh(zⱼ)</code><p id="hidden-values"></p><small>8 hidden neurons · 72 weights + 8 biases</small></article>
-                <article><h3>03 · Make a bet</h3><code>aₖ = Σⱼ W²ₖⱼhⱼ + b²ₖ<br>pₖ = exp(aₖ) / Σ exp(a)</code><div class="oracle-bars" id="probability-bars" aria-hidden="true"></div><p id="probability-values"></p><small>3 outputs · 24 weights + 3 biases</small></article>
+            <p class="oracle-lab-note">Live values below are from <strong>before the last click’s update</strong>, exactly what the network saw when it bet. No future guesses are revealed.</p>
+            <div class="oracle-pipeline">
+                <article class="oracle-stage">
+                    <header><span class="oracle-stage-n">01</span><h3>Remember</h3><span class="oracle-shape">9 inputs</span></header>
+                    <div class="oracle-tex" data-tex="\mathbf{x} = \big[\ \operatorname{onehot}(c_t)\ \big|\ \operatorname{onehot}(c_{t-1})\ \big|\ \operatorname{onehot}(c_{t-2})\ \big]">x = [onehot(c_t) | onehot(c_t−1) | onehot(c_t−2)]</div>
+                    <div class="oracle-readout oracle-tex" id="input-values"></div>
+                    <p class="oracle-stage-note">Each click becomes three switches: Orbit, Prism, Spark. Newest click first; missing history stays 0.</p>
+                </article>
+                <article class="oracle-stage">
+                    <header><span class="oracle-stage-n">02</span><h3>Mix patterns</h3><span class="oracle-shape">8 neurons · 80 params</span></header>
+                    <div class="oracle-tex" data-tex="\mathbf{z} = W^{(1)}\mathbf{x} + \mathbf{b}^{(1)}, \qquad \mathbf{h} = \tanh(\mathbf{z})">z = W¹x + b¹,  h = tanh(z)</div>
+                    <div class="oracle-readout oracle-tanh"><svg id="tanh-plot" viewBox="0 0 280 128" role="img" aria-label="Hidden neurons plotted on the tanh curve"></svg></div>
+                    <div class="oracle-readout oracle-tex" id="hidden-values"></div>
+                    <p class="oracle-stage-note">tanh squashes each weighted sum into <span data-tex="(-1,\ 1)">(−1, 1)</span>: a soft “how much does this pattern match?”</p>
+                </article>
+                <article class="oracle-stage">
+                    <header><span class="oracle-stage-n">03</span><h3>Make a bet</h3><span class="oracle-shape">3 outputs · 27 params</span></header>
+                    <div class="oracle-tex" data-tex="\mathbf{a} = W^{(2)}\mathbf{h} + \mathbf{b}^{(2)}, \qquad p_k = \frac{e^{a_k}}{\sum_{m} e^{a_m}}">a = W²h + b²,  p_k = exp(a_k) / Σ exp(a_m)</div>
+                    <div class="oracle-bars" id="probability-bars" aria-hidden="true"></div>
+                    <div class="oracle-readout oracle-tex" id="probability-values"></div>
+                    <p class="oracle-stage-note">Softmax turns raw scores into probabilities that sum to 1. Its bet is the tallest bar.</p>
+                </article>
+                <article class="oracle-stage">
+                    <header><span class="oracle-stage-n">04</span><h3>Learn from being wrong</h3><span class="oracle-shape" data-tex="\eta = 0.22">η = 0.22</span></header>
+                    <div class="oracle-tex" data-tex="\begin{gathered} \frac{\partial L}{\partial a_k} = p_k - y_k \qquad W \leftarrow W - \eta\,\frac{\partial L}{\partial W} \\[2pt] \delta_j = (1 - h_j^2)\sum_k W^{(2)}_{kj}\,(p_k - y_k) \end{gathered}">∂L/∂a_k = p_k − y_k,  δ_j = (1 − h_j²) Σ_k W²_kj (p_k − y_k),  W ← W − η ∂L/∂W</div>
+                    <div class="oracle-readout oracle-tex" id="loss-tex"></div>
+                    <p class="oracle-stage-note" id="loss-values">Click a symbol to see its loss and a real gradient update.</p>
+                </article>
             </div>
-            <div class="oracle-learning"><h3>04 · Learn from being wrong</h3><code>L = −ln(p of your choice)<br>W ← W − 0.22 × ∂L/∂W</code><p id="loss-values">Click a symbol to see its loss and a real gradient update.</p></div>
-            <label for="inspect-output">Inspect an output neuron</label>
-            <select id="inspect-output"><option value="0">Orbit</option><option value="1">Prism</option><option value="2">Spark</option></select>
-            <p id="neuron-equation" class="oracle-equation"></p>
-            <p id="gradient-equation" class="oracle-equation"></p>
-            <details open><summary>Input → hidden: all 72 weights + 8 biases</summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Input to hidden weights"><table id="weights-one"></table></div></details>
-            <details open><summary>Hidden → output: all 24 weights + 3 biases</summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Hidden to output weights"><table id="weights-two"></table></div></details>
-            <p class="oracle-lab-note">Each cell shows its weight and Δ. Cyan = positive; pink = negative; a gold outline marks the biggest changes from your last click. Rounded to 3 decimals; calculations use full precision. O / P / S = Orbit / Prism / Spark.</p>
+            <div class="oracle-inspector">
+                <div class="oracle-inspector-head">
+                    <div><p class="oracle-eyebrow">ZOOM IN</p><h3>Inside one output neuron</h3></div>
+                    <label for="inspect-output">Neuron <select id="inspect-output"><option value="0">◯ Orbit</option><option value="1">△ Prism</option><option value="2">ϟ Spark</option></select></label>
+                </div>
+                <div class="oracle-inspector-grid">
+                    <div class="oracle-equation oracle-tex" id="neuron-equation"></div>
+                    <figure class="oracle-votes">
+                        <figcaption id="votes-title">Who voted for it?</figcaption>
+                        <div id="contributions"></div>
+                        <small>Each bar is one term <span data-tex="W^{(2)}_{kj}\,h_j">W·h</span>. Right pushes this symbol up; left pushes it down.</small>
+                    </figure>
+                </div>
+                <div class="oracle-gradient">
+                    <h4>One real gradient step</h4>
+                    <div class="oracle-equation oracle-tex" id="gradient-tex"></div>
+                    <p id="gradient-equation"></p>
+                </div>
+            </div>
+            <details open><summary>Input → hidden: all 72 weights + 8 biases <span data-tex="W^{(1)},\ \mathbf{b}^{(1)}">W¹, b¹</span></summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Input to hidden weights"><table id="weights-one"></table></div></details>
+            <details open><summary>Hidden → output: all 24 weights + 3 biases <span data-tex="W^{(2)},\ \mathbf{b}^{(2)}">W², b²</span></summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Hidden to output weights"><table id="weights-two"></table></div></details>
+            <p class="oracle-lab-note oracle-legend"><span><span class="oracle-swatch positive"></span> positive</span><span><span class="oracle-swatch negative"></span> negative</span><span>stronger colour = bigger weight</span><span><span class="oracle-swatch big-change"></span> biggest changes from your last click</span></p>
+            <p class="oracle-lab-note">Each cell shows the weight and, below it, the Δ your last click caused. Rounded to 3 decimals; calculations use full precision.</p>
         </div>
         <details class="oracle-explainer">
             <summary>Wait. Is it actually learning?</summary>

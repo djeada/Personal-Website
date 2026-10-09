@@ -1,3 +1,4 @@
+const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { Network, Game } = require('../src/tools/neural_oracle/model.js');
 
@@ -49,8 +50,19 @@ test('challenge is deterministic, bounded, and immutable after 30 moves', () => 
 });
 
 test.describe('browser interaction', () => {
+// KaTeX is served from the same npm version the page loads from cdnjs, so the math renders offline.
+const katexDist = path.dirname(require.resolve('katex/dist/katex.min.js'));
+const katexPrefix = '/ajax/libs/KaTeX/0.16.9/';
+
 test.beforeEach(async ({ page }) => {
-    await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
+    await page.route('**/*', route => {
+        const url = new URL(route.request().url());
+        if (url.hostname === '127.0.0.1') return route.continue();
+        if (url.hostname === 'cdnjs.cloudflare.com' && url.pathname.startsWith(katexPrefix)) {
+            return route.fulfill({ path: path.join(katexDist, url.pathname.slice(katexPrefix.length)), headers: { 'Access-Control-Allow-Origin': '*' } });
+        }
+        return route.abort();
+    });
 });
 
 for (const width of [390, 1280]) {
@@ -71,6 +83,10 @@ for (const width of [390, 1280]) {
         await expect(page.locator('#memory li').first()).toHaveText('◯');
         await expect(page.locator('#accuracy')).toHaveText(/^\d+%$/);
         await expect(page.locator('#gradient-equation')).toContainText('New weight');
+        await expect(page.locator('#gradient-tex .katex')).toHaveCount(1);
+        await expect(page.locator('#input-values .katex')).toHaveCount(1);
+        await expect(page.locator('#tanh-plot circle')).toHaveCount(8);
+        await expect(page.locator('.oracle-lab .katex-error')).toHaveCount(0);
         for (let i = 1; i < 30; i++) await page.keyboard.press(String(i % 3 + 1));
         await expect(page.locator('#round')).toHaveText('30 / 30');
         await expect(page.locator('#result')).toBeVisible();
@@ -98,7 +114,10 @@ for (const width of [390, 1280]) {
         await page.keyboard.press('Enter');
         await expect(page.locator('#round')).toHaveText('1 / 30');
         await page.locator('#inspect-output').selectOption('2');
-        await expect(page.locator('#neuron-equation')).toContainText('a(Spark)');
+        await expect(page.locator('#neuron-equation .katex')).toContainText('Spark');
+        await expect(page.locator('#votes-title')).toHaveText('Who voted for Spark?');
+        await expect(page.locator('#contributions .oracle-vote')).toHaveCount(9);
+        await expect(page.locator('.oracle-lab .katex-error')).toHaveCount(0);
         expect(errors).toEqual([]);
         await page.screenshot({ path: `screenshots/neural-oracle-${width}.png`, fullPage: true });
     });
@@ -115,6 +134,15 @@ test('game works with blocked storage and clipboard success reports accurately',
     await page.locator('#share').click();
     await expect(page.locator('#share-status')).toContainText('Copied!');
     expect(await page.evaluate(() => window.copiedText)).toContain('107-parameter');
+});
+
+test('lab math falls back to readable text when KaTeX cannot load', async ({ page }) => {
+    await page.route('**/cdnjs.cloudflare.com/**', route => route.abort());
+    await page.goto('/tools/neural_oracle/?challenge=2026-10-09');
+    await page.keyboard.press('1');
+    await expect(page.locator('#loss-tex')).toContainText('L = −ln(0.333) = 1.099');
+    await expect(page.locator('#neuron-equation')).toContainText('a(Orbit) =');
+    await expect(page.locator('.oracle-lab .katex')).toHaveCount(0);
 });
 
 test('friend challenge links show the score to beat and report the outcome', async ({ page }) => {
