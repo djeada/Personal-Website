@@ -2,6 +2,17 @@
 
 A 30-move human-vs-network game at `/tools/neural_oracle/`. The hook is testable: can a tiny, visible neural network learn your clicking habits? Three symbols, immediate feedback, a shareable escape mosaic, and daily starting weights make it easy to try and challenge someone else. Virality is an aspiration, not a promised outcome.
 
+## Game feel
+
+- **Sealed guess.** The Oracle's prediction sits face-down (🔒) before every click, then flips to show its pick and confidence next to yours, with an ESCAPED / PREDICTED stamp and the points earned. It re-seals 1.7 s later for the next move.
+- **Visible learning.** After each click the canvas plays the forward pass (white sparks along the weights that carried signal), then backprop (gold sparks flowing backward along the weights that changed most). Its BET ring marks the predicted output.
+- **Feedback.** Escapes burst particles from the clicked button and flash cyan. Predictions shake the arena and flash pink. Streaks of 3+ make the arena glow, and 5+ turns it gold. The Oracle taunts in context ("Orbit again? Of course.").
+- **Sound.** Short WebAudio synth cues: click, escape arpeggio (pitch rises with the streak), "denied" buzz, end fanfare. No audio files. A toggle in the top bar is persisted under `neural-oracle-sound`. A light vibration on predicted moves fires only when sound is on.
+- **Results.** Rank (Open Book → Oracle Breaker), a per-move chart of the probability it gave your actual click against a 33% blind guess, and up to four habit insights: favorite symbol, repeat rate vs. 33%, strongest transition, and early vs. late hit rate.
+- **Sharing.** Native share where available, copy-to-clipboard with a selectable fallback, and a 1080×1350 PNG score card. Shared links carry `&beat=<score>`. Opening one shows the friend's score as a target and reports beat / not beaten at the end. `beat` is ignored unless `challenge` is also valid.
+
+All motion respects `prefers-reduced-motion`. The screen-reader status line still states the factual outcome of every move.
+
 ## Teaching through play
 
 1. Repeat a symbol to teach a pattern. Confidence rises and surprise points shrink.
@@ -21,4 +32,8 @@ Daily seeds use UTC dates. `?challenge=YYYY-MM-DD` preserves the initial network
 
 Uses the existing site shell, shared tool styles/helpers, standalone `index.html` / `style.css` / `app.js` convention, and the tools directory's normal searchable card. The pure model is in `model.js` and exports to browser and CommonJS test environments.
 
-Run `npx playwright test tests/neural-oracle.spec.js`. The tests verify numerical gradients, actual learning, deterministic replay, the 30-move boundary, mobile/desktop interaction, keyboard use, weight inspection, sharing fallbacks, blocked storage, and tools-directory discovery.
+Run `npx playwright test tests/neural-oracle.spec.js`. The tests verify numerical gradients, actual learning, deterministic replay, the 30-move boundary, mobile/desktop interaction, keyboard use, weight inspection, sharing fallbacks, friend-challenge links, score-card download, sound preference, blocked storage, and tools-directory discovery.
+
+## Promo video
+
+`node scripts/reels/oracle/build.js` films a 26 s vertical promo of a real game against the 2026-10-09 brain and cuts it to an original synthesized phonk track. Output goes to `scripts/reels/out/oracle-promo.mp4`. See `scripts/reels/oracle/README.md`.

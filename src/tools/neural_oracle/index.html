@@ -105,29 +105,67 @@
             <p>You think you’re random. This 107-parameter brain disagrees. Prove it wrong in 30 clicks.</p>
         </header>
         <div class="oracle-arena" id="oracle-arena">
-            <div class="oracle-topline"><span>● LIVE NEURAL NETWORK</span><span id="challenge-label"></span></div>
+            <div class="oracle-fx" aria-hidden="true"><canvas id="particles"></canvas><div class="oracle-flash" id="flash"></div></div>
+            <div class="oracle-topline">
+                <span class="oracle-live">LIVE NEURAL NETWORK</span>
+                <span id="challenge-label"></span>
+                <button id="sound" type="button" aria-pressed="true">Sound on</button>
+            </div>
+            <p class="oracle-rival" id="rival" hidden></p>
             <div class="oracle-stats" aria-label="Game statistics">
                 <div><span>UNPREDICTABILITY</span><strong id="score">0</strong></div>
                 <div><span>MOVE</span><strong id="round">0 / 30</strong></div>
                 <div><span>ESCAPE STREAK</span><strong id="streak">0</strong></div>
+                <div><span>ORACLE HIT RATE</span><strong id="accuracy">—</strong></div>
             </div>
             <div class="oracle-brain">
                 <canvas id="network" width="900" height="300" aria-label="Neural network visualization. Full game feedback is provided below." role="img"></canvas>
+                <span class="oracle-phase" id="phase" aria-hidden="true"></span>
                 <div class="oracle-layer-labels" aria-hidden="true"><span>YOUR LAST 3 CLICKS</span><span>8 HIDDEN NEURONS</span><span>3 PREDICTIONS</span></div>
             </div>
-            <div class="oracle-feedback" id="feedback" role="status" aria-live="polite" aria-atomic="true">Pick any symbol. The Oracle predicts first, then learns from your click.</div>
+            <div class="oracle-duel" aria-hidden="true">
+                <div class="oracle-card oracle-guess" id="guess-card">
+                    <span class="oracle-card-label">ORACLE’S GUESS</span>
+                    <div class="oracle-flip"><span class="oracle-sealed">🔒</span><span class="oracle-revealed" id="guess-symbol"></span></div>
+                    <small id="guess-detail">Locked before you click</small>
+                </div>
+                <div class="oracle-versus"><span id="verdict">VS</span><b id="points-pop"></b></div>
+                <div class="oracle-card oracle-pick" id="pick-card">
+                    <span class="oracle-card-label">YOUR PICK</span>
+                    <div class="oracle-flip"><span class="oracle-revealed" id="pick-symbol">?</span></div>
+                    <small id="pick-detail">Choose below</small>
+                </div>
+            </div>
+            <div class="oracle-feedback" role="status" aria-live="polite" aria-atomic="true">
+                <q id="taunt">I have already made my prediction. Go ahead. Surprise me.</q>
+                <span id="feedback">Pick any symbol. The Oracle predicts first, then learns from your click.</span>
+            </div>
             <div class="oracle-choices" role="group" aria-label="Choose your next symbol">
                 <button type="button" data-choice="0" aria-label="Choose Orbit, shortcut 1" disabled><span class="oracle-symbol">◯</span><strong>Orbit</strong><small>1</small></button>
                 <button type="button" data-choice="1" aria-label="Choose Prism, shortcut 2" disabled><span class="oracle-symbol">△</span><strong>Prism</strong><small>2</small></button>
                 <button type="button" data-choice="2" aria-label="Choose Spark, shortcut 3" disabled><span class="oracle-symbol">ϟ</span><strong>Spark</strong><small>3</small></button>
             </div>
-            <p class="oracle-hint">Click, tap, or press 1 / 2 / 3. More surprising choices earn more points.</p>
+            <div class="oracle-memory"><span>IT REMEMBERS</span><ol id="memory" aria-label="The three clicks the Oracle uses for its next prediction"></ol><span class="oracle-hint">Click, tap, or press 1 / 2 / 3. Surprising choices earn more points.</span></div>
             <div class="oracle-history" id="history" aria-label="Completed moves"></div>
             <div class="oracle-result" id="result" hidden>
-                <p class="oracle-eyebrow">EXPERIMENT COMPLETE</p>
+                <p class="oracle-eyebrow" id="result-rank">EXPERIMENT COMPLETE</p>
                 <h2 id="result-title" tabindex="-1"></h2>
                 <p id="result-summary"></p>
-                <button id="share" type="button">Copy challenge &amp; score</button>
+                <div class="oracle-result-grid">
+                    <figure>
+                        <canvas id="confidence-chart" width="600" height="180" role="img" aria-label="Chart of how much probability the Oracle gave your actual choice on each move"></canvas>
+                        <figcaption>How sure it was of your <em>actual</em> click, move by move. The dashed line is a blind 33% guess.</figcaption>
+                    </figure>
+                    <div>
+                        <h3>Your habits, as the Oracle saw them</h3>
+                        <ul id="habits"></ul>
+                    </div>
+                </div>
+                <div class="oracle-share">
+                    <button id="native-share" class="primary" type="button" hidden>Share challenge</button>
+                    <button id="share" type="button">Copy challenge &amp; score</button>
+                    <button id="card" type="button">Save score card</button>
+                </div>
                 <p id="share-status" role="status"></p>
                 <textarea id="share-fallback" aria-label="Copy this challenge manually" readonly hidden></textarea>
             </div>
@@ -140,11 +178,17 @@
         <div class="oracle-lab" role="region" aria-labelledby="lab-title">
             <div class="oracle-lab-heading"><div><p class="oracle-eyebrow">OPEN THE BLACK BOX</p><h2 id="lab-title">Every guess. Every weight.</h2></div><span id="lab-step">Untrained brain</span></div>
             <p id="lesson">Try repeating Orbit a few times, then switch. Watch the probability rise, the surprise spike, and the weights adapt.</p>
+            <ol class="oracle-steps" aria-label="One move, step by step">
+                <li><b>Predict</b> Your last 3 clicks flow forward through the network. It commits to a bet.</li>
+                <li><b>Reveal</b> You click. Points = how unlikely it thought your choice was.</li>
+                <li><b>Measure</b> Loss = −ln(probability of your choice). Big surprise, big loss.</li>
+                <li><b>Learn</b> Backpropagation nudges all 107 parameters to make that choice likelier next time.</li>
+            </ol>
             <p class="oracle-lab-note">These are the values <strong>before the last click’s update</strong>. Δ shows what learning changed afterward. No future guesses are revealed.</p>
             <div class="oracle-formulas">
                 <article><h3>01 · Remember</h3><code>x = one-hot(last 3 clicks)</code><p id="input-values"></p><small>9 inputs · newest click first · no history = 0</small></article>
                 <article><h3>02 · Mix patterns</h3><code>zⱼ = Σᵢ W¹ⱼᵢxᵢ + b¹ⱼ<br>hⱼ = tanh(zⱼ)</code><p id="hidden-values"></p><small>8 hidden neurons · 72 weights + 8 biases</small></article>
-                <article><h3>03 · Make a bet</h3><code>aₖ = Σⱼ W²ₖⱼhⱼ + b²ₖ<br>pₖ = exp(aₖ) / Σ exp(a)</code><p id="probability-values"></p><small>3 outputs · 24 weights + 3 biases</small></article>
+                <article><h3>03 · Make a bet</h3><code>aₖ = Σⱼ W²ₖⱼhⱼ + b²ₖ<br>pₖ = exp(aₖ) / Σ exp(a)</code><div class="oracle-bars" id="probability-bars" aria-hidden="true"></div><p id="probability-values"></p><small>3 outputs · 24 weights + 3 biases</small></article>
             </div>
             <div class="oracle-learning"><h3>04 · Learn from being wrong</h3><code>L = −ln(p of your choice)<br>W ← W − 0.22 × ∂L/∂W</code><p id="loss-values">Click a symbol to see its loss and a real gradient update.</p></div>
             <label for="inspect-output">Inspect an output neuron</label>
@@ -153,13 +197,13 @@
             <p id="gradient-equation" class="oracle-equation"></p>
             <details open><summary>Input → hidden: all 72 weights + 8 biases</summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Input to hidden weights"><table id="weights-one"></table></div></details>
             <details open><summary>Hidden → output: all 24 weights + 3 biases</summary><div class="oracle-matrix-scroll" tabindex="0" role="region" aria-label="Hidden to output weights"><table id="weights-two"></table></div></details>
-            <p class="oracle-lab-note">Each cell shows its weight and Δ. Cyan = positive; pink = negative. Rounded to 3 decimals; calculations use full precision. O / P / S = Orbit / Prism / Spark.</p>
+            <p class="oracle-lab-note">Each cell shows its weight and Δ. Cyan = positive; pink = negative; a gold outline marks the biggest changes from your last click. Rounded to 3 decimals; calculations use full precision. O / P / S = Orbit / Prism / Spark.</p>
         </div>
         <details class="oracle-explainer">
             <summary>Wait. Is it actually learning?</summary>
-            <p>Yes. Your last three choices become nine inputs to a neural network with eight tanh hidden neurons and three softmax outputs. After each move, backpropagation adjusts its weights using cross-entropy loss. The lines show real weights: cyan is positive, pink is negative; thicker means stronger.</p>
-            <p>The prediction is locked before your click. The diagram and percentages reveal that past prediction, never the next one. An escape means it guessed the wrong symbol. Points = round(100 × (1 − probability of your choice)); up to 3,000 points across 30 moves. Streaks are for bragging rights and do not multiply points.</p>
-            <p>Everyone gets the same initial brain for a given UTC day. Shared links preserve that challenge; restarting resets all learned weights. There is no timer. This is a playful experiment in pattern learning, not a test of intelligence or a measure of true randomness. Game choices stay in this tab; only your best score is saved locally.</p>
+            <p>Yes. Your last three choices become nine inputs to a neural network with eight tanh hidden neurons and three softmax outputs. After each move, backpropagation adjusts its weights using cross-entropy loss. The lines show real weights: cyan is positive, pink is negative; thicker means stronger. After each click you see the forward pass (white sparks) and then the learning pass (gold sparks flowing backward along the weights that changed most).</p>
+            <p>The prediction is locked before your click. The diagram and percentages reveal that past prediction, never the next one. An escape means it guessed the wrong symbol. Points = round(100 × (1 − probability of your choice)); up to 3,000 points across 30 moves. Clicking truly at random averages about 2,000 points, so beating 2,000 means you modeled the model better than it modeled you. Streaks are for bragging rights and do not multiply points.</p>
+            <p>Everyone gets the same initial brain for a given UTC day. Shared links preserve that challenge and the score to beat; restarting resets all learned weights. There is no timer. This is a playful experiment in pattern learning, not a test of intelligence or a measure of true randomness. Game choices stay in this tab; only your best score and sound preference are saved locally.</p>
         </details>
     </section>
     </main>
