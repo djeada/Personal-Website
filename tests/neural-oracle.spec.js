@@ -67,6 +67,9 @@ for (const width of [390, 1280]) {
         await expect(page.locator('#round')).toHaveText('1 / 30');
         await expect(page.locator('#lesson')).toContainText('Only the biases');
         await expect(page.locator('#loss-values')).toContainText('1.099');
+        await expect(page.locator('#verdict')).toHaveText(/ESCAPED|PREDICTED/);
+        await expect(page.locator('#memory li').first()).toHaveText('◯');
+        await expect(page.locator('#accuracy')).toHaveText(/^\d+%$/);
         await expect(page.locator('#gradient-equation')).toContainText('New weight');
         for (let i = 1; i < 30; i++) await page.keyboard.press(String(i % 3 + 1));
         await expect(page.locator('#round')).toHaveText('30 / 30');
@@ -79,7 +82,10 @@ for (const width of [390, 1280]) {
         await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('blocked'); } } }));
         await page.getByRole('button', { name: 'Copy challenge & score' }).click();
         await expect(page.locator('#share-fallback')).toBeVisible();
-        await expect(page.locator('#share-fallback')).toHaveValue(/challenge=2026-10-09/);
+        await expect(page.locator('#share-fallback')).toHaveValue(/challenge=2026-10-09&beat=\d+/);
+        expect(await page.locator('#habits li').count()).toBeGreaterThanOrEqual(3);
+        await expect(page.locator('#result-rank')).toContainText('EXPERIMENT COMPLETE ·');
+        await expect(page.locator('#history .escaped, #history .caught')).toHaveCount(30);
         await page.keyboard.press('2');
         await expect(page.locator('#round')).toHaveText('30 / 30');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -109,6 +115,26 @@ test('game works with blocked storage and clipboard success reports accurately',
     await page.locator('#share').click();
     await expect(page.locator('#share-status')).toContainText('Copied!');
     expect(await page.evaluate(() => window.copiedText)).toContain('107-parameter');
+});
+
+test('friend challenge links show the score to beat and report the outcome', async ({ page }) => {
+    await page.goto('/tools/neural_oracle/?challenge=2026-10-09&beat=1500');
+    await expect(page.locator('#rival')).toContainText('1,500');
+    for (let i = 0; i < 30; i++) await page.keyboard.press(String(i % 3 + 1));
+    await expect(page.locator('#result-summary')).toContainText(/friend’s 1,500/);
+    const download = page.waitForEvent('download');
+    await page.locator('#card').click();
+    expect((await download).suggestedFilename()).toMatch(/^outclick-the-oracle-2026-10-09-\d+\.png$/);
+});
+
+test('invalid beat values are ignored and sound preference persists', async ({ page }) => {
+    await page.goto('/tools/neural_oracle/?challenge=2026-10-09&beat=99999');
+    await expect(page.locator('#rival')).toBeHidden();
+    await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#sound').click();
+    await expect(page.locator('#sound')).toHaveText('Sound off');
+    await page.reload();
+    await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('game is discoverable through the existing tools filter', async ({ page }) => {
