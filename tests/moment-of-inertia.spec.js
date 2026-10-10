@@ -36,7 +36,7 @@ test('mass elements preserve mass and center, and finite sums converge for tilte
             previousError = error;
             expect(d.cumulative[0]).toBe(0);
             expect(d.cumulative.at(-1)).toBeCloseTo(d.numerical, 12);
-            expect(d.bins.reduce((sum, b) => sum + b.inertia, 0)).toBeCloseTo(d.numerical, 10);
+            expect(Math.abs(d.bins.reduce((sum, b) => sum + b.inertia, 0) - d.exact.total)).toBeLessThanOrEqual(0.01 * d.exact.total + 1e-12);
             expect(d.bins.reduce((sum, b) => sum + b.mass, 0)).toBeCloseTo(d.config.mass, 10);
             for (const p of d.points) expect(p.contribution).toBeCloseTo(p.dm * p.r2, 12);
         }
@@ -54,6 +54,31 @@ test('perpendicular distance uses the full axis line and stays invariant during 
         const shiftedAlongAxis = { x: p.x + 3 * n[0], y: p.y, z: p.z + 3 * n[2] };
         expect(M.distanceSquared(shiftedAlongAxis, c)).toBeCloseTo(r2, 12);
         expect(M.distanceSquared(M.rotate(p, c, 1.7), c)).toBeCloseTo(r2, 12);
+    }
+});
+
+test('distance bands describe the physical body without sampling gaps', () => {
+    const disk = M.evaluate({ ...M.DEFAULTS, resolution: 4 });
+    disk.bins.forEach((b, i) => expect(b.mass / disk.config.mass).toBeCloseTo((2 * i + 1) / 100, 3));
+    const rod = M.evaluate({ ...M.DEFAULTS, shape: 'rod' });
+    rod.bins.forEach(b => expect(b.mass / rod.config.mass).toBeCloseTo(0.1, 10));
+    const sphere = M.evaluate({ ...M.DEFAULTS, shape: 'sphere' });
+    sphere.bins.forEach(b => {
+        const exact = (1 - (b.from / 1) ** 2) ** 1.5 - (1 - (b.to / 1) ** 2) ** 1.5;
+        expect(Math.abs(b.mass / sphere.config.mass - exact)).toBeLessThan(0.01);
+    });
+    M.evaluate({ ...M.DEFAULTS, shape: 'sphere', tilt: 35 }).bins.forEach((b, i) => expect(b.mass).toBeCloseTo(sphere.bins[i].mass, 10));
+});
+
+test('the farthest point bounds every mass element and tracks the swinging end', () => {
+    const end = M.farthestPoint(M.normalize({ shape: 'rod', offset: 1 }));
+    expect([end.x, end.y, end.z, end.r]).toEqual([-1, 0, 0, 2]);
+    expect(M.farthestPoint(M.normalize({ shape: 'sphere', tilt: 35, offset: -0.4 })).r).toBeCloseTo(1.4, 12);
+    for (const shape of Object.keys(M.SHAPES)) {
+        const c = M.normalize({ shape, tilt: 35, offset: 0.3, resolution: 16 });
+        const far = M.farthestPoint(c);
+        expect(M.distanceSquared(far, c)).toBeCloseTo(far.r ** 2, 12);
+        for (const p of M.sample(c)) expect(Math.sqrt(p.r2)).toBeLessThanOrEqual(far.r + 1e-9);
     }
 });
 
@@ -261,6 +286,90 @@ test.describe('inertia lab in the browser', () => {
             await page.screenshot({ path: `screenshots/moment-of-inertia-${width}.png`, fullPage: true });
         });
     }
+
+    test('experiments stay active while followed, and explanations report what changed', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        const redistribute = page.getByRole('button', { name: 'Move mass outward', exact: true });
+        await redistribute.click();
+        await slider(page, 'hollow', 0.8);
+        await expect(redistribute).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#experiment-note')).toContainText('Move mass toward the rim');
+        await expect(page.locator('#live-insight')).toContainText('I: 1.000 → 1.640 kg·m² (×1.64)');
+        await page.locator('#reset-body').click();
+        await expect(page.locator('#hollow')).toHaveValue('0');
+        await expect(redistribute).toHaveAttribute('aria-pressed', 'true');
+        await page.locator('#shape').selectOption('cylinder');
+        await expect(redistribute).toHaveAttribute('aria-pressed', 'false');
+        await slider(page, 'height', 3);
+        await expect(page.locator('#live-insight')).toContainText('unchanged');
+        await expect(page.locator('#live-insight')).toContainText('only along the axis');
+        await slider(page, 'tilt', 90);
+        await slider(page, 'height', 2);
+        await expect(page.locator('#live-insight')).toContainText('less than the full');
+        await expect(page.locator('#pause-motion')).toHaveText('Pause');
+        await expect(page.locator('#pause-motion')).toBeDisabled();
+    });
+
+    test('the primer explains I = m r² with a live ball on an arm', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('#primer-I')).toHaveText('1.0 × 0.50² = 0.250 kg·m²');
+        await slider(page, 'primer-r', 1);
+        await expect(page.locator('#primer-I')).toHaveText('1.0 × 1.00² = 1.000 kg·m²');
+        await expect(page.locator('#primer-insight')).toContainText('r² ×4.00');
+        await slider(page, 'primer-m', 2);
+        await expect(page.locator('#primer-insight')).toContainText('I is ×8.00');
+        await expect(page.locator('#primer-svg')).toHaveAttribute('aria-label', /square of side r has area 1.00/);
+    });
+
+    test('every shape shows how many integrals it needs and why', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('#count-table tr')).toHaveCount(7);
+        await expect(page.locator('#count-table tr.current-shape')).toContainText('Solid disk');
+        await expect(page.locator('#count-table tr.current-shape .sign-cell')).toHaveText('∫∫ double');
+        await expect(page.locator('#integral-badge')).toHaveText('2D surface · double ∫∫');
+        await expect(page.locator('#integral-shortcut')).toBeVisible();
+        await page.locator('[data-load-shape="sphere"]').click();
+        await expect(page.locator('#specimen-title')).toHaveText('Solid sphere');
+        await expect(page.locator('#integral-badge')).toHaveText('3D solid · triple ∫∫∫');
+        await expect(page.locator('.dimension-cards .current-shape')).toHaveAttribute('data-dims', '3');
+        await page.locator('[data-load-shape="rod"]').click();
+        await expect(page.locator('#integral-badge')).toHaveText('1D line · single ∫');
+        await expect(page.locator('#integral-shortcut')).toBeHidden();
+        await page.locator('#shape').selectOption('annulus');
+        await slider(page, 'hollow', 1);
+        await expect(page.locator('#integral-badge')).toHaveText('1D line · single ∫');
+    });
+
+    test('the off-center section splits I into the spin about the center and the center going around', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('#offcenter-insight')).toContainText('goes through the center of mass');
+        await slider(page, 'offcenter-d', 0.5);
+        await expect(page.locator('#offset')).toHaveValue('0.5');
+        await expect(page.locator('#inertia-value')).toHaveText('1.500');
+        await expect(page.locator('#offcenter-cm')).toHaveText('1.000 kg·m²');
+        await expect(page.locator('#offcenter-shift')).toHaveText('2.00 × 0.50² = 0.500 kg·m²');
+        await expect(page.locator('#offcenter-insight')).toContainText('1.50× harder');
+        await slider(page, 'offset', -0.5);
+        await expect(page.locator('#offcenter-d')).toHaveValue('-0.5');
+        await expect(page.locator('#offcenter-total')).toHaveText('1.500 kg·m²');
+        await page.locator('[data-experiment-link="shift"]').click();
+        await expect(page.locator('#inertia-value')).toHaveText('2.667');
+        await expect(page.locator('#offcenter-insight')).toContainText('4.00× harder');
+    });
+
+    test('charts and motion views are drawn at their displayed size on phones', async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 800 });
+        await page.goto('/tools/moment_of_inertia/');
+        for (const id of ['motion-chart', 'distribution-chart']) {
+            const [viewWidth, shown] = await page.locator('#' + id).evaluate(svg => [svg.viewBox.baseVal.width, svg.clientWidth]);
+            expect(Math.abs(viewWidth - Math.max(280, shown))).toBeLessThanOrEqual(1);
+        }
+        const motion = await page.locator('#current-motion').evaluate(c => [c.clientWidth, c.clientHeight]);
+        expect(motion[1] / motion[0]).toBeGreaterThan(0.65);
+        expect(await page.locator('#current-motion').getAttribute('data-scale')).toBe(await page.locator('#reference-motion').getAttribute('data-scale'));
+        const inset = await page.locator('.specimen-stage .canvas-wrap').evaluate(e => getComputedStyle(e).paddingLeft);
+        expect(inset).toBe('0px');
+    });
 
     test('ideal axial rod is explained, disabling invalid motion until the axis changes', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
