@@ -31,7 +31,7 @@ The page is written for beginners:
    - plate: strips, then pieces along a strip
    - cylinder or sphere: slices, then rings, then pieces
    Each Σ has its own colored nested box with a counter, a partial sum and the totals of finished groups. The canvas uses the same colors. Play/Pause, +1 piece, Finish ring/strip, Finish slice, To the end and Reset control the build, which starts by itself the first time it scrolls into view. A colored nested Σ formula turns into the ∫ form, and a table shows Σ approaching ∫ as the pieces shrink. Another table lists every shape's coordinates, dm, integral count and symmetry shortcut.
-4. **Same twist race.** Two bodies get equal torque from rest, shown with a scrubbable timeline and a speed-versus-time plot. Any body can be pinned as the reference.
+4. **Same twist race.** Two bodies get equal torque from rest, shown with a scrubbable timeline and a speed-versus-time plot. Guided experiments select their comparison body. Outside an experiment, the reference follows the selected shape, mass and dimensions with a centered z axis (β = 0°, d = 0). The reference selector can switch to this automatic comparison during an experiment. Pinning a body preserves its complete configuration until a different reference is selected.
 5. **Off-center axes.** The parallel-axis theorem is shown as two motions:
    - an animated view along the axis, with the center's circle (M d²) and an arrow showing the body turning about its own center (I_CM)
    - an I(d) parabola whose dot can be dragged
@@ -39,7 +39,7 @@ The page is written for beginners:
 6. **The math for this body, step by step**, then "Learn with this tool": objectives, model, four predict/test/measure/explain exercises, a worked triple-integral example, limits and references.
 7. **Formula sheet** at the bottom, as static HTML and MathML. It has 15 bodies and axes (the lab's seven shapes plus a point mass, a thin-walled tube and a spherical shell) and the parallel- and perpendicular-axis theorems. Each row shows:
    - the result
-   - what to plug into I = ∫ r⊥² dm (dm and r⊥)
+   - what to plug into I = ∫ r⊥² dm: the material’s total length, area or volume gives its uniform density (λ, σ or ρ), and the tiny piece’s size gives dm; the row also gives r⊥. An introduction derives the density rule from M = ∫ dm and explains units and the hoop’s arc length.
    - the integral worked out, with its integral count
    - for bodies in the lab, a "Load" button. A test checks that each loaded body's I equals the formula at the default sizes.
 
