@@ -100,6 +100,14 @@ UI.onThemeChange(() => { /* redraw DOM-coloured things */ });
 
 Include at least one limiting-case exercise. State what the solver models and what the prose only mentions.
 
+### Readable math and results
+
+- Keep the readouts as a `dl.optics-readouts`, with a `div` around each `dt`/`dd` pair. The shared theme stacks the label above the value in a card; put context such as the measurement plane in a separate `.optics-readout-note` span. Group long result lists under descriptive headings.
+- Wrap each glossary `dt`/`dd` pair in `div.optics-symbol`. The theme separates rows and stacks the term and definition on phones.
+- Author math in LaTeX using `<span class="optics-inline" data-tex="...">` for inline symbols and short expressions, or `<div class="optics-equation" data-tex="...">` for display equations. Escape HTML attribute characters, including `&` in matrix column separators. Group related display equations in `.optics-equation-card` with a `.optics-equation-label`.
+- Run `npm run math:optics` after changing a formula. It uses the locked KaTeX dependency to write native MathML into each marked element, keeping its LaTeX source in `data-tex`. Commit the rendered HTML. No runtime CDN, font download or JavaScript renderer is needed. Unknown TeX commands fail the render command rather than reaching the page.
+- Split long formulas into named steps. Display equations can scroll within their own container on narrow screens; the page itself must stay within the viewport. Keep explanatory paragraphs short and define symbols beside the model.
+
 ## 5. Conventions (identical across all tools)
 
 - **SI internally** (m, s, rad, W). Convert nm, mm and degrees only at the UI boundary with `core.units`, and format output with `core.formatSI(v, "m")`.
