@@ -11,6 +11,9 @@
     const COOL = [105, 245, 231], WARM = [248, 212, 119];
     let data = M.evaluate(M.DEFAULTS);
     let reference = M.evaluate({ ...M.DEFAULTS, shape: "hoop" });
+    let referenceMode = "experiment";
+    let experimentReference = reference;
+    let pinnedReference = null;
     let selected = Math.floor(data.points.length * 0.75);
     let activeExperiment = null;
     let hits = [];
@@ -298,7 +301,7 @@
         } else s.line(circle(c.radius), color, c.shape === "hoop" ? 4 : 1.5, c.shape === "disk" ? fill : null);
     }
 
-    function drawAxis(s, c, labels = true) {
+    function drawAxis(s, c, labels = true, cm = { x: 0, y: 0, z: 0 }) {
         const { ctx, project, line, a, n, w, h } = s;
         const axisPoint = project({ x: a[0], y: 0, z: a[2] });
         const b = Math.max(bound(c) + Math.abs(c.offset), 0.6) * 1.5;
@@ -307,8 +310,8 @@
         ctx.beginPath(); ctx.arc(axisPoint.x, axisPoint.y, 7, 0, 2 * Math.PI); ctx.stroke();
         ctx.fillStyle = C.axis; ctx.beginPath(); ctx.arc(axisPoint.x, axisPoint.y, 2, 0, 2 * Math.PI); ctx.fill();
         if (c.offset !== 0) {
-            line([{ x: 0, y: 0, z: 0 }, { x: a[0], y: 0, z: a[2] }], "rgba(255, 141, 124, .6)", 1, null, [4, 5]);
-            const mid = project({ x: a[0] / 2, y: 0, z: a[2] / 2 });
+            line([cm, { x: a[0], y: 0, z: a[2] }], "rgba(255, 141, 124, .6)", 1, null, [4, 5]);
+            const mid = project({ x: (cm.x + a[0]) / 2, y: cm.y / 2, z: (cm.z + a[2]) / 2 });
             ctx.font = "12px ui-monospace, monospace"; ctx.fillStyle = "#ffb1a5"; ctx.fillText(`d = ${num(Math.abs(c.offset), 2)} m`, mid.x + 6, mid.y + 16);
         }
         if (!labels) return;
@@ -329,11 +332,15 @@
         }
     }
 
-    function drawCM(s) {
-        const center = s.project({ x: 0, y: 0, z: 0 });
-        s.ctx.strokeStyle = C.text; s.ctx.lineWidth = 1.2;
-        s.ctx.beginPath(); s.ctx.moveTo(center.x - 5, center.y); s.ctx.lineTo(center.x + 5, center.y); s.ctx.moveTo(center.x, center.y - 5); s.ctx.lineTo(center.x, center.y + 5); s.ctx.stroke();
-        s.ctx.font = "11px ui-monospace, monospace"; s.ctx.fillStyle = C.muted; s.ctx.fillText("CM", center.x + 8, center.y + 16);
+    function drawCM(s, position = { x: 0, y: 0, z: 0 }) {
+        const center = s.project(position), ctx = s.ctx;
+        // A screen-aligned target marks one point, regardless of the axis tilt.
+        ctx.fillStyle = C.panel; ctx.strokeStyle = C.white; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(center.x, center.y, 8, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(center.x - 5, center.y); ctx.lineTo(center.x + 5, center.y); ctx.moveTo(center.x, center.y - 5); ctx.lineTo(center.x, center.y + 5); ctx.stroke();
+        ctx.font = "700 12px ui-monospace, monospace";
+        ctx.fillStyle = C.panel; ctx.fillRect(center.x + 12, center.y + 4, 25, 18);
+        ctx.fillStyle = C.white; ctx.fillText("CM", center.x + 16, center.y + 17);
     }
 
     // Dot area is proportional to the piece's mass, so heavier pieces look heavier.
@@ -364,8 +371,8 @@
             ctx.beginPath(); ctx.arc(q.x, q.y, dotRadius(q.p, w), 0, Math.PI * 2); ctx.fill();
         }
         drawAxis(s, c);
-        drawCM(s);
         drawDistance(s, data.points[selected]);
+        drawCM(s);
     }
 
     // ---------- canvases ----------
@@ -737,14 +744,10 @@
         ctx.canvas.dataset.scale = String(s.scale);
         outline(s, c, 0, true);
         outline(s, c, angle);
-        drawAxis(s, c);
+        const origin = { x: 0, y: 0, z: 0 }, cm = M.rotate(origin, c, angle);
+        drawAxis(s, c, true, cm);
         if (c.offset !== 0) {
-            const origin = { x: 0, y: 0, z: 0 };
             s.line(Array.from({ length: 65 }, (_, i) => M.rotate(origin, c, i * Math.PI / 32)), "rgba(201, 195, 230, .6)", 1.5, null, [3, 5]);
-            const cm = s.project(M.rotate(origin, c, angle));
-            ctx.strokeStyle = C.text; ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.moveTo(cm.x - 5, cm.y); ctx.lineTo(cm.x + 5, cm.y); ctx.moveTo(cm.x, cm.y - 5); ctx.lineTo(cm.x, cm.y + 5); ctx.stroke();
-            ctx.font = "11px ui-monospace, monospace"; ctx.fillStyle = C.muted; ctx.fillText("CM", cm.x + 7, cm.y - 7);
         }
         const { x, y, z } = M.farthestPoint(c), p = { x, y, z };
         const marker = M.rotate(p, c, angle), q = s.project(marker);
@@ -752,6 +755,7 @@
         const along = p.x * s.n[0] + p.z * s.n[2];
         s.line([{ x: s.a[0] + along * s.n[0], y: 0, z: s.a[2] + along * s.n[2] }, marker], C.gold, 2);
         ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 2 * Math.PI); ctx.fill();
+        drawCM(s, cm);
         ctx.font = "12px ui-monospace, monospace"; ctx.fillStyle = C.muted; ctx.fillText(`t = ${num(motionState.time, 2)} s`, 12, 38);
     }
 
@@ -771,7 +775,22 @@
         }
     }
 
+    function syncReference() {
+        if (referenceMode === "auto") {
+            const c = { ...data.config, tilt: 0, offset: 0 };
+            if (controls.some(key => c[key] !== reference.config[key])) reference = M.evaluate(c);
+        } else reference = referenceMode === "pinned" ? pinnedReference : experimentReference;
+        $("reference-mode").value = referenceMode;
+        $("reference-experiment").disabled = !activeExperiment;
+        $("reference-pinned").disabled = !pinnedReference;
+        $("reference-note").textContent = referenceMode === "auto"
+            ? "Reference follows your shape, mass and dimensions, with β = 0° and d = 0."
+            : referenceMode === "pinned" ? "Reference is your pinned snapshot. Body controls change your body only."
+            : "Reference is the guided experiment’s comparison body. Choose “Same body” to follow your changes.";
+    }
+
     function renderMotion() {
+        syncReference();
         const torque = Number($("torque").value), t = motionState.time;
         for (const [prefix, d] of [["current", data], ["reference", reference]]) {
             const motion = M.motion(d.exact.total, torque, t);
@@ -870,9 +889,8 @@
         ctx.strokeStyle = C.cyan; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cm.x, cm.y); ctx.lineTo(tp.x, tp.y); ctx.stroke();
         const head = Math.atan2(tp.y - cm.y, tp.x - cm.x);
         ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.moveTo(tp.x, tp.y); ctx.lineTo(tp.x - 10 * Math.cos(head - 0.4), tp.y - 10 * Math.sin(head - 0.4)); ctx.lineTo(tp.x - 10 * Math.cos(head + 0.4), tp.y - 10 * Math.sin(head + 0.4)); ctx.fill();
-        ctx.strokeStyle = C.text; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(cm.x - 6, cm.y); ctx.lineTo(cm.x + 6, cm.y); ctx.moveTo(cm.x, cm.y - 6); ctx.lineTo(cm.x, cm.y + 6); ctx.stroke();
-        drawAxis(s, c, false);
+        drawAxis(s, c, false, cmNow);
+        drawCM(s, cmNow);
         ctx.font = "12px ui-sans-serif, system-ui, sans-serif"; ctx.fillStyle = C.gold;
         ctx.fillText(c.offset !== 0 ? "① center goes around the axis (M d²)" : "d = 0: the center stays on the axis", 12, 20);
         ctx.fillStyle = C.cyan; ctx.fillText("② body turns about its own center (I_CM)", 12, 38);
@@ -987,7 +1005,7 @@
         $("inertia-value").textContent = num(data.exact.total);
         $("centered-value").textContent = num(data.exact.centered);
         $("shift-value").textContent = num(data.exact.shift);
-        $("scene-description").textContent = `${M.SHAPES[c.shape].name}, ${num(c.mass, 2)} kg, split into ${data.points.length} pieces. Coral: the axis, tilted ${c.tilt}° from z and moved ${num(c.offset, 2)} m off-center. Warmer dots add more r⊥²Δm. The white line is the selected piece’s distance r⊥.`;
+        $("scene-description").textContent = `${M.SHAPES[c.shape].name}, ${num(c.mass, 2)} kg, split into ${data.points.length} pieces. The white CM target marks the body’s center of mass; changing the axis does not move it. Coral: the axis, tilted ${c.tilt}° from z and moved ${num(c.offset, 2)} m off-center. Warmer dots add more r⊥²Δm. The white line is the selected piece’s distance r⊥.`;
         renderExplanation();
         renderDerivation();
         renderDistributionText();
@@ -1006,9 +1024,9 @@
         const before = data;
         data = M.evaluate(c);
         selected = Math.min(selected, data.points.length - 1);
-        if (change !== "resolution") resetMotion();
         // Following an experiment's instructions keeps it active; switching shape leaves it.
         if (change === "shape") setExperiment(null);
+        if (change !== "resolution") resetMotion();
         renderBody();
         renderExplanation(change, before);
         if ($("run-motion").disabled) $("motion-status").textContent = "This idealized axis has I = 0, so α = τ/I has no finite value. Change the axis or shape to run the race.";
@@ -1025,6 +1043,7 @@
 
     function setExperiment(key) {
         activeExperiment = key;
+        if (!key && referenceMode === "experiment") referenceMode = "auto";
         $("experiment-note").textContent = key ? experiments[key].note : "Your own experiment. Change one variable at a time, and pin a reference to compare before and after.";
         document.querySelectorAll("[data-experiment]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.experiment === key)); b.classList.toggle("active", b.dataset.experiment === key); });
     }
@@ -1033,6 +1052,8 @@
         const e = experiments[key];
         data = M.evaluate({ ...M.DEFAULTS, ...e.current });
         reference = M.evaluate({ ...M.DEFAULTS, ...e.reference });
+        experimentReference = reference;
+        referenceMode = "experiment";
         selected = Math.floor(data.points.length * 0.75);
         $("torque").value = 1;
         setExperiment(key);
@@ -1122,8 +1143,13 @@
             renderMotion();
         });
         $("pin-reference").addEventListener("click", () => {
-            reference = M.evaluate(data.config);
+            pinnedReference = M.evaluate(data.config);
+            referenceMode = "pinned";
             resetMotion("Your body is now the reference. Change your body and race again.");
+        });
+        $("reference-mode").addEventListener("change", () => {
+            referenceMode = $("reference-mode").value;
+            resetMotion();
         });
         // The orbit view animates only while it is on screen.
         if ("IntersectionObserver" in window) {

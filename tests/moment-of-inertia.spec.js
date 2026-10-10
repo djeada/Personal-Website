@@ -355,6 +355,99 @@ test.describe('inertia lab in the browser', () => {
         await expect(page.locator('#comparison-headline')).toHaveText('No torque. No change in spin.');
     });
 
+    test('reference follows custom bodies and dimensions, while pinned snapshots stay fixed', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('#reference-name')).toContainText('Thin hoop');
+        await page.locator('#shape').selectOption('cylinder');
+        await slider(page, 'tilt', 40);
+        await slider(page, 'offset', -0.45);
+        await expect(page.locator('#reference-mode')).toHaveValue('auto');
+        await expect(page.locator('#reference-name')).toContainText('Solid cylinder');
+        await expect(page.locator('#reference-name')).toContainText('β 0° · d 0.00 m');
+        await slider(page, 'mass', 4);
+        await slider(page, 'radius', 1.5);
+        await slider(page, 'height', 3);
+        await expect(page.locator('#reference-I')).toHaveText('4.500');
+        await expect(page.locator('#reference-name')).toContainText('H 3.00 m');
+        await slider(page, 'motion-time', 2);
+        await expect(page.locator('#reference-angle')).toHaveText('0.444');
+        await page.locator('#pin-reference').click();
+        const snapshot = await page.locator('#reference-name').textContent();
+        const inertia = await page.locator('#reference-I').textContent();
+        await page.locator('#shape').selectOption('sphere');
+        await slider(page, 'mass', 2);
+        await expect(page.locator('#reference-mode')).toHaveValue('pinned');
+        await expect(page.locator('#reference-name')).toHaveText(snapshot);
+        await expect(page.locator('#reference-I')).toHaveText(inertia);
+        await page.locator('#reference-mode').selectOption('auto');
+        await expect(page.locator('#reference-name')).toContainText('Solid sphere');
+        await expect(page.locator('#reference-I')).toHaveText('1.800');
+        await expect(page.locator('#motion-time')).toHaveValue('0');
+        await page.getByRole('button', { name: 'Center vs. end', exact: true }).click();
+        await expect(page.locator('#reference-mode')).toHaveValue('experiment');
+        await expect(page.locator('#reference-I')).toHaveText('0.667');
+        await page.locator('#reference-mode').selectOption('auto');
+        await expect(page.locator('#reference-name')).toContainText('Thin rod');
+        await expect(page.locator('#reference-name')).toContainText('d 0.00 m');
+    });
+
+    test('CM target stays at the body center when the axis tilts, and follows its physical orbit', async ({ page }) => {
+        await page.addInitScript(() => {
+            window.cmDraws = {};
+            window.offsetDraws = {};
+            const proto = CanvasRenderingContext2D.prototype;
+            for (const method of ['beginPath', 'moveTo', 'lineTo', 'stroke', 'fillText']) {
+                const original = proto[method];
+                proto[method] = function(...args) {
+                    if (method === 'beginPath') this.cmPath = [];
+                    if (method === 'moveTo' || method === 'lineTo') (this.cmPath ||= []).push(args);
+                    if (method === 'stroke') this.cmStroke = this.cmPath;
+                    if (method === 'fillText' && args[0] === 'CM') {
+                        window.cmDraws[this.canvas.id] = { x: args[1] - 16, y: args[2] - 17, cross: this.cmStroke };
+                    }
+                    if (method === 'fillText' && args[0].startsWith('d =')) window.offsetDraws[this.canvas.id] = this.cmStroke;
+                    return original.apply(this, args);
+                };
+            }
+        });
+        await page.goto('/tools/moment_of_inertia/');
+        await page.locator('#shape').selectOption('cylinder');
+        for (const tilt of [0, 40, 90]) {
+            await slider(page, 'tilt', tilt);
+            await slider(page, 'offset', -0.45);
+            const result = await page.locator('#specimen').evaluate(canvas => {
+                const marker = window.cmDraws.specimen;
+                const c = window.InertiaModel.normalize({ tilt: document.getElementById('tilt').value, offset: -0.45 });
+                const { point: a } = window.InertiaModel.axis(c);
+                const scale = Number(canvas.dataset.scale), w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
+                const qx = -a[0] * 0.4, qz = -a[2] * 0.4;
+                return {
+                    marker,
+                    x: w / 2 + scale * qx * Math.cos(-0.45),
+                    y: h / 2 - scale * (-qx * Math.sin(-0.45) * Math.sin(0.72) + qz * Math.cos(0.72))
+                };
+            });
+            expect(result.marker.x).toBeCloseTo(result.x, 0);
+            expect(result.marker.y).toBeCloseTo(result.y, 0);
+            const expectedCross = [
+                [result.marker.x - 5, result.marker.y], [result.marker.x + 5, result.marker.y],
+                [result.marker.x, result.marker.y - 5], [result.marker.x, result.marker.y + 5]
+            ];
+            result.marker.cross.forEach((point, i) => point.forEach((coordinate, j) => {
+                expect(coordinate).toBeCloseTo(expectedCross[i][j], 10);
+            }));
+        }
+        await slider(page, 'tilt', 40);
+        const initial = await page.evaluate(() => window.cmDraws['current-motion']);
+        await slider(page, 'motion-time', 2);
+        const moved = await page.evaluate(() => window.cmDraws['current-motion']);
+        expect(Math.hypot(moved.x - initial.x, moved.y - initial.y)).toBeGreaterThan(5);
+        const connector = await page.evaluate(() => window.offsetDraws['current-motion']);
+        expect(connector[0][0]).toBeCloseTo(moved.x, 10);
+        expect(connector[0][1]).toBeCloseTo(moved.y, 10);
+        await expect(page.locator('#scene-description')).toContainText('changing the axis does not move it');
+    });
+
     test('experiments stay active while followed, and explanations report what changed', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
         const redistribute = page.getByRole('button', { name: 'Move mass outward', exact: true });
