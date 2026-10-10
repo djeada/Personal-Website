@@ -4,6 +4,7 @@
     const SHAPES = {
         rod: { name: "Thin rod", dimensions: ["length"], kind: "line" },
         disk: { name: "Solid disk", dimensions: ["radius"], kind: "area" },
+        annulus: { name: "Adjustable ring", dimensions: ["radius", "hollow"], kind: "area" },
         hoop: { name: "Thin hoop", dimensions: ["radius"], kind: "line" },
         plate: { name: "Rectangular plate", dimensions: ["length", "width"], kind: "area" },
         cylinder: { name: "Solid cylinder", dimensions: ["radius", "height"], kind: "volume" },
@@ -11,7 +12,7 @@
     };
     const DEFAULTS = Object.freeze({
         shape: "disk", mass: 2, radius: 1, length: 2, width: 1, height: 2,
-        tilt: 0, offset: 0, resolution: 8
+        tilt: 0, offset: 0, hollow: 0.5, resolution: 8
     });
 
     function bounded(value, fallback, min, max) {
@@ -26,6 +27,7 @@
             length: bounded(input.length, DEFAULTS.length, 0.4, 4),
             width: bounded(input.width, DEFAULTS.width, 0.4, 4),
             height: bounded(input.height, DEFAULTS.height, 0.4, 4),
+            hollow: bounded(input.hollow, DEFAULTS.hollow, 0, 1),
             tilt: bounded(input.tilt, DEFAULTS.tilt, 0, 90),
             offset: bounded(input.offset, DEFAULTS.offset, -2, 2),
             resolution: [4, 8, 16].includes(Number(input.resolution)) ? Number(input.resolution) : DEFAULTS.resolution
@@ -52,6 +54,10 @@
         switch (config.shape) {
             case "rod": return { x: 0, y: m * l * l / 12, z: m * l * l / 12 };
             case "disk": return { x: m * r * r / 4, y: m * r * r / 4, z: m * r * r / 2 };
+            case "annulus": {
+                const z = m * r * r * (1 + config.hollow ** 2) / 2;
+                return { x: z / 2, y: z / 2, z };
+            }
             case "hoop": return { x: m * r * r / 2, y: m * r * r / 2, z: m * r * r };
             case "plate": return { x: m * w * w / 12, y: m * l * l / 12, z: m * (l * l + w * w) / 12 };
             case "cylinder": return { x: m * (3 * r * r + h * h) / 12, y: m * (3 * r * r + h * h) / 12, z: m * r * r / 2 };
@@ -73,6 +79,9 @@
             case "rod": return { symbol: "λ", value: m / l, unit: "kg/m" };
             case "hoop": return { symbol: "λ", value: m / (2 * Math.PI * r), unit: "kg/m" };
             case "disk": return { symbol: "σ", value: m / (Math.PI * r * r), unit: "kg/m²" };
+            case "annulus": return config.hollow === 1
+                ? { symbol: "λ", value: m / (2 * Math.PI * r), unit: "kg/m" }
+                : { symbol: "σ", value: m / (Math.PI * r * r * (1 - config.hollow ** 2)), unit: "kg/m²" };
             case "plate": return { symbol: "σ", value: m / (l * w), unit: "kg/m²" };
             case "cylinder": return { symbol: "ρ", value: m / (Math.PI * r * r * h), unit: "kg/m³" };
             case "sphere": return { symbol: "ρ", value: 3 * m / (4 * Math.PI * r ** 3), unit: "kg/m³" };
@@ -83,18 +92,18 @@
         const { shape, mass, radius, length, width, height, resolution: n } = config;
         const points = [];
         const add = (x, y, z, weight) => points.push({ x, y, z, weight });
-        const circularSlice = (z, r, sliceWeight, radialCount) => {
+        const circularSlice = (z, r, sliceWeight, radialCount, inner = 0) => {
             for (let i = 0; i < radialCount; i++) {
-                const a = r * i / radialCount, b = r * (i + 1) / radialCount;
+                const a = inner + (r - inner) * i / radialCount, b = inner + (r - inner) * (i + 1) / radialCount;
                 const midpoint = (a + b) / 2;
-                const weight = sliceWeight * (b * b - a * a) / (r * r) / (2 * n);
+                const weight = sliceWeight * (b * b - a * a) / (r * r - inner * inner) / (2 * n);
                 for (let j = 0; j < 2 * n; j++) {
                     const phi = 2 * Math.PI * (j + 0.5) / (2 * n);
                     add(midpoint * Math.cos(phi), midpoint * Math.sin(phi), z, weight);
                 }
             }
         };
-        switch (shape) {
+        switch (shape === "annulus" && config.hollow === 1 ? "hoop" : shape) {
             case "rod":
                 for (let i = 0; i < n; i++) add(length * ((i + 0.5) / n - 0.5), 0, 0, 1 / n);
                 break;
@@ -105,6 +114,7 @@
                 }
                 break;
             case "disk": circularSlice(0, radius, 1, n); break;
+            case "annulus": circularSlice(0, radius, 1, n, radius * config.hollow); break;
             case "plate":
                 for (let i = 0; i < n; i++) {
                     for (let j = 0; j < n; j++) add(length * ((i + 0.5) / n - 0.5), width * ((j + 0.5) / n - 0.5), 0, 1 / (n * n));

@@ -50,9 +50,11 @@ test('challenge is deterministic, bounded, and immutable after 30 moves', () => 
 });
 
 test.describe('browser interaction', () => {
-// KaTeX is served from the same npm version the page loads from cdnjs, so the math renders offline.
+// Keep CDN URLs and SRI aligned with the locked npm version; browser integrity
+// checks still apply when these local files are served to render math offline.
 const katexDist = path.dirname(require.resolve('katex/dist/katex.min.js'));
-const katexPrefix = '/ajax/libs/KaTeX/0.16.9/';
+const katexVersion = require('katex/package.json').version;
+const katexPrefix = `/ajax/libs/KaTeX/${katexVersion}/`;
 
 test.beforeEach(async ({ page }) => {
     await page.route('**/*', route => {
@@ -84,6 +86,7 @@ for (const width of [390, 1280]) {
         await expect(page.locator('#accuracy')).toHaveText(/^\d+%$/);
         await expect(page.locator('#gradient-equation')).toContainText('New weight');
         await expect(page.locator('#gradient-tex .katex')).toHaveCount(1);
+        await expect(page.locator('#gradient-tex .katex')).toHaveCSS('font-family', /KaTeX_Main/);
         await expect(page.locator('#input-values .katex')).toHaveCount(1);
         await expect(page.locator('#tanh-plot circle')).toHaveCount(8);
         await expect(page.locator('.oracle-lab .katex-error')).toHaveCount(0);
