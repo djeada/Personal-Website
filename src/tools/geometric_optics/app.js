@@ -1427,7 +1427,34 @@
 
     function setText(id, t) {
         const el = $(id);
-        if (el && el.textContent !== t) el.textContent = t;
+        if (el && el.textContent !== t) {
+            el.textContent = t;
+            delete el.dataset.readout;
+        }
+    }
+
+    function setReadout(id, value, notes = []) {
+        const el = $(id), key = JSON.stringify([value, notes]);
+        if (el.dataset.readout === key) return;
+        el.dataset.readout = key;
+        el.replaceChildren(document.createTextNode(value));
+        for (const text of notes) {
+            const note = document.createElement("span");
+            note.className = "optics-readout-note";
+            note.textContent = text;
+            el.append(note);
+        }
+    }
+
+    function setMatrixReadout(matrix, determinant) {
+        const el = $("rAbcd");
+        el.innerHTML = '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable columnspacing="1em" rowspacing=".4em"><mtr><mtd><mn></mn></mtd><mtd><mn></mn></mtd></mtr><mtr><mtd><mn></mn></mtd><mtd><mn></mn></mtd></mtr></mtable><mo>]</mo></mrow></math>';
+        const values = [matrix[0][0], matrix[0][1] / MM, matrix[1][0] * MM, matrix[1][1]];
+        el.querySelectorAll("mn").forEach((node, i) => { node.textContent = fmt(values[i], 4); });
+        const note = document.createElement("span");
+        note.className = "optics-readout-note";
+        note.textContent = "Determinant: " + fmt(determinant, 4) + " · B in mm, C in mm⁻¹";
+        el.append(note);
     }
 
     function elementName(sys, k) {
@@ -1476,7 +1503,6 @@
             }
         } else {
             siTxt = fmm(im.si, 5) + (im.virtual ? " (virtual)" : "");
-            imgTxt = "s_i = " + fmm(im.si, 5) + " after " + elementName(r.sysOpt, r.sysOpt.kRef).replace(/^#\d+ /, "") + ", z = " + fmm(im.zImage, 5) + (im.virtual ? ", virtual" : ", real");
             if (r.obj.atInfinity) {
                 mTxt = "h′ = " + fmm(im.hImage, 4);
                 mLabel = "Image height";
@@ -1484,8 +1510,13 @@
                 mTxt = fmt(im.m, 4) + (im.m < 0 ? " (inverted)" : " (upright)");
             }
         }
-        setText("rImage", imgTxt);
-        setText("rMag", mLabel + ": " + mTxt);
+        if (im.atInfinity) setReadout("rImage", "At infinity", [imgTxt]);
+        else setReadout("rImage", fmm(im.si, 5), [
+            (im.virtual ? "Virtual image" : "Real image") + " · after " + elementName(r.sysOpt, r.sysOpt.kRef).replace(/^#\d+ /, ""),
+            "Position z = " + fmm(im.zImage, 5)
+        ]);
+        setText("rMagLabel", mLabel);
+        setText("rMag", mTxt);
         setText("statSi", siTxt);
         setText("statM", mTxt);
         setText("statMLabel", mLabel);
@@ -1497,16 +1528,16 @@
             setText("rN", "at ∞");
             setText("statEfl", "afocal");
         } else {
-            setText("rEfl", fmm(cp.efl, 5) + " (f = " + fmm(cp.fFront, 4) + ", f′ = " + fmm(cp.fRear, 4) + ")");
+            setReadout("rEfl", fmm(cp.efl, 5), ["Front: " + fmm(cp.fFront, 4) + " · rear: " + fmm(cp.fRear, 4)]);
             setText("rBfd", fmm(cp.bfd, 5) + " / " + fmm(cp.ffd, 5));
             setText("rF", fmm(cp.zF, 5) + ", " + fmm(cp.zFp, 5));
             setText("rH", fmm(cp.zH, 5) + ", " + fmm(cp.zHp, 5));
             setText("rN", fmm(cp.zN, 5) + ", " + fmm(cp.zNp, 5));
             setText("statEfl", fmm(cp.efl, 4));
         }
-        setText("rStops", sp.stop < 0 ? "no finite aperture" : elementName(r.sys, sp.stop) + " / " + elementName(r.sys, sp.fieldStop));
-        setText("rEP", sp.stop < 0 ? "—" : sp.epAtInfinity ? "at ∞ (object-space telecentric)" : "z = " + fmm(sp.zEP, 5) + ", radius " + fmm(sp.rEP, 4));
-        setText("rXP", sp.stop < 0 ? "—" : sp.xpAtInfinity ? "at ∞ (image-space telecentric)" : "z = " + fmm(sp.zXP, 5) + ", radius " + fmm(sp.rXP, 4));
+        setReadout("rStops", sp.stop < 0 ? "No finite aperture" : elementName(r.sys, sp.stop), sp.stop < 0 ? [] : ["Field stop: " + elementName(r.sys, sp.fieldStop)]);
+        setReadout("rEP", sp.stop < 0 ? "—" : sp.epAtInfinity ? "At infinity" : "z = " + fmm(sp.zEP, 5), sp.stop < 0 ? [] : [sp.epAtInfinity ? "Object-space telecentric" : "Radius: " + fmm(sp.rEP, 4)]);
+        setReadout("rXP", sp.stop < 0 ? "—" : sp.xpAtInfinity ? "At infinity" : "z = " + fmm(sp.zXP, 5), sp.stop < 0 ? [] : [sp.xpAtInfinity ? "Image-space telecentric" : "Radius: " + fmm(sp.rXP, 4)]);
         setText("rNA", sp.stop < 0 ? "—" : fmt(sp.naObject, 4) + " / " + fmt(sp.naImage, 4));
         setText("rFno", sp.naImage > 1e-9 ? "f/" + fmt(sp.fNumberWorking, 3) : "∞ (image at ∞)");
         setText("statNA", sp.stop < 0 ? "—" : fmt(sp.naImage, 3));
@@ -1514,20 +1545,20 @@
         const s = r.spot;
         let dl = false;
         if (s.mode === "angle") {
-            setText("rAiry", Number.isFinite(r.airyAngle) ? "angular diameter " + fmt(2 * r.airyAngle * 1e6, 4) + " µrad (2.44 λ/D_XP)" : "—");
-            setText("rSpot", fsmall(s.rms, 1e6, "µrad") + " vs " + fmt(r.airyAngle * 1e6, 3) + " µrad");
+            setReadout("rAiry", Number.isFinite(r.airyAngle) ? fmt(2 * r.airyAngle * 1e6, 4) + " µrad" : "—", ["Angular diameter · set by the exit pupil"]);
+            setReadout("rSpot", fsmall(s.rms, 1e6, "µrad") + " / " + fmt(r.airyAngle * 1e6, 3) + " µrad", ["Angular RMS / Airy radius"]);
             dl = s.rms < r.airyAngle;
             setText("statRms", fsmall(s.rms, 1e6, "µrad"));
         } else {
-            setText("rAiry", Number.isFinite(r.airy.diameter) ? fmt(r.airy.diameter / 1e-6, 4) + " µm at λ = " + fmt(lamRef / NM, 4) + " nm" : "—");
-            setText("rSpot", fsmall(s.rms, 1e6, "µm") + " vs " + fmt(r.airy.radius / 1e-6, 3) + " µm (" + s.planeLabel + ")");
+            setReadout("rAiry", Number.isFinite(r.airy.diameter) ? fmt(r.airy.diameter / 1e-6, 4) + " µm" : "—", ["Wavelength: " + fmt(lamRef / NM, 4) + " nm"]);
+            setReadout("rSpot", fsmall(s.rms, 1e6, "µm") + " / " + fmt(r.airy.radius / 1e-6, 3) + " µm", ["Measured at the " + s.planeLabel]);
             dl = s.rms < r.airy.radius;
             setText("statRms", fsmall(s.rms, 1e6, "µm"));
         }
         const link = $("fourierLink");
         link.classList.toggle("is-diffraction-limited", dl);
         const M = cp.M;
-        setText("rAbcd", "[[" + fmt(M[0][0], 4) + ", " + fmt(M[0][1] / MM, 4) + "], [" + fmt(M[1][0] * MM, 4) + ", " + fmt(M[1][1], 4) + "]]  det " + fmt(cp.det, 4));
+        setMatrixReadout(M, cp.det);
         if (sp.fieldStop >= 0 && Number.isFinite(sp.fieldLimit)) {
             setText("rField", r.obj.atInfinity ? "α ≤ " + fmt(Math.atan(sp.fieldLimit) / DEG, 3) + "°" : "|h| ≤ " + fmm(sp.fieldLimit, 4));
         } else setText("rField", "—");

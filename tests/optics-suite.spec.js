@@ -43,7 +43,8 @@ async function openTool(browser, tool, viewport, colorScheme = "dark") {
     colorScheme,
   });
   const page = await context.newPage();
-  await page.route(EXTERNAL, (route) => route.abort());
+  // Formula layout and the simulator must work with every external request blocked.
+  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/tools/${tool}/`, { waitUntil: "load" });
@@ -63,6 +64,11 @@ for (const tool of OPTICS_TOOLS) {
             viewport: document.documentElement.clientWidth,
             pageWidth: document.documentElement.scrollWidth,
             dpr: window.devicePixelRatio,
+            readouts: [...document.querySelectorAll('.optics-readouts > div')].map(card => {
+              const label = card.querySelector('dt'), value = card.querySelector('dd');
+              if (!label || !value) return null;
+              return { labelBottom: label.getBoundingClientRect().bottom, valueTop: value.getBoundingClientRect().top };
+            }).filter(Boolean),
             canvases: canvases.map((c) => ({
               id: c.id,
               cssWidth: c.clientWidth,
@@ -75,6 +81,9 @@ for (const tool of OPTICS_TOOLS) {
         expect(errors, "page errors").toEqual([]);
         expect(report.pageWidth).toBeLessThanOrEqual(report.viewport + 1);
         expect(report.canvases.length).toBeGreaterThan(0);
+        for (const readout of report.readouts) {
+          expect(readout.valueTop, 'readout value is below its label').toBeGreaterThanOrEqual(readout.labelBottom);
+        }
         for (const canvas of report.canvases) {
           expect(canvas.labelled, `canvas #${canvas.id} has an accessible label`).toBe(true);
           expect(canvas.cssWidth, `canvas #${canvas.id} fits the viewport`).toBeLessThanOrEqual(report.viewport);
@@ -95,6 +104,9 @@ for (const tool of OPTICS_TOOLS) {
         teaching: !!document.querySelector(".optics-teaching"),
         exercises: document.querySelectorAll(".optics-exercise").length,
         related: [...document.querySelectorAll("main a[href^='../']")].map((a) => a.getAttribute("href")),
+        equations: document.querySelectorAll('.optics-equation math').length,
+        missingMath: [...document.querySelectorAll('[data-tex]')].filter(el => !el.querySelector('math')).length,
+        mathErrors: document.querySelectorAll('math merror').length,
       }));
 
       expect(errors).toEqual([]);
@@ -103,6 +115,9 @@ for (const tool of OPTICS_TOOLS) {
       expect(report.teaching).toBe(true);
       expect(report.exercises).toBeGreaterThanOrEqual(2);
       expect(report.related.length).toBeGreaterThan(0);
+      expect(report.equations, 'key equations are typeset while offline').toBeGreaterThan(0);
+      expect(report.missingMath).toBe(0);
+      expect(report.mathErrors).toBe(0);
       await context.close();
     });
 
@@ -128,4 +143,31 @@ test("tools catalogue lists every optics tool", async ({ page }) => {
   for (const tool of OPTICS_TOOLS) {
     expect(hrefs).toContain(`../tools/${tool}/index.html`);
   }
+});
+
+test('geometric optics keeps readouts and matrix correct when the focus goes through infinity', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'geometric_optics', VIEWPORTS[0]);
+  await expect(page.locator('#rImage')).toContainText('150 mm');
+  await expect(page.locator('#rMag')).toHaveText('−0.5 (inverted)');
+  await expect(page.locator('#rAbcd math mtr')).toHaveCount(2);
+  expect(await page.locator('#rAbcd math mn').allTextContents()).toEqual(['1', '0', '−0.01', '1']);
+  const distance = async value => page.locator('#objDist').evaluate((el, value) => {
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+  await distance(100);
+  await expect(page.locator('#rImage')).toContainText('At infinity');
+  await expect(page.locator('#rMagLabel')).toHaveText('Visual magnification');
+  await expect(page.locator('#rAiry')).toContainText('Angular diameter');
+  await distance(50);
+  await expect(page.locator('#rImage')).toContainText('−100 mm');
+  await expect(page.locator('#rImage .optics-readout-note').first()).toContainText('Virtual image');
+  await expect(page.locator('#rMag')).toHaveText('2 (upright)');
+  await expect(page.locator('#rMagLabel')).toHaveText('Magnification');
+  await expect(page.locator('#rAiry .optics-readout-note')).toContainText('Wavelength:');
+  await distance(300);
+  await expect(page.locator('#rImage')).toContainText('150 mm');
+  await expect(page.locator('#rImage .optics-readout-note').first()).toContainText('Real image');
+  expect(errors).toEqual([]);
+  await context.close();
 });

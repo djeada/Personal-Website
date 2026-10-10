@@ -16,6 +16,8 @@ This dir contains a set of Python scripts designed to build and maintain a perso
 
 - `format.sh`: A shell script to format and lint code, maintaining code quality and consistency throughout the project.
 
+- `render-optics-math.mjs`: Typesets the optics tools' `data-tex` LaTeX expressions into native MathML using the locked KaTeX dependency. Run `npm run math:optics` after editing a formula and commit the resulting HTML. Rendering is idempotent, validates TeX commands, and requires no external browser resources.
+
 - `generate_article_list.py`: Compiles a list of all articles or blog posts rendered on a specific section of the website (blog).
 
 - `generate_from_markdown.py`: Converts the Markdown notes into article pages. It fetches every source first (with retries), checks common malformed TeX escapes before clearing generated articles, stamps each article with the date of its last upstream commit (see `source_dates.py`), turns links between notes into links between articles, and only loads Prism and MathJax on pages with code or math. Math is protected during Markdown conversion and supports `$...$`, `$$...$$`, `\(...\)`, and `\[...\]`.
