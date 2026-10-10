@@ -390,6 +390,26 @@ test.describe('inertia lab in the browser', () => {
         await expect(page.locator('#nest .nest-level')).toHaveCount(1);
     });
 
+    test('the formula sheet derives every shape and each Load matches its formula', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.goto('/tools/moment_of_inertia/');
+        const rows = page.locator('#formula-table tbody tr');
+        await expect(rows).toHaveCount(17);
+        expect(await page.locator('#formula-table math').count()).toBeGreaterThanOrEqual(34);
+        const buttons = page.locator('#formula-table .formula-load');
+        const count = await buttons.count();
+        expect(count).toBe(13);
+        for (let i = 0; i < count; i++) {
+            const button = buttons.nth(i);
+            const expected = await button.getAttribute('data-check');
+            await button.click();
+            await expect(page.locator('#inertia-value')).toHaveText(expected);
+        }
+        await page.setViewportSize({ width: 390, height: 900 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        await expect(page.locator('#formula-table thead')).toBeHidden();
+    });
+
     for (const width of [320, 390, 768, 1280]) {
         test(`every shape and axis works without overflow at ${width}px`, async ({ page }) => {
             const errors = [];

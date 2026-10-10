@@ -1086,6 +1086,16 @@
         $("reset-view").addEventListener("click", () => { camera.az = -0.45; camera.el = 0.72; $("camera").value = "perspective"; redrawViews(); });
         $("piece").addEventListener("input", () => { selected = Number($("piece").value) - 1; renderPiece(); });
         $("offcenter-d").addEventListener("input", () => setOffset(Number($("offcenter-d").value)));
+        // Formula sheet: load that body and axis with the default sizes the formulas are checked against.
+        document.querySelectorAll(".formula-load").forEach(button => button.addEventListener("click", () => {
+            const { formulaShape, formulaTilt, formulaOffset, formulaHollow } = button.dataset;
+            setExperiment(null);
+            data = M.evaluate({ ...M.DEFAULTS, resolution: data.config.resolution, shape: formulaShape, tilt: formulaTilt ?? 0, offset: formulaOffset ?? 0, hollow: formulaHollow ?? M.DEFAULTS.hollow });
+            selected = Math.floor(data.points.length * 0.75);
+            resetMotion();
+            renderBody();
+            $("explore").scrollIntoView({ behavior: UI.prefersReducedMotion() ? "auto" : "smooth" });
+        }));
         $("count-table").addEventListener("click", event => {
             const button = event.target.closest("[data-load-shape]");
             if (!button) return;
