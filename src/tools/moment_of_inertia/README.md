@@ -37,6 +37,13 @@ The page is written for beginners:
    - an I(d) parabola whose dot can be dragged
    - a stacked bar of the two parts and the cross-term derivation
 6. **The math for this body, step by step**, then "Learn with this tool": objectives, model, four predict/test/measure/explain exercises, a worked triple-integral example, limits and references.
+7. **Formula sheet** at the bottom, as static HTML and MathML. It has 15 bodies and axes (the lab's seven shapes plus a point mass, a thin-walled tube and a spherical shell) and the parallel- and perpendicular-axis theorems. Each row shows:
+   - the result
+   - what to plug into I = ∫ r⊥² dm (dm and r⊥)
+   - the integral worked out, with its integral count
+   - for bodies in the lab, a "Load" button. A test checks that each loaded body's I equals the formula at the default sizes.
+
+   On phones the rows become cards.
 
 ## Physics model
 
@@ -70,6 +77,6 @@ npx playwright install chromium
 npx playwright test tests/moment-of-inertia.spec.js
 ```
 
-The tests cover the physics model (standard moments, parallel axis, scaling, convergence, nested-sum order, distance bands, the farthest point) and the browser behaviour: the shared template and theme, dragging the ball and the 3D views, the nested builder for a triple integral and a plate, its auto-start, the off-center section and its draggable curve, the race, the experiments and explanations, every shape and axis at 320–1280 px without overflow, canvas resolution, both themes with external requests blocked, and discovery from the tools directory. `tests/tool-layout.spec.js` also passes.
+The tests cover the physics model (standard moments, parallel axis, scaling, convergence, nested-sum order, distance bands, the farthest point) and the browser behaviour: the shared template and theme, dragging the ball and the 3D views, the nested builder for a triple integral and a plate, its auto-start, the off-center section and its draggable curve, the formula sheet's Load buttons against each formula, the race, the experiments and explanations, every shape and axis at 320–1280 px without overflow, canvas resolution, both themes with external requests blocked, and discovery from the tools directory. `tests/tool-layout.spec.js` also passes.
 
 References: OpenStax [Calculating moments of inertia](https://openstax.org/books/university-physics-volume-1/pages/10-5-calculating-moments-of-inertia) and [Newton's second law for rotation](https://openstax.org/books/university-physics-volume-1/pages/10-7-newtons-second-law-for-rotation).

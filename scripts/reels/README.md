@@ -28,6 +28,8 @@ Outputs land in `out/` (gitignored), two files per scene:
 Reach on Reels/TikTok is tied to trending audio, so the silent cut is usually the
 one to post. The muxed cut is for places where the file has to stand alone.
 
+Two standalone promos live in their own folders, each with its own README: [`oracle/`](./oracle/) (a fast phonk edit of Outclick the Oracle) and [`inertia/`](./inertia/) (a calm, captioned 62 s explainer of the Moment of Inertia Lab).
+
 Requires `ffmpeg` (with `libx264` and `aac`) and the repo's Playwright install. A
 static server for `src/` is started automatically unless port 8000 is already
 answering.
