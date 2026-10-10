@@ -91,37 +91,39 @@
     function sample(config) {
         const { shape, mass, radius, length, width, height, resolution: n } = config;
         const points = [];
-        const add = (x, y, z, weight) => points.push({ x, y, z, weight });
-        const circularSlice = (z, r, sliceWeight, radialCount, inner = 0) => {
+        // idx records where a piece sits in the nested sum, outermost first:
+        // slice → ring → piece around the ring, strip → piece, and so on.
+        const add = (x, y, z, weight, idx) => points.push({ x, y, z, weight, idx, order: points.length });
+        const circularSlice = (z, r, sliceWeight, radialCount, inner = 0, outer = []) => {
             for (let i = 0; i < radialCount; i++) {
                 const a = inner + (r - inner) * i / radialCount, b = inner + (r - inner) * (i + 1) / radialCount;
                 const midpoint = (a + b) / 2;
                 const weight = sliceWeight * (b * b - a * a) / (r * r - inner * inner) / (2 * n);
                 for (let j = 0; j < 2 * n; j++) {
                     const phi = 2 * Math.PI * (j + 0.5) / (2 * n);
-                    add(midpoint * Math.cos(phi), midpoint * Math.sin(phi), z, weight);
+                    add(midpoint * Math.cos(phi), midpoint * Math.sin(phi), z, weight, [...outer, i, j]);
                 }
             }
         };
         switch (shape === "annulus" && config.hollow === 1 ? "hoop" : shape) {
             case "rod":
-                for (let i = 0; i < n; i++) add(length * ((i + 0.5) / n - 0.5), 0, 0, 1 / n);
+                for (let i = 0; i < n; i++) add(length * ((i + 0.5) / n - 0.5), 0, 0, 1 / n, [i]);
                 break;
             case "hoop":
                 for (let i = 0; i < 2 * n; i++) {
                     const phi = 2 * Math.PI * (i + 0.5) / (2 * n);
-                    add(radius * Math.cos(phi), radius * Math.sin(phi), 0, 1 / (2 * n));
+                    add(radius * Math.cos(phi), radius * Math.sin(phi), 0, 1 / (2 * n), [i]);
                 }
                 break;
             case "disk": circularSlice(0, radius, 1, n); break;
             case "annulus": circularSlice(0, radius, 1, n, radius * config.hollow); break;
             case "plate":
                 for (let i = 0; i < n; i++) {
-                    for (let j = 0; j < n; j++) add(length * ((i + 0.5) / n - 0.5), width * ((j + 0.5) / n - 0.5), 0, 1 / (n * n));
+                    for (let j = 0; j < n; j++) add(length * ((i + 0.5) / n - 0.5), width * ((j + 0.5) / n - 0.5), 0, 1 / (n * n), [i, j]);
                 }
                 break;
             case "cylinder":
-                for (let i = 0; i < n / 2; i++) circularSlice(height * ((i + 0.5) / (n / 2) - 0.5), radius, 1 / (n / 2), n);
+                for (let i = 0; i < n / 2; i++) circularSlice(height * ((i + 0.5) / (n / 2) - 0.5), radius, 1 / (n / 2), n, 0, [i]);
                 break;
             case "sphere":
                 // Midpoint slices of a solid sphere, not points on a spherical shell.
@@ -129,7 +131,7 @@
                 for (let i = 0; i < n; i++) {
                     const z = radius * (2 * (i + 0.5) / n - 1);
                     const r = Math.sqrt(radius * radius - z * z);
-                    circularSlice(z, r, r * r * (2 * radius / n), n / 2);
+                    circularSlice(z, r, r * r * (2 * radius / n), n / 2, 0, [i]);
                 }
                 break;
         }
@@ -197,7 +199,9 @@
         for (const p of points) cumulative.push(cumulative[cumulative.length - 1] + p.contribution);
         const numerical = cumulative[cumulative.length - 1];
         const bins = distribution(config);
-        return { config, exact, points, cumulative, numerical, bins, density: density(config) };
+        // The same pieces in the order the nested sum visits them.
+        const build = [...points].sort((a, b) => a.order - b.order);
+        return { config, exact, points, build, cumulative, numerical, bins, density: density(config) };
     }
 
     function motion(inertia, torque, time) {
