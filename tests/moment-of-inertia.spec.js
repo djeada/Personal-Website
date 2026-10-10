@@ -82,6 +82,28 @@ test('invalid configurations cannot inject shapes or create non-finite geometry'
     expect(d.points.every(p => Number.isFinite(p.contribution) && p.dm > 0)).toBe(true);
 });
 
+test('redistributing a disk into a hoop preserves mass and reaches both exact limits', () => {
+    for (const tilt of [0, 35, 90]) {
+        for (const offset of [0, -0.4]) {
+            const config = { ...M.DEFAULTS, tilt, offset };
+            for (const [hollow, shape] of [[0, 'disk'], [1, 'hoop']]) {
+                const ring = M.evaluate({ ...config, shape: 'annulus', hollow });
+                const limit = M.evaluate({ ...config, shape });
+                expect(ring.exact.total).toBeCloseTo(limit.exact.total, 12);
+                expect(ring.numerical).toBeCloseTo(limit.numerical, 12);
+                expect(Number.isFinite(ring.density.value)).toBe(true);
+            }
+        }
+    }
+    for (const hollow of [0.25, 0.5, 0.9, 0.9999]) {
+        const ring = M.evaluate({ shape: 'annulus', hollow, resolution: 16 });
+        expect(ring.exact.total).toBeCloseTo(1 + hollow ** 2, 12);
+        expect(ring.points.reduce((sum, p) => sum + p.dm, 0)).toBeCloseTo(2, 10);
+        expect(ring.points.every(p => Math.hypot(p.x, p.y) > hollow && Math.hypot(p.x, p.y) < 1)).toBe(true);
+        expect(Math.abs(ring.numerical - ring.exact.total)).toBeLessThan(0.002);
+    }
+});
+
 test.describe('inertia lab in the browser', () => {
     test.beforeEach(async ({ page }) => {
         await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
@@ -92,7 +114,89 @@ test.describe('inertia lab in the browser', () => {
         el.dispatchEvent(new Event('input', { bubbles: true }));
     }, value);
 
-    for (const width of [390, 1280]) {
+    test('the outward-mass experiment connects geometry, explanation, and acceleration', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await page.getByRole('button', { name: 'Move mass outward', exact: true }).click();
+        await expect(page.locator('#hollow')).toBeVisible();
+        await expect(page.locator('#inertia-value')).toHaveText('1.000');
+        await expect(page.locator('#comparison-headline')).toHaveText('Equal inertia. Equal acceleration.');
+        await slider(page, 'hollow', 0.5);
+        await expect(page.locator('#inertia-value')).toHaveText('1.250');
+        await expect(page.locator('#current-alpha')).toHaveText('0.800');
+        await expect(page.locator('#live-insight')).toContainText('same 2.00 kg');
+        await expect(page.locator('#live-insight')).toContainText('1.25 times');
+        await slider(page, 'hollow', 1);
+        await expect(page.locator('#inertia-value')).toHaveText('2.000');
+        await expect(page.locator('#reference-I')).toHaveText('1.000');
+        await expect(page.locator('#current-alpha')).toHaveText('0.500');
+        await expect(page.locator('#density-title')).toHaveText('Linear density');
+        await expect(page.locator('#comparison-headline')).toHaveText('The reference accelerates 2.00× as fast.');
+        await expect(page.locator('#mass-value')).toHaveText('2.00 kg');
+    });
+
+    test('scrubbing synchronizes motion, graph and calculation and resumes from that instant', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.goto('/tools/moment_of_inertia/');
+        await slider(page, 'motion-time', 1);
+        await expect(page.locator('#current-omega')).toHaveText('1.000');
+        await expect(page.locator('#current-angle')).toHaveText('0.500');
+        await expect(page.locator('#reference-angle')).toHaveText('0.250');
+        await expect(page.locator('#motion-chart')).toHaveAttribute('aria-label', /your body 1.000 rad\/s, reference 0.500 rad\/s/);
+        await expect(page.locator('#motion-equation')).toContainText('θ = ½αt² = 0.500 rad');
+        await page.locator('#resolution').selectOption('16');
+        await expect(page.locator('#current-angle')).toHaveText('0.500');
+        await expect(page.locator('#motion-time')).toHaveValue('1');
+        await page.locator('#pause-motion').click();
+        await expect(page.locator('#motion-status')).toContainText('After 2.00 s');
+        await expect(page.locator('#current-angle')).toHaveText('2.000');
+        await slider(page, 'motion-time', 0.5);
+        await expect(page.locator('#current-angle')).toHaveText('0.125');
+        await slider(page, 'torque', 0);
+        await expect(page.locator('#motion-time')).toHaveValue('0');
+        await expect(page.locator('#comparison-headline')).toHaveText('No torque. No change in spin.');
+        await slider(page, 'motion-time', 2);
+        await expect(page.locator('#current-omega')).toHaveText('0.000');
+    });
+
+    test('building the sum animates contributions and manual edits cancel playback', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.goto('/tools/moment_of_inertia/');
+        await page.locator('#animate-sum').click();
+        await expect(page.locator('#animate-sum')).toHaveText('Pause sum');
+        await expect.poll(() => page.locator('#accumulate').inputValue()).not.toBe('0');
+        await slider(page, 'accumulate', 50);
+        await expect(page.locator('#piece-count')).toHaveText('64 / 128 pieces included');
+        await expect(page.locator('#animate-sum')).toHaveAttribute('aria-pressed', 'false');
+        await page.waitForTimeout(120);
+        await expect(page.locator('#accumulate')).toHaveValue('50');
+        await page.locator('#animate-sum').click();
+        await expect(page.locator('#piece-count')).toHaveText('128 / 128 pieces included', { timeout: 5000 });
+        await expect(page.locator('#piece-value')).toHaveText('128 / 128');
+        await expect(page.locator('#animate-sum')).toHaveAttribute('aria-pressed', 'false');
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await slider(page, 'accumulate', 0);
+        await page.locator('#animate-sum').click();
+        await expect(page.locator('#accumulate')).toHaveValue('100');
+        await expect(page.locator('#animate-sum')).toContainText('reduced motion');
+    });
+
+    test('size changes stay visible, comparison scales match, and explanations follow the variable', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        const scale = await page.locator('#specimen').getAttribute('data-scale');
+        await slider(page, 'radius', 2);
+        await expect(page.locator('#inertia-value')).toHaveText('4.000');
+        await expect(page.locator('#specimen')).toHaveAttribute('data-scale', scale);
+        await expect(page.locator('#live-insight')).toContainText('doubling radius');
+        expect(await page.locator('#current-motion').getAttribute('data-scale')).toBe(await page.locator('#reference-motion').getAttribute('data-scale'));
+        await slider(page, 'mass', 4);
+        await expect(page.locator('#live-insight')).toContainText('doubling mass');
+        await page.getByRole('button', { name: 'A sphere’s symmetry', exact: true }).click();
+        await slider(page, 'tilt', 45);
+        await expect(page.locator('#live-insight')).toContainText('Nothing changed!');
+        await expect(page.locator('#inertia-value')).toHaveText('0.800');
+    });
+
+    for (const width of [320, 390, 768, 1280]) {
         test(`shapes, axes, mass elements and torque comparison work at ${width}px`, async ({ page }) => {
             const errors = [];
             page.on('pageerror', e => errors.push(e.message));
