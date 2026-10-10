@@ -2,22 +2,41 @@
 
 An interactive mechanics lesson at `/tools/moment_of_inertia/`. Start with a physical question, change a body, and connect its mass distribution to its response under equal torque. The live explorer, guided experiments, worked explanations, numerical integration, and motion graph all use the same physics model. It follows the existing standalone `index.html` / `style.css` / `app.js` tool convention and uses the site's navigation, theme, and searchable tools directory.
 
-## Learning flow
+## Page structure
 
-The page is written for beginners and moves from the idea to the math:
+The lab uses the shared physics-tool template (`src/tools/shared/optics/TEMPLATE.md`):
+- the stylesheet order `resources/style.css`, `shared/base.css`, `shared/simulation.css`, `style.css`, `shared/array-visualizer-theme.css`, `shared/optics-lab-theme.css`
+- the body classes `tool-page tool-simulation tool-array-visualizer tool-optics-lab`
+- `tool-header`, `stats-bar`, an `options-sidebar` with `option-card`s, and `canvas-container` cards
+- `OpticsUI` for DPR-aware canvases (`setupCanvas`), plots (`plot`), number boxes on every slider (`enhanceAllSliders`), loops (`createLoop`) and theme changes
+- the "Learn with this tool" section with exercises
 
-- **01 What is moment of inertia?** I is the spinning version of mass (τ = Iα next to F = ma). A ball on a light arm lets you change r and m; r² is drawn as a real square, and a meter shows I. The panel explains why distance counts twice: a = rα and τ = rF give τ = (mr²)α. It then goes from one ball (mr²) to many balls (Σ m r²) to a solid body (∫ r² dm), and ends with a short glossary.
-- **04 Single, double or triple integral?** You need one ∫ for each number it takes to locate a tiny piece: a line needs 1, a surface 2, a solid 3. A table lists every shape with its coordinates, dm, integral count and symmetry shortcut; choosing a row loads that shape. The derivation card shows the full integral first, then the symmetry shortcut (for example, adding whole rings of a disk), so the missing ∫ signs are explained.
-- **05 What if the axis isn't through the center?** The parallel-axis theorem is shown as two motions: the center circles the axis (M d²) while the body spins about its center (I_CM). A d slider (synced with the main one), a stacked bar and an I(d) parabola show both parts. A collapsible section explains why the cross term vanishes. The motion view draws the center of mass's circle whenever d ≠ 0.
+Canvases are always dark, as in the other labs. `style.css` only holds lab-specific pieces and uses the theme's tokens.
 
-The interactive explorer then works as follows:
+The page is written for beginners:
 
-1. Choose one of five guided experiments: disk/hoop, moving mass outward, rod center/end, disk normal/diameter, or sphere symmetry. Each starts with a concrete question and a reference body. The experiment stays active while you follow its instructions; switching shape leaves it, and "Reset body & axis" returns to its starting body.
-2. Build a thin rod, solid disk, adjustable ring, thin hoop, rectangular plate, solid cylinder, or solid sphere. Adjust mass, dimensions, axis tilt, and perpendicular axis shift. A live explanation reports how I changed (before → after and the ratio) and why. For a dimension change, it says whether every perpendicular distance scaled (the full k² rule), only part of I depends on that dimension, or the dimension runs along the axis and I is unchanged.
-3. In the adjustable ring, grow the inner radius from zero (a disk) to the outer radius (the ideal thin-hoop limit). Total mass and outer radius stay fixed, so density increases as material moves outward.
-4. Tap a dot or use the keyboard-accessible mass-element slider beside the explorer to inspect its position, mass, perpendicular distance, contribution, and shares of total mass and inertia. Animate the numerical sum from the nearest pieces outward, or scrub the included fraction. This reveals contributions without removing material from the physical body.
-5. Apply equal torque for two seconds from rest. Compare inertia bars, acceleration, speed, angle, and the synchronized speed-versus-time graph. Pause, resume, reset, or scrub to any instant. Pin any body and axis as the reference. Reduced-motion mode shows the final state immediately and still supports manual scrubbing.
-6. Compare numerical and exact inertia, refine the partition, and read the distance-band chart or equivalent HTML table. The bands describe the physical body, using a fine partition independent of the dots on screen. Follow the native MathML derivation through density, the centered z-axis integral, orientation, and the parallel-axis theorem. No external math renderer or runtime dependency is needed.
+1. **What is moment of inertia?** I is the spinning version of mass (τ = Iα next to F = ma).
+   - A ball on a light arm can be dragged with the pointer or moved with the arrow keys. Its area grows with its mass.
+   - r² is drawn as a square rotating with the arm.
+   - "Twist both" races the ball against a faint 1 kg ball at 0.50 m under the same 1 N·m torque.
+   - The panel explains why distance counts twice (a = rα and τ = rF), then goes from one ball to Σmr² to ∫r²dm.
+2. **Explore a body.** The sidebar holds experiments, body, axis and view controls.
+   - Drag any 3D view to turn the shared camera; arrow keys work too. A click without a drag picks a piece.
+   - Dot area is proportional to each piece's mass.
+   - Panels show the selected piece's r⊥²Δm and a mass-versus-inertia band chart.
+   - A live explanation reports how I changed and why.
+3. **Build the integral.** The pieces are added in nested-sum order, outermost first:
+   - rod or hoop: one sum
+   - disk or ring: rings, then pieces around a ring
+   - plate: strips, then pieces along a strip
+   - cylinder or sphere: slices, then rings, then pieces
+   Each Σ has its own colored nested box with a counter, a partial sum and the totals of finished groups. The canvas uses the same colors. Play/Pause, +1 piece, Finish ring/strip, Finish slice, To the end and Reset control the build, which starts by itself the first time it scrolls into view. A colored nested Σ formula turns into the ∫ form, and a table shows Σ approaching ∫ as the pieces shrink. Another table lists every shape's coordinates, dm, integral count and symmetry shortcut.
+4. **Same twist race.** Two bodies get equal torque from rest, shown with a scrubbable timeline and a speed-versus-time plot. Any body can be pinned as the reference.
+5. **Off-center axes.** The parallel-axis theorem is shown as two motions:
+   - an animated view along the axis, with the center's circle (M d²) and an arrow showing the body turning about its own center (I_CM)
+   - an I(d) parabola whose dot can be dragged
+   - a stacked bar of the two parts and the cross-term derivation
+6. **The math for this body, step by step**, then "Learn with this tool": objectives, model, four predict/test/measure/explain exercises, a worked triple-integral example, limits and references.
 
 ## Physics model
 
@@ -35,6 +54,8 @@ The six standard bodies are symmetric about their coordinate planes, so the mixe
 
 The adjustable ring is also symmetric. For inner radius `a = hollow × R`, its centered moments are `Iz = M(R² + a²)/2` and `Ix = Iy = Iz/2`. Sampling uses annular areas between `a` and `R`. At `hollow = 0` it matches the disk; at `hollow = 1` it uses hoop sampling and linear density, avoiding a division by zero in the vanishing-area limit. Intermediate shapes redistribute the same total mass instead of cutting mass away.
 
+Every sampled piece records `idx`, its position in the nested sum (outermost first), and `evaluate` returns `build`, the pieces in that order. The builder relies on these indices and on contiguous groups.
+
 Numerical integration uses line/rectangle midpoint elements, polar annular-area elements for disks, volume slices for cylinders, and interior disk slices for spheres. Circular element weights follow their annular areas; dots do not necessarily have equal mass. Sphere slice volumes are approximated and all weights normalized to the chosen total mass. These are finite midpoint approximations, so the displayed numerical sum may differ from the exact result. Refinement from 4 to 8 to 16 partitions per direction approaches the integral. The exact result, complete numerical sum, partial sum, and relative numerical error are separately labeled. A hoop's angular quadrature can already match its exact quadratic moment at coarse resolution.
 
 The distance-band chart uses its own fine partition (80 line, 40 area, 20 volume divisions), binned from zero to the body's true maximum perpendicular distance. Coarse dots would alias into empty bands, such as a gap in a solid disk. A sphere's bands are measured about a transverse axis through the same offset: the sphere is symmetric, and this avoids aligning the axis with its sampling slices.
@@ -49,6 +70,6 @@ npx playwright install chromium
 npx playwright test tests/moment-of-inertia.spec.js
 ```
 
-The tests cover standard moments, the parallel-axis theorem, mass and dimension scaling, conservation of sampled mass and center, numerical convergence, full-axis distance and rotation invariance, solid-sphere volume sampling, annulus limits and intermediate mass distributions, torque kinematics and energy, invalid input handling, all shapes and axis views at phone and desktop widths, element inspection and animated partial sums, reference pinning, zero-inertia behavior, motion scrubbing and resuming, graph/readout synchronization, partition changes during motion, visual scale consistency, contextual explanations, reduced motion, both themes, external-request independence, keyboard interaction, and tools-directory discovery. The existing GitHub Actions browser job includes the suite.
+The tests cover the physics model (standard moments, parallel axis, scaling, convergence, nested-sum order, distance bands, the farthest point) and the browser behaviour: the shared template and theme, dragging the ball and the 3D views, the nested builder for a triple integral and a plate, its auto-start, the off-center section and its draggable curve, the race, the experiments and explanations, every shape and axis at 320–1280 px without overflow, canvas resolution, both themes with external requests blocked, and discovery from the tools directory. `tests/tool-layout.spec.js` also passes.
 
 References: OpenStax [Calculating moments of inertia](https://openstax.org/books/university-physics-volume-1/pages/10-5-calculating-moments-of-inertia) and [Newton's second law for rotation](https://openstax.org/books/university-physics-volume-1/pages/10-7-newtons-second-law-for-rotation).

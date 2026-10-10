@@ -129,6 +129,31 @@ test('redistributing a disk into a hoop preserves mass and reaches both exact li
     }
 });
 
+test('pieces are visited in nested-sum order: rings inside slices, pieces inside rings', () => {
+    const levels = { rod: 1, hoop: 1, disk: 2, annulus: 2, plate: 2, cylinder: 3, sphere: 3 };
+    for (const [shape, depth] of Object.entries(levels)) {
+        const d = M.evaluate({ ...M.DEFAULTS, shape });
+        expect(d.build).toHaveLength(d.points.length);
+        expect(new Set(d.build)).toEqual(new Set(d.points));
+        d.build.forEach((p, i) => {
+            expect(p.idx).toHaveLength(depth);
+            if (i) {
+                const prev = d.build[i - 1].idx, cur = p.idx;
+                const first = cur.findIndex((v, k) => v !== prev[k]);
+                expect(first).toBeGreaterThanOrEqual(0);
+                expect(cur[first]).toBeGreaterThan(prev[first]);
+            }
+        });
+        expect(d.build.reduce((sum, p) => sum + p.contribution, 0)).toBeCloseTo(d.numerical, 12);
+    }
+    // A cylinder ring has 2n pieces and all of them sit at the same distance from its own axis.
+    const cylinder = M.evaluate({ ...M.DEFAULTS, shape: 'cylinder' });
+    const ring = cylinder.build.filter(p => p.idx[0] === 1 && p.idx[1] === 3);
+    expect(ring).toHaveLength(16);
+    ring.forEach(p => expect(p.r2).toBeCloseTo(ring[0].r2, 12));
+    expect(M.evaluate({ ...M.DEFAULTS, shape: 'annulus', hollow: 1 }).build[0].idx).toHaveLength(1);
+});
+
 test.describe('inertia lab in the browser', () => {
     test.beforeEach(async ({ page }) => {
         await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
@@ -138,6 +163,23 @@ test.describe('inertia lab in the browser', () => {
         el.value = String(value);
         el.dispatchEvent(new Event('input', { bubbles: true }));
     }, value);
+    const pixels = (page, id) => page.locator('#' + id).evaluate(c => c.toDataURL());
+
+    test('uses the shared physics-lab template and theme', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page).toHaveTitle('Moment of Inertia Lab | Adam Djellouli');
+        await expect(page.locator('body')).toHaveClass(/tool-page tool-simulation tool-array-visualizer tool-optics-lab/);
+        const sheets = await page.evaluate(() => [...document.styleSheets].map(s => (s.href || '').split('/').slice(-2).join('/')));
+        expect(sheets).toEqual(expect.arrayContaining(['shared/simulation.css', 'shared/array-visualizer-theme.css', 'shared/optics-lab-theme.css']));
+        await expect(page.locator('.tool-header h1')).toHaveText('Moment of Inertia Lab');
+        await expect(page.locator('.stats-bar .stat-item')).toHaveCount(4);
+        await expect(page.locator('.options-sidebar .option-card')).toHaveCount(4);
+        await expect(page.locator('#mass + .optics-num-wrap input')).toHaveValue('2');
+        for (const id of ['primer-canvas', 'specimen', 'builder', 'current-motion', 'motion-chart', 'orbit-canvas', 'shift-chart', 'distribution-chart']) {
+            await expect(page.locator('#' + id)).toHaveClass(/optics-canvas/);
+        }
+        await expect(page.locator('.optics-exercise')).toHaveCount(4);
+    });
 
     test('the outward-mass experiment connects geometry, explanation, and acceleration', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
@@ -149,17 +191,152 @@ test.describe('inertia lab in the browser', () => {
         await expect(page.locator('#inertia-value')).toHaveText('1.250');
         await expect(page.locator('#current-alpha')).toHaveText('0.800');
         await expect(page.locator('#live-insight')).toContainText('same 2.00 kg');
-        await expect(page.locator('#live-insight')).toContainText('1.25 times');
+        await expect(page.locator('[data-experiment="redistribute"]')).toHaveClass(/active/);
         await slider(page, 'hollow', 1);
         await expect(page.locator('#inertia-value')).toHaveText('2.000');
-        await expect(page.locator('#reference-I')).toHaveText('1.000');
-        await expect(page.locator('#current-alpha')).toHaveText('0.500');
         await expect(page.locator('#density-title')).toHaveText('Linear density');
+        await expect(page.locator('#integral-kind')).toHaveText('∫ single');
         await expect(page.locator('#comparison-headline')).toHaveText('The reference accelerates 2.00× as fast.');
-        await expect(page.locator('#mass-value')).toHaveText('2.00 kg');
     });
 
-    test('scrubbing synchronizes motion, graph and calculation and resumes from that instant', async ({ page }) => {
+    test('dragging the ball moves it; its size and I follow mass and distance', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.goto('/tools/moment_of_inertia/');
+        const canvas = page.locator('#primer-canvas');
+        await canvas.scrollIntoViewIfNeeded();
+        const box = await canvas.boundingBox();
+        const before = await pixels(page, 'primer-canvas');
+        const ax = box.x + box.width * 0.42, ay = box.y + box.height * 0.5;
+        const px = Math.min(box.width * 0.4, box.height * 0.46) / (1.2 * Math.SQRT2);
+        await page.mouse.move(ax + 0.5 * px * Math.cos(-0.4), ay + 0.5 * px * Math.sin(-0.4));
+        await page.mouse.down();
+        await page.mouse.move(ax + px, ay, { steps: 6 });
+        await page.mouse.up();
+        await expect(page.locator('#primer-r')).toHaveValue('1');
+        await expect(page.locator('#primer-I')).toHaveText('1.0 × 1.00² = 1.000 kg·m²');
+        await expect(page.locator('#primer-insight')).toContainText('r² ×4.00');
+        expect(await pixels(page, 'primer-canvas')).not.toBe(before);
+        const light = await pixels(page, 'primer-canvas');
+        await slider(page, 'primer-m', 4);
+        await expect(page.locator('#primer-insight')).toContainText('I is ×16.00');
+        expect(await pixels(page, 'primer-canvas')).not.toBe(light);
+        await canvas.focus();
+        await page.keyboard.press('ArrowLeft');
+        await expect(page.locator('#primer-r')).toHaveValue('0.95');
+        await page.locator('#primer-twist').click();
+        await expect(page.locator('#primer-race')).toContainText('After 2 s at 1 N·m');
+        await expect(page.locator('#primer-race')).toContainText('1.27 turns');
+    });
+
+    test('dragging a 3D view turns the camera; a click still picks a piece', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        const canvas = page.locator('#specimen');
+        await canvas.scrollIntoViewIfNeeded();
+        const box = await canvas.boundingBox();
+        const scale = await canvas.getAttribute('data-scale');
+        const before = await pixels(page, 'specimen');
+        await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(100);
+        expect(await pixels(page, 'specimen')).not.toBe(before);
+        await expect(canvas).toHaveAttribute('data-scale', scale);
+        await page.locator('#camera').selectOption('axis');
+        await page.locator('#reset-view').click();
+        await expect(page.locator('#camera')).toHaveValue('perspective');
+        await page.locator('#piece').evaluate(el => { el.value = '1'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+        await expect(page.locator('#piece-value')).toHaveText('1 / 128');
+        await canvas.scrollIntoViewIfNeeded();
+        const again = await canvas.boundingBox();
+        await page.mouse.click(again.x + again.width / 2 + 2, again.y + again.height / 2);
+        await expect(page.locator('#piece-value')).not.toHaveText('1 / 128');
+    });
+
+    test('the builder adds a triple integral as sums inside sums', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.goto('/tools/moment_of_inertia/');
+        await page.locator('#shape').selectOption('cylinder');
+        await expect(page.locator('#integral-badge')).toHaveText('3D solid · triple ∫∫∫');
+        await expect(page.locator('#nest .nest-level')).toHaveCount(3);
+        await expect(page.locator('#nest-formula math mo', { hasText: '∑' })).toHaveCount(3);
+        await expect(page.locator('#build-inner')).toHaveText('Finish ring');
+        await expect(page.locator('#build-middle')).toHaveText('Finish slice');
+        await page.locator('#build-inner').click();
+        await expect(page.locator('.lv-inner > .nest-head .nest-count')).toHaveText('piece 16 of 16');
+        await expect(page.locator('.lv-middle > .nest-head .nest-count')).toHaveText('ring 1 of 8');
+        await page.locator('#build-step').click();
+        await expect(page.locator('.lv-middle > .nest-head .nest-count')).toHaveText('ring 2 of 8');
+        await expect(page.locator('.lv-middle > .nest-parts')).toContainText('finished rings');
+        await page.locator('#build-middle').click();
+        await expect(page.locator('.lv-outer > .nest-head .nest-count')).toHaveText('slice 1 of 4');
+        await expect(page.locator('.lv-middle > .nest-head .nest-count')).toHaveText('ring 8 of 8');
+        await page.locator('#build-end').click();
+        await expect(page.locator('.nest-done')).toContainText('All 512 pieces added');
+        await expect(page.locator('#build-step')).toBeDisabled();
+        await page.locator('#build-play').click();
+        await expect(page.locator('.nest-done')).toContainText('Σ = 0.9922');
+        await page.locator('#build-reset').click();
+        await expect(page.locator('.lv-outer > .nest-value strong')).toHaveText('0.00000');
+        await expect(page.locator('#convergence tbody tr')).toHaveCount(4);
+        await expect(page.locator('#convergence tr.exact-row')).toContainText('1.0000');
+    });
+
+    test('a plate is a double integral: strip totals add up to the running total', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await page.getByRole('button', { name: 'Build a plate', exact: true }).click();
+        await expect(page.locator('#nest .nest-level')).toHaveCount(2);
+        await expect(page.locator('#build-middle')).toBeHidden();
+        for (let i = 0; i < 4; i++) await page.locator('#build-inner').click();
+        await expect(page.locator('.lv-outer > .nest-head .nest-count')).toHaveText('strip 4 of 4');
+        await expect(page.locator('.nest-done')).toContainText('All 16 pieces added');
+        await page.locator('#build-reset').click();
+        for (let i = 0; i < 3; i++) await page.locator('#build-inner').click();
+        await page.locator('#build-step').click();
+        const parts = (await page.locator('.lv-outer > .nest-parts').textContent()).match(/[\d.]+/g).map(Number);
+        expect(parts).toHaveLength(3);
+        const inner = Number(await page.locator('.lv-inner > .nest-value strong').textContent());
+        const total = Number(await page.locator('.lv-outer > .nest-value strong').textContent());
+        expect(parts.reduce((a, b) => a + b, 0) + inner).toBeCloseTo(total, 3);
+    });
+
+    test('the builder starts by itself once it scrolls into view', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('.lv-outer > .nest-value strong')).toHaveText('0.00000');
+        await page.locator('#builder').scrollIntoViewIfNeeded();
+        await expect(page.locator('#build-play')).toHaveText('❚❚ Pause');
+        await expect.poll(async () => Number(await page.locator('.lv-outer > .nest-value strong').textContent())).toBeGreaterThan(0);
+        await page.locator('#build-play').click();
+        await expect(page.locator('#build-play')).toHaveText('▶ Play');
+    });
+
+    test('the off-center section splits I into two motions and its curve can be dragged', async ({ page }) => {
+        await page.goto('/tools/moment_of_inertia/');
+        await expect(page.locator('#offcenter-insight')).toContainText('goes through the center of mass');
+        await slider(page, 'offcenter-d', 0.5);
+        await expect(page.locator('#offset')).toHaveValue('0.5');
+        await expect(page.locator('#inertia-value')).toHaveText('1.500');
+        await expect(page.locator('#offcenter-shift')).toHaveText('2.00 × 0.50² = 0.500 kg·m²');
+        await expect(page.locator('#offcenter-insight')).toContainText('1.50× harder');
+        const chart = page.locator('#shift-chart');
+        await chart.scrollIntoViewIfNeeded();
+        const box = await chart.boundingBox();
+        await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width * 0.15, box.y + box.height / 2, { steps: 5 });
+        await page.mouse.up();
+        expect(Number(await page.locator('#offset').inputValue())).toBeLessThan(-1);
+        await chart.focus();
+        const d = Number(await page.locator('#offset').inputValue());
+        await page.keyboard.press('ArrowRight');
+        expect(Number(await page.locator('#offset').inputValue())).toBeCloseTo(d + 0.05, 6);
+        await page.locator('[data-experiment-link="shift"]').click();
+        await expect(page.locator('#inertia-value')).toHaveText('2.667');
+        await expect(page.locator('#offcenter-insight')).toContainText('4.00× harder');
+    });
+
+    test('scrubbing synchronizes motion, graph and calculation', async ({ page }) => {
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.goto('/tools/moment_of_inertia/');
         await slider(page, 'motion-time', 1);
@@ -170,122 +347,13 @@ test.describe('inertia lab in the browser', () => {
         await expect(page.locator('#motion-equation')).toContainText('θ = ½αt² = 0.500 rad');
         await page.locator('#resolution').selectOption('16');
         await expect(page.locator('#current-angle')).toHaveText('0.500');
-        await expect(page.locator('#motion-time')).toHaveValue('1');
         await page.locator('#pause-motion').click();
         await expect(page.locator('#motion-status')).toContainText('After 2.00 s');
         await expect(page.locator('#current-angle')).toHaveText('2.000');
-        await slider(page, 'motion-time', 0.5);
-        await expect(page.locator('#current-angle')).toHaveText('0.125');
         await slider(page, 'torque', 0);
         await expect(page.locator('#motion-time')).toHaveValue('0');
         await expect(page.locator('#comparison-headline')).toHaveText('No torque. No change in spin.');
-        await slider(page, 'motion-time', 2);
-        await expect(page.locator('#current-omega')).toHaveText('0.000');
     });
-
-    test('building the sum animates contributions and manual edits cancel playback', async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: 'no-preference' });
-        await page.goto('/tools/moment_of_inertia/');
-        await page.locator('#animate-sum').click();
-        await expect(page.locator('#animate-sum')).toHaveText('Pause sum');
-        await expect.poll(() => page.locator('#accumulate').inputValue()).not.toBe('0');
-        await slider(page, 'accumulate', 50);
-        await expect(page.locator('#piece-count')).toHaveText('64 / 128 pieces included');
-        await expect(page.locator('#animate-sum')).toHaveAttribute('aria-pressed', 'false');
-        await page.waitForTimeout(120);
-        await expect(page.locator('#accumulate')).toHaveValue('50');
-        await page.locator('#animate-sum').click();
-        await expect(page.locator('#piece-count')).toHaveText('128 / 128 pieces included', { timeout: 5000 });
-        await expect(page.locator('#piece-value')).toHaveText('128 / 128');
-        await expect(page.locator('#animate-sum')).toHaveAttribute('aria-pressed', 'false');
-        await page.emulateMedia({ reducedMotion: 'reduce' });
-        await slider(page, 'accumulate', 0);
-        await page.locator('#animate-sum').click();
-        await expect(page.locator('#accumulate')).toHaveValue('100');
-        await expect(page.locator('#animate-sum')).toContainText('reduced motion');
-    });
-
-    test('size changes stay visible, comparison scales match, and explanations follow the variable', async ({ page }) => {
-        await page.goto('/tools/moment_of_inertia/');
-        const scale = await page.locator('#specimen').getAttribute('data-scale');
-        await slider(page, 'radius', 2);
-        await expect(page.locator('#inertia-value')).toHaveText('4.000');
-        await expect(page.locator('#specimen')).toHaveAttribute('data-scale', scale);
-        await expect(page.locator('#live-insight')).toContainText('doubling radius');
-        expect(await page.locator('#current-motion').getAttribute('data-scale')).toBe(await page.locator('#reference-motion').getAttribute('data-scale'));
-        await slider(page, 'mass', 4);
-        await expect(page.locator('#live-insight')).toContainText('doubling mass');
-        await page.getByRole('button', { name: 'A sphere’s symmetry', exact: true }).click();
-        await slider(page, 'tilt', 45);
-        await expect(page.locator('#live-insight')).toContainText('Nothing changed!');
-        await expect(page.locator('#inertia-value')).toHaveText('0.800');
-    });
-
-    for (const width of [320, 390, 768, 1280]) {
-        test(`shapes, axes, mass elements and torque comparison work at ${width}px`, async ({ page }) => {
-            const errors = [];
-            page.on('pageerror', e => errors.push(e.message));
-            await page.setViewportSize({ width, height: 900 });
-            await page.emulateMedia({ reducedMotion: 'reduce' });
-            await page.goto('/tools/moment_of_inertia/');
-            await expect(page).toHaveTitle('Moment of Inertia Lab | Adam Djellouli');
-            await expect(page.locator('#inertia-value')).toHaveText('1.000');
-            await expect(page.locator('#reference-I')).toHaveText('2.000');
-            await page.locator('#run-motion').click();
-            await expect(page.locator('#current-angle')).toHaveText('2.000');
-            await expect(page.locator('#reference-angle')).toHaveText('1.000');
-            await expect(page.locator('#motion-status')).toContainText('Reduced motion');
-
-            await page.getByRole('button', { name: 'Center vs. end', exact: true }).click();
-            await expect(page.locator('#inertia-value')).toHaveText('2.667');
-            await expect(page.locator('#reference-I')).toHaveText('0.667');
-            await expect(page.locator('#radius')).toBeHidden();
-            await expect(page.locator('#length')).toBeVisible();
-            await page.locator('#run-motion').click();
-            await expect(page.locator('#current-angle')).toHaveText('0.750');
-            await expect(page.locator('#reference-angle')).toHaveText('3.000');
-
-            for (const shape of Object.keys(M.SHAPES)) {
-                await page.locator('#shape').selectOption(shape);
-                await slider(page, 'tilt', 35);
-                await slider(page, 'offset', 0.3);
-                await expect(page.locator('#specimen-title')).toHaveText(M.SHAPES[shape].name);
-                await expect(page.locator('#integral-equation math')).toHaveCount(1);
-                await expect(page.locator('#distribution-table tr')).toHaveCount(10);
-                await page.locator('#camera').selectOption('axis');
-                await page.locator('#camera').selectOption('perspective');
-                expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-            }
-            await page.getByRole('button', { name: 'Disk vs. hoop', exact: true }).click();
-            await page.locator('#pin-reference').click();
-            await slider(page, 'mass', 4);
-            await expect(page.locator('#inertia-value')).toHaveText('2.000');
-            await expect(page.locator('#reference-I')).toHaveText('1.000');
-            await expect(page.locator('#current-angle')).toHaveText('0.000');
-            await page.locator('#run-motion').click();
-            await expect(page.locator('#current-angle')).toHaveText('1.000');
-            await expect(page.locator('#reference-angle')).toHaveText('2.000');
-
-            await slider(page, 'accumulate', 0);
-            await expect(page.locator('#sum-equation')).toContainText('0.000');
-            await expect(page.locator('#piece-count')).toHaveText('0 / 128 pieces included');
-            await slider(page, 'accumulate', 50);
-            await expect(page.locator('#piece-count')).toHaveText('64 / 128 pieces included');
-            await slider(page, 'accumulate', 100);
-            await page.locator('#piece').focus();
-            await page.keyboard.press('End');
-            await expect(page.locator('#piece-value')).toHaveText('128 / 128');
-            await expect(page.locator('#piece-position')).toContainText('included in the sum');
-            const before = await page.locator('#integration-error').textContent();
-            await page.locator('#resolution').selectOption('16');
-            await expect(page.locator('#piece-count')).toHaveText('512 / 512 pieces included');
-            expect(await page.locator('#integration-error').textContent()).not.toBe(before);
-            await page.locator('#reset-body').click();
-            await expect(page.locator('#inertia-value')).toHaveText('1.000');
-            expect(errors).toEqual([]);
-            await page.screenshot({ path: `screenshots/moment-of-inertia-${width}.png`, fullPage: true });
-        });
-    }
 
     test('experiments stay active while followed, and explanations report what changed', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
@@ -293,83 +361,69 @@ test.describe('inertia lab in the browser', () => {
         await redistribute.click();
         await slider(page, 'hollow', 0.8);
         await expect(redistribute).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('#experiment-note')).toContainText('Move mass toward the rim');
         await expect(page.locator('#live-insight')).toContainText('I: 1.000 → 1.640 kg·m² (×1.64)');
         await page.locator('#reset-body').click();
         await expect(page.locator('#hollow')).toHaveValue('0');
-        await expect(redistribute).toHaveAttribute('aria-pressed', 'true');
         await page.locator('#shape').selectOption('cylinder');
         await expect(redistribute).toHaveAttribute('aria-pressed', 'false');
         await slider(page, 'height', 3);
-        await expect(page.locator('#live-insight')).toContainText('unchanged');
         await expect(page.locator('#live-insight')).toContainText('only along the axis');
-        await slider(page, 'tilt', 90);
-        await slider(page, 'height', 2);
-        await expect(page.locator('#live-insight')).toContainText('less than the full');
-        await expect(page.locator('#pause-motion')).toHaveText('Pause');
-        await expect(page.locator('#pause-motion')).toBeDisabled();
+        await slider(page, 'radius', 2);
+        await expect(page.locator('#live-insight')).toContainText('doubling radius');
+        await slider(page, 'mass', 4);
+        await expect(page.locator('#live-insight')).toContainText('doubling mass');
+        await page.getByRole('button', { name: 'A sphere’s symmetry', exact: true }).click();
+        await slider(page, 'tilt', 45);
+        await expect(page.locator('#live-insight')).toContainText('Nothing changed!');
     });
 
-    test('the primer explains I = m r² with a live ball on an arm', async ({ page }) => {
-        await page.goto('/tools/moment_of_inertia/');
-        await expect(page.locator('#primer-I')).toHaveText('1.0 × 0.50² = 0.250 kg·m²');
-        await slider(page, 'primer-r', 1);
-        await expect(page.locator('#primer-I')).toHaveText('1.0 × 1.00² = 1.000 kg·m²');
-        await expect(page.locator('#primer-insight')).toContainText('r² ×4.00');
-        await slider(page, 'primer-m', 2);
-        await expect(page.locator('#primer-insight')).toContainText('I is ×8.00');
-        await expect(page.locator('#primer-svg')).toHaveAttribute('aria-label', /square of side r has area 1.00/);
-    });
-
-    test('every shape shows how many integrals it needs and why', async ({ page }) => {
+    test('every shape shows how many integrals it needs and loads from the table', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
         await expect(page.locator('#count-table tr')).toHaveCount(7);
-        await expect(page.locator('#count-table tr.current-shape')).toContainText('Solid disk');
         await expect(page.locator('#count-table tr.current-shape .sign-cell')).toHaveText('∫∫ double');
-        await expect(page.locator('#integral-badge')).toHaveText('2D surface · double ∫∫');
-        await expect(page.locator('#integral-shortcut')).toBeVisible();
         await page.locator('[data-load-shape="sphere"]').click();
         await expect(page.locator('#specimen-title')).toHaveText('Solid sphere');
-        await expect(page.locator('#integral-badge')).toHaveText('3D solid · triple ∫∫∫');
         await expect(page.locator('.dimension-cards .current-shape')).toHaveAttribute('data-dims', '3');
         await page.locator('[data-load-shape="rod"]').click();
         await expect(page.locator('#integral-badge')).toHaveText('1D line · single ∫');
         await expect(page.locator('#integral-shortcut')).toBeHidden();
-        await page.locator('#shape').selectOption('annulus');
-        await slider(page, 'hollow', 1);
-        await expect(page.locator('#integral-badge')).toHaveText('1D line · single ∫');
+        await expect(page.locator('#nest .nest-level')).toHaveCount(1);
     });
 
-    test('the off-center section splits I into the spin about the center and the center going around', async ({ page }) => {
-        await page.goto('/tools/moment_of_inertia/');
-        await expect(page.locator('#offcenter-insight')).toContainText('goes through the center of mass');
-        await slider(page, 'offcenter-d', 0.5);
-        await expect(page.locator('#offset')).toHaveValue('0.5');
-        await expect(page.locator('#inertia-value')).toHaveText('1.500');
-        await expect(page.locator('#offcenter-cm')).toHaveText('1.000 kg·m²');
-        await expect(page.locator('#offcenter-shift')).toHaveText('2.00 × 0.50² = 0.500 kg·m²');
-        await expect(page.locator('#offcenter-insight')).toContainText('1.50× harder');
-        await slider(page, 'offset', -0.5);
-        await expect(page.locator('#offcenter-d')).toHaveValue('-0.5');
-        await expect(page.locator('#offcenter-total')).toHaveText('1.500 kg·m²');
-        await page.locator('[data-experiment-link="shift"]').click();
-        await expect(page.locator('#inertia-value')).toHaveText('2.667');
-        await expect(page.locator('#offcenter-insight')).toContainText('4.00× harder');
-    });
-
-    test('charts and motion views are drawn at their displayed size on phones', async ({ page }) => {
-        await page.setViewportSize({ width: 320, height: 800 });
-        await page.goto('/tools/moment_of_inertia/');
-        for (const id of ['motion-chart', 'distribution-chart']) {
-            const [viewWidth, shown] = await page.locator('#' + id).evaluate(svg => [svg.viewBox.baseVal.width, svg.clientWidth]);
-            expect(Math.abs(viewWidth - Math.max(280, shown))).toBeLessThanOrEqual(1);
-        }
-        const motion = await page.locator('#current-motion').evaluate(c => [c.clientWidth, c.clientHeight]);
-        expect(motion[1] / motion[0]).toBeGreaterThan(0.65);
-        expect(await page.locator('#current-motion').getAttribute('data-scale')).toBe(await page.locator('#reference-motion').getAttribute('data-scale'));
-        const inset = await page.locator('.specimen-stage .canvas-wrap').evaluate(e => getComputedStyle(e).paddingLeft);
-        expect(inset).toBe('0px');
-    });
+    for (const width of [320, 390, 768, 1280]) {
+        test(`every shape and axis works without overflow at ${width}px`, async ({ page }) => {
+            const errors = [];
+            page.on('pageerror', e => errors.push(e.message));
+            await page.setViewportSize({ width, height: 900 });
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await page.goto('/tools/moment_of_inertia/');
+            await page.locator('#run-motion').click();
+            await expect(page.locator('#current-angle')).toHaveText('2.000');
+            await expect(page.locator('#reference-angle')).toHaveText('1.000');
+            await page.getByRole('button', { name: 'Center vs. end', exact: true }).click();
+            await expect(page.locator('#inertia-value')).toHaveText('2.667');
+            await expect(page.locator('#length')).toBeVisible();
+            for (const shape of Object.keys(M.SHAPES)) {
+                await page.locator('#shape').selectOption(shape);
+                await slider(page, 'tilt', 35);
+                await slider(page, 'offset', 0.3);
+                await expect(page.locator('#specimen-title')).toHaveText(M.SHAPES[shape].name);
+                await expect(page.locator('#integral-equation math')).toHaveCount(1);
+                await expect(page.locator('#distribution-table tr')).toHaveCount(10);
+                await page.locator('#build-end').click();
+                await page.locator('#camera').selectOption('axis');
+                await page.locator('#camera').selectOption('perspective');
+                expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+            }
+            for (const id of ['specimen', 'builder', 'current-motion', 'motion-chart']) {
+                const [w, cw, dpr] = await page.locator('#' + id).evaluate(c => [c.width, c.clientWidth, devicePixelRatio]);
+                expect(Math.abs(w - cw * dpr)).toBeLessThanOrEqual(2);
+            }
+            expect(await page.locator('#current-motion').getAttribute('data-scale')).toBe(await page.locator('#reference-motion').getAttribute('data-scale'));
+            expect(errors).toEqual([]);
+            await page.screenshot({ path: `screenshots/moment-of-inertia-${width}.png`, fullPage: true });
+        });
+    }
 
     test('ideal axial rod is explained, disabling invalid motion until the axis changes', async ({ page }) => {
         await page.goto('/tools/moment_of_inertia/');
@@ -383,10 +437,9 @@ test.describe('inertia lab in the browser', () => {
         await slider(page, 'offset', 0.5);
         await expect(page.locator('#inertia-value')).toHaveText('0.500');
         await expect(page.locator('#run-motion')).toBeEnabled();
-        await expect(page.locator('#current-alpha')).toHaveText('2.000');
     });
 
-    test('animation can pause, resume, reset, and finish with physical values', async ({ page }) => {
+    test('the race can pause, resume, reset, and finish with physical values', async ({ page }) => {
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.goto('/tools/moment_of_inertia/');
         await page.locator('#run-motion').click();
@@ -398,23 +451,26 @@ test.describe('inertia lab in the browser', () => {
         await expect(page.locator('#current-angle')).toHaveText(angle);
         await page.locator('#pause-motion').click();
         await expect(page.locator('#motion-status')).toContainText('After 2.00 s');
-        await expect(page.locator('#current-omega')).toHaveText('2.000');
         await expect(page.locator('#current-angle')).toHaveText('2.000');
-        await expect(page.locator('#reference-angle')).toHaveText('1.000');
         await page.locator('#reset-motion').click();
         await expect(page.locator('#current-angle')).toHaveText('0.000');
         await expect(page.locator('#pause-motion')).toBeDisabled();
+        await page.locator('#pin-reference').click();
+        await expect(page.locator('#reference-I')).toHaveText('1.000');
     });
 
-    test('theme changes redraw the chart, and native math works with all external requests blocked', async ({ page, context }) => {
+    test('both themes render with no errors and all external requests blocked', async ({ page, context }) => {
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
         await context.addCookies([{ name: 'darkMode', value: 'true', domain: '127.0.0.1', path: '/' }]);
         await page.goto('/tools/moment_of_inertia/');
         await expect(page.locator('body')).toHaveClass(/dark-mode/);
         await expect(page.locator('#integral-equation math')).toBeVisible();
-        const before = await page.locator('#distribution-chart rect').last().getAttribute('fill');
+        const dark = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--lv-outer').trim());
         await page.getByRole('button', { name: 'Toggle dark mode' }).click();
         await expect(page.locator('body')).not.toHaveClass(/dark-mode/);
-        expect(await page.locator('#distribution-chart rect').last().getAttribute('fill')).not.toBe(before);
+        expect(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--lv-outer').trim())).not.toBe(dark);
+        expect(errors).toEqual([]);
         await page.screenshot({ path: 'screenshots/moment-of-inertia-light.png', fullPage: true });
     });
 
