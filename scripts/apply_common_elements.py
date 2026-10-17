@@ -300,7 +300,10 @@ def upsert_canonical_link(soup: BeautifulSoup, canonical_url: str) -> None:
 
 
 def find_share_image(soup: BeautifulSoup, canonical_url: str) -> Optional[str]:
-    """Absolute URL of the first article image, if the article has one."""
+    """The page's own og:image if it sets one, else the first article image."""
+    own = soup.find("meta", attrs={"property": "og:image"})
+    if own and own.get("content"):
+        return urljoin(canonical_url, own["content"])
     article_body = soup.find(id="article-body")
     image = article_body.find("img", src=True) if article_body else None
     if image is None:
