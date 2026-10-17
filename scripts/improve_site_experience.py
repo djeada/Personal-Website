@@ -15,14 +15,14 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1] / 'src'
 TITLES = {
-    'index.html': 'Adam Djellouli — AI Tools, a Game Engine & Free Programming Courses',
+    'index.html': 'Adam Djellouli — Programming Videos, Free Courses & Open-Source Tools',
     'core/tools.html': 'Free Developer Tools & Interactive Visualizers',
     'articles/backend_engineers_guide/01_api_design/02_rest.html': 'REST APIs: Principles, HTTP Methods, and Examples',
     'articles/backend_engineers_guide/01_api_design/03_graphql.html': 'GraphQL APIs: Queries, Mutations, and Schemas',
     'articles/backend_engineers_guide/01_api_design/04_grpc.html': 'gRPC: Protocol Buffers and RPC Communication',
 }
 DESCRIPTIONS = {
-    'index.html': 'Adam Djellouli, software engineer in Berlin: MCP servers for AI assistants, TempoBench, a C++ game engine, 55 browser tools and free programming courses.',
+    'index.html': 'Software engineer in Berlin. Short videos on algorithms, graphics and physics, free programming courses, 55 browser tools and open-source AI projects.',
     'core/tools.html': 'Free browser tools for comparing text, working with matrices, and exploring algorithms, statistics, and physics through interactive visualizers.',
 }
 
