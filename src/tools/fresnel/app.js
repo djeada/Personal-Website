@@ -240,6 +240,11 @@
         return mag.toFixed(3) + " ∠ " + (Math.abs(ph) < 0.05 ? "0.0" : ph.toFixed(1)) + "°";
     }
 
+    // The phase of a vanishing amplitude (r_p at Brewster) is undefined: say so instead of printing ±180°.
+    function phaseText(z) {
+        return C.abs(z) < 5e-4 ? "undefined (r = 0)" : phaseDeg(C.arg(z)).toFixed(1) + "°";
+    }
+
     function formatIndex(s) {
         return s.k2 > 0 ? s.n2.toFixed(2) + " + " + s.k2.toFixed(2) + "i" : s.n2.toFixed(2);
     }
@@ -540,6 +545,8 @@
         }
 
 
+        // Text is drawn last so field samples and arcs never cover it.
+        const late = [];
         const drawRay = (u, power, color, name, incident, fade, xo = 0) => {
             const sx = (incident ? ox - u.x * L : ox) + xo,
                 sy = incident ? oy - u.z * L : oy;
@@ -550,7 +557,8 @@
             const below = ly > oy;
 
             const topMin = incident && (sep || lx < 8 + 190) ? 3 * fs + 22 : fs + 2;
-            const ty = below ? Math.min(h - 8, ly + fs + 4) : Math.max(topMin, ly - 6);
+            // A near-grazing ray lies on the interface; keep its label clear of the ray and its field samples.
+            const ty = below ? Math.min(h - 8, Math.max(ly + fs + 4, oy + fs + 30)) : Math.max(topMin, Math.min(ly - 6, oy - 34));
             if (power < ZERO_POWER) {
                 ctx.strokeStyle = COL.guide;
                 ctx.lineWidth = 1.4;
@@ -560,10 +568,11 @@
                 ctx.lineTo(ex, ey);
                 ctx.stroke();
                 ctx.setLineDash([]);
-                label(ctx, name + " = 0 (direction only)", lx, ty, PAL.textMuted, u.x >= 0 ? "right" : "left", w, fs);
+                late.push(() => label(ctx, name + " = 0 (direction only)", lx, ty, PAL.textMuted, u.x >= 0 ? "right" : "left", w, fs));
                 return;
             }
-            const width = incident ? 8 : 1.5 + 7 * power;
+            // Width ∝ power: the incident ray (P = 1) is 8 px, so R = 1 or T = 1 is never drawn wider than it.
+            const width = incident ? 8 : Math.max(1.5, 8 * power);
             if (fade) {
                 const segs = 12;
                 for (let i = 0; i < segs; i++) {
@@ -586,30 +595,11 @@
             }
             const txt = incident ? "incident, P = 1" : name + " = " + f3(power);
             const align = sep ? (incident ? "right" : "left") : (incident ? "left" : (u.x >= 0 ? "right" : "left"));
-            label(ctx, txt, lx + (sep ? (incident ? -8 : 8) : 0), ty, color, align, w, fs);
+            late.push(() => label(ctx, txt, lx + (sep ? (incident ? -8 : 8) : 0), ty, color, align, w, fs));
         };
         drawRay(uInc, 1, COL.incident, "P", true, null, -sep);
         drawRay(uRef, Pw.R, COL.reflected, "R", false, null, sep);
         if (uTr && !bandMode) drawRay(uTr, Pw.T, COL.transmitted, "T", false, decaying ? decayAt : null);
-
-
-        const arc = (r, a0, a1, text, color) => {
-            if (Math.abs(a1 - a0) < 0.01) return;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.6;
-            ctx.beginPath();
-            ctx.arc(ox, oy, r, a0, a1);
-            ctx.stroke();
-            const mid = (a0 + a1) / 2;
-            ctx.fillStyle = color;
-            ctx.font = fs + "px " + PAL.font;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(text, ox + (r + 12) * Math.cos(mid), oy + (r + 12) * Math.sin(mid));
-        };
-        arc(34, -Math.PI / 2 - s.theta1, -Math.PI / 2, "θ₁", COL.incident);
-        arc(48, -Math.PI / 2, -Math.PI / 2 + s.theta1, "θ₁", COL.reflected);
-        if (uTr && !bandMode) arc(34, Math.PI / 2 - s.theta2, Math.PI / 2, "θ₂", COL.transmitted);
 
 
         if (st.ef) {
@@ -649,18 +639,40 @@
                 along(uRef, waves.reflected, 1, mo);
                 if (uTr && !bandMode) along(uTr, waves.transmitted, 1);
                 if (bandMode) {
+                    // Sample the evanescent or absorbed field left of the normal, clear of the reflected ray,
+                    // the depth bar on the right and the medium labels at the bottom.
                     const dL = 1 / (2 * Math.PI * kappa);
                     [0.5, 1.4, 2.3].forEach((xs) => {
-                        const x = ((xs * scale) < w / 2 - 12 ? xs : xs * 0.5) + shift / scale;
+                        const x = -((xs * scale) < w / 2 - 12 ? xs : xs * 0.5) + shift / scale;
                         [0, dL, 2 * dL].forEach((z) => {
                             const zd = z * zoom;
-                            if (zd * scale > h - oy - 10) return;
+                            if (zd * scale > h - oy - 2 * fs - 30) return;
                             put(waves.transmitted, x, z, zd, null);
                         });
                     });
                 }
             });
         }
+
+
+        const arc = (r, a0, a1, text, color) => {
+            if (Math.abs(a1 - a0) < 0.01) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(ox, oy, r, a0, a1);
+            ctx.stroke();
+            const mid = (a0 + a1) / 2;
+            ctx.fillStyle = color;
+            ctx.font = fs + "px " + PAL.font;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, ox + (r + 12) * Math.cos(mid), oy + (r + 12) * Math.sin(mid));
+        };
+        arc(34, -Math.PI / 2 - s.theta1, -Math.PI / 2, "θ₁", COL.incident);
+        arc(48, -Math.PI / 2, -Math.PI / 2 + s.theta1, "θ₁", COL.reflected);
+        if (uTr && !bandMode) arc(34, Math.PI / 2 - s.theta2, Math.PI / 2, "θ₂", COL.transmitted);
+        late.forEach((f) => f());
 
 
         if (Math.abs(st.th * DEG - aux.thB) < 0.003 && !aux.absorbing) {
@@ -682,7 +694,12 @@
         label(ctx, "Medium 2: ñ₂ = " + formatIndex(st), 8, h - fs - 14, PAL.text, "left", w, fs);
         label(ctx, s.tir ? "evanescent: T = 0, |E| ≠ 0" : "λ₂ = " + formatLength(lam0 / kTn) + (aux.absorbing ? " (phase)" : ""), 8, h - 8, PAL.textMuted, "left", w, fs);
         if (Math.abs(st.th * DEG - aux.thB) < 0.003) {
-            label(ctx, aux.absorbing ? "min Rp = " + f3(s.Rp) : "Brewster: Rp = 0", ox + 12, oy - 58, COL.brewster, "left", w, fs);
+            // Far left, just above the interface: clear of the θ₁ arcs and the reflected ray.
+            label(ctx, aux.absorbing ? "min Rp = " + f3(s.Rp) : "Brewster: Rp = 0", 8, oy - 8, COL.brewster, "left", w, fs);
+        }
+        if (bandMode && !s.tir) {
+            // The absorbed beam is drawn as a band, not a ray, so state its power here.
+            label(ctx, "T = " + f3(Pw.T) + " (absorbed)", ox + 10, oy + fs + 8, COL.transmitted, "left", w, fs);
         }
 
         const sbx = w - 10 - scale,
@@ -768,7 +785,7 @@
             label: "R unpol."
         });
         const Pw = selectedPower();
-        rtMap = UI.plot(ctx, {
+        rtMap = plotWithMarkerLabels(ctx, {
             x: 0,
             y: 0,
             w,
@@ -790,12 +807,51 @@
             },
             series,
             legend: false,
+            margin: ANGLE_MARGIN,
             markers: markerList(),
             cursor: {
                 x: st.th,
                 label: "θ₁ " + st.th.toFixed(1) + "°  R " + f3(Pw.R) + "  T " + f3(Pw.T)
             }
         });
+    }
+
+    // Integer margins put the 90° tick exactly on the plot edge, so UI.plot does not drop its label.
+    const ANGLE_MARGIN = {
+        l: 53,
+        r: 13
+    };
+
+    // UI.plot draws marker labels without a backing box, so they vanish into curves near R = 1 or ±180°.
+    // Draw the marker lines through UI.plot and their labels here, stacked from the top (or from yFrac of the height).
+    function plotWithMarkerLabels(ctx, rect, opts, yFrac = 0) {
+        const marks = opts.markers || [];
+        const map = UI.plot(ctx, rect, Object.assign({}, opts, {
+            markers: marks.map((m) => Object.assign({}, m, {
+                label: ""
+            }))
+        }));
+        const P = map.plot,
+            fs = 12;
+        ctx.save();
+        ctx.font = fs + "px " + PAL.font;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        let row = 0;
+        marks.forEach((m) => {
+            const px = map.xToPx(m.x);
+            if (!m.label || !(px >= P.x && px <= P.x + P.w)) return;
+            const tw = ctx.measureText(m.label).width;
+            let lx = px + 6 + tw > P.x + P.w - 3 ? px - 6 - tw : px + 6;
+            lx = Math.max(P.x + 3, Math.min(P.x + P.w - tw - 3, lx));
+            const ly = P.y + 4 + yFrac * P.h + row++ * (fs + 8);
+            ctx.fillStyle = "rgba(7, 7, 13, 0.85)";
+            ctx.fillRect(lx - 3, ly - 2, tw + 6, fs + 6);
+            ctx.fillStyle = m.color || PAL.marker;
+            ctx.fillText(m.label, lx, ly + 1);
+        });
+        ctx.restore();
+        return map;
     }
 
     function markerList() {
@@ -830,9 +886,7 @@
                 label: "arg rp"
             }
         ];
-        const ps = phaseDeg(sol.phaseRs),
-            pp = phaseDeg(sol.phaseRp);
-        phMap = UI.plot(ctx, {
+        phMap = plotWithMarkerLabels(ctx, {
             x: 0,
             y: 0,
             w,
@@ -858,10 +912,11 @@
             },
             series,
             legend: false,
+            margin: ANGLE_MARGIN,
             markers: markerList(),
             cursor: {
                 x: st.th,
-                label: "φs " + ps.toFixed(1) + "°  φp " + pp.toFixed(1) + "°"
+                label: "φs " + phaseText(sol.rs) + "  φp " + phaseText(sol.rp)
             }
         });
     }
@@ -911,7 +966,7 @@
             label: "1/e field depth d = " + formatLength(d),
             color: PAL.marker
         }] : [];
-        depthMap = UI.plot(ctx, {
+        depthMap = plotWithMarkerLabels(ctx, {
             x: 0,
             y: 0,
             w,
@@ -936,7 +991,7 @@
                 color: PAL.gridStrong
             }],
             markers
-        });
+        }, 0.4);
     }
 
 
@@ -952,8 +1007,8 @@
         dRT.update("R and T versus angle from 0 to 90°. At θ₁ = " + st.th.toFixed(1) + "°: Rs = " + f3(s.Rs) + ", Rp = " + f3(s.Rp) +
             ", Ts = " + f3(s.Ts) + ", Tp = " + f3(s.Tp) + ". Rp reaches its minimum " + minRp.toFixed(4) + " at " + deg(aux.thB).toFixed(2) + "°" +
             (aux.thC !== null && !aux.absorbing ? "; R = 1 beyond the critical angle " + deg(aux.thC).toFixed(2) + "°." : "."));
-        dPh.update("Reflection phase versus angle. At θ₁ = " + st.th.toFixed(1) + "°: arg rs = " + phaseDeg(s.phaseRs).toFixed(1) +
-            "°, arg rp = " + phaseDeg(s.phaseRp).toFixed(1) + "°.");
+        dPh.update("Reflection phase versus angle. At θ₁ = " + st.th.toFixed(1) + "°: arg rs = " + phaseText(s.rs) +
+            ", arg rp = " + phaseText(s.rp) + ".");
         dDepth.update("Transmitted |E|² versus depth: at the surface s = " + f3(Fresnel.transmittedIntensity(s, "s", 0)) + ", p = " +
             f3(Fresnel.transmittedIntensity(s, "p", 0)) + " times the incident value; " +
             (s.fieldDecayLength && Number.isFinite(s.fieldDecayLength) ? "it falls to 1/e² of its surface value at depth " + formatLength(s.fieldDecayLength) + "." : "it is constant with depth (lossless propagating wave)."));

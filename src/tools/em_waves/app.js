@@ -241,24 +241,23 @@
         });
         zs = core.linspace(Z_MIN * cfg.lambda1, Z_MAX * cfg.lambda1, NZ);
 
-        let fMax = 0,
-            uMax = 0,
-            sMax = 0;
+        let fMax = 0;
         for (const z of zs) {
             const a = em.timeAverage(cfg, z);
-            const eps = em.region(cfg, z) === 1 ? cfg.m1.eps : em.region(cfg, z) === 2 ? cfg.m2.eps : 0;
             fMax = Math.max(fMax, a.Eamp, cfg.m1.eta * a.Hamp);
-            uMax = Math.max(uMax, 0.5 * eps * a.Eamp * a.Eamp, 0.5 * core.constants.mu0 * a.Hamp * a.Hamp);
-            sMax = Math.max(sMax, a.Eamp * a.Hamp);
         }
 
-        uMax = 0;
-        sMax = 0;
-        let sMin = 0;
+        // The time plot also draws the total u: in a partial standing wave E and H are in phase at
+        // the envelope maxima, so u/ū₀ reaches 2(1 + |r|²) and can exceed both the u_E and S_z peaks.
+        let uMax = 0,
+            uTotMax = 0,
+            sMax = 0,
+            sMin = 0;
         for (let i = 0; i < zs.length; i += 4) {
             for (let j = 0; j < 24; j++) {
                 const f = em.fields(cfg, zs[i], j * cfg.period / 24);
                 uMax = Math.max(uMax, f.uE, f.uH);
+                uTotMax = Math.max(uTotMax, f.u);
                 sMax = Math.max(sMax, Math.abs(f.S[2]));
                 sMin = Math.min(sMin, f.S[2]);
             }
@@ -266,6 +265,7 @@
         ranges = {
             f: fMax || 1,
             u: uMax / cfg.u0 || 1,
+            uTot: uTotMax / cfg.u0 || 1,
             s: sMax / cfg.I0 || 1,
             sMin: sMin / cfg.I0,
             sAbs: sMax || 1
@@ -930,7 +930,7 @@
         const xs = Array.from(sT.t, (t) => t * 1e15),
             u0 = cfg.u0,
             I0 = cfg.I0;
-        const top = Math.max(ranges.u, ranges.s) * 1.1;
+        const top = Math.max(ranges.uTot, ranges.s) * 1.1;
         const bottom = Math.min(-0.1 * top, ranges.sMin * 1.1);
         mapTE = UI.plot(ctx, {
             x: 0,
@@ -1075,7 +1075,10 @@
     }
 
 
-    const sig = (v, d = 3) => (Math.abs(v) < 1e-300 ? "0" : Number(v.toPrecision(d)).toString());
+    // sig() only sees fields in V/m (E₀ ≥ 1 V/m) or ratios normalised to E₀², ū₀ or I₀, so anything below 10⁻⁹ is
+    // round-off at a standing-wave node (sin kz ≈ 10⁻¹⁶), not a value worth printing as "9.91e-15".
+    const sig = (v, d = 3) => (Math.abs(v) < 1e-9 ? "0" : Number(v.toPrecision(d)).toString());
+    const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v);
     const sci = (v) => (v === 0 ? "0" : v.toExponential(1).replace(/e([+-])(\d+)/, (m, s, e) => "×10" + (s === "-" ? "⁻" : "") + e.split("").map((c) => "⁰¹²³⁴⁵⁶⁷⁸⁹" [c]).join("")));
 
     function updateText() {
@@ -1127,10 +1130,14 @@
         const ang = Em > 1e-9 * cfg.E0 && Hm > 1e-9 * cfg.E0 / eta1 ? Math.acos(core.clamp(em.vec.dot(Ef, Hf) / (Em * Hm), -1, 1)) * 180 / Math.PI : NaN;
         $("rTrans").textContent = `${sig(Ef[2])} V/m, ${sig(eta1 * Hf[2])} V/m, η₁E·H/E₀² = ${sig(eta1 * em.vec.dot(Ef, Hf) / (cfg.E0 * cfg.E0), 2)}` +
             (Number.isFinite(ang) ? `; ∠(E, H) = ${ang.toFixed(1)}°` : "");
-        const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v);
         $("rProbe").textContent = `${fmt(snap(f.uE, cfg.u0), "J/m³")}, ${fmt(snap(f.uH, cfg.u0), "J/m³")}, ${fmt(snap(f.S[2], cfg.I0), "W/m²")}`;
         const av = em.timeAverage(cfg, zProbe());
-        $("rRatio").textContent = av.uH > 0 ? `${fmt(av.uE, "J/m³")} / ${fmt(av.uH, "J/m³")} = ${sig(av.uE / av.uH, 4)}` : "— (inside conductor)";
+        // At an exact E or H node of a standing wave one average is round-off (~10⁻³⁰ ū₀), not a number to divide by.
+        const avE = snap(av.uE, cfg.u0),
+            avH = snap(av.uH, cfg.u0);
+        $("rRatio").textContent = f.region === 0 ? "— (inside conductor)" :
+            avH > 0 ? `${fmt(avE, "J/m³")} / ${fmt(avH, "J/m³")} = ${sig(avE / avH, 4)}${avE === 0 ? " (E node)" : ""}` :
+            `${fmt(avE, "J/m³")} / 0 J/m³ = ∞ (H node)`;
         $("rPoynt").textContent = `${sci(poynt)} (central differences, steps 10⁻⁵λ₀, 10⁻⁵T)`;
 
         const warn = $("regimeWarn");
@@ -1153,7 +1160,7 @@
             elliptical: `elliptical (ψ = ${state.psi}°, δ = ${state.dl}°)`
         } [state.pol];
         const bnd = cfg.boundary === "none" ? "no boundary" : cfg.boundary === "pec" ? "a perfect conductor at z = 0" : `a dielectric n₂ = ${cfg.m2.n.toFixed(2)} at z = 0 (r = ${cfg.r.re.toFixed(3)})`;
-        dView.update(`${polName} wave, λ₀ = ${state.lam} nm, n₁ = ${cfg.m1.n.toFixed(2)}, ${bnd}, t = ${state.tph.toFixed(3)} T. At the probe z = ${fmt(zp, "m")}: E = (${sig(f.E[0])}, ${sig(f.E[1])}, 0) V/m, η₁H = (${sig(cfg.m1.eta * f.H[0])}, ${sig(cfg.m1.eta * f.H[1])}, 0) V/m, S_z = ${fmt(f.S[2], "W/m²")}.`);
+        dView.update(`${polName} wave, λ₀ = ${state.lam} nm, n₁ = ${cfg.m1.n.toFixed(2)}, ${bnd}, t = ${state.tph.toFixed(3)} T. At the probe z = ${fmt(zp, "m")}: E = (${sig(f.E[0])}, ${sig(f.E[1])}, 0) V/m, η₁H = (${sig(cfg.m1.eta * f.H[0])}, ${sig(cfg.m1.eta * f.H[1])}, 0) V/m, S_z = ${fmt(snap(f.S[2], I0), "W/m²")}.`);
         const eMaxNow = Math.max(...Array.from(sZ.Ex, (v, i) => Math.hypot(v, sZ.Ey[i])));
         const nodes = em.eNodes(cfg, zs[0]).map((z) => fmt(z, "m")).slice(0, 4);
         dZF.update(`Fields versus z at t = ${state.tph.toFixed(3)} T over ${fmt(zs[0], "m")} to ${fmt(zs[zs.length - 1], "m")}. Maximum |E| now ${sig(eMaxNow)} V/m; envelope max ${sig(Math.max(...sZ.envE))} V/m, min ${sig(Math.min(...sZ.envE.filter((v, i) => zs[i] < 0 || cfg.boundary === "none")))} V/m.` + (nodes.length ? ` Envelope minima at ${nodes.join(", ")}.` : "") + (a.x && a.y ? " Both x and y components present." : ""));
@@ -1246,6 +1253,12 @@
 
     render(false);
     url.ready.then((restored) => {
+        // A hand-edited link such as ?pol=foo leaves the <select> blank; fall back to the defaults instead.
+        const s = ctl.get(),
+            fix = {};
+        if (!["linear", "rcp", "lcp", "elliptical"].includes(s.pol)) fix.pol = DEFAULTS.pol;
+        if (!["none", "dielectric", "pec"].includes(s.bnd)) fix.bnd = DEFAULTS.bnd;
+        if (Object.keys(fix).length) ctl.set(fix);
         state = ctl.get();
         needModel = true;
         render(false);
