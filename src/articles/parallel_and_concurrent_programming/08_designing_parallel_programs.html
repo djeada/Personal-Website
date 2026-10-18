@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs",
             "description": "Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate.",
-            "dateModified": "2026-09-12",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Designing a parallel program means restructuring a computation so that useful work can proceed concurrently without making coordination costs dominate." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -234,7 +234,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -263,6 +263,7 @@ messageStyle: "none"
                 <li><strong>Mapping</strong> — assign tasks to processors, cores, nodes, or accelerators.</li>
             </ol>
             <p>PCAM is best treated as an <strong>iterative design process</strong>, not a one-way checklist. A mapping decision may reveal that communication is too expensive; agglomeration may then need to change, which can in turn require a different partitioning. The final design should be validated with measurements rather than assumed to be optimal from the decomposition alone.</p>
+            <p>For example, in an image pipeline, partitioning creates work per image or tile; communication transfers inputs and results; agglomeration batches small tiles; mapping assigns batches to workers. An image may contain many tiles without requiring one permanent thread per tile. Keep the distinction between a <strong>task</strong> (a unit of work) and a <strong>worker</strong> (an execution context) explicit.</p>
             <p>Three questions are useful throughout the process:</p>
             <ul>
                 <li><strong>Where is the parallelism?</strong> Identify independent work and the critical dependencies that limit concurrency.</li>
@@ -355,7 +356,7 @@ messageStyle: "none"
 |     Worker 3          |      Worker 4         |
 +-----------------------+-----------------------+</code></pre>
             </div>
-            <p>This decomposition works well because most pixels depend only on nearby pixels, so almost all computation stays inside each tile. Only the tile boundaries need data from neighboring partitions. For a two-dimensional square tile with side length (L), computation grows roughly with (L^2), while boundary data grows roughly with (L). Larger tiles therefore do more computation for each boundary element exchanged, although making tiles too large eventually reduces the amount of parallel work available.</p>
+            <p>This decomposition works well because most pixels depend only on nearby pixels, so almost all computation stays inside each tile. Only the tile boundaries need data from neighboring partitions. For a two-dimensional square tile with side length \(L\), computation grows roughly with \(L^2\), while boundary data grows roughly with \(L\). Larger tiles therefore do more computation for each boundary element exchanged, although making tiles too large eventually reduces the amount of parallel work available.</p>
             <h4 id="ii-functional-decomposition">II. Functional Decomposition</h4>
             <p>Functional decomposition splits the work by <strong>type of operation</strong> rather than by data region. It is often used to build pipelines.</p>
             <p>A web request pipeline is a simple example.</p>
@@ -673,7 +674,8 @@ Result:         22</code></pre>
             <p>Graph partitioning is particularly useful for irregular meshes, sparse matrix computations, and graph analytics.</p>
             <h2 id="example-workflow">Example Workflow</h2>
             <h3 id="2-d-heat-diffusion">2-D Heat Diffusion</h3>
-            <p>The worked example simulates heat diffusion on a 4096 × 4096 grid for 5,000 time steps using a 5-point stencil in double precision.</p>
+            <p>This section is a design exercise for a 4096 × 4096 grid and 5,000 updates using a 5-point stencil in double precision. The repository does not include a complete <code>heat2d.c</code> implementation; the commands later in the section illustrate how such a solver could be built and launched.</p>
+            <p>To turn the exercise into a numerical experiment, also specify initial values, boundary conditions, grid spacing, diffusivity, and a stable time step. The neighbor-average update below illustrates the communication pattern; it is not a general parameterized heat-equation solver.</p>
             <p>The program uses two row-major arrays, <code>A[nx][ny]</code> and <code>B[nx][ny]</code>, which alternate roles each step. This is often called a <strong>ping-pong buffer</strong> pattern.</p>
             <p>A typical Jacobi-style update derived from a 5-point stencil is:</p>
             <p>$$
@@ -881,7 +883,7 @@ export OMP_PROC_BIND=close</code></pre>
             <p>This asks OpenMP to bind each team to cores close to the thread that created the team. MPI rank binding must also reserve the same eight cores per rank; otherwise all eight OpenMP threads may compete inside a smaller CPU set.</p>
             <p>NUMA placement matters as well. With <strong>first-touch allocation</strong>, each rank initializes its large arrays in parallel using the same thread placement that will later update them. This encourages memory pages to be allocated near the threads that use them.</p>
             <h3 id="runbook">Runbook</h3>
-            <p>The example implementation is assumed to live in <code>heat2d.c</code>.</p>
+            <p>The commands below assume you have implemented <code>heat2d.c</code> with the listed options. They are illustrative, not commands that work on a fresh clone. The mapping flags shown are Open MPI syntax; adapt placement options to your MPI launcher and allocated hardware.</p>
             <p>Expected implementation features:</p>
             <ul>
                 <li>Ping-pong buffers <code>A</code> and <code>B</code>.</li>
@@ -893,6 +895,7 @@ export OMP_PROC_BIND=close</code></pre>
                 <li>Optional HDF5 checkpoint output.</li>
             </ul>
             <h4 id="build-and-quick-check">Build and Quick Check</h4>
+            <p>This minimal build command assumes checkpoint support is disabled. Enabling HDF5 also requires the appropriate headers and link flags for a parallel HDF5 installation.</p>
             <div>
                 <pre><code class="language-bash">mpicc -O3 -march=native -fopenmp heat2d.c -o heat2d
 mpirun -n 1 ./heat2d --nx 512 --ny 512 --steps 10 --tile 512 --verify analytic</code></pre>

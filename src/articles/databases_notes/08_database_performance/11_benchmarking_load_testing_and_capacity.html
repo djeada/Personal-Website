@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Benchmarking, Load Testing, and Capacity Planning</title>
+    <meta content='A performance claim without a workload definition is incomplete. "Query X takes 5 ms" is useful only when you know.' name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Benchmarking, Load Testing, and Capacity Planning",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity",
+            "description": "A performance claim without a workload definition is incomplete. \"Query X takes 5 ms\" is useful only when you know.",
+            "dateModified": "2026-10-01",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Benchmarking, Load Testing, and Capacity Planning" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content='A performance claim without a workload definition is incomplete. "Query X takes 5 ms" is useful only when you know.' property="og:description" />
+    <meta content="2026-10-01" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Performance</li><li><span aria-current="page">Benchmarking, Load Testing, and Capacity Planning</span></li></ol></div>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#microbenchmark-versus-workload-test">Microbenchmark versus workload test</a></li>
+                    <li><a href="#define-the-hypothesis">Define the hypothesis</a></li>
+                    <li><a href="#representative-data-volume">Representative data volume</a></li>
+                    <li><a href="#data-skew">Data skew</a></li>
+                    <li><a href="#workload-mix">Workload mix</a></li>
+                    <li><a href="#concurrency">Concurrency</a></li>
+                    <li><a href="#coordinated-omission">Coordinated omission</a></li>
+                    <li><a href="#percentiles">Percentiles</a></li>
+                    <li><a href="#throughput">Throughput</a></li>
+                    <li><a href="#error-rate">Error rate</a></li>
+                    <li><a href="#resource-metrics">Resource metrics</a></li>
+                    <li><a href="#warm-up">Warm-up</a></li>
+                    <li><a href="#cold-cache-benchmark">Cold-cache benchmark</a></li>
+                    <li><a href="#repeated-trials">Repeated trials</a></li>
+                    <li><a href="#change-one-variable">Change one variable</a></li>
+                    <li><a href="#correctness-first">Correctness first</a></li>
+                    <li><a href="#write-cost">Write cost</a></li>
+                    <li><a href="#benchmark-environment">Benchmark environment</a></li>
+                    <li><a href="#production-shadow-testing">Production shadow testing</a></li>
+                    <li><a href="#query-replay">Query replay</a></li>
+                    <li><a href="#load-generators">Load generators</a></li>
+                    <li><a href="#pgbench-concept">pgbench concept</a></li>
+                    <li><a href="#think-time">Think time</a></li>
+                    <li><a href="#burst-testing">Burst testing</a></li>
+                    <li><a href="#soak-testing">Soak testing</a></li>
+                    <li><a href="#failure-testing-under-load">Failure testing under load</a></li>
+                    <li><a href="#capacity-model">Capacity model</a></li>
+                    <li><a href="#headroom">Headroom</a></li>
+                    <li><a href="#replication-headroom">Replication headroom</a></li>
+                    <li><a href="#queueing">Queueing</a></li>
+                    <li><a href="#cost-performance">Cost-performance</a></li>
+                    <li><a href="#regression-gate">Regression gate</a></li>
+                    <li><a href="#runnable-benchmark-exercises">Runnable benchmark exercises</a></li>
+                    <li><a href="#benchmark-report-template">Benchmark report template</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning, Sharding, and Data Locality for Performance</a></li><li><a href="/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance, Vacuum, Bloat, and Maintenance</a></li><li><a href="/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination, Large Result Sets, and Data Transfer</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 01, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Benchmarking, Load Testing, and Capacity Planning</h1>
+            <p>A performance claim without a workload definition is incomplete.</p>
+            <p>"Query X takes 5 ms" is useful only when you know:</p>
+            <ul>
+                <li>data size,</li>
+                <li>parameter values,</li>
+                <li>cache state,</li>
+                <li>concurrency,</li>
+                <li>hardware,</li>
+                <li>database version/configuration.</li>
+            </ul>
+            <p>Benchmarking should model the production question you are trying to answer.</p>
+            <h2 id="microbenchmark-versus-workload-test">Microbenchmark versus workload test</h2>
+            <p>Microbenchmark:</p>
+            <p>~~~text
+                one query
+                one parameter
+                one connection
+                ~~~</p>
+            <p>Useful for isolating a query change.</p>
+            <p>Load/workload test:</p>
+            <p>~~~text
+                many query types
+                realistic read/write ratio
+                many concurrent clients
+                ~~~</p>
+            <p>Useful for system capacity and interactions.</p>
+            <p>Use both for different questions.</p>
+            <h2 id="define-the-hypothesis">Define the hypothesis</h2>
+            <p>Good benchmark question:</p>
+            <blockquote>
+                <p>Does the composite index reduce p95 latency for the open-orders endpoint under 100 concurrent requests without increasing write latency beyond the allowed target?</p>
+            </blockquote>
+            <p>Bad benchmark question:</p>
+            <blockquote>
+                <p>Is the new index faster?</p>
+            </blockquote>
+            <p>The first defines success and trade-offs.</p>
+            <h2 id="representative-data-volume">Representative data volume</h2>
+            <p>Indexes and plans change as tables grow.</p>
+            <p>Test near realistic scale.</p>
+            <p>A 1,000-row table cannot demonstrate behavior of a billion-row table.</p>
+            <p>If full scale is impossible, preserve:</p>
+            <ul>
+                <li>cardinality,</li>
+                <li>skew,</li>
+                <li>row width,</li>
+                <li>index selectivity.</li>
+            </ul>
+            <h2 id="data-skew">Data skew</h2>
+            <p>Synthetic uniform IDs can hide production hotspots.</p>
+            <p>Include:</p>
+            <ul>
+                <li>largest tenant,</li>
+                <li>popular product,</li>
+                <li>common status,</li>
+                <li>rare status,</li>
+                <li>burst traffic.</li>
+            </ul>
+            <h2 id="workload-mix">Workload mix</h2>
+            <p>Example:</p>
+            <p>~~~text
+                60 percent product reads
+                20 percent order reads
+                10 percent order writes
+                5 percent search
+                5 percent background jobs
+                ~~~</p>
+            <p>A change that improves one query may hurt the total system through cache or write amplification.</p>
+            <h2 id="concurrency">Concurrency</h2>
+            <p>Latency under one connection can look excellent.</p>
+            <p>Increase concurrent clients gradually.</p>
+            <p>Typical curve:</p>
+            <p>~~~text
+                load increases
+                |
+                throughput rises
+                |
+                saturation point
+                |
+                latency rises sharply
+                throughput flattens
+                ~~~</p>
+            <p>The knee of the curve is important capacity information.</p>
+            <h2 id="coordinated-omission">Coordinated omission</h2>
+            <p>A load generator can under-report latency if it waits for a slow request before scheduling the next one.</p>
+            <p>Real traffic may continue arriving while the service is slow.</p>
+            <p>Use load tools/methods that preserve intended arrival rate when latency distributions matter.</p>
+            <h2 id="percentiles">Percentiles</h2>
+            <p>Track:</p>
+            <ul>
+                <li>p50,</li>
+                <li>p95,</li>
+                <li>p99,</li>
+                <li>max carefully,</li>
+                <li>error/timeout rate.</li>
+            </ul>
+            <p>Average latency hides tail behavior.</p>
+            <h2 id="throughput">Throughput</h2>
+            <p>Measure:</p>
+            <p>~~~text
+                requests/sec
+                transactions/sec
+                rows/sec
+                MB/sec
+                ~~~</p>
+            <p>Choose the unit that matches the workload.</p>
+            <h2 id="error-rate">Error rate</h2>
+            <p>A system is not "fast" if it returns errors under load.</p>
+            <p>Include:</p>
+            <ul>
+                <li>timeout rate,</li>
+                <li>deadlocks,</li>
+                <li>failed transactions,</li>
+                <li>connection failures.</li>
+            </ul>
+            <h2 id="resource-metrics">Resource metrics</h2>
+            <p>During load testing, observe:</p>
+            <ul>
+                <li>CPU,</li>
+                <li>memory,</li>
+                <li>I/O latency/IOPS,</li>
+                <li>disk throughput,</li>
+                <li>connections,</li>
+                <li>pool wait,</li>
+                <li>lock waits,</li>
+                <li>temp files,</li>
+                <li>WAL/redo,</li>
+                <li>replication lag.</li>
+            </ul>
+            <p>This explains the saturation point.</p>
+            <h2 id="warm-up">Warm-up</h2>
+            <p>JIT compilation, caches, connection pools, and buffer caches may change during the first minutes.</p>
+            <p>Separate:</p>
+            <ul>
+                <li>warm-up period,</li>
+                <li>measured steady state.</li>
+            </ul>
+            <p>For cold-start questions, test cold state intentionally.</p>
+            <h2 id="cold-cache-benchmark">Cold-cache benchmark</h2>
+            <p>A cold-cache test is valid only when the product question is cold-start behavior.</p>
+            <p>Do not clear caches just because it seems more "fair."</p>
+            <p>Most production systems operate warm most of the time.</p>
+            <h2 id="repeated-trials">Repeated trials</h2>
+            <p>One run can be noise.</p>
+            <p>Run several trials and report distribution or confidence, not only the best number.</p>
+            <h2 id="change-one-variable">Change one variable</h2>
+            <p>If you simultaneously change:</p>
+            <ul>
+                <li>database version,</li>
+                <li>index,</li>
+                <li>instance size,</li>
+                <li>pool size,</li>
+            </ul>
+            <p>you cannot attribute the result.</p>
+            <p>Control variables where possible.</p>
+            <h2 id="correctness-first">Correctness first</h2>
+            <p>Verify the optimized query returns the same:</p>
+            <ul>
+                <li>rows,</li>
+                <li>ordering,</li>
+                <li>totals,</li>
+                <li>null semantics.</li>
+            </ul>
+            <p>A faster wrong query is not an optimization.</p>
+            <h2 id="write-cost">Write cost</h2>
+            <p>If you add an index, benchmark writes too.</p>
+            <p>Measure:</p>
+            <ul>
+                <li>insert latency,</li>
+                <li>update latency,</li>
+                <li>storage growth,</li>
+                <li>WAL/redo,</li>
+                <li>checkpoint pressure.</li>
+            </ul>
+            <p>Read optimization shifts work elsewhere.</p>
+            <h2 id="benchmark-environment">Benchmark environment</h2>
+            <p>Document:</p>
+            <ul>
+                <li>CPU/RAM,</li>
+                <li>storage type,</li>
+                <li>database version,</li>
+                <li>settings,</li>
+                <li>dataset size,</li>
+                <li>client location,</li>
+                <li>network.</li>
+            </ul>
+            <p>Without context, benchmark numbers are not reproducible.</p>
+            <h2 id="production-shadow-testing">Production shadow testing</h2>
+            <p>Where safe, production-like traffic can be replayed against a staging/shadow environment.</p>
+            <p>Benefits:</p>
+            <ul>
+                <li>realistic parameter distribution,</li>
+                <li>real query mix.</li>
+            </ul>
+            <p>Risks:</p>
+            <ul>
+                <li>sensitive data,</li>
+                <li>accidental writes,</li>
+                <li>external side effects.</li>
+            </ul>
+            <p>Sanitize and isolate carefully.</p>
+            <h2 id="query-replay">Query replay</h2>
+            <p>Capture normalized query patterns and parameter distributions, then replay against a copy.</p>
+            <p>Useful for:</p>
+            <ul>
+                <li>upgrades,</li>
+                <li>index changes,</li>
+                <li>configuration changes.</li>
+            </ul>
+            <p>Do not replay destructive production writes into a shared environment.</p>
+            <h2 id="load-generators">Load generators</h2>
+            <p>Common categories:</p>
+            <ul>
+                <li>HTTP load generators,</li>
+                <li>database-specific tools,</li>
+                <li>custom application workload drivers.</li>
+            </ul>
+            <p>Examples include pgbench for PostgreSQL and sysbench for some database workloads.</p>
+            <p>The tool matters less than modeling the right request pattern.</p>
+            <h2 id="pgbench-concept">pgbench concept</h2>
+            <p>pgbench can test PostgreSQL transaction throughput.</p>
+            <p>Use custom scripts when the default transaction does not resemble your application.</p>
+            <p>A benchmark that does not match the workload answers the wrong question precisely.</p>
+            <h2 id="think-time">Think time</h2>
+            <p>Users do not always issue requests back-to-back.</p>
+            <p>For interactive workloads, model pauses/arrival rates realistically.</p>
+            <p>For batch ingestion, maximum sustained throughput may be the correct goal.</p>
+            <h2 id="burst-testing">Burst testing</h2>
+            <p>Production traffic can spike.</p>
+            <p>Test:</p>
+            <p>~~~text
+                steady baseline
+                |
+                sudden 5x burst
+                |
+                recovery
+                ~~~</p>
+            <p>Observe:</p>
+            <ul>
+                <li>queue growth,</li>
+                <li>pool exhaustion,</li>
+                <li>recovery time.</li>
+            </ul>
+            <h2 id="soak-testing">Soak testing</h2>
+            <p>Run a sustained workload for hours.</p>
+            <p>This catches:</p>
+            <ul>
+                <li>memory leaks,</li>
+                <li>growing connection count,</li>
+                <li>bloat,</li>
+                <li>cache churn,</li>
+                <li>compaction/vacuum effects.</li>
+            </ul>
+            <p>Short benchmarks miss long-term maintenance behavior.</p>
+            <h2 id="failure-testing-under-load">Failure testing under load</h2>
+            <p>Performance during failover matters.</p>
+            <p>Test:</p>
+            <ul>
+                <li>replica failover,</li>
+                <li>node restart,</li>
+                <li>network delay,</li>
+                <li>storage throttling,</li>
+            </ul>
+            <p>while workload continues.</p>
+            <p>Measure both availability and recovery latency.</p>
+            <h2 id="capacity-model">Capacity model</h2>
+            <p>A simple throughput model:</p>
+            <p>~~~text
+                peak requests/sec
+                × database operations/request
+                = database ops/sec demand
+                ~~~</p>
+            <p>Then include:</p>
+            <ul>
+                <li>growth factor,</li>
+                <li>burst headroom,</li>
+                <li>background jobs,</li>
+                <li>failover headroom.</li>
+            </ul>
+            <h2 id="headroom">Headroom</h2>
+            <p>Running permanently at 95 percent of a bottleneck resource leaves little room for spikes or node failure.</p>
+            <p>Capacity planning should include operational reserve.</p>
+            <h2 id="replication-headroom">Replication headroom</h2>
+            <p>If a primary fails and one replica becomes primary, the remaining topology must absorb the workload.</p>
+            <p>Capacity needs to cover degraded mode, not only healthy mode.</p>
+            <h2 id="queueing">Queueing</h2>
+            <p>Near saturation, small increases in utilization can cause large increases in latency.</p>
+            <p>This is why "CPU went from 80 to 90 percent" can produce a disproportionate p99 increase.</p>
+            <p>Measure queue/wait metrics.</p>
+            <h2 id="cost-performance">Cost-performance</h2>
+            <p>Compare:</p>
+            <p>~~~text
+                requests/sec per euro
+                latency at fixed monthly cost
+                cost for target SLO
+                ~~~</p>
+            <p>A faster architecture may not be cost-effective.</p>
+            <h2 id="regression-gate">Regression gate</h2>
+            <p>For critical workloads, CI/performance pipelines can reject significant regressions.</p>
+            <p>Example gate:</p>
+            <p>~~~text
+                p95 must not degrade by &gt; 10 percent
+                errors must remain &lt; 0.1 percent
+                ~~~</p>
+            <p>Use stable environments and enough repetitions to avoid noisy false failures.</p>
+            <h2 id="runnable-benchmark-exercises">Runnable benchmark exercises</h2>
+            <p>This PR adds local scripts that generate synthetic data and measurements:</p>
+            <ul>
+                <li>scripts/performance/sqlite_query_plan_demo.py</li>
+                <li>scripts/performance/sqlite_pagination_demo.py</li>
+                <li>scripts/performance/sqlite_index_write_cost_demo.py</li>
+                <li>scripts/performance/postgres_pool_and_batch_demo.py</li>
+            </ul>
+            <p>These are teaching tools, not standardized database rankings.</p>
+            <h2 id="benchmark-report-template">Benchmark report template</h2>
+            <p>Record:</p>
+            <p>~~~text
+                goal:
+                dataset:
+                hardware:
+                database version:
+                configuration:
+                workload:
+                concurrency:
+                warm-up:
+                duration:
+                p50/p95/p99:
+                throughput:
+                errors:
+                CPU/memory/I/O:
+                change tested:
+                result:
+                trade-offs:
+                ~~~</p>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <ul>
+                <li>Benchmarking tiny datasets.</li>
+                <li>Reporting only average latency.</li>
+                <li>Ignoring errors.</li>
+                <li>One client only.</li>
+                <li>Uniform synthetic data hiding skew.</li>
+                <li>Comparing warm versus cold runs.</li>
+                <li>Changing multiple variables.</li>
+                <li>Ignoring write cost.</li>
+                <li>Treating laptop numbers as production capacity.</li>
+                <li>Running benchmark tools against production without safeguards.</li>
+            </ul>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="../11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance monitoring</a></li>
+                <li><a href="../11_security_best_practices/03_capacity_planning.html">Capacity planning</a></li>
+                <li><a href="01_query_optimization_techniques.html">Query optimization</a></li>
+                <li><a href="08_connection_pooling_batching_and_n_plus_one.html">Connection pooling and batching</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

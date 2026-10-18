@@ -240,7 +240,7 @@
         return mag.toFixed(3) + " ∠ " + (Math.abs(ph) < 0.05 ? "0.0" : ph.toFixed(1)) + "°";
     }
 
-    // The phase of a vanishing amplitude (r_p at Brewster) is undefined: say so instead of printing ±180°.
+
     function phaseText(z) {
         return C.abs(z) < 5e-4 ? "undefined (r = 0)" : phaseDeg(C.arg(z)).toFixed(1) + "°";
     }
@@ -545,7 +545,7 @@
         }
 
 
-        // Text is drawn last so field samples and arcs never cover it.
+
         const late = [];
         const drawRay = (u, power, color, name, incident, fade, xo = 0) => {
             const sx = (incident ? ox - u.x * L : ox) + xo,
@@ -557,7 +557,7 @@
             const below = ly > oy;
 
             const topMin = incident && (sep || lx < 8 + 190) ? 3 * fs + 22 : fs + 2;
-            // A near-grazing ray lies on the interface; keep its label clear of the ray and its field samples.
+
             const ty = below ? Math.min(h - 8, Math.max(ly + fs + 4, oy + fs + 30)) : Math.max(topMin, Math.min(ly - 6, oy - 34));
             if (power < ZERO_POWER) {
                 ctx.strokeStyle = COL.guide;
@@ -571,7 +571,7 @@
                 late.push(() => label(ctx, name + " = 0 (direction only)", lx, ty, PAL.textMuted, u.x >= 0 ? "right" : "left", w, fs));
                 return;
             }
-            // Width ∝ power: the incident ray (P = 1) is 8 px, so R = 1 or T = 1 is never drawn wider than it.
+
             const width = incident ? 8 : Math.max(1.5, 8 * power);
             if (fade) {
                 const segs = 12;
@@ -639,8 +639,8 @@
                 along(uRef, waves.reflected, 1, mo);
                 if (uTr && !bandMode) along(uTr, waves.transmitted, 1);
                 if (bandMode) {
-                    // Sample the evanescent or absorbed field left of the normal, clear of the reflected ray,
-                    // the depth bar on the right and the medium labels at the bottom.
+
+
                     const dL = 1 / (2 * Math.PI * kappa);
                     [0.5, 1.4, 2.3].forEach((xs) => {
                         const x = -((xs * scale) < w / 2 - 12 ? xs : xs * 0.5) + shift / scale;
@@ -694,11 +694,11 @@
         label(ctx, "Medium 2: ñ₂ = " + formatIndex(st), 8, h - fs - 14, PAL.text, "left", w, fs);
         label(ctx, s.tir ? "evanescent: T = 0, |E| ≠ 0" : "λ₂ = " + formatLength(lam0 / kTn) + (aux.absorbing ? " (phase)" : ""), 8, h - 8, PAL.textMuted, "left", w, fs);
         if (Math.abs(st.th * DEG - aux.thB) < 0.003) {
-            // Far left, just above the interface: clear of the θ₁ arcs and the reflected ray.
+
             label(ctx, aux.absorbing ? "min Rp = " + f3(s.Rp) : "Brewster: Rp = 0", 8, oy - 8, COL.brewster, "left", w, fs);
         }
         if (bandMode && !s.tir) {
-            // The absorbed beam is drawn as a band, not a ray, so state its power here.
+
             label(ctx, "T = " + f3(Pw.T) + " (absorbed)", ox + 10, oy + fs + 8, COL.transmitted, "left", w, fs);
         }
 
@@ -816,14 +816,14 @@
         });
     }
 
-    // Integer margins put the 90° tick exactly on the plot edge, so UI.plot does not drop its label.
+
     const ANGLE_MARGIN = {
         l: 53,
         r: 13
     };
 
-    // UI.plot draws marker labels without a backing box, so they vanish into curves near R = 1 or ±180°.
-    // Draw the marker lines through UI.plot and their labels here, stacked from the top (or from yFrac of the height).
+
+
     function plotWithMarkerLabels(ctx, rect, opts, yFrac = 0) {
         const marks = opts.markers || [];
         const map = UI.plot(ctx, rect, Object.assign({}, opts, {

@@ -22,8 +22,8 @@
             });
         })();
     </script>
-    <title>Database Replication | Adam Djellouli</title>
-    <meta content="Database replication is the process of copying and maintaining database objects, such as tables and records, across multiple servers in a distributed…" name="description" />
+    <title>Replication: Maintaining Copies of Database Changes</title>
+    <meta content="Replication keeps database data on more than one node by transferring changes from one database instance to another." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -39,7 +39,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Database Replication",
+            "headline": "Replication: Maintaining Copies of Database Changes",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -49,17 +49,17 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication",
-            "description": "Database replication is the process of copying and maintaining database objects, such as tables and records, across multiple servers in a distributed\u2026",
-            "dateModified": "2025-05-06",
+            "description": "Replication keeps database data on more than one node by transferring changes from one database instance to another.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
-    <meta content="Database Replication" property="og:title" />
+    <meta content="Replication: Maintaining Copies of Database Changes" property="og:title" />
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Database replication is the process of copying and maintaining database objects, such as tables and records, across multiple servers in a distributed…" property="og:description" />
-    <meta content="2025-05-06" property="article:modified_time" />
+    <meta content="Replication keeps database data on more than one node by transferring changes from one database instance to another." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -106,7 +106,7 @@
         </ul>
     </nav>
     <main class="site-main" id="main-content" tabindex="-1">
-<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Replication</li><li><span aria-current="page">Database Replication</span></li></ol></div>
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Replication</li><li><span aria-current="page">Replication: Maintaining Copies of Database Changes</span></li></ol></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
     <div id="article-wrapper">
@@ -114,32 +114,101 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#understanding-database-replication">Understanding Database Replication</a></li>
-                    <li><a href="#the-purpose-of-database-replication">The Purpose of Database Replication</a></li>
-                    <li><a href="#types-of-database-replication">Types of Database Replication</a>
+                    <li><a href="#why-replicate-a-database">Why replicate a database?</a></li>
+                    <li><a href="#a-concrete-example-create-order-104">A concrete example: create order 104</a></li>
+                    <li><a href="#replication-usually-transfers-a-change-stream-not-repeated-full-database-copies">Replication usually transfers a change stream, not repeated full database copies</a></li>
+                    <li><a href="#postgresql-example-wal-streaming">PostgreSQL example: WAL streaming</a></li>
+                    <li><a href="#the-most-important-replication-pipeline">The most important replication pipeline</a></li>
+                    <li><a href="#receive-persist-apply-and-visibility">Receive, persist, apply, and visibility</a>
                         <ol>
-                            <li><a href="#synchronous-replication">Synchronous Replication</a></li>
-                            <li><a href="#asynchronous-replication">Asynchronous Replication</a></li>
-                            <li><a href="#snapshot-replication">Snapshot Replication</a></li>
-                            <li><a href="#multi-master-replication">Multi-Master Replication</a></li>
+                            <li><a href="#stage-1-receive">Stage 1 — Receive</a></li>
+                            <li><a href="#stage-2-persist-harden">Stage 2 — Persist / harden</a></li>
+                            <li><a href="#stage-3-apply-replay">Stage 3 — Apply / replay</a></li>
+                            <li><a href="#stage-4-visible-to-a-read">Stage 4 — Visible to a read</a></li>
                         </ol>
                     </li>
-                    <li><a href="#benefits-of-implementing-database-replication">Benefits of Implementing Database Replication</a></li>
-                    <li><a href="#challenges-associated-with-database-replication">Challenges Associated with Database Replication</a></li>
-                    <li><a href="#considerations-for-implementing-database-replication">Considerations for Implementing Database Replication</a></li>
-                    <li><a href="#choosing-the-right-replication-topology">Choosing the Right Replication Topology</a>
+                    <li><a href="#why-this-distinction-matters">Why this distinction matters</a></li>
+                    <li><a href="#sql-server-demonstrates-this-especially-clearly">SQL Server demonstrates this especially clearly</a></li>
+                    <li><a href="#replication-lag-is-not-one-single-delay">Replication lag is not one single delay</a></li>
+                    <li><a href="#postgresql-exposes-these-stages-directly">PostgreSQL exposes these stages directly</a></li>
+                    <li><a href="#asynchronous-replication">Asynchronous replication</a></li>
+                    <li><a href="#the-asynchronous-data-loss-window">The asynchronous data-loss window</a></li>
+                    <li><a href="#mysql-is-asynchronous-by-default">MySQL is asynchronous by default</a></li>
+                    <li><a href="#why-an-immediate-replica-read-may-fail">Why an immediate replica read may fail</a></li>
+                    <li><a href="#this-is-a-read-after-write-consistency-problem">This is a read-after-write consistency problem</a></li>
+                    <li><a href="#different-reads-have-different-freshness-requirements">Different reads have different freshness requirements</a>
                         <ol>
-                            <li><a href="#strategies-for-conflict-resolution">Strategies for Conflict Resolution</a></li>
-                            <li><a href="#monitoring-and-maintenance-practices">Monitoring and Maintenance Practices</a></li>
-                            <li><a href="#implementing-failover-mechanisms">Implementing Failover Mechanisms</a></li>
+                            <li><a href="#product-catalog">Product catalog</a></li>
+                            <li><a href="#analytics-dashboard">Analytics dashboard</a></li>
+                            <li><a href="#payment-confirmation">Payment confirmation</a></li>
                         </ol>
                     </li>
-                    <li><a href="#best-practices-for-database-replication">Best Practices for Database Replication</a></li>
+                    <li><a href="#synchronous-replication">Synchronous replication</a></li>
+                    <li><a href="#postgresql-makes-the-acknowledgement-level-explicit">PostgreSQL makes the acknowledgement level explicit</a></li>
+                    <li><a href="#postgresql-remote_apply">PostgreSQL remote_apply</a></li>
+                    <li><a href="#synchronous-replication-adds-network-latency-to-commits">Synchronous replication adds network latency to commits</a></li>
+                    <li><a href="#postgresql-can-require-several-replicas">PostgreSQL can require several replicas</a></li>
+                    <li><a href="#mysql-semisynchronous-replication">MySQL semisynchronous replication</a></li>
+                    <li><a href="#mysql-can-wait-for-more-than-one-replica">MySQL can wait for more than one replica</a></li>
+                    <li><a href="#mysql-semisynchronous-replication-can-fall-back">MySQL semisynchronous replication can fall back</a></li>
+                    <li><a href="#sql-server-synchronous-commit">SQL Server synchronous commit</a></li>
+                    <li><a href="#sql-server-synchronous-commit-can-still-have-stale-readable-secondary-data">SQL Server synchronous commit can still have stale readable secondary data</a></li>
+                    <li><a href="#technology-comparison-commit-acknowledgement">Technology comparison: commit acknowledgement</a></li>
+                    <li><a href="#starting-a-new-replica-requires-a-consistent-starting-point">Starting a new replica requires a consistent starting point</a></li>
+                    <li><a href="#why-copying-live-database-files-casually-is-unsafe">Why copying live database files casually is unsafe</a></li>
+                    <li><a href="#replication-positions">Replication positions</a></li>
+                    <li><a href="#mysql-gtids">MySQL GTIDs</a></li>
+                    <li><a href="#postgresql-replication-slots">PostgreSQL replication slots</a></li>
+                    <li><a href="#physical-replication">Physical replication</a></li>
+                    <li><a href="#logical-replication">Logical replication</a></li>
+                    <li><a href="#postgresql-logical-replication">PostgreSQL logical replication</a></li>
+                    <li><a href="#physical-versus-logical-replication">Physical versus logical replication</a></li>
+                    <li><a href="#logical-replication-does-not-mean-everything-is-copied">Logical replication does not mean "everything is copied"</a></li>
+                    <li><a href="#replication-lag-can-come-from-several-places">Replication lag can come from several places</a></li>
+                    <li><a href="#read-replicas-can-make-themselves-slower">Read replicas can make themselves slower</a></li>
+                    <li><a href="#failover">Failover</a></li>
+                    <li><a href="#promotion">Promotion</a></li>
+                    <li><a href="#sql-server-availability-group-listener">SQL Server Availability Group listener</a></li>
+                    <li><a href="#rpo-how-much-data-can-we-lose">RPO: how much data can we lose?</a></li>
+                    <li><a href="#rto-how-long-can-the-system-remain-unavailable">RTO: how long can the system remain unavailable?</a></li>
+                    <li><a href="#replica-apply-lag-can-hurt-rto-too">Replica apply lag can hurt RTO too</a></li>
+                    <li><a href="#split-brain">Split brain</a></li>
+                    <li><a href="#fencing">Fencing</a></li>
+                    <li><a href="#sql-server-shows-why-quorum-matters">SQL Server shows why quorum matters</a></li>
+                    <li><a href="#asynchronous-failover-can-lose-acknowledged-writes">Asynchronous failover can lose acknowledged writes</a></li>
+                    <li><a href="#synchronous-replication-changes-the-failure-tradeoff">Synchronous replication changes the failure tradeoff</a></li>
+                    <li><a href="#durability-versus-availability-during-network-partitions">Durability versus availability during network partitions</a></li>
+                    <li><a href="#replication-is-not-backup">Replication is not backup</a></li>
+                    <li><a href="#corruption-and-bad-application-writes-can-replicate-too">Corruption and bad application writes can replicate too</a></li>
+                    <li><a href="#backup-solves-a-different-problem">Backup solves a different problem</a></li>
+                    <li><a href="#replica-backup-and-failover-are-different-concepts">Replica, backup, and failover are different concepts</a></li>
+                    <li><a href="#replication-is-not-sharding">Replication is not sharding</a>
+                        <ol>
+                            <li><a href="#replication">Replication</a></li>
+                            <li><a href="#sharding">Sharding</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#read-scaling-does-not-scale-writes">Read scaling does not scale writes</a></li>
+                    <li><a href="#cascading-replication">Cascading replication</a></li>
+                    <li><a href="#monitoring-replication">Monitoring replication</a></li>
+                    <li><a href="#concrete-monitoring-concepts-by-engine">Concrete monitoring concepts by engine</a></li>
+                    <li><a href="#technology-summary">Technology summary</a></li>
+                    <li><a href="#choosing-what-each-replica-is-for">Choosing what each replica is for</a></li>
+                    <li><a href="#a-useful-design-exercise">A useful design exercise</a></li>
+                    <li><a href="#final-mental-model">Final mental model</a>
+                        <ol>
+                            <li><a href="#asynchronous">Asynchronous</a></li>
+                            <li><a href="#synchronous-durability">Synchronous durability</a></li>
+                            <li><a href="#synchronous-visibility">Synchronous visibility</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master-Standby Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Master Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous and Asynchronous Replication</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Primary–Standby Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Primary Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous and Asynchronous Replication</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -203,6 +272,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -217,7 +292,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -243,6 +317,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -265,6 +345,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -279,6 +365,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -293,6 +384,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -301,7 +425,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -320,200 +444,2024 @@
                         </svg>
                     </button></div>
             </div>
-            <h1>Database Replication</h1>
-            <p>Database replication is the process of copying and maintaining database objects, such as tables and records, across multiple servers in a distributed system. This technique ensures that data remains consistent and up-to-date on all servers, enhancing availability, fault tolerance, and scalability. By synchronizing multiple copies of data, replication allows applications to stay resilient and responsive, even during hardware failures or periods of increased demand.</p>
-            <h3 id="understanding-database-replication">Understanding Database Replication</h3>
-            <p>To grasp how database replication works, it's helpful to visualize the architecture that synchronizes data across servers. Below is a diagram illustrating a basic replication setup:</p>
+            <h1>Replication: Maintaining Copies of Database Changes</h1>
+            <p>Replication keeps database data on more than one node by transferring changes from one database instance to another.</p>
+            <p>A common topology is:</p>
             <div>
-                <pre><code class="language-shell">+------------------+
-|                  |
-|   Primary Server |
-|     (Master)     |
-+---------+--------+
-          |
-Replication Channel
-          |
-          v
-+-----------+-----------+
-|                       |
-|   Secondary Server 1  |
-|      (Replica)        |
-+-----------+-----------+
-          |
-Replication Channel
-          |
-          v
-+-----------+-----------+
-|                       |
-|   Secondary Server 2  |
-|      (Replica)        |
-+-----------------------+</code></pre>
+                <pre><code class="language-text">             writes
+Application ---------&gt; Primary
+                         |
+                         | replication stream
+                         v
+                      Replica 1
+                         |
+                         +--------&gt; Replica 2</code></pre>
             </div>
-            <p>In this architecture, the primary server handles all write operations and data modifications. Secondary servers, or replicas, receive updates from the primary server and can handle read-only queries. The replication channel represents the communication pathway through which data changes are transmitted from the primary server to the replicas.</p>
-            <h3 id="the-purpose-of-database-replication">The Purpose of Database Replication</h3>
-            <p>Database replication serves several critical purposes that enhance the reliability, performance, and accessibility of data within an organization. For instance, it ensures high availability by allowing applications to continue operating even if the primary server fails, since standby servers have up-to-date copies of the data. Replication also facilitates disaster recovery by maintaining data copies in different locations, so in the event of a catastrophic failure, data can be recovered from replicas. Additionally, it improves performance through load balancing by distributing read operations across multiple servers, reducing the load on the primary server and optimizing response times for users. By replicating data to servers closer to users in various geographical locations, replication reduces latency and provides faster data access, enhancing the user experience. Finally, it serves as a live backup solution, reducing the need for traditional backup processes and ensuring consistent data preservation across the system.</p>
-            <h3 id="types-of-database-replication">Types of Database Replication</h3>
-            <p>Database replication can be implemented in various forms, each suited to different application needs and system architectures. These types are classified based on synchronization methods and topology.</p>
-            <h4 id="synchronous-replication">Synchronous Replication</h4>
-            <p>In synchronous replication, the primary server waits for replicas to acknowledge that they have received and written the data before committing the transaction. This method ensures that all servers have identical data at all times, providing strong consistency across the system.</p>
-            <h5>How Synchronous Replication Works</h5>
-            <p>When a client initiates a write operation, the process unfolds as follows:</p>
-            <ol>
-                <li><strong>Initiation of Write Operation</strong>: The client sends a data modification request to the primary server.</li>
-                <li><strong>Data Writing and Propagation</strong>: The primary server writes the data to its storage and simultaneously sends the changes to the replicas.</li>
-                <li><strong>Acknowledgment from Replicas</strong>: Each replica writes the data to its storage and sends an acknowledgment back to the primary server.</li>
-                <li><strong>Transaction Completion</strong>: Upon receiving acknowledgments from all replicas, the primary server commits the transaction, confirming that the data is safely stored across all servers.</li>
-            </ol>
+            <p>The copies are related, but this does not mean they are identical at every instant.</p>
+            <p>A replica may be:</p>
             <div>
-                <pre><code class="language-shell">Client Write Request
-          |
-          v
-+---------------------+
-|   Primary Server    |
-+---------------------+
-          |
-Writes Data and Sends to Replicas
-          |
-          v
-+---------------------+       +---------------------+
-| Secondary Server 1  |       | Secondary Server 2  |
-+---------------------+       +---------------------+
-          ^                           ^
-          |                           |
-Acknowledgment from Replica 1         |
-          |                           |
-          +---------------------------+
-                      |
-        Acknowledgment from Replica 2
-                      |
-                      v
-       Transaction Committed on Primary</code></pre>
+                <pre><code class="language-text">milliseconds behind
+seconds behind
+minutes behind
+completely disconnected</code></pre>
             </div>
-            <h5>Advantages and Disadvantages</h5>
-            <p>One advantage of synchronous replication is strong consistency; all replicas have the same data immediately after the transaction commits, eliminating discrepancies. It also reduces the risk of data loss since changes are confirmed to be stored on multiple servers before the transaction completes. However, this method can increase latency because the primary server must wait for acknowledgments from replicas, which can slow down transaction processing. It may also have scalability limitations, especially in systems with high network latency or geographically dispersed replicas, as the wait times can become significant.</p>
-            <h4 id="asynchronous-replication">Asynchronous Replication</h4>
-            <p>Asynchronous replication allows the primary server to complete transactions without waiting for replicas to confirm receipt of the data. Changes are sent to replicas after the transaction has been committed, enabling the primary server to continue processing new requests immediately.</p>
-            <h5>How Asynchronous Replication Works</h5>
-            <p>The process involves the following steps:</p>
-            <ol>
-                <li>The client sends a data modification request to the primary server.</li>
-                <li>The primary server writes the data to its storage and commits the transaction without waiting for replicas.</li>
-                <li>The changes are queued and sent to the replicas asynchronously, allowing the primary server to handle other operations without delay.</li>
-            </ol>
+            <p>while the primary continues accepting transactions.</p>
+            <p>This immediately creates the central question in replication:</p>
+            <blockquote>
+                <p>When the database tells the client that <code>COMMIT</code> succeeded, how much of that transaction has reached the other copies?</p>
+            </blockquote>
+            <p>That question determines:</p>
             <div>
-                <pre><code class="language-shell">Client Write Request
-          |
-          v
-+---------------------+
-|   Primary Server    |
-+---------------------+
-          |
-Writes Data and Commits Transaction
-          |
-          v
-Asynchronous Data Transmission to Replicas
-          |
-          +---------------------+
-          |                     |
-          v                     v
-+---------------------+   +---------------------+
-| Secondary Server 1  |   | Secondary Server 2  |
-+---------------------+   +---------------------+</code></pre>
+                <pre><code class="language-text">durability after primary failure
+replication lag
+read consistency
+failover data loss
+write latency</code></pre>
             </div>
-            <h5>Advantages and Disadvantages</h5>
-            <p>An advantage of asynchronous replication is reduced latency; transactions are processed faster since the primary server doesn't wait for replicas, enhancing system throughput. It also improves performance because the primary server can handle more transactions per second due to the absence of synchronization delays. However, replicas might not reflect the most recent data immediately, leading to eventual consistency and temporary inconsistencies. There's also a potential risk of data loss if the primary server fails before changes are replicated.</p>
-            <h4 id="snapshot-replication">Snapshot Replication</h4>
-            <p>Snapshot replication involves copying data at specific intervals from the primary server to the replicas. This method is suitable for systems where data changes are infrequent or where real-time data accuracy isn't critical.</p>
-            <h5>How Snapshot Replication Works</h5>
-            <p>The snapshot replication process includes:</p>
-            <ol>
-                <li>The primary server captures a snapshot of the entire database at a particular point in time.</li>
-                <li>The snapshot is sent to the replicas.</li>
-                <li>Each replica applies the snapshot, updating its data by overwriting previous information.</li>
-            </ol>
+            <h2 id="why-replicate-a-database">Why replicate a database?</h2>
+            <p>A single database server creates a simple failure mode:</p>
             <div>
-                <pre><code class="language-shell">+---------------------+
-|   Primary Server    |
-+---------------------+
-          |
-      Creates Snapshot
-          |
-          v
-+---------------------+       +---------------------+
-| Secondary Server 1  |       | Secondary Server 2  |
-+---------------------+       +---------------------+</code></pre>
+                <pre><code class="language-text">                 ┌───────────────┐
+Application ---&gt; │ Database      │
+                 │ only copy     │
+                 └───────────────┘
+                         X</code></pre>
             </div>
-            <h5>Advantages and Disadvantages</h5>
-            <p>Snapshot replication is simpler to set up and manage compared to continuous replication methods, making it advantageous for certain scenarios. It also reduces resource usage on the primary server since replication occurs at scheduled intervals. However, replicas may have outdated data between snapshots, which can be problematic for applications requiring real-time information. It's also less efficient in environments with frequent data changes, as constant snapshot creation and distribution can become resource-intensive.</p>
-            <h4 id="multi-master-replication">Multi-Master Replication</h4>
-            <p>Multi-master replication allows multiple servers to act as primary servers, enabling write operations on any of them. Changes made on one server are replicated to all others, offering greater flexibility and availability.</p>
-            <h5>How Multi-Master Replication Works</h5>
-            <p>The process unfolds as follows:</p>
-            <ol>
-                <li>Clients can perform write operations on any of the primary servers.</li>
-                <li>Each server replicates its changes to the other primary servers.</li>
-                <li>Mechanisms are in place to handle conflicts that arise from concurrent modifications to the same data on different servers.</li>
-            </ol>
+            <p>If that server becomes unavailable, the application may become unavailable too.</p>
+            <p>Replication introduces additional copies:</p>
             <div>
-                <pre><code class="language-shell">+---------------------+       +---------------------+
-|  Primary Server A   |&lt;-----&gt;|  Primary Server B   |
-+---------------------+       +---------------------+
-          ^                           ^
-          |                           |
-          v                           v
-+---------------------+       +---------------------+
-| Secondary Server 1  |       | Secondary Server 2  |
-+---------------------+       +---------------------+</code></pre>
+                <pre><code class="language-text">                    Primary
+                   /       \
+                  /         \
+             Replica 1    Replica 2</code></pre>
             </div>
-            <h5>Advantages and Disadvantages</h5>
-            <p>Multi-master replication enhances write scalability by distributing write operations across multiple servers, reducing the load on any single server. It also improves availability by eliminating single points of failure for write operations. However, it introduces complexity in conflict management, requiring sophisticated methods to resolve conflicts when the same data is modified on different servers simultaneously. Without effective conflict resolution, data inconsistencies can occur, potentially compromising data integrity.</p>
-            <h3 id="benefits-of-implementing-database-replication">Benefits of Implementing Database Replication</h3>
-            <p>Adopting database replication offers several advantages for organizations. It provides higher data availability, as the system can continue to operate smoothly even if one server encounters issues. Replication enhances fault tolerance by providing redundancy, allowing the system to withstand hardware failures or network problems without data loss. It also improves performance by distributing read operations to replicas, leading to faster response times and improved user satisfaction. By replicating data to servers closer to users, replication reduces latency and offers quicker data access, enhancing the overall user experience. Additionally, it allows for a scalable infrastructure, enabling the system to handle increased demand without significant changes to the existing architecture.</p>
-            <h3 id="challenges-associated-with-database-replication">Challenges Associated with Database Replication</h3>
-            <p>Despite its benefits, database replication introduces several challenges that organizations must address. Maintaining data consistency across all replicas can be complex, especially in asynchronous or multi-master setups. Managing conflicting updates requires advanced conflict resolution strategies to prevent data integrity issues. Network delays can impact the speed of data replication, leading to latency between the primary server and replicas. The replication process adds complexity to the system, necessitating more sophisticated monitoring and maintenance practices. Additionally, replicating data consumes extra CPU, memory, and storage resources on both primary and replica servers.</p>
-            <h3 id="considerations-for-implementing-database-replication">Considerations for Implementing Database Replication</h3>
-            <p>When setting up database replication, several factors need careful consideration to ensure a successful implementation.</p>
-            <h3 id="choosing-the-right-replication-topology">Choosing the Right Replication Topology</h3>
-            <p>Selecting an appropriate replication topology depends on the application's requirements and the desired balance between consistency, availability, and performance. Options include:</p>
-            <ul>
-                <li><strong>Primary-Replica (Master-Slave)</strong> architecture involves a single <strong>primary server</strong> managing all write operations, while <strong>replicas</strong> handle read operations. This setup enhances <strong>read scalability</strong> and provides <strong>high availability</strong>. </li>
-                <li><strong>Multi-Master</strong> configurations enable multiple <strong>primary servers</strong> to handle both <strong>read and write operations</strong>, making them suitable for systems needing <strong>write scalability</strong> and equipped with <strong>conflict resolution mechanisms</strong>. </li>
-                <li><strong>Hierarchical (Tree)</strong> structures have the <strong>primary server</strong> replicating data to <strong>intermediate nodes</strong>, which then replicate to other nodes. This setup reduces the <strong>replication load</strong> on the primary server and improves <strong>scalability</strong>. </li>
-                <li><strong>Mesh Network</strong> setups involve every <strong>node</strong> replicating to every other node. While this provides <strong>high redundancy</strong> and <strong>availability</strong>, it is <strong>complex to manage</strong> and may not <strong>scale well</strong> with a large number of nodes.</li>
-            </ul>
-            <p>Factors influencing topology selection include consistency requirements, network infrastructure, and scalability needs.</p>
-            <h4 id="strategies-for-conflict-resolution">Strategies for Conflict Resolution</h4>
-            <p>In environments where conflicts can occur, especially in multi-master or asynchronous replication, effective conflict resolution strategies are essential. Options include:</p>
-            <ul>
-                <li><strong>Timestamp-Based Resolution</strong> relies on <strong>timestamps</strong> to determine which <strong>data modification</strong> is the most recent, ensuring the latest changes take precedence. </li>
-                <li><strong>Versioning Systems</strong> use <strong>version numbers</strong> or <strong>vectors</strong> to track changes and resolve <strong>conflicts</strong> intelligently by comparing versions. </li>
-                <li><strong>Application-Level Rules</strong> employ <strong>business logic</strong> to automatically resolve conflicts based on predefined <strong>criteria</strong> tailored to specific use cases. </li>
-                <li><strong>User Intervention</strong> involves <strong>logging conflicts</strong> and requiring <strong>manual resolution</strong> to maintain <strong>data integrity</strong> when automated solutions are insufficient.</li>
-            </ul>
-            <h4 id="monitoring-and-maintenance-practices">Monitoring and Maintenance Practices</h4>
-            <p>Effective monitoring and maintenance ensure the replication system remains reliable and performs optimally. Practices include:</p>
-            <ul>
-                <li><strong>Replication Lag Monitoring</strong> involves regularly checking the <strong>time difference</strong> between the primary server and replicas to identify potential <strong>delays</strong> in data synchronization. </li>
-                <li><strong>Health Checks of Nodes</strong> ensure that all <strong>servers</strong> are <strong>operational</strong> and properly <strong>synchronized</strong> within the replication setup. </li>
-                <li><strong>Alert Systems</strong> are configured to send <strong>notifications</strong> for issues such as replication <strong>failures</strong>, significant <strong>lag</strong>, or other <strong>critical problems</strong>. </li>
-                <li><strong>Regular Backups</strong> are maintained as an additional safeguard to protect against <strong>data corruption</strong> or <strong>widespread failures</strong>, despite having replication in place.</li>
-            </ul>
-            <h4 id="implementing-failover-mechanisms">Implementing Failover Mechanisms</h4>
-            <p>Failover mechanisms are vital for maintaining system availability when a server fails. Options include:</p>
-            <ul>
-                <li><strong>Automatic Failover</strong> allows the system to detect <strong>server failures</strong> and switch operations to a <strong>replica</strong> automatically, eliminating the need for human intervention. </li>
-                <li><strong>Manual Failover</strong> involves <strong>administrators</strong> initiating the failover process, providing a controlled <strong>switchover</strong> and allowing for assessment before action is taken. </li>
-                <li><strong>Failback Procedures</strong> are required to <strong>reintegrate</strong> the restored original <strong>primary server</strong>, either by configuring it as a <strong>replica</strong> or restoring it to its <strong>primary role</strong>.</li>
-            </ul>
-            <h3 id="best-practices-for-database-replication">Best Practices for Database Replication</h3>
-            <p>To maximize the benefits of database replication, organizations should consider the following best practices:</p>
-            <ul>
-                <li>Predict future data volumes and user loads to design a replication system that scales effectively.</li>
-                <li>Regularly simulate failures to ensure failover mechanisms work as intended and that staff are familiar with the procedures.</li>
-                <li>Use encryption and secure channels for data replication to protect sensitive information during transit.</li>
-                <li>Ensure the network infrastructure can handle replication traffic without bottlenecks or excessive latency.</li>
-                <li>Maintain thorough documentation of the replication setup, including configurations and maintenance procedures, to facilitate troubleshooting and onboarding.</li>
-            </ul>
+            <p>Those copies can serve different purposes.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Goal</th>
+                        <th>How replication can help</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>High availability</td>
+                        <td>Promote another node when the primary fails</td>
+                    </tr>
+                    <tr>
+                        <td>Disaster recovery</td>
+                        <td>Maintain a copy in another location</td>
+                    </tr>
+                    <tr>
+                        <td>Read scaling</td>
+                        <td>Send reporting/read traffic to replicas</td>
+                    </tr>
+                    <tr>
+                        <td>Backup offloading</td>
+                        <td>Run some backup work on secondary systems</td>
+                    </tr>
+                    <tr>
+                        <td>Analytics</td>
+                        <td>Feed another database or analytical system</td>
+                    </tr>
+                    <tr>
+                        <td>Geographic reads</td>
+                        <td>Place readable copies closer to users</td>
+                    </tr>
+                    <tr>
+                        <td>Upgrade/migration</td>
+                        <td>Logical replication can move data between environments</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>But replication is not automatically all of these things.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">a reporting replica</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">a failover replica</code></pre>
+            </div>
+            <p>may have very different requirements.</p>
+            <h2 id="a-concrete-example-create-order-104">A concrete example: create order 104</h2>
+            <p>Suppose an application creates:</p>
+            <div>
+                <pre><code class="language-text">order_id = 104
+customer_id = 27
+amount = €89</code></pre>
+            </div>
+            <p>The application sends:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+INSERT INTO orders(order_id, customer_id, amount)
+VALUES (104, 27, 89);
+
+COMMIT;</code></pre>
+            </div>
+            <p>Assume a primary and one replica.</p>
+            <p>In asynchronous replication, the timeline might be:</p>
+            <div>
+                <pre><code class="language-text">Primary                         Replica
+
+INSERT order 104
+
+COMMIT
+   |
+   +---- durable locally
+
+return "success"
+to application
+
+        replication data ----------&gt;
+
+                                receive change
+
+                                persist/log change
+
+                                apply change
+
+                                order 104 becomes
+                                visible to queries</code></pre>
+            </div>
+            <p>The key observation is:</p>
+            <div>
+                <pre><code class="language-text">client hears SUCCESS</code></pre>
+            </div>
+            <p>before:</p>
+            <div>
+                <pre><code class="language-text">replica can necessarily return order 104</code></pre>
+            </div>
+            <p>That interval is replication lag.</p>
+            <h2 id="replication-usually-transfers-a-change-stream-not-repeated-full-database-copies">Replication usually transfers a change stream, not repeated full database copies</h2>
+            <p>A naive replication design might sound like:</p>
+            <div>
+                <pre><code class="language-text">database changed
+→ copy entire database again</code></pre>
+            </div>
+            <p>That would obviously be far too expensive.</p>
+            <p>Instead, database systems normally maintain a stream describing changes.</p>
+            <p>Examples include:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL
+    WAL — Write-Ahead Log
+
+MySQL
+    binary log
+
+SQL Server Availability Groups
+    transaction log records</code></pre>
+            </div>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Database state
+
+        +
+        |
+        v
+
+ordered change stream
+
+change 101
+change 102
+change 103
+change 104
+...</code></pre>
+            </div>
+            <p>The replica starts from some known database state and then follows that change stream.</p>
+            <h2 id="postgresql-example-wal-streaming">PostgreSQL example: WAL streaming</h2>
+            <p>PostgreSQL physical streaming replication transfers WAL records.</p>
+            <p>The primary generates WAL as transactions modify the database.</p>
+            <p>A standby connects to the primary and streams WAL records as they are generated:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL primary
+
+database changes
+       |
+       v
+      WAL
+       |
+       |  walsender
+       v
+================ network ================
+       |
+       |  walreceiver
+       v
+PostgreSQL standby
+
+receive WAL
+    |
+write/flush WAL
+    |
+replay WAL
+    |
+updated standby database</code></pre>
+            </div>
+            <p>PostgreSQL documents that streaming replication sends WAL records incrementally rather than waiting for a whole WAL segment to fill, and that streaming replication is asynchronous by default.</p>
+            <p>This is a good example of an important pattern:</p>
+            <blockquote>
+                <p>Replication often means shipping the database's recovery/change log to another machine and replaying it there.</p>
+            </blockquote>
+            <h2 id="the-most-important-replication-pipeline">The most important replication pipeline</h2>
+            <p>A useful generic model is:</p>
+            <div>
+                <pre><code class="language-text">PRIMARY
+
+transaction
+    |
+    v
+commit/change log
+    |
+    v
+SEND
+    |
+    |
+    | network
+    v
+
+REPLICA
+
+RECEIVE
+    |
+    v
+PERSIST / HARDEN
+    |
+    v
+APPLY / REPLAY
+    |
+    v
+VISIBLE TO READERS</code></pre>
+            </div>
+            <p>These are not interchangeable milestones.</p>
+            <p>The replica can have received a transaction without having applied it.</p>
+            <p>It can have persisted the transaction to its own log without having made the changed rows visible to queries.</p>
+            <p>That distinction explains a large fraction of replication behavior.</p>
+            <h2 id="receive-persist-apply-and-visibility">Receive, persist, apply, and visibility</h2>
+            <p>Consider order <code>104</code>.</p>
+            <h3 id="stage-1-receive">Stage 1 — Receive</h3>
+            <p>The replica has obtained the replication message:</p>
+            <div>
+                <pre><code class="language-text">Replica memory/network buffers:
+
+"insert order 104"</code></pre>
+            </div>
+            <p>This says little about crash durability.</p>
+            <p>The data may not yet be safely stored.</p>
+            <h3 id="stage-2-persist-harden">Stage 2 — Persist / harden</h3>
+            <p>The replica has recorded the change in durable or recovery storage according to the engine's durability rules.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Replica disk:
+
+replication log contains order 104</code></pre>
+            </div>
+            <p>If the replica process restarts, it may be able to recover the transaction from that log.</p>
+            <h3 id="stage-3-apply-replay">Stage 3 — Apply / replay</h3>
+            <p>The replica's apply mechanism has executed or replayed the change against the database state:</p>
+            <div>
+                <pre><code class="language-text">orders table now contains order 104</code></pre>
+            </div>
+            <h3 id="stage-4-visible-to-a-read">Stage 4 — Visible to a read</h3>
+            <p>The database's consistency rules allow a query to observe the applied transaction. Once order 104 has been applied on the replica, its <code>orders</code> table contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>27</td>
+                        <td>89.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The read returns that row:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM orders
+WHERE order_id = 104;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>27</td>
+                        <td>89.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The important principle is:</p>
+            <blockquote>
+                <p>Persisted on a replica is not necessarily the same thing as applied on the replica.</p>
+            </blockquote>
+            <h2 id="why-this-distinction-matters">Why this distinction matters</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary transaction commits.
+
+Replica has already persisted the change.
+
+Replica has not applied it yet.</code></pre>
+            </div>
+            <p>Then two different statements can simultaneously be true:</p>
+            <div>
+                <pre><code class="language-text">The transaction is protected against loss
+if the primary disappears.</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">A query against the replica still cannot see it.</code></pre>
+            </div>
+            <p>This surprises people because durability and read freshness are often incorrectly treated as the same property.</p>
+            <p>They are different.</p>
+            <h2 id="sql-server-demonstrates-this-especially-clearly">SQL Server demonstrates this especially clearly</h2>
+            <p>With SQL Server Always On Availability Groups, changes are sent from the primary to secondary replicas as transaction log records.</p>
+            <p>On the secondary:</p>
+            <div>
+                <pre><code class="language-text">receive log records
+       |
+       v
+harden transaction log
+       |
+       v
+redo
+       |
+       v
+changes visible in secondary database</code></pre>
+            </div>
+            <p>SQL Server synchronous-commit mode waits for the synchronous secondary to harden the log before the primary completes the relevant commit protocol.</p>
+            <p>But hardening does not mean redo is finished.</p>
+            <p>Microsoft explicitly documents that a redo queue can contain log records that have already been hardened on the secondary but have not yet been applied to its database pages. Reads on that secondary can therefore still return stale data.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-text">synchronous replication</code></pre>
+            </div>
+            <p>does not automatically mean:</p>
+            <div>
+                <pre><code class="language-text">every read on the replica immediately sees the transaction</code></pre>
+            </div>
+            <h2 id="replication-lag-is-not-one-single-delay">Replication lag is not one single delay</h2>
+            <p>When somebody says:</p>
+            <div>
+                <pre><code class="language-text">replica lag = 5 seconds</code></pre>
+            </div>
+            <p>ask:</p>
+            <blockquote>
+                <p>Lag between which stages?</p>
+            </blockquote>
+            <p>There can be multiple kinds of lag:</p>
+            <div>
+                <pre><code class="language-text">primary generated
+       ↓
+     SEND
+       ↓         ← send lag
+replica received
+       ↓
+    PERSIST
+       ↓         ← flush/harden lag
+replica durable
+       ↓
+     APPLY
+       ↓         ← replay/apply lag
+replica visible</code></pre>
+            </div>
+            <p>A replica might have excellent network throughput but slow apply performance.</p>
+            <p>Or it might apply quickly once data arrives but have a slow network.</p>
+            <p>Those are different problems.</p>
+            <h2 id="postgresql-exposes-these-stages-directly">PostgreSQL exposes these stages directly</h2>
+            <p>PostgreSQL's replication monitoring includes multiple WAL positions.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">sent_lsn
+    ↓
+write_lsn
+    ↓
+flush_lsn
+    ↓
+replay_lsn</code></pre>
+            </div>
+            <p>These correspond roughly to:</p>
+            <div>
+                <pre><code class="language-text">sent
+received/written
+durably flushed
+replayed</code></pre>
+            </div>
+            <p>PostgreSQL documentation recommends comparing WAL positions to identify whether lag is primarily:</p>
+            <div>
+                <pre><code class="language-text">primary sending slowly
+network / receiver delay
+or
+standby replay delay</code></pre>
+            </div>
+            <p>and notes that a large difference between received/flushed WAL and replay position means the standby is receiving WAL faster than it can replay it.</p>
+            <p>This is much more useful than treating "replica lag" as one mysterious number.</p>
+            <h2 id="asynchronous-replication">Asynchronous replication</h2>
+            <p>With asynchronous replication, the primary does not wait for the replica before acknowledging the transaction to the client.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Client          Primary              Replica
+  |                |                    |
+  |---- write ----&gt;|                    |
+  |                |                    |
+  |                | COMMIT             |
+  |                |                    |
+  |&lt;--- success ---|                    |
+  |                |                    |
+  |                |---- replicate ----&gt;|
+  |                |                    |</code></pre>
+            </div>
+            <p>The advantage is lower commit latency.</p>
+            <p>The client does not wait for:</p>
+            <div>
+                <pre><code class="language-text">network round trip
+replica storage
+replica apply</code></pre>
+            </div>
+            <p>The cost is a failure window.</p>
+            <h2 id="the-asynchronous-data-loss-window">The asynchronous data-loss window</h2>
+            <p>Suppose the primary tells the client:</p>
+            <div>
+                <pre><code class="language-text">Order 104 committed successfully.</code></pre>
+            </div>
+            <p>but has not yet transmitted order <code>104</code> to the replica.</p>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-text">Primary dies permanently.</code></pre>
+            </div>
+            <p>The replica may contain only:</p>
+            <div>
+                <pre><code class="language-text">orders 1 ... 103</code></pre>
+            </div>
+            <p>If that replica is promoted, order <code>104</code> disappears from the surviving database state even though the application previously received success.</p>
+            <p>This is the fundamental durability tradeoff of asynchronous replication.</p>
+            <p>PostgreSQL explicitly notes that asynchronous streaming replication can lose transactions that committed on the primary but had not yet reached the standby when the primary failed.</p>
+            <p>SQL Server similarly documents possible data loss when failing over from asynchronous-commit replicas that have not caught up.</p>
+            <h2 id="mysql-is-asynchronous-by-default">MySQL is asynchronous by default</h2>
+            <p>MySQL source-to-replica replication is asynchronous by default.</p>
+            <p>A common pipeline is:</p>
+            <div>
+                <pre><code class="language-text">MySQL source
+
+transaction
+    |
+    v
+binary log
+    |
+    | replication connection
+    v
+
+MySQL replica
+
+receiver / I/O thread
+    |
+    v
+relay log
+    |
+    v
+applier / SQL thread(s)
+    |
+    v
+replica database</code></pre>
+            </div>
+            <p>MySQL's documentation explicitly describes normal replication as asynchronous and supports tracking either binary-log positions or GTIDs to identify replication progress.</p>
+            <p>This pipeline again separates:</p>
+            <div>
+                <pre><code class="language-text">received</code></pre>
+            </div>
+            <p>from:</p>
+            <div>
+                <pre><code class="language-text">applied</code></pre>
+            </div>
+            <h2 id="why-an-immediate-replica-read-may-fail">Why an immediate replica read may fail</h2>
+            <p>Suppose an API endpoint does:</p>
+            <div>
+                <pre><code class="language-text">POST /orders</code></pre>
+            </div>
+            <p>which writes order <code>104</code> to the primary.</p>
+            <p>The next browser request performs:</p>
+            <div>
+                <pre><code class="language-text">GET /orders/104</code></pre>
+            </div>
+            <p>but the application's load balancer sends reads to a replica.</p>
+            <p>The timing might be:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+order 104 committed
+
+Client:
+POST succeeded
+
+Replica:
+still on order 103
+
+Client:
+GET /orders/104
+
+Replica:
+404 / not found</code></pre>
+            </div>
+            <p>Nothing has necessarily malfunctioned.</p>
+            <p>The read simply arrived before replication had applied the transaction.</p>
+            <h2 id="this-is-a-read-after-write-consistency-problem">This is a read-after-write consistency problem</h2>
+            <p>The user expects:</p>
+            <div>
+                <pre><code class="language-text">I just created it
+therefore I should be able to read it</code></pre>
+            </div>
+            <p>That property is commonly called read-your-writes or read-after-write consistency.</p>
+            <p>Basic asynchronous read replicas do not automatically provide it.</p>
+            <p>Several application designs are possible.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">write → primary
+immediate confirmation read → primary
+later ordinary reads → replicas</code></pre>
+            </div>
+            <p>Another design carries a replication position/token and waits until the selected replica reaches that point.</p>
+            <p>Another design avoids the confirmation read entirely by returning the newly created object from the write operation.</p>
+            <p>The correct approach depends on how much staleness the application can tolerate.</p>
+            <h2 id="different-reads-have-different-freshness-requirements">Different reads have different freshness requirements</h2>
+            <p>Consider three queries.</p>
+            <h3 id="product-catalog">Product catalog</h3>
+            <div>
+                <pre><code class="language-text">"What products are available?"</code></pre>
+            </div>
+            <p>Being 500 ms behind may be acceptable.</p>
+            <h3 id="analytics-dashboard">Analytics dashboard</h3>
+            <div>
+                <pre><code class="language-text">"How many orders did we receive today?"</code></pre>
+            </div>
+            <p>Several seconds of lag may be acceptable.</p>
+            <h3 id="payment-confirmation">Payment confirmation</h3>
+            <div>
+                <pre><code class="language-text">"Did my €10,000 transfer succeed?"</code></pre>
+            </div>
+            <p>A stale read may be unacceptable.</p>
+            <p>The mistake is designing one global rule:</p>
+            <div>
+                <pre><code class="language-text">all reads must use replicas</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-text">all reads must use primary</code></pre>
+            </div>
+            <p>without considering the semantics of individual requests.</p>
+            <h2 id="synchronous-replication">Synchronous replication</h2>
+            <p>Synchronous replication changes the commit rule.</p>
+            <p>Instead of:</p>
+            <div>
+                <pre><code class="language-text">primary commits
+→ tell client success
+→ replicate later</code></pre>
+            </div>
+            <p>the protocol becomes something like:</p>
+            <div>
+                <pre><code class="language-text">primary prepares commit information
+       |
+       v
+send to replica
+       |
+       v
+wait for required acknowledgement
+       |
+       v
+return success</code></pre>
+            </div>
+            <p>The cost is latency.</p>
+            <p>The benefit is stronger durability.</p>
+            <p>But the phrase:</p>
+            <div>
+                <pre><code class="language-text">synchronous replication</code></pre>
+            </div>
+            <p>is incomplete unless you know:</p>
+            <div>
+                <pre><code class="language-text">which replicas must acknowledge?
+
+what exactly must they acknowledge?
+
+receive?
+
+memory write?
+
+filesystem write?
+
+durable flush?
+
+application/replay?</code></pre>
+            </div>
+            <h2 id="postgresql-makes-the-acknowledgement-level-explicit">PostgreSQL makes the acknowledgement level explicit</h2>
+            <p>PostgreSQL's <code>synchronous_commit</code> setting provides an excellent concrete example.</p>
+            <p>With synchronous standbys configured, PostgreSQL supports several important acknowledgement levels:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>PostgreSQL setting</th>
+                        <th>Commit waits for</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>remote_write</code></td>
+                        <td>Standby received the WAL and wrote it to its operating system</td>
+                    </tr>
+                    <tr>
+                        <td><code>on</code></td>
+                        <td>Standby flushed the WAL to durable storage</td>
+                    </tr>
+                    <tr>
+                        <td><code>remote_apply</code></td>
+                        <td>Standby replayed the transaction so it is visible to standby queries</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>PostgreSQL documents those differences directly. <code>remote_write</code> is weaker than durable standby flush, <code>on</code> waits for durable storage, and <code>remote_apply</code> additionally waits for replay and visibility.</p>
+            <p>This is exactly why:</p>
+            <div>
+                <pre><code class="language-text">receive
+persist
+apply</code></pre>
+            </div>
+            <p>must be understood separately.</p>
+            <h2 id="postgresql-remote_apply">PostgreSQL <code>remote_apply</code></h2>
+            <p>Suppose an application requires:</p>
+            <div>
+                <pre><code class="language-text">COMMIT returned
+
+therefore
+
+a query sent to the synchronous standby
+must be able to see the transaction</code></pre>
+            </div>
+            <p>PostgreSQL can provide that stronger behavior with:</p>
+            <div>
+                <pre><code class="language-text">synchronous_commit = remote_apply</code></pre>
+            </div>
+            <p>The commit waits until the synchronous standby reports that the commit record has been replayed and has become visible there.</p>
+            <p>Compare that with:</p>
+            <div>
+                <pre><code class="language-text">synchronous_commit = on</code></pre>
+            </div>
+            <p>which waits for durable WAL on the synchronous standby but not necessarily replay.</p>
+            <p>That distinction is extremely important for applications performing synchronous replica reads.</p>
+            <h2 id="synchronous-replication-adds-network-latency-to-commits">Synchronous replication adds network latency to commits</h2>
+            <p>Consider two servers in the same datacenter:</p>
+            <div>
+                <pre><code class="language-text">Primary ← 0.3 ms → Standby</code></pre>
+            </div>
+            <p>The network penalty may be manageable.</p>
+            <p>Now place the synchronous standby across an ocean:</p>
+            <div>
+                <pre><code class="language-text">Frankfurt ←────────→ Sydney</code></pre>
+            </div>
+            <p>Every synchronous transaction may now need to incorporate a large network round trip into its commit latency.</p>
+            <p>PostgreSQL explicitly notes that synchronous replication necessarily increases response time and that the minimum extra wait includes the primary-to-standby round trip.</p>
+            <p>That produces a common architecture:</p>
+            <div>
+                <pre><code class="language-text">nearby synchronous replica
++
+distant asynchronous disaster-recovery replica</code></pre>
+            </div>
+            <p>rather than making every geographically distant copy synchronous.</p>
+            <h2 id="postgresql-can-require-several-replicas">PostgreSQL can require several replicas</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary
+   |
+   +-- Replica A
+   +-- Replica B
+   +-- Replica C</code></pre>
+            </div>
+            <p>PostgreSQL can use priority-based or quorum-based synchronous replication.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">ANY 2 (A, B, C)</code></pre>
+            </div>
+            <p>means the commit can wait for any two of the listed synchronous candidates rather than requiring one specific machine.</p>
+            <p>PostgreSQL's current documentation supports both <code>FIRST</code> priority-based and <code>ANY</code> quorum-style synchronous standby selection.</p>
+            <p>This illustrates another important principle:</p>
+            <blockquote>
+                <p>"Synchronous" also requires defining how many replicas constitute enough acknowledgement.</p>
+            </blockquote>
+            <h2 id="mysql-semisynchronous-replication">MySQL semisynchronous replication</h2>
+            <p>MySQL provides semisynchronous replication in addition to its default asynchronous replication.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Source
+   |
+   | transaction
+   v
+binary log
+   |
+   +----------&gt; replica
+                   |
+                   v
+                relay log
+                   |
+                   |
+             acknowledgement
+                   |
+                   v
+Source returns to client</code></pre>
+            </div>
+            <p>With semisynchronous replication enabled, the source waits for the required replica acknowledgement that the transaction has been received and logged before returning according to the configured wait point.</p>
+            <p>Importantly, this is not the same as:</p>
+            <div>
+                <pre><code class="language-text">replica has already applied the transaction</code></pre>
+            </div>
+            <p>The replica's apply step remains separate.</p>
+            <h2 id="mysql-can-wait-for-more-than-one-replica">MySQL can wait for more than one replica</h2>
+            <p>MySQL exposes:</p>
+            <div>
+                <pre><code class="language-text">rpl_semi_sync_source_wait_for_replica_count</code></pre>
+            </div>
+            <p>which controls how many replicas must acknowledge a transaction.</p>
+            <p>The default is one.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">wait_for_replica_count = 2</code></pre>
+            </div>
+            <p>requires two qualifying acknowledgements while semisynchronous mode remains active.</p>
+            <p>Again, the useful question is not:</p>
+            <div>
+                <pre><code class="language-text">"Is replication synchronous?"</code></pre>
+            </div>
+            <p>It is:</p>
+            <blockquote>
+                <p>Which nodes participate in the commit acknowledgement rule?</p>
+            </blockquote>
+            <h2 id="mysql-semisynchronous-replication-can-fall-back">MySQL semisynchronous replication can fall back</h2>
+            <p>Another operational detail matters.</p>
+            <p>MySQL's semisynchronous source has a timeout:</p>
+            <div>
+                <pre><code class="language-text">rpl_semi_sync_source_timeout</code></pre>
+            </div>
+            <p>If sufficient acknowledgements do not arrive within that interval, MySQL can revert to asynchronous replication depending on configuration.</p>
+            <p>Therefore an architecture review should not stop at:</p>
+            <div>
+                <pre><code class="language-text">"semisync is enabled"</code></pre>
+            </div>
+            <p>It should also ask:</p>
+            <div>
+                <pre><code class="language-text">What happens if all semisynchronous replicas disappear?
+
+Do writes stop?
+
+Do they continue asynchronously?
+
+What durability guarantee does the application then have?</code></pre>
+            </div>
+            <h2 id="sql-server-synchronous-commit">SQL Server synchronous commit</h2>
+            <p>SQL Server Always On Availability Groups have:</p>
+            <div>
+                <pre><code class="language-text">asynchronous-commit mode</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">synchronous-commit mode</code></pre>
+            </div>
+            <p>In synchronous-commit mode, the primary waits for the synchronous secondary to acknowledge that the relevant transaction log records have been hardened to disk.</p>
+            <p>This protects committed transactions against loss on primary failure when the secondary is properly synchronized.</p>
+            <p>But remember the earlier pipeline:</p>
+            <div>
+                <pre><code class="language-text">harden
+   ↓
+redo
+   ↓
+visible</code></pre>
+            </div>
+            <p>Synchronous commit does not collapse those into one operation.</p>
+            <h2 id="sql-server-synchronous-commit-can-still-have-stale-readable-secondary-data">SQL Server synchronous commit can still have stale readable secondary data</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">transaction log is already hardened</code></pre>
+            </div>
+            <p>but the secondary's redo process is overloaded.</p>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-text">redo queue grows</code></pre>
+            </div>
+            <p>and the transaction may not yet be reflected in queries against a readable secondary.</p>
+            <p>Microsoft explicitly documents this scenario: log records can be safely hardened yet remain unreadable until redo applies them.</p>
+            <p>This is one of the clearest examples of:</p>
+            <blockquote>
+                <p>durability lag and query-visibility lag being different concepts.</p>
+            </blockquote>
+            <h2 id="technology-comparison-commit-acknowledgement">Technology comparison: commit acknowledgement</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technology</th>
+                        <th>Default/common asynchronous behavior</th>
+                        <th>Stronger acknowledgement option</th>
+                        <th>What stronger acknowledgement means</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL streaming replication</td>
+                        <td>Asynchronous by default</td>
+                        <td>Synchronous replication</td>
+                        <td>Can wait for remote write, durable flush, or even replay depending on <code>synchronous_commit</code></td>
+                    </tr>
+                    <tr>
+                        <td>MySQL source/replica</td>
+                        <td>Asynchronous by default</td>
+                        <td>Semisynchronous replication</td>
+                        <td>Source waits for configured replica receipt/log acknowledgement; apply remains separate</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server Availability Groups</td>
+                        <td>Async-commit available</td>
+                        <td>Synchronous-commit</td>
+                        <td>Primary waits for synchronized secondary log hardening</td>
+                    </tr>
+                    <tr>
+                        <td>PostgreSQL <code>remote_apply</code></td>
+                        <td>—</td>
+                        <td>Stronger than normal synchronous flush</td>
+                        <td>Commit can wait until transaction is replayed and query-visible</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>These distinctions are documented by PostgreSQL's WAL and synchronous replication configuration, MySQL's replication and semisynchronous replication documentation, and SQL Server's Availability Group availability-mode documentation.</p>
+            <h2 id="starting-a-new-replica-requires-a-consistent-starting-point">Starting a new replica requires a consistent starting point</h2>
+            <p>A new replica cannot normally begin from:</p>
+            <div>
+                <pre><code class="language-text">an empty database
++
+whatever replication messages happen to arrive now</code></pre>
+            </div>
+            <p>Suppose the primary already contains:</p>
+            <div>
+                <pre><code class="language-text">orders 1 ... 10,000,000</code></pre>
+            </div>
+            <p>and the replica begins listening at:</p>
+            <div>
+                <pre><code class="language-text">order 10,000,001</code></pre>
+            </div>
+            <p>The previous data is missing.</p>
+            <p>So replication setup normally requires:</p>
+            <div>
+                <pre><code class="language-text">1. create a consistent base copy
+2. record the change-stream position corresponding to that copy
+3. continue replication from that position</code></pre>
+            </div>
+            <p>This is often called:</p>
+            <div>
+                <pre><code class="language-text">seeding
+bootstrap
+base backup
+initial snapshot</code></pre>
+            </div>
+            <p>depending on the technology.</p>
+            <h2 id="why-copying-live-database-files-casually-is-unsafe">Why copying live database files casually is unsafe</h2>
+            <p>Suppose a database contains:</p>
+            <div>
+                <pre><code class="language-text">customers.dat
+orders.dat
+indexes.dat</code></pre>
+            </div>
+            <p>and you manually copy them while transactions are running.</p>
+            <p>The copy process might capture:</p>
+            <div>
+                <pre><code class="language-text">customers.dat at 10:00:01
+
+orders.dat at 10:00:08
+
+indexes.dat at 10:00:15</code></pre>
+            </div>
+            <p>Those files may represent different logical moments.</p>
+            <p>You can therefore create an inconsistent database image.</p>
+            <p>Database engines provide supported backup/snapshot procedures specifically to produce a recoverable starting state.</p>
+            <p>PostgreSQL, for example, requires a suitable base backup to bootstrap a physical standby.</p>
+            <p>MySQL likewise documents taking a source snapshot before starting replication from the corresponding position.</p>
+            <h2 id="replication-positions">Replication positions</h2>
+            <p>The replica needs to answer:</p>
+            <blockquote>
+                <p>How far through the source's change history have I processed?</p>
+            </blockquote>
+            <p>Systems therefore maintain replication positions.</p>
+            <p>Examples include:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL
+    LSN — Log Sequence Number
+
+MySQL
+    binary-log file + position
+    or
+    GTID set
+
+SQL Server
+    LSN-based transaction-log positions internally</code></pre>
+            </div>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Source stream:
+
+100 ─ 101 ─ 102 ─ 103 ─ 104 ─ 105
+
+Replica received through: 105
+Replica persisted through: 104
+Replica applied through:   102</code></pre>
+            </div>
+            <p>That is much more informative than simply saying:</p>
+            <div>
+                <pre><code class="language-text">replication is running</code></pre>
+            </div>
+            <h2 id="mysql-gtids">MySQL GTIDs</h2>
+            <p>MySQL can identify transactions using Global Transaction Identifiers (GTIDs).</p>
+            <p>Instead of saying:</p>
+            <div>
+                <pre><code class="language-text">"continue at binary log mysql-bin.008214 byte 93482"</code></pre>
+            </div>
+            <p>a replica can reason in terms of which transactions it has already executed.</p>
+            <p>MySQL supports GTID auto-positioning so a replica can determine which transactions it still needs from the source.</p>
+            <p>This is especially useful when topology changes make one fixed log filename/offset inconvenient.</p>
+            <h2 id="postgresql-replication-slots">PostgreSQL replication slots</h2>
+            <p>A different problem occurs when the replica falls behind.</p>
+            <p>Suppose the primary generates WAL quickly.</p>
+            <p>Without protection, it may eventually recycle old WAL that the disconnected replica still needs.</p>
+            <p>PostgreSQL replication slots tell the primary:</p>
+            <div>
+                <pre><code class="language-text">this consumer has not yet passed LSN X
+
+do not discard the WAL it still requires</code></pre>
+            </div>
+            <p>PostgreSQL documents replication slots specifically as a mechanism to retain WAL needed by standbys.</p>
+            <p>But this creates another operational risk:</p>
+            <div>
+                <pre><code class="language-text">replica offline
+       ↓
+slot cannot advance
+       ↓
+primary retains more WAL
+       ↓
+disk usage grows</code></pre>
+            </div>
+            <p>PostgreSQL explicitly warns that replication slots can retain enough WAL to fill <code>pg_wal</code> if not managed.</p>
+            <p>So solving:</p>
+            <div>
+                <pre><code class="language-text">replica missed required history</code></pre>
+            </div>
+            <p>can create:</p>
+            <div>
+                <pre><code class="language-text">primary disk exhaustion</code></pre>
+            </div>
+            <p>if monitoring is absent.</p>
+            <h2 id="physical-replication">Physical replication</h2>
+            <p>Physical replication works at a level closely tied to the storage/recovery format of the database engine.</p>
+            <p>PostgreSQL physical streaming replication is the clearest example:</p>
+            <div>
+                <pre><code class="language-text">primary WAL
+    |
+    v
+standby WAL replay</code></pre>
+            </div>
+            <p>The standby reconstructs the physical database state by replaying WAL.</p>
+            <p>Advantages include:</p>
+            <div>
+                <pre><code class="language-text">very complete copy of the database cluster state
+efficient failover-style replication
+close integration with crash recovery</code></pre>
+            </div>
+            <p>The tradeoff is tighter engine/version/platform coupling.</p>
+            <p>PostgreSQL notes that physical log shipping is tied closely enough to server storage formats that major PostgreSQL versions generally cannot be mixed in a normal physical primary/standby configuration.</p>
+            <h2 id="logical-replication">Logical replication</h2>
+            <p>Logical replication works with logical data changes rather than reproducing the source's physical storage layout.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">INSERT customer 7
+UPDATE order 104
+DELETE item 8</code></pre>
+            </div>
+            <p>rather than:</p>
+            <div>
+                <pre><code class="language-text">modify physical page X at byte offsets Y...</code></pre>
+            </div>
+            <p>PostgreSQL logical replication uses a publication/subscription model and tracks rows through a replication identity, usually a primary key.</p>
+            <p>This allows much more selective replication.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Database A
+
+customers
+orders
+internal_audit
+temporary_processing</code></pre>
+            </div>
+            <p>might publish only:</p>
+            <div>
+                <pre><code class="language-text">customers
+orders</code></pre>
+            </div>
+            <p>to another system.</p>
+            <h2 id="postgresql-logical-replication">PostgreSQL logical replication</h2>
+            <p>A PostgreSQL logical replication topology might look like:</p>
+            <div>
+                <pre><code class="language-text">Publisher
+
+customers
+orders
+payments
+internal_logs
+
+     |
+     | publication:
+     | customers, orders
+     v
+
+Subscriber
+
+customers
+orders</code></pre>
+            </div>
+            <p>PostgreSQL can perform an initial table synchronization and then continually send changes made after that snapshot.</p>
+            <p>Logical replication can support scenarios such as:</p>
+            <div>
+                <pre><code class="language-text">replicating only selected data
+replicating between PostgreSQL major versions
+replicating between different platforms
+feeding analytical databases</code></pre>
+            </div>
+            <p>which PostgreSQL explicitly lists among its logical-replication use cases.</p>
+            <h2 id="physical-versus-logical-replication">Physical versus logical replication</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Physical</th>
+                        <th>Logical</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Replicates</td>
+                        <td>Storage/recovery-level changes</td>
+                        <td>Logical row/data changes</td>
+                    </tr>
+                    <tr>
+                        <td>Typical use</td>
+                        <td>HA standby</td>
+                        <td>Selective replication, migrations, integrations</td>
+                    </tr>
+                    <tr>
+                        <td>Scope</td>
+                        <td>Usually broad database/cluster copy</td>
+                        <td>Can often choose tables/rows/columns</td>
+                    </tr>
+                    <tr>
+                        <td>Engine coupling</td>
+                        <td>High</td>
+                        <td>Usually lower</td>
+                    </tr>
+                    <tr>
+                        <td>Cross-version flexibility</td>
+                        <td>Limited</td>
+                        <td>Often better</td>
+                    </tr>
+                    <tr>
+                        <td>Schema handling</td>
+                        <td>Physical copy naturally follows storage state</td>
+                        <td>Schema compatibility must be considered</td>
+                    </tr>
+                    <tr>
+                        <td>Example</td>
+                        <td>PostgreSQL WAL streaming</td>
+                        <td>PostgreSQL publications/subscriptions</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Neither is universally better.</p>
+            <p>They solve different problems.</p>
+            <h2 id="logical-replication-does-not-mean-everything-is-copied">Logical replication does not mean "everything is copied"</h2>
+            <p>Suppose the publisher adds:</p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE customers
+ADD COLUMN loyalty_level integer;</code></pre>
+            </div>
+            <p>Do not assume every logical replication technology automatically reproduces every schema operation.</p>
+            <p>Logical replication frequently requires the target schema to be compatible with the replicated data.</p>
+            <p>Likewise:</p>
+            <div>
+                <pre><code class="language-text">sequences
+large objects
+DDL
+permissions
+extensions
+triggers</code></pre>
+            </div>
+            <p>may have technology-specific behavior.</p>
+            <p>Therefore:</p>
+            <blockquote>
+                <p>"The tables are logically replicated"</p>
+            </blockquote>
+            <p>does not imply:</p>
+            <blockquote>
+                <p>"Every database object and every schema operation is automatically synchronized. "</p>
+            </blockquote>
+            <h2 id="replication-lag-can-come-from-several-places">Replication lag can come from several places</h2>
+            <p>A replica can fall behind because:</p>
+            <div>
+                <pre><code class="language-text">primary generates changes faster than network can send them
+
+network is slow or congested
+
+replica disk cannot persist logs fast enough
+
+replica CPU cannot apply changes fast enough
+
+long queries interfere with apply/redo
+
+replication process is paused
+
+replica is disconnected</code></pre>
+            </div>
+            <p>These produce different diagnostic signatures.</p>
+            <p>For example, SQL Server explicitly distinguishes log hardening from redo: a secondary can receive and harden changes faster than redo can apply them, creating a recovery/redo queue.</p>
+            <p>PostgreSQL similarly exposes separate received/flushed/replayed WAL positions, making it possible to distinguish network/receive delay from replay delay.</p>
+            <h2 id="read-replicas-can-make-themselves-slower">Read replicas can make themselves slower</h2>
+            <p>Suppose a replica is intended for large reporting queries. For example, the replica may have these orders:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>27</td>
+                        <td>89.00</td>
+                    </tr>
+                    <tr>
+                        <td>105</td>
+                        <td>27</td>
+                        <td>35.00</td>
+                    </tr>
+                    <tr>
+                        <td>106</td>
+                        <td>28</td>
+                        <td>120.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A report can aggregate them by customer:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+    customer_id,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total_amount
+FROM orders
+GROUP BY customer_id
+ORDER BY customer_id;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>customer_id</th>
+                        <th>order_count</th>
+                        <th>total_amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>27</td>
+                        <td>2</td>
+                        <td>124.00</td>
+                    </tr>
+                    <tr>
+                        <td>28</td>
+                        <td>1</td>
+                        <td>120.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Those queries consume:</p>
+            <div>
+                <pre><code class="language-text">CPU
+memory
+I/O bandwidth</code></pre>
+            </div>
+            <p>But the same replica also needs CPU and I/O to apply incoming replication changes.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-text">more reporting work
+        ↓
+less resource available to replication apply
+        ↓
+replica falls further behind
+        ↓
+reports become even more stale</code></pre>
+            </div>
+            <p>SQL Server explicitly documents that heavy reporting workloads on readable secondary replicas can compete with redo and increase replication latency.</p>
+            <p>This is why:</p>
+            <div>
+                <pre><code class="language-text">"we'll move reads to replicas"</code></pre>
+            </div>
+            <p>is not automatically free scalability.</p>
+            <h2 id="failover">Failover</h2>
+            <p>Failover changes which node accepts primary/write responsibility.</p>
+            <p>Before:</p>
+            <div>
+                <pre><code class="language-text">                 Primary A
+                    |
+                    v
+                 Replica B</code></pre>
+            </div>
+            <p>A fails.</p>
+            <p>After failover:</p>
+            <div>
+                <pre><code class="language-text">                 X Primary A
+
+                 Primary B</code></pre>
+            </div>
+            <p>This sounds simple, but several things must happen correctly:</p>
+            <div>
+                <pre><code class="language-text">select a suitable replacement
+
+ensure it has an acceptable data position
+
+promote it
+
+route application traffic to it
+
+prevent the old primary from continuing to accept writes</code></pre>
+            </div>
+            <p>Replication by itself does not perform all of those steps safely.</p>
+            <h2 id="promotion">Promotion</h2>
+            <p>A replica normally behaves differently from a primary.</p>
+            <p>For example, a PostgreSQL physical standby continuously replays WAL.</p>
+            <p>Promotion tells it:</p>
+            <div>
+                <pre><code class="language-text">stop behaving as a recovery standby
+
+become a normal read/write primary</code></pre>
+            </div>
+            <p>PostgreSQL supports promotion through <code>pg_ctl promote</code> or <code>pg_promote()</code>.</p>
+            <p>After promotion, applications must also know where to connect.</p>
+            <p>That may require:</p>
+            <div>
+                <pre><code class="language-text">load balancer
+proxy
+VIP
+DNS
+cluster manager
+service discovery
+connection-string listener</code></pre>
+            </div>
+            <p>depending on the platform.</p>
+            <h2 id="sql-server-availability-group-listener">SQL Server Availability Group listener</h2>
+            <p>SQL Server Availability Groups provide the concept of an availability group listener.</p>
+            <p>Applications connect to the listener rather than hard-coding the current primary machine.</p>
+            <p>After failover, the listener allows client connections to be routed toward the replica currently holding the primary role. SQL Server can also use read-only routing for appropriate read-intent connections.</p>
+            <p>This solves an important layer beyond merely copying data:</p>
+            <div>
+                <pre><code class="language-text">"Which server should my application connect to now?"</code></pre>
+            </div>
+            <h2 id="rpo-how-much-data-can-we-lose">RPO: how much data can we lose?</h2>
+            <p>The Recovery Point Objective (RPO) describes the tolerated data-loss window.</p>
+            <p>Suppose asynchronous replication normally lags by:</p>
+            <div>
+                <pre><code class="language-text">2 seconds</code></pre>
+            </div>
+            <p>If the primary dies permanently, the surviving replica may be approximately two seconds behind.</p>
+            <p>The business might therefore lose recently acknowledged transactions.</p>
+            <p>A system requirement might say:</p>
+            <div>
+                <pre><code class="language-text">RPO = 0</code></pre>
+            </div>
+            <p>meaning acknowledged committed transactions must not be lost under the failures covered by the design.</p>
+            <p>Another system may accept:</p>
+            <div>
+                <pre><code class="language-text">RPO ≤ 60 seconds</code></pre>
+            </div>
+            <p>for a low-value reporting database.</p>
+            <p>The replication architecture should follow the business requirement, not the reverse.</p>
+            <h2 id="rto-how-long-can-the-system-remain-unavailable">RTO: how long can the system remain unavailable?</h2>
+            <p>The Recovery Time Objective (RTO) concerns time rather than data:</p>
+            <div>
+                <pre><code class="language-text">failure
+   |
+   v
+detect failure
+
+choose new primary
+
+promote/recover
+
+redirect clients
+
+application becomes usable
+   |
+   v
+
+elapsed time = recovery time</code></pre>
+            </div>
+            <p>A company might require:</p>
+            <div>
+                <pre><code class="language-text">RTO &lt; 30 seconds</code></pre>
+            </div>
+            <p>while another system might tolerate:</p>
+            <div>
+                <pre><code class="language-text">RTO = 4 hours</code></pre>
+            </div>
+            <p>Those lead to very different architectures.</p>
+            <p>Replication improves the potential RTO because a mostly up-to-date database already exists.</p>
+            <p>But automatic detection, promotion, routing, replay backlog, and application reconnection all affect actual recovery time.</p>
+            <h2 id="replica-apply-lag-can-hurt-rto-too">Replica apply lag can hurt RTO too</h2>
+            <p>Suppose a failover replica has safely received large amounts of transaction log but has not replayed all of it.</p>
+            <p>The data may be durable:</p>
+            <div>
+                <pre><code class="language-text">good RPO</code></pre>
+            </div>
+            <p>but recovery may still need to process the backlog before the database becomes fully useful:</p>
+            <div>
+                <pre><code class="language-text">worse RTO</code></pre>
+            </div>
+            <p>SQL Server specifically documents that a large redo queue on a secondary can extend failover time even when those log records have already been hardened there.</p>
+            <p>Again:</p>
+            <div>
+                <pre><code class="language-text">durability</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">readiness</code></pre>
+            </div>
+            <p>are different properties.</p>
+            <h2 id="split-brain">Split brain</h2>
+            <p>One of the most dangerous failover failures is split brain.</p>
+            <p>Suppose network communication between two sites fails:</p>
+            <div>
+                <pre><code class="language-text">Site A                 Site B
+
+Primary A      X       Replica B</code></pre>
+            </div>
+            <p>A can no longer see B.</p>
+            <p>B can no longer see A.</p>
+            <p>If both sides independently decide:</p>
+            <div>
+                <pre><code class="language-text">"The other side is dead.
+I should be primary."</code></pre>
+            </div>
+            <p>you can get:</p>
+            <div>
+                <pre><code class="language-text">Primary A             Primary B
+
+accepts write X       accepts write Y</code></pre>
+            </div>
+            <p>Now the system has two conflicting histories.</p>
+            <p>That is much more difficult than ordinary replica lag.</p>
+            <h2 id="fencing">Fencing</h2>
+            <p>Safe failover therefore requires more than promotion.</p>
+            <p>The old primary must be prevented from continuing to process writes if it is no longer authoritative.</p>
+            <p>That exclusion is commonly called fencing.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">1. Decide B will become primary.
+
+2. Ensure A cannot continue writing.
+
+3. Promote B.
+
+4. Route clients to B.</code></pre>
+            </div>
+            <p>Possible fencing mechanisms depend on the environment and can involve:</p>
+            <div>
+                <pre><code class="language-text">cluster quorum
+storage fencing
+node power control
+leases
+STONITH-style mechanisms
+cloud control planes
+consensus-based ownership</code></pre>
+            </div>
+            <p>The architectural principle is:</p>
+            <blockquote>
+                <p>Never rely solely on "we think the old primary is dead. "</p>
+            </blockquote>
+            <p>You need a mechanism ensuring only the authorized writer remains active.</p>
+            <h2 id="sql-server-shows-why-quorum-matters">SQL Server shows why quorum matters</h2>
+            <p>SQL Server synchronous Availability Group automatic failover is not based only on:</p>
+            <div>
+                <pre><code class="language-text">secondary can no longer ping primary</code></pre>
+            </div>
+            <p>Microsoft documents additional requirements including synchronous state, configured automatic failover, WSFC quorum, and failover-policy conditions.</p>
+            <p>This is an example of a general distributed-systems principle:</p>
+            <blockquote>
+                <p>Failure detection alone is not enough to safely assign write ownership.</p>
+            </blockquote>
+            <p>You also need coordination about who has authority.</p>
+            <h2 id="asynchronous-failover-can-lose-acknowledged-writes">Asynchronous failover can lose acknowledged writes</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">T1 committed on Primary A
+
+Primary A told application:
+SUCCESS
+
+T1 had not reached Replica B
+
+Primary A permanently fails
+
+Replica B promoted</code></pre>
+            </div>
+            <p>The new primary never contained T1.</p>
+            <p>This is why forced failover from an unsynchronized asynchronous SQL Server secondary explicitly permits data loss.</p>
+            <p>The same fundamental risk exists in asynchronous PostgreSQL and MySQL replication.</p>
+            <p>Asynchrony trades some durability guarantee for lower commit latency and increased geographic flexibility.</p>
+            <h2 id="synchronous-replication-changes-the-failure-tradeoff">Synchronous replication changes the failure tradeoff</h2>
+            <p>Suppose the commit rule instead requires:</p>
+            <div>
+                <pre><code class="language-text">Primary local durable write
+
+AND
+
+Replica durable write
+
+before
+
+SUCCESS</code></pre>
+            </div>
+            <p>Then loss of only the primary does not lose the acknowledged transaction.</p>
+            <p>But now consider:</p>
+            <div>
+                <pre><code class="language-text">replica unavailable</code></pre>
+            </div>
+            <p>What should happen?</p>
+            <p>Possibilities include:</p>
+            <div>
+                <pre><code class="language-text">stop accepting commits
+
+wait indefinitely
+
+wait for another synchronous replica
+
+fall back to asynchronous operation</code></pre>
+            </div>
+            <p>Different systems/configurations choose differently.</p>
+            <p>That is why synchronous replication also creates an availability tradeoff.</p>
+            <h2 id="durability-versus-availability-during-network-partitions">Durability versus availability during network partitions</h2>
+            <p>Consider:</p>
+            <div>
+                <pre><code class="language-text">Primary A --------X-------- Synchronous replica B</code></pre>
+            </div>
+            <p>The network link fails.</p>
+            <p>A now has to choose between two desirable properties:</p>
+            <div>
+                <pre><code class="language-text">keep accepting writes</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">guarantee every acknowledged write exists on B</code></pre>
+            </div>
+            <p>It cannot do both using B while communication is impossible.</p>
+            <p>A strict design may stop commits.</p>
+            <p>A looser design may continue asynchronously.</p>
+            <p>The important point is:</p>
+            <blockquote>
+                <p>Replication configuration is partly a business decision about what to sacrifice during failures: latency, availability, or risk of data loss.</p>
+            </blockquote>
+            <h2 id="replication-is-not-backup">Replication is not backup</h2>
+            <p>Suppose an administrator accidentally runs:</p>
+            <div>
+                <pre><code class="language-sql">DELETE FROM customers;</code></pre>
+            </div>
+            <p>Replication faithfully copies the change.</p>
+            <p>Soon:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+customers deleted
+
+Replica A:
+customers deleted
+
+Replica B:
+customers deleted</code></pre>
+            </div>
+            <p>Replication succeeded perfectly.</p>
+            <p>Yet the data is gone everywhere.</p>
+            <p>That is why:</p>
+            <div>
+                <pre><code class="language-text">multiple current copies</code></pre>
+            </div>
+            <p>is not the same as:</p>
+            <div>
+                <pre><code class="language-text">historical recoverability</code></pre>
+            </div>
+            <h2 id="corruption-and-bad-application-writes-can-replicate-too">Corruption and bad application writes can replicate too</h2>
+            <p>Other examples:</p>
+            <div>
+                <pre><code class="language-text">UPDATE accounts
+SET balance = 0;</code></pre>
+            </div>
+            <p>without a <code>WHERE</code> clause.</p>
+            <p>Or an application bug writes:</p>
+            <div>
+                <pre><code class="language-text">customer_email = NULL</code></pre>
+            </div>
+            <p>for millions of customers.</p>
+            <p>Or malicious credentials delete records.</p>
+            <p>Replication may propagate those changes to every healthy replica.</p>
+            <p>A replica protects against some infrastructure failures.</p>
+            <p>It does not automatically protect against:</p>
+            <div>
+                <pre><code class="language-text">logical corruption
+operator mistakes
+application bugs
+malicious valid writes</code></pre>
+            </div>
+            <h2 id="backup-solves-a-different-problem">Backup solves a different problem</h2>
+            <p>A backup preserves an earlier recoverable state.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Monday backup
+Tuesday backup
+Wednesday backup
+
++
+transaction/WAL/binlog archive</code></pre>
+            </div>
+            <p>may allow restoration to:</p>
+            <div>
+                <pre><code class="language-text">Wednesday 14:37:12</code></pre>
+            </div>
+            <p>before an accidental deletion at:</p>
+            <div>
+                <pre><code class="language-text">14:37:15</code></pre>
+            </div>
+            <p>This is point-in-time recovery.</p>
+            <p>Replication provides:</p>
+            <div>
+                <pre><code class="language-text">another current copy</code></pre>
+            </div>
+            <p>while backups and retained logs provide:</p>
+            <div>
+                <pre><code class="language-text">historical recovery points</code></pre>
+            </div>
+            <p>A resilient system often needs both.</p>
+            <h2 id="replica-backup-and-failover-are-different-concepts">Replica, backup, and failover are different concepts</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mechanism</th>
+                        <th>Main question</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Replica</td>
+                        <td>Do I have another copy receiving current changes?</td>
+                    </tr>
+                    <tr>
+                        <td>Backup</td>
+                        <td>Can I restore an earlier state?</td>
+                    </tr>
+                    <tr>
+                        <td>Failover</td>
+                        <td>Can another node safely become the writer?</td>
+                    </tr>
+                    <tr>
+                        <td>Point-in-time recovery</td>
+                        <td>Can I restore to a chosen moment?</td>
+                    </tr>
+                    <tr>
+                        <td>Read replica</td>
+                        <td>Can I offload some read workload?</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Having one does not prove that the others are properly implemented.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">three replicas</code></pre>
+            </div>
+            <p>does not answer:</p>
+            <div>
+                <pre><code class="language-text">Can I recover data deleted last Tuesday?</code></pre>
+            </div>
+            <h2 id="replication-is-not-sharding">Replication is not sharding</h2>
+            <p>These concepts are also frequently confused.</p>
+            <h3 id="replication">Replication</h3>
+            <div>
+                <pre><code class="language-text">Node A:
+customers 1-1,000,000
+
+Node B:
+customers 1-1,000,000</code></pre>
+            </div>
+            <p>The nodes contain overlapping copies.</p>
+            <h3 id="sharding">Sharding</h3>
+            <div>
+                <pre><code class="language-text">Shard A:
+customers 1-500,000
+
+Shard B:
+customers 500,001-1,000,000</code></pre>
+            </div>
+            <p>Different nodes own different subsets.</p>
+            <p>Replication solves:</p>
+            <div>
+                <pre><code class="language-text">copying / availability / read scaling</code></pre>
+            </div>
+            <p>Sharding solves:</p>
+            <div>
+                <pre><code class="language-text">partitioning data or write load</code></pre>
+            </div>
+            <p>They can be combined:</p>
+            <div>
+                <pre><code class="language-text">Shard 1
+   primary
+   replica
+
+Shard 2
+   primary
+   replica
+
+Shard 3
+   primary
+   replica</code></pre>
+            </div>
+            <h2 id="read-scaling-does-not-scale-writes">Read scaling does not scale writes</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary
+   |
+   +--- Replica A
+   +--- Replica B
+   +--- Replica C</code></pre>
+            </div>
+            <p>You can distribute:</p>
+            <div>
+                <pre><code class="language-text">SELECT</code></pre>
+            </div>
+            <p>traffic across several replicas.</p>
+            <p>But if all writes still go through one primary:</p>
+            <div>
+                <pre><code class="language-text">INSERT
+UPDATE
+DELETE</code></pre>
+            </div>
+            <p>write throughput is still constrained by the single-writer path.</p>
+            <p>Adding read replicas does not magically partition write load.</p>
+            <p>That is one reason multi-primary systems and sharding exist—but they introduce much harder conflict and coordination problems.</p>
+            <h2 id="cascading-replication">Cascading replication</h2>
+            <p>Replicas do not always connect directly to the primary.</p>
+            <p>A topology can be:</p>
+            <div>
+                <pre><code class="language-text">Primary
+   |
+   v
+Replica A
+   |
+   +------&gt; Replica B
+   |
+   +------&gt; Replica C</code></pre>
+            </div>
+            <p>This is cascading replication.</p>
+            <p>It can reduce:</p>
+            <div>
+                <pre><code class="language-text">connections to primary
+cross-site bandwidth</code></pre>
+            </div>
+            <p>but adds another dependency.</p>
+            <p>If A falls behind, B and C cannot be more current than the data they receive through A.</p>
+            <p>PostgreSQL supports cascading physical streaming replication, where one standby can stream WAL to downstream standbys. PostgreSQL currently documents that cascading replication itself is asynchronous.</p>
+            <h2 id="monitoring-replication">Monitoring replication</h2>
+            <p>A production replication system should answer at least:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Why it matters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Is the replica connected?</td>
+                        <td>Disconnected replicas stop advancing</td>
+                    </tr>
+                    <tr>
+                        <td>What position has the source produced?</td>
+                        <td>Defines the latest available state</td>
+                    </tr>
+                    <tr>
+                        <td>What position has the replica received?</td>
+                        <td>Measures transport lag</td>
+                    </tr>
+                    <tr>
+                        <td>What has the replica persisted?</td>
+                        <td>Measures durability progress</td>
+                    </tr>
+                    <tr>
+                        <td>What has the replica applied/replayed?</td>
+                        <td>Measures query freshness</td>
+                    </tr>
+                    <tr>
+                        <td>Is lag growing or shrinking?</td>
+                        <td>Distinguishes transient delay from overload</td>
+                    </tr>
+                    <tr>
+                        <td>How much log is retained for the replica?</td>
+                        <td>Prevents source disk exhaustion</td>
+                    </tr>
+                    <tr>
+                        <td>Is the replica eligible for failover?</td>
+                        <td>Avoids promoting a bad candidate</td>
+                    </tr>
+                    <tr>
+                        <td>How large is the redo/apply queue?</td>
+                        <td>Affects freshness and potentially RTO</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Monitoring only:</p>
+            <div>
+                <pre><code class="language-text">"replication process = running"</code></pre>
+            </div>
+            <p>is not enough.</p>
+            <h2 id="concrete-monitoring-concepts-by-engine">Concrete monitoring concepts by engine</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>PostgreSQL</th>
+                        <th>MySQL</th>
+                        <th>SQL Server</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>pg_stat_replication</code></td>
+                        <td>Replication connection/status metadata</td>
+                        <td>Availability Group dashboard / DMVs</td>
+                    </tr>
+                    <tr>
+                        <td>WAL LSN positions</td>
+                        <td>GTID / binary-log positions</td>
+                        <td>received/hardened/redone LSNs</td>
+                    </tr>
+                    <tr>
+                        <td>receive/flush/replay progress</td>
+                        <td>receiver vs applier progress</td>
+                        <td>send queue / redo queue</td>
+                    </tr>
+                    <tr>
+                        <td>replication slot state</td>
+                        <td>relay logs</td>
+                        <td>synchronization state</td>
+                    </tr>
+                    <tr>
+                        <td><code>pg_stat_wal_receiver</code></td>
+                        <td>replica I/O/applier state</td>
+                        <td><code>sys. dm_hadr_database_replica_states</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>PostgreSQL documents WAL-position monitoring and replication sender/receiver views. MySQL tracks source and relay-log/applier positions and supports GTID-based progress tracking. SQL Server exposes redo and synchronization information through Availability Group monitoring and <code>sys. dm_hadr_database_replica_states</code>.</p>
+            <h2 id="technology-summary">Technology summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>PostgreSQL physical streaming</th>
+                        <th>MySQL source/replica</th>
+                        <th>SQL Server Availability Groups</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Change source</td>
+                        <td>WAL</td>
+                        <td>Binary log</td>
+                        <td>Transaction log</td>
+                    </tr>
+                    <tr>
+                        <td>Replica transport</td>
+                        <td><code>walsender</code> → <code>walreceiver</code></td>
+                        <td>Source → replica receiver</td>
+                        <td>Primary → secondary</td>
+                    </tr>
+                    <tr>
+                        <td>Apply mechanism</td>
+                        <td>WAL replay</td>
+                        <td>Replica applier thread(s)</td>
+                        <td>Redo</td>
+                    </tr>
+                    <tr>
+                        <td>Default/basic mode</td>
+                        <td>Asynchronous streaming</td>
+                        <td>Asynchronous</td>
+                        <td>Async or sync configured per replica</td>
+                    </tr>
+                    <tr>
+                        <td>Stronger durability mode</td>
+                        <td>Synchronous standbys</td>
+                        <td>Semisynchronous plugin</td>
+                        <td>Synchronous commit</td>
+                    </tr>
+                    <tr>
+                        <td>Can acknowledgement precede apply?</td>
+                        <td>Yes, except <code>remote_apply</code></td>
+                        <td>Yes</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td>Readable replica</td>
+                        <td>Hot standby</td>
+                        <td>Replica can serve reads</td>
+                        <td>Readable secondary</td>
+                    </tr>
+                    <tr>
+                        <td>Progress identifier</td>
+                        <td>LSN</td>
+                        <td>Binlog position / GTID</td>
+                        <td>Log/LSN state</td>
+                    </tr>
+                    <tr>
+                        <td>Typical HA use</td>
+                        <td>Physical standby + external orchestration</td>
+                        <td>Source/replica + HA tooling</td>
+                        <td>Built-in Availability Group roles/failover integration</td>
+                    </tr>
+                    <tr>
+                        <td>Selective logical replication</td>
+                        <td>Built in publication/subscription</td>
+                        <td>Binlog replication can filter; separate group/topology features exist</td>
+                        <td>SQL Server has separate replication technologies besides AGs</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>PostgreSQL's current documentation describes asynchronous physical streaming, synchronous standbys, WAL positions, hot standbys, and logical publication/subscription replication. MySQL documents source-to-replica asynchronous replication, semisynchronous replication, relay logs, and GTID positioning. SQL Server documents asynchronous/synchronous Availability Group replicas, readable secondaries, log hardening, and failover modes.</p>
+            <h2 id="choosing-what-each-replica-is-for">Choosing what each replica is for</h2>
+            <p>A replica should have an explicit job.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Replica A
+    synchronous
+    same datacenter
+    failover candidate
+
+Replica B
+    asynchronous
+    another geographic region
+    disaster recovery
+
+Replica C
+    asynchronous
+    large machine
+    analytical/reporting reads</code></pre>
+            </div>
+            <p>Trying to make every replica satisfy every goal can create bad tradeoffs.</p>
+            <p>A reporting replica may tolerate lag but need substantial CPU.</p>
+            <p>A failover replica may prioritize:</p>
+            <div>
+                <pre><code class="language-text">low lag
+durable replication
+fast promotion
+strict monitoring</code></pre>
+            </div>
+            <p>over analytical workloads.</p>
+            <h2 id="a-useful-design-exercise">A useful design exercise</h2>
+            <p>For each replica, answer:</p>
+            <div>
+                <pre><code class="language-text">What is this replica for?
+
+May applications read from it?
+
+How stale may those reads be?
+
+Can it be promoted?
+
+How much acknowledged data may it be missing?
+
+What acknowledgement does the primary wait for?
+
+Does the acknowledgement mean receive, persist, or apply?
+
+How do we know the replica is healthy?
+
+Who decides failover?
+
+How is the old primary fenced?
+
+How do clients discover the new primary?
+
+Where are the historical backups?</code></pre>
+            </div>
+            <p>If those questions do not have clear answers, merely knowing:</p>
+            <div>
+                <pre><code class="language-text">"we have replication"</code></pre>
+            </div>
+            <p>does not tell you much about the system's actual reliability.</p>
+            <h2 id="final-mental-model">Final mental model</h2>
+            <p>Do not memorize replication as:</p>
+            <div>
+                <pre><code class="language-text">Primary copies data to replica.</code></pre>
+            </div>
+            <p>Use this model:</p>
+            <div>
+                <pre><code class="language-text">WRITE ON PRIMARY
+      |
+      v
+PRIMARY CHANGE LOG
+      |
+      v
+SEND
+      |
+      v
+RECEIVE ON REPLICA
+      |
+      v
+PERSIST / HARDEN
+      |
+      v
+APPLY / REPLAY
+      |
+      v
+VISIBLE TO REPLICA READS</code></pre>
+            </div>
+            <p>Then ask where <code>COMMIT SUCCESS</code> occurs.</p>
+            <h3 id="asynchronous">Asynchronous</h3>
+            <div>
+                <pre><code class="language-text">PRIMARY COMMIT
+      |
+SUCCESS TO CLIENT
+      |
+      v
+SEND → RECEIVE → PERSIST → APPLY</code></pre>
+            </div>
+            <p>Fast commits, but a primary failure can lose acknowledged transactions that have not reached the surviving replica.</p>
+            <h3 id="synchronous-durability">Synchronous durability</h3>
+            <div>
+                <pre><code class="language-text">PRIMARY
+   |
+SEND
+   |
+REPLICA PERSIST
+   |
+ACK
+   |
+SUCCESS TO CLIENT</code></pre>
+            </div>
+            <p>Stronger protection, but higher latency.</p>
+            <h3 id="synchronous-visibility">Synchronous visibility</h3>
+            <p>Some technologies can go further:</p>
+            <div>
+                <pre><code class="language-text">PRIMARY
+   |
+SEND
+   |
+REPLICA PERSIST
+   |
+REPLICA APPLY
+   |
+ACK
+   |
+SUCCESS TO CLIENT</code></pre>
+            </div>
+            <p>PostgreSQL <code>remote_apply</code> is a concrete example.</p>
+            <p>Finally, keep these four concepts separate:</p>
+            <div>
+                <pre><code class="language-text">REPLICATION
+    another current copy
+
+FAILOVER
+    make another copy authoritative
+
+BACKUP
+    retain recoverable historical state
+
+SHARDING
+    divide different data among nodes</code></pre>
+            </div>
+            <p>The central replication question is therefore not:</p>
+            <blockquote>
+                <p>"Do we have a replica? "</p>
+            </blockquote>
+            <p>It is:</p>
+            <blockquote>
+                <p>"When we tell the application that a transaction succeeded, where else does that transaction exist, how durable is it there, has it been applied there, and what happens if the current primary disappears at that exact moment? "</p>
+            </blockquote>
+            <p>That question connects replication lag, synchronous versus asynchronous replication, read consistency, RPO, RTO, and failover into one coherent model.</p>
+            <h2 id="references">References</h2>
+            <p>PostgreSQL's current high-availability documentation describes physical WAL streaming, asynchronous and synchronous standbys, hot standby reads, replication slots, cascading replication, promotion, WAL positions, and the different synchronous acknowledgement levels.</p>
+            <p>PostgreSQL's logical replication documentation describes publications/subscriptions, initial synchronization, logical replication identities, selective replication, and cross-version/platform use cases.</p>
+            <p>MySQL's current replication documentation describes asynchronous source-to-replica replication, binary/relay logs, GTID positioning, replica initialization, and semisynchronous acknowledgement behavior.</p>
+            <p>Microsoft's SQL Server Availability Group documentation describes asynchronous and synchronous commit, secondary log hardening, readable secondaries, redo lag, failover modes, listeners, and RPO/RTO-related monitoring.</p>
         </article-section>
     </div>
     </main>

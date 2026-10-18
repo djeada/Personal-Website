@@ -37,6 +37,13 @@ GITHUB_API_BASE = "https://api.github.com/repos"
 SOURCE_REPOSITORIES = [
     {
         "owner": "djeada",
+        "repo": "Databases-Notes",
+        "branch": "main",
+        "root": "notes",
+        "language": "EN",
+    },
+    {
+        "owner": "djeada",
         "repo": "Backend-Engineers-Guide",
         "branch": "main",
         "root": "notes",
@@ -79,8 +86,7 @@ INLINE_MATH_PATTERN = re.compile(
     r"|(?<!\\)\\\([^`\n]+?(?<!\\)\\\)"
 )
 MATH_PRESENCE_PATTERN = re.compile(
-    r"\$\$|(?<!\\)\\\(|(?<!\\)\\\[|"
-    r"(?<![\\$\w])\$(?=\S)[^$\n<]+?(?<=\S)\$(?![\w$])"
+    r"\$\$|(?<!\\)\\\(|(?<!\\)\\\[|" r"(?<![\\$\w])\$(?=\S)[^$\n<]+?(?<=\S)\$(?![\w$])"
 )
 DOUBLE_ESCAPED_TEX_COMMAND_PATTERN = re.compile(
     r"(?<!\\)\\\\(?:frac|dfrac|tfrac|left|right|bigl|bigr|Bigl|Bigr|xi|"
@@ -172,7 +178,7 @@ class MarkdownProcessor:
     @classmethod
     def find_math_source_issues(cls, markdown_text: str) -> List[tuple[int, str]]:
         """Find common malformed TeX patterns before a site rebuild starts."""
-        # Preserve newlines so reported source line numbers remain accurate.
+
         source = CODE_FENCE_PATTERN.sub(
             lambda match: "\n" * match.group(0).count("\n"), markdown_text
         )
@@ -195,7 +201,10 @@ class MarkdownProcessor:
 
             if NESTED_TEX_DISPLAY_DELIMITER_PATTERN.search(body):
                 issues.append(
-                    (line_number, "display delimiter used inside another math expression")
+                    (
+                        line_number,
+                        "display delimiter used inside another math expression",
+                    )
                 )
             if DOUBLE_ESCAPED_TEX_COMMAND_PATTERN.search(body):
                 issues.append((line_number, "doubled backslash before a TeX command"))
@@ -207,11 +216,15 @@ class MarkdownProcessor:
         return issues
 
     @classmethod
-    def validate_math_sources(cls, urls: List["UrlData"], texts: Dict[str, str]) -> None:
+    def validate_math_sources(
+        cls, urls: List["UrlData"], texts: Dict[str, str]
+    ) -> None:
         """Stop before cleaning generated pages if imported TeX looks malformed."""
         issues = []
         for url_data in urls:
-            for line_number, message in cls.find_math_source_issues(texts[url_data.url]):
+            for line_number, message in cls.find_math_source_issues(
+                texts[url_data.url]
+            ):
                 issues.append(f"{url_data.url}:{line_number}: {message}")
         if issues:
             details = "\n".join(f"  - {issue}" for issue in issues)
@@ -294,6 +307,10 @@ class HtmlEnhancer:
             return html
         owner, repo, branch, _ = source
         soup = BeautifulSoup(html, "html.parser")
+        for image in soup.find_all("img", src=True):
+            image_source = image["src"].strip()
+            if image_source and not urlparse(image_source).scheme:
+                image["src"] = urljoin(url_data.url, image_source)
         for link in soup.find_all("a", href=True):
             href = link["href"].strip()
             target, _, fragment = href.partition("#")

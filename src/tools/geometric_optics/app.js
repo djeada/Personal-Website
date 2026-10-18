@@ -83,7 +83,7 @@
     };
     const nmColor = (lam, a = 1) => UI.wavelengthToCSS(lam / NM, a);
     const hasMirror = () => els.some((e) => e.type === "mirror");
-    // Sequential tracing needs every other item (incoming or returning) to stay in front of the mirror.
+
     function clampZ(el, z) {
         const mirror = els.find((x) => x.type === "mirror");
         if (!mirror) return z;
@@ -510,7 +510,7 @@
                 max: view.zMax,
                 label: "z",
                 unit: "mm",
-                // at least five ticks: the default leaves only two on a phone
+
                 ticks: UI.niceTicks(view.zMin, view.zMax, Math.max(5, Math.round((w - 66) / 84)))
             },
             y: {
@@ -534,7 +534,7 @@
             if (st.showConstr && !r.cp.afocal) items.push([COL.construct, "construction", [2, 3]]);
         }
         const showLegend = w >= 520 && items.length > 0;
-        // labels are placed around each other and around the legend so none hides another
+
         placedLabels = [];
         if (showLegend) {
             ctx.save();
@@ -804,7 +804,7 @@
         lx += shift;
         x += shift;
         if (placedLabels) {
-            // a 2 px overlap of the padded boxes is allowed so labels can stack 14 px apart
+
             const free = (yy) => !placedLabels.some((b) => lx - 3 < b.x + b.w && b.x < lx + w + 3 && yy - 10 < b.y + b.h && b.y + 2 < yy + 4);
             const inside = (yy) => !labelBounds || (yy - 12 >= labelBounds.y && yy + 4 <= labelBounds.y + labelBounds.h);
             const dy = [0, -16, 16, -32, 32, -48, 48].find((d) => inside(y + d) && free(y + d));
@@ -876,7 +876,7 @@
         ctx.restore();
     }
 
-    // A cardinal point or pupil outside the view gets an arrow label at the edge, not a label clamped onto the border.
+
     function offViewLabel(ctx, map, z, text, y, color) {
         if (z >= view.zMin && z <= view.zMax) return false;
         const P = map.plot,
@@ -1178,7 +1178,7 @@
         return map;
     }
 
-    // Fraction axis (pupil height or field) with headroom above 1 so the legend never covers the curves.
+
     function fractionAxis(h, rows, label) {
         const head = rows ? (rows * 18 + 14) / Math.max(120, h - 52) : 0;
         return {
@@ -1189,7 +1189,7 @@
         };
     }
 
-    // Data range with a minimum half-width, so an aberration-free system gets a readable ±0.01 mm axis.
+
     function spanAxis(lo, hi, minHalf, pad) {
         const mid = (lo + hi) / 2,
             half = Math.max((hi - lo) / 2, minHalf) * (1 + pad);
@@ -1341,7 +1341,7 @@
             dash: TH.dashes[i],
             label: lamLabel(c.lambda)
         }));
-        // legend-only entry for the dashed Δz = 0 marker (a marker label would hide under the legend)
+
         series.push({
             xs: [],
             ys: [],
@@ -1511,7 +1511,8 @@
     }
 
     function setReadout(id, value, notes = []) {
-        const el = $(id), key = JSON.stringify([value, notes]);
+        const el = $(id),
+            key = JSON.stringify([value, notes]);
         if (el.dataset.readout === key) return;
         el.dataset.readout = key;
         el.replaceChildren(document.createTextNode(value));
@@ -1527,7 +1528,9 @@
         const el = $("rAbcd");
         el.innerHTML = '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable columnspacing="1em" rowspacing=".4em"><mtr><mtd><mn></mn></mtd><mtd><mn></mn></mtd></mtr><mtr><mtd><mn></mn></mtd><mtd><mn></mn></mtd></mtr></mtable><mo>]</mo></mrow></math>';
         const values = [matrix[0][0], matrix[0][1] / MM, matrix[1][0] * MM, matrix[1][1]];
-        el.querySelectorAll("mn").forEach((node, i) => { node.textContent = fmt(values[i], 4); });
+        el.querySelectorAll("mn").forEach((node, i) => {
+            node.textContent = fmt(values[i], 4);
+        });
         const note = document.createElement("span");
         note.className = "optics-readout-note";
         note.textContent = "Determinant: " + fmt(determinant, 4) + " · B in mm, C in mm⁻¹";
@@ -1557,7 +1560,7 @@
         const warn = [];
         if (r.empty) {
             ["statEfl", "statSi", "statM", "statNA", "statRms"].forEach((id) => setText(id, "—"));
-            // clear the result cards and tables too, so no value from the previous system lingers
+
             document.querySelectorAll("#readouts dd").forEach((dd) => setText(dd.id, "—"));
             setText("rMagLabel", "Magnification");
             setText("statMLabel", "Magnification");
@@ -1670,7 +1673,7 @@
         setText("convRatioHead", "Error / ρ" + (order === 3 ? "³" : "²"));
         const tb = $("convTable").querySelector("tbody");
         tb.innerHTML = convRows.map((row) => {
-            // below 10 fm (or 10 frad) the difference is floating-point round-off, not aberration
+
             const d = Math.abs(row.delta) < 1e-14 ? 0 : row.delta;
             const dTxt = !Number.isFinite(d) ? row.status : slope ? fmt(d * 1e6, 4) + " µrad" : fmt(d / 1e-6, 4) + " µm";
             const kTxt = !Number.isFinite(d) ? "—" : slope ? fmt(d / row.rho ** order * 1e6, 4) + " µrad" : fmt(d / row.rho ** order / 1e-6, 4) + " µm";
@@ -1890,7 +1893,7 @@
         let z;
         if (mirror && type !== "mirror") z = mirror.z - 40;
         else if (type === "mirror") {
-            // Behind everything already on the bench, including the detector, which then moves to the returning path.
+
             const zs = list.map((e) => e.z + (e.t || 0));
             z = zs.length ? Math.max(...zs) + 40 : 100;
         } else if (type === "detector") {

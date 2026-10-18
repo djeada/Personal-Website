@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/07_evaluating_performance",
             "description": "Evaluating a parallel program means more than asking whether it runs faster with more processors.",
-            "dateModified": "2026-09-12",
+            "dateModified": "2026-10-12",
             "image": "https://adamdjellouli.com/resources/article-images/f94b018d-9741-46ee-80ae-ecfb52141fba-44d95a5c4a.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Evaluating a parallel program means more than asking whether it runs faster with more processors." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/f94b018d-9741-46ee-80ae-ecfb52141fba-44d95a5c4a.webp" property="og:image" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -158,7 +158,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -244,7 +244,8 @@ messageStyle: "none"
             <p>$$
                 E_4 = \frac{3.57}{4} \approx 0.893 = 89.3\%
                 $$</p>
-            <p>An efficiency near $1$ indicates that the additional processors are being used effectively. Efficiency usually decreases as the processor count grows because communication, synchronization, and serial work become more significant.</p>
+            <p>An efficiency near $1$ means speedup is close to linear relative to the chosen baseline. It is not the percentage of time each CPU is busy: a processor can be fully occupied by spinning or redundant work and still contribute little useful speedup. Efficiency usually decreases as communication, synchronization, and serial work become more significant.</p>
+            <p>State what $p$ counts: physical cores, software threads, MPI ranks, or GPUs. For hybrid runs, report ranks and threads per rank separately. Keep the problem size and timed boundaries consistent, and distinguish speedup over the one-worker parallel implementation from speedup over the best sequential implementation.</p>
             <p>V. Scalability</p>
             <ul>
                 <li><strong>Scalability</strong> describes how performance changes as more processing resources are added.</li>
@@ -409,6 +410,34 @@ messageStyle: "none"
             </ul>
             <h3 id="performance-measurement-techniques">Performance Measurement Techniques</h3>
             <p>Performance measurement should be systematic and reproducible. A single timing result is rarely sufficient because parallel execution is affected by scheduling, cache state, network traffic, frequency scaling, operating-system activity, and input-dependent behavior.</p>
+            <p>Before collecting timings, decide what is inside the measured region. The following boundaries answer different questions:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Measurement</th>
+                        <th>Include</th>
+                        <th>Question answered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>End-to-end latency</td>
+                        <td>Startup, input, computation, transfers, required waits, and output</td>
+                        <td>How long does the user wait for a completed result?</td>
+                    </tr>
+                    <tr>
+                        <td>Computation phase</td>
+                        <td>The selected work and all waits needed to finish it</td>
+                        <td>How well does this phase scale?</td>
+                    </tr>
+                    <tr>
+                        <td>Steady-state throughput</td>
+                        <td>Completed items during a stated interval after warm-up</td>
+                        <td>How much work can the running system sustain?</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Do not compare a sequential end-to-end time with a parallel compute-only time. If startup or transfers are excluded, report them separately so the reader can reconstruct the total cost.</p>
             <p>Before profiling or monitoring, establish a reliable measurement procedure:</p>
             <ul>
                 <li>Use a representative workload and realistic input size.</li>
@@ -548,6 +577,7 @@ MPI_Reduce(
             </div>
             <p>Taking the <strong>maximum</strong> process time reflects the fact that the parallel phase is not complete until its slowest participating process finishes.</p>
             <p>The barrier in this example is appropriate only when the measurement intentionally requires aligned start times. Adding barriers that are not present in the actual algorithm can change behavior and produce an unrealistic measurement.</p>
+            <p>For asynchronous GPU work, timing just the host's kernel-launch call measures submission overhead. Use GPU events for a device interval, or wait for the relevant work to finish before stopping an end-to-end host timer. Report whether transfers and allocation are included. See <a href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#timing">CUDA timing guidance</a>.</p>
             <h4 id="strong-scaling-experiment">Strong-Scaling Experiment</h4>
             <p>A simple strong-scaling study keeps the problem fixed and measures:</p>
             <table>

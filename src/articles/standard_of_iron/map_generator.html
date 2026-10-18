@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Map generator | Adam Djellouli</title>
+    <meta content="scripts/soi-mapgen.py turns a seed, a preset and a handful of parameters into a complete, playable battlefield." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/map_generator" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Map generator",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/map_generator"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/map_generator",
+            "description": "scripts/soi-mapgen.py turns a seed, a preset and a handful of parameters into a complete, playable battlefield.",
+            "dateModified": "2026-10-06",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Map generator" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/standard_of_iron/map_generator" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="scripts/soi-mapgen.py turns a seed, a preset and a handful of parameters into a complete, playable battlefield." property="og:description" />
+    <meta content="2026-10-06" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/standard_of_iron.html">Standard Of Iron</a></li><li><span aria-current="page">Map generator</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#quick-start">Quick start</a></li>
+                    <li><a href="#how-a-battlefield-is-laid-out">How a battlefield is laid out</a></li>
+                    <li><a href="#presets">Presets</a></li>
+                    <li><a href="#parameters">Parameters</a></li>
+                    <li><a href="#soak-testing">Soak testing</a></li>
+                    <li><a href="#contract">Contract</a>
+                        <ol>
+                            <li><a href="#stages">Stages</a></li>
+                            <li><a href="#provenance">Provenance</a></li>
+                            <li><a href="#map-metadata">Map metadata</a></li>
+                            <li><a href="#command-line">Command line</a></li>
+                            <li><a href="#describe-schema">--describe schema</a></li>
+                            <li><a href="#report">Report</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/standard_of_iron/macos_signing.html">macOS Code Signing and Notarization</a></li><li><a href="/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li><li><a href="/articles/standard_of_iron/iron_sepulcher.html">The Iron Sepulcher</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ambient_wildlife.html">Ambient Wildlife</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_licenses.html">Audio Licenses</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_system.html">Audio System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/baked_meshes.html">Baked Meshes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_map_film.html">Campaign Map Film</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/difficulty.html">Difficulty</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/documentary.html">Documentary</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/drama.html">Drama</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/frame_pacing.html">Frame Pacing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/hill_shapes.html">Hill Shapes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a aria-current="page" href="https://adamdjellouli.com/articles/standard_of_iron/map_generator.html">Map Generator</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/performance.html">Performance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rafts.html">Rafts</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rockfall.html">Rockfall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/trailer.html">Trailer</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/farm_activity.html">Farm Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/home_activity.html">Home Activity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/marketplace.html">Marketplace</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/siege_presentation.html">Siege Presentation</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 06, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Map generator</h1>
+            <p><code>scripts/soi-mapgen.py</code> turns a seed, a preset and a handful of parameters into a
+                complete, playable battlefield. It does not replace the map pipeline; it authors
+                the <em>intent</em> that pipeline already consumes and then runs it:</p>
+            <div>
+                <pre><code class="language-text">seed + preset + parameters
+  -&gt; terrain intent        (hills, ridges, mountains)
+  -&gt; water intent          -&gt; scripts/generate-map-water.py
+  -&gt; settlement intent     (anchors on open ground)
+  -&gt; road intent           -&gt; scripts/generate-map-roads.py   (builds the bridges)
+                           -&gt; scripts/generate-map-settlements.py
+  -&gt; forest intent
+  -&gt; landmark intent       -&gt; scripts/generate-map-landmarks.py
+  -&gt; dressing intent       -&gt; scripts/generate-map-dressing.py
+  -&gt; spawns
+  -&gt; placement             -&gt; scripts/fix-map-prop-overlaps.py
+  -&gt; validation + metrics  (water/roads/settlements --validate-only, own checks)
+  -&gt; candidate map + report</code></pre>
+            </div>
+            <p>The map editor's <strong>Generator</strong> tab is a front end for the same command; anything
+                the tab can do, the command line can do, so tests and CI drive the generator
+                without a window.</p>
+            <p>The design rules in <code>scripts/RTS_MAP_DESIGN.md</code> are the generator's contract:
+                terrain is a tactical graph first and scenery second.</p>
+            <h2 id="quick-start">Quick start</h2>
+            <div>
+                <pre><code class="language-bash"># a river battlefield from seed 7
+python3 scripts/soi-mapgen.py --preset river_crossing --seed 7 --output my_map.json
+# the same preset with two rivers and more woods
+python3 scripts/soi-mapgen.py --preset river_crossing --seed 7 \
+    --set water.rivers=2 --set forests.density=0.8 --output my_map.json
+# keep the ground and water of a map you like, reroll everything else
+python3 scripts/soi-mapgen.py --preset river_crossing --seed 8 \
+    --base my_map.json --lock terrain,water --output my_map_v2.json</code></pre>
+            </div>
+            <p>Each run writes the map and a report next to it (<code>my_map.report.json</code>) and prints
+                the checks. Open the map in the editor, or use the editor's <strong>Generator</strong> tab,
+                which runs the same command and previews the candidate before it replaces the
+                document.</p>
+            <p>A standard map takes 10-30 seconds; the road and water tools' path searches are
+                most of it. A seed that fails a hard check is retried with fresh stage seeds up
+                to four times before the run reports failure.</p>
+            <h2 id="how-a-battlefield-is-laid-out">How a battlefield is laid out</h2>
+            <p>Before anything is placed the generator draws a tactical skeleton from the
+                layout seed (<code>scripts/mapgen/layout.py</code>):</p>
+            <ul>
+                <li><strong>Orientation</strong> - which edge the player starts from.</li>
+                <li><strong>Sectors</strong> - 3 to 5 basins across the field. Each boundary between them is a
+                    river, a ridge line, a wood belt or open ground, chosen from the preset's
+                    water, ridge and forest weights and the choke intensity.</li>
+                <li><strong>Routes</strong> - one to three strategic routes from the player's edge to the
+                    enemy's, bending between basins. Flanking sets how far apart they run.</li>
+                <li><strong>Cross links</strong> - roads between routes (or round a single route) at sector
+                    centres. Every one closes a loop, so every standard map has at least one.</li>
+                <li><strong>Sites</strong> - where settlements may stand: towns on the routes at the links,
+                    forts just behind a boundary, camps in the basins.</li>
+            </ul>
+            <p>The stages then build on that plan:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stage</th>
+                        <th>Synthesises</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>terrain</code></td>
+                        <td>Mountain walls on the flanks; corridor ridges along ridge boundaries with the routes' gaps left open; defended hills (mounds, boomerangs with their pocket to the road, elbows, rings) beside the routes with 2-3 entrances facing them; pedestal hills for hilltop forts.</td>
+                    </tr>
+                    <tr>
+                        <td><code>water</code></td>
+                        <td>A river guide from edge to edge (or edge to a flank tarn) on each river boundary; edge tarns that close a flank; a coast of large edge lakes; a ring moat round the enemy seat. Every lake touches the map edge or a river, as the water gate requires.</td>
+                    </tr>
+                    <tr>
+                        <td><code>settlements</code></td>
+                        <td>The player's start camp, the enemy seat (a town when the preset has one) and the remaining towns, forts and camps at layout sites. Towns straddle a route; camps and forts stand beside one, clear of the planned roads.</td>
+                    </tr>
+                    <tr>
+                        <td><code>roads</code></td>
+                        <td>Routes edge to edge through the towns on them, cross links, extra diagonal crossings when a river needs more bridges (or a funnel onto one bridge for a hold-the-bridge map), and paired approaches to every camp, fort and spurred hill entrance. Junctions are written into the routes' guides so the road tool joins them exactly.</td>
+                    </tr>
+                    <tr>
+                        <td><code>forests</code></td>
+                        <td>Belts along wood boundaries, ambush woods beside the roads, flank screens at the map edge - all clear of settlements by the clearance parameter.</td>
+                    </tr>
+                    <tr>
+                        <td><code>landmarks</code></td>
+                        <td>Sanctuaries, shrines, hamlets and watch posts on the outer side of a road, away from settlements; a share are held by an enemy picket.</td>
+                    </tr>
+                    <tr>
+                        <td><code>dressing</code></td>
+                        <td>Bridgeheads, a lost ford, riverbanks, hill ramps, scree under ridges, gate approaches, farmland and orchards round towns, the player's tent lines, copses in open ground.</td>
+                    </tr>
+                    <tr>
+                        <td><code>spawns</code></td>
+                        <td>The player's commander and army formed up on the enemy side of the start camp; a commander and garrisons for the enemy.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Places get deterministic names from small pools per nation
+                (<code>scripts/mapgen/data/names.json</code>): settlements, rivers, woods, landmarks and
+                the map itself. Names are stored on the intent entries and used for ids.</p>
+            <h2 id="presets">Presets</h2>
+            <p>Presets are JSON files in <code>scripts/mapgen/presets/</code>; add one by dropping a file
+                there with <code>id</code>, <code>label</code>, <code>description</code>, <code>width</code>, <code>height</code> and a <code>parameters</code>
+                object of overrides.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Preset</th>
+                        <th>Character</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>open_plains</code></td>
+                        <td>Few obstacles, wide basins, two long routes and a single cross link.</td>
+                    </tr>
+                    <tr>
+                        <td><code>river_crossing</code></td>
+                        <td>One river splits the field; each route has its bridge to hold or force.</td>
+                    </tr>
+                    <tr>
+                        <td><code>mountain_pass</code></td>
+                        <td>Mountain walls on both flanks squeeze the routes into a pass with ridges across.</td>
+                    </tr>
+                    <tr>
+                        <td><code>coastal_battlefield</code></td>
+                        <td>The sea closes one flank; a river comes down to the coast.</td>
+                    </tr>
+                    <tr>
+                        <td><code>forest_ambush</code></td>
+                        <td>Woods crowd the roads: cavalry keeps to the routes, infantry owns the trees.</td>
+                    </tr>
+                    <tr>
+                        <td><code>siege_town</code></td>
+                        <td>A moated town with forts on its approaches and a large starting army.</td>
+                    </tr>
+                    <tr>
+                        <td><code>fortified_frontier</code></td>
+                        <td>A line of forts on ridges along the border, a town behind them.</td>
+                    </tr>
+                    <tr>
+                        <td><code>multi_settlement_valley</code></td>
+                        <td>Several towns and camps on a dense road net with farms between.</td>
+                    </tr>
+                    <tr>
+                        <td><code>broken_hills</code></td>
+                        <td>Ridges, boomerangs and rings everywhere; every boundary is high ground.</td>
+                    </tr>
+                    <tr>
+                        <td><code>marsh_wetland</code></td>
+                        <td>Slow rivers, meres along the edges and alder woods.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="parameters">Parameters</h2>
+            <p><code>--describe</code> lists every parameter with its range, default and help text; the
+                editor builds its controls from that list. They group as:</p>
+            <ul>
+                <li><strong>General</strong> - biome (ground, light and weather copied from a shipped map, see
+                    <code>scripts/mapgen/data/biomes.json</code>) and the player's nation.
+                </li>
+                <li><strong>Tactical</strong> - sectors, choke intensity, flanking, formation space, mirror
+                    layout.</li>
+                <li><strong>Terrain</strong> - relief, hills, mountains, ridges, roughness.</li>
+                <li><strong>Water</strong> - rivers, lakes, river width, crossings per river, edge-to-edge
+                    chance, coast, moat.</li>
+                <li><strong>Roads</strong> - main routes, cross links, side roads, road width.</li>
+                <li><strong>Settlements</strong> - towns, forts, camps, plan variety, spacing, hilltop chance,
+                    farmland, walled start.</li>
+                <li><strong>Forests</strong> - density, size, ambush share, settlement clearance.</li>
+                <li><strong>Landmarks</strong> - count, spacing, guarded share.</li>
+                <li><strong>Dressing</strong> - density, scatter.</li>
+                <li><strong>Spawns</strong> - starting army, garrison strength.</li>
+            </ul>
+            <h2 id="soak-testing">Soak testing</h2>
+            <div>
+                <pre><code class="language-bash">make test-map-generation seeds=100          # seeds 1..100 across every preset
+python3 scripts/soi-mapgen.py --preset all --seed 1 --count 50 --report-dir artifacts/mapgen</code></pre>
+            </div>
+            <p><code>--preset all</code> cycles the presets seed by seed. <code>summary.json</code> lists failures by
+                check id, pathological seeds (failed, retried, or slower than twice the median)
+                and mean metrics; every seed's map and report sit beside it, and any failure
+                reproduces with <code>--preset &lt;id&gt; --seed &lt;n&gt;</code>. <code>tests/scripts/test_mapgen.py</code> runs
+                a small fixed set in the unit tests; <code>SOI_MAPGEN_SOAK=1</code> widens it to every
+                preset at full size.</p>
+            <p>Generation is deterministic for a given generator version: dressing and
+                placement run with <code>--surface off</code>, so whether <code>terrain_probe</code> happens to be
+                built does not change the map.</p>
+            <h2 id="contract">Contract</h2>
+            <p>This section is the interface between the generator and its callers (the
+                editor, tests, batch runs). Change it in one place and update both sides.</p>
+            <h3 id="stages">Stages</h3>
+            <p>Fixed order. Every stage has a stable id.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>owns (map JSON)</th>
+                        <th>regenerated whenever this stage is unlocked:</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>terrain</code></td>
+                        <td><code>terrain</code> (hills, shaped ridges, mountains)</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><code>water</code></td>
+                        <td><code>rivers</code>, <code>lakes</code></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><code>settlements</code></td>
+                        <td><code>settlements</code> intent; its <code>structures</code> output</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><code>roads</code></td>
+                        <td><code>roads</code>, <code>bridges</code></td>
+                        <td><code>settlements</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>forests</code></td>
+                        <td><code>forests</code></td>
+                        <td><code>settlements</code>, <code>roads</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>landmarks</code></td>
+                        <td><code>landmarks</code> intent; its <code>structures</code>/<code>world_props</code>/<code>spawns</code> output</td>
+                        <td><code>settlements</code>, <code>roads</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>dressing</code></td>
+                        <td><code>dressing</code> intent; its <code>world_props</code> output</td>
+                        <td><code>terrain</code>, <code>water</code>, <code>settlements</code>, <code>roads</code>, <code>landmarks</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>spawns</code></td>
+                        <td>generated starting armies in <code>spawns</code></td>
+                        <td><code>settlements</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The last column is the <em>forced</em> rule: a stage whose intent is derived from
+                another stage's geometry cannot stay locked while that stage is rerolled. Roads
+                run between settlement anchors, so unlocking settlements forces roads. A caller
+                asking for a forced stage to stay locked gets it regenerated anyway, and the
+                report names the stage that forced it (<code>forced_by</code>).</p>
+            <p>A locked stage keeps the base map's arrays for that stage <strong>verbatim</strong>. Its
+                materialiser does not re-run, and after every tool that does run the locked
+                arrays are put back unchanged: <code>generate-map-settlements.py</code> grows a hill to
+                carry a hilltop settlement and moves ramps out of a new wall ring, and neither
+                may touch locked terrain. When a tool tried to, the stage notes say so, and the
+                validation gates decide whether the candidate still holds; a candidate that
+                does not is retried and, failing that, reported. The settlement stage never
+                asks for a hilltop settlement while terrain is locked, which is the common case.</p>
+            <p>Materialiser <em>output</em> of a locked intent stage (a locked settlement's
+                buildings, a locked landmark's props) is kept verbatim too, unless the ground
+                it stands on was rerolled: then the tool lays the same intent out again, so a
+                locked town keeps its tier, plan and position and realigns its gates to the new
+                roads. Placement correction never moves an element the run did not generate.</p>
+            <p>Every synthesiser treats everything already in the working map - locked stages
+                and authored elements - as an obstacle, so a rerolled hill never lands on a
+                locked river and a rerolled forest never grows through a locked town.</p>
+            <h3 id="provenance">Provenance</h3>
+            <p>Every element the generator authors carries <code>"generated": "&lt;stage id&gt;"</code>:
+                terrain features, rivers, lakes, roads, bridges, forests, spawns and the
+                <code>settlements</code>/<code>landmarks</code>/<code>dressing</code> intent entries. Materialiser output keeps
+                the ownership key its tool already writes (<code>settlement</code>, <code>landmark</code>,
+                <code>dressing</code>) and gains the <code>generated</code> key as well.
+            </p>
+            <p>An element <strong>without</strong> <code>generated</code> is authored. Rerolling a stage removes only
+                that stage's <code>generated</code> elements; authored elements are kept and treated as
+                obstacles. The runtime ignores all of these keys.</p>
+            <p>Editing a generated element in the map editor (moving it, changing its owner,
+                editing its JSON) converts it to authored: the edit strips <code>generated</code>,
+                <code>settlement</code>, <code>landmark</code> and <code>dressing</code> from that element, in the same undo
+                step. A later reroll then leaves it alone instead of silently replacing the
+                user's work.
+            </p>
+            <h3 id="map-metadata">Map metadata</h3>
+            <p>A generated map records how to reproduce itself in a root <code>generation</code> object.
+                Maps without it load exactly as before.</p>
+            <div>
+                <pre><code class="language-json">"generation": {
+  "version": 1,
+  "generator": "soi_mapgen",
+  "seed": 73948291,
+  "preset": "river_crossing",
+  "width": 650,
+  "height": 650,
+  "parameters": { "terrain.relief": 0.5, "water.rivers": 1 },
+  "stage_seeds": { "terrain": 1932, "water": 88123 },
+  "locks": ["terrain"]
+}</code></pre>
+            </div>
+            <p><code>parameters</code> is the fully resolved set (preset defaults plus overrides), so the
+                same <code>version</code> + <code>seed</code> + <code>parameters</code> reproduces the same map byte for byte.</p>
+            <p>Stage seeds are derived, never drawn in sequence:
+                <code>stage_seed = int.from_bytes(sha256(f"{seed}:{stage}").digest()[:8], "big") &amp; (2**53 - 1)</code>.
+                Changing one stage's parameters therefore cannot perturb another stage's
+                random stream. The mask keeps every seed exact in a JSON double, so the
+                metadata survives the editor's QJsonValue round trip. A retry derives
+                <code>sha256(f"{seed}:{stage}:attempt{n}")</code> the same way.
+            </p>
+            <p>Two more keys describe how the candidate was found: <code>layout_seed</code> (the seed of
+                the tactical skeleton; a reroll with any lock reuses the base map's, so the
+                skeleton stays put while unlocked stages change) and <code>attempt</code> (0 unless the
+                first candidate failed a hard check).</p>
+            <h3 id="command-line">Command line</h3>
+            <div>
+                <pre><code class="language-bash">python3 scripts/soi-mapgen.py --describe
+python3 scripts/soi-mapgen.py --preset river_crossing --seed 73948291 \
+    [--width 650 --height 650] [--set water.rivers=2 ...] \
+    [--request request.json] \
+    [--base current.json --lock terrain,water] \
+    --output candidate.json [--report report.json] [--progress]
+python3 scripts/soi-mapgen.py --preset river_crossing --seed 1 --count 100 \
+    --report-dir artifacts/mapgen</code></pre>
+            </div>
+            <ul>
+                <li><code>--describe</code> prints the schema below to stdout and exits 0.</li>
+                <li><code>--request</code> reads a request object (
+                    <pre><code class="language-none">{"version", "seed", "preset", "width",
+"height", "parameters", "locks"}</code></pre>); explicit flags override it. A map's
+                    <code>generation</code> object is a valid request.
+                </li>
+                <li><code>--base</code> is the document to reroll; <code>--lock</code> lists the stages to keep from it.
+                    Without <code>--base</code> the map is generated from scratch and <code>--lock</code> is an error.</li>
+                <li><code>--progress</code> writes one JSON object per line to <strong>stdout</strong>, nothing else goes
+                    to stdout; tool chatter goes to stderr.<ul>
+                        <li><code>{"event": "stage", "stage": "water", "status": "running"}</code></li>
+                        <li><code>{"event": "stage", "stage": "water", "status": "done", "seconds": 1.4}</code>;
+                            status is one of <code>running</code>, <code>done</code>, <code>locked</code>, <code>failed</code></li>
+                        <li><code>{"event": "done", "ok": true, "output": "&lt;path&gt;", "report": "&lt;path&gt;"}</code></li>
+                        <li><code>{"event": "error", "message": "..."}</code> before an exit status of 2</li>
+                        <li>Stage events also name the two closing passes, <code>placement</code> and
+                            <code>validation</code>, and carry <code>"attempt": n</code>; a retry starts the stages again
+                            from <code>terrain</code> with the next attempt number.
+                        </li>
+                    </ul>
+                </li>
+                <li>Without <code>--report</code> the report is written next to the output as
+                    <code>&lt;output&gt;.report.json</code>.
+                </li>
+                <li>Exit status: <code>0</code> candidate written and every check passed or warned; <code>1</code>
+                    candidate written but a hard check failed; <code>2</code> bad arguments or no candidate
+                    could be produced (the report says why when it can).</li>
+                <li><code>--count N</code> generates seeds <code>seed .. seed+N-1</code> into <code>--report-dir</code>
+                    (<code>seed_&lt;n&gt;.json</code>, <code>seed_&lt;n&gt;.report.json</code>) and writes <code>summary.json</code> with the
+                    failure count, failures by check id, pathological seeds, generation time and
+                    mean metrics. Exit <code>1</code> if any seed failed.</li>
+            </ul>
+            <h3 id="describe-schema"><code>--describe</code> schema</h3>
+            <div>
+                <pre><code class="language-json">{
+    "version": 1,
+    "stages": [
+        { "id": "roads", "label": "Roads", "forced_by": ["settlements"] }
+    ],
+    "parameters": [
+        {
+            "key": "terrain.relief",
+            "stage": "terrain",
+            "label": "Relief",
+            "type": "float",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.05,
+            "default": 0.5,
+            "help": "How much of the map rises into hills."
+        },
+        {
+            "key": "water.rivers",
+            "stage": "water",
+            "label": "Rivers",
+            "type": "int",
+            "min": 0,
+            "max": 3,
+            "default": 1
+        },
+        {
+            "key": "general.biome",
+            "stage": "general",
+            "label": "Biome",
+            "type": "choice",
+            "choices": [{ "id": "temperate", "label": "Temperate" }],
+            "default": "temperate"
+        },
+        {
+            "key": "tactical.symmetric",
+            "stage": "tactical",
+            "label": "Mirror layout",
+            "type": "bool",
+            "default": false
+        }
+    ],
+    "presets": [
+        {
+            "id": "river_crossing",
+            "label": "River Crossing",
+            "description": "One river splits the field; two bridges and a ford.",
+            "width": 650,
+            "height": 650,
+            "parameters": { "water.rivers": 1 }
+        }
+    ]
+}</code></pre>
+            </div>
+            <p><code>stage</code> on a parameter is one of the stage ids, or <code>general</code> / <code>tactical</code> for
+                parameters that shape the whole map.</p>
+            <h3 id="report">Report</h3>
+            <div>
+                <pre><code class="language-json">{
+    "version": 1,
+    "ok": true,
+    "request": { "seed": 1, "preset": "river_crossing", "parameters": {} },
+    "stages": [
+        {
+            "id": "water",
+            "status": "done",
+            "seed": 88123,
+            "seconds": 1.4,
+            "forced_by": null,
+            "notes": ["river 1: 649.7 -&gt; 650.9, 36 points"]
+        }
+    ],
+    "checks": [
+        {
+            "id": "roads.connected",
+            "status": "pass",
+            "message": "connected road graph"
+        },
+        {
+            "id": "tactical.flank_diversity",
+            "status": "warn",
+            "message": "western route has low flank diversity",
+            "objects": [{ "kind": "road", "index": 3, "x": 120.0, "z": 44.0 }]
+        }
+    ],
+    "metrics": {
+        "road_components": 1,
+        "edge_connections": 4,
+        "route_loops": 1,
+        "bridges": 2,
+        "settlements": 3,
+        "sectors": 4,
+        "dead_ends": 0,
+        "formation_area_ratio": 0.41,
+        "terrain_blockage": 0.12,
+        "forest_blockage": 0.06,
+        "min_settlement_spacing": 180.0,
+        "out_of_bounds": 0,
+        "seconds": 9.2
+    }
+}</code></pre>
+            </div>
+            <p>Stage <code>status</code> is <code>done</code>, <code>locked</code> or <code>failed</code>. The report also lists
+                <code>attempts</code> - <code>[{"attempt": 0, "failures": ["settlements.gate"]}, ...]</code> - and the
+                metrics include <code>attempts</code>, <code>water_coverage</code>, <code>spawn_to_objective</code> and
+                <code>min_landmark_spacing</code>.
+            </p>
+            <p>Check <code>status</code> is <code>pass</code>, <code>warn</code> or <code>fail</code>. A <code>fail</code> makes <code>ok</code> false and the
+                exit status 1. <code>roads.loop</code> fails on a standard map (both sides at least 500)
+                and only warns on a smaller one, following the loop rule in
+                <code>scripts/RTS_MAP_DESIGN.md</code>. <code>terrain.hill_approaches</code> applies the engine's own
+                terrain audit (<code>game/map/terrain_topology_audit.cpp</code>): the loader expands an
+                entrance into every cell within its radius, so two ramps only count as two
+                approaches when their centres are further apart than both radii plus 12% of
+                the hill's smaller extent. It fails for a generated hill and warns for an
+                authored one. <code>objects</code> is optional; <code>kind</code> is one of <code>terrain</code>, <code>river</code>,
+                <code>lake</code>, <code>road</code>, <code>bridge</code>, <code>structure</code>, <code>spawn</code>, <code>world_prop</code>, <code>forest</code>,
+                <code>settlement</code>, <code>landmark</code>, with the map coordinates of the problem so a caller
+                can frame it.
+            </p>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

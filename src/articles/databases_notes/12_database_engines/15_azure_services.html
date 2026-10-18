@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Choosing a Database on Microsoft Azure | Adam Djellouli</title>
+    <meta content="Azure provides several managed relational, NoSQL, cache, and distributed data services." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Choosing a Database on Microsoft Azure",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services",
+            "description": "Azure provides several managed relational, NoSQL, cache, and distributed data services.",
+            "dateModified": "2026-09-30",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Choosing a Database on Microsoft Azure" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Azure provides several managed relational, NoSQL, cache, and distributed data services." property="og:description" />
+    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Engines</li><li><span aria-current="page">Choosing a Database on Microsoft Azure</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#workload-map">Workload map</a></li>
+                    <li><a href="#azure-sql-database">Azure SQL Database</a>
+                        <ol>
+                            <li><a href="#architecture">Architecture</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#sql-database-versus-managed-instance">SQL Database versus Managed Instance</a></li>
+                    <li><a href="#azure-database-for-postgresql">Azure Database for PostgreSQL</a>
+                        <ol>
+                            <li><a href="#cli-example">CLI example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#postgresql-high-availability">PostgreSQL high availability</a></li>
+                    <li><a href="#azure-database-for-mysql">Azure Database for MySQL</a></li>
+                    <li><a href="#azure-cosmos-db">Azure Cosmos DB</a></li>
+                    <li><a href="#cosmos-db-partition-key">Cosmos DB partition key</a></li>
+                    <li><a href="#cosmos-db-consistency">Cosmos DB consistency</a></li>
+                    <li><a href="#request-capacity-model">Request/capacity model</a></li>
+                    <li><a href="#azure-managed-redis">Azure Managed Redis</a></li>
+                    <li><a href="#azure-managed-instance-for-apache-cassandra">Azure Managed Instance for Apache Cassandra</a></li>
+                    <li><a href="#azure-ai-search">Azure AI Search</a></li>
+                    <li><a href="#sql-server-on-azure-vms">SQL Server on Azure VMs</a></li>
+                    <li><a href="#managed-database-versus-vm">Managed database versus VM</a></li>
+                    <li><a href="#networking">Networking</a></li>
+                    <li><a href="#identity">Identity</a></li>
+                    <li><a href="#secrets">Secrets</a></li>
+                    <li><a href="#encryption">Encryption</a></li>
+                    <li><a href="#backups">Backups</a></li>
+                    <li><a href="#high-availability-versus-disaster-recovery">High availability versus disaster recovery</a></li>
+                    <li><a href="#cost-dimensions">Cost dimensions</a></li>
+                    <li><a href="#choosing-by-workload">Choosing by workload</a>
+                        <ol>
+                            <li><a href="#conventional-transactional-application">Conventional transactional application</a></li>
+                            <li><a href="#existing-sql-server-enterprise-application">Existing SQL Server enterprise application</a></li>
+                            <li><a href="#global-nosql-application">Global NoSQL application</a></li>
+                            <li><a href="#cache-session-rate-limit">Cache/session/rate limit</a></li>
+                            <li><a href="#search">Search</a></li>
+                            <li><a href="#existing-cassandra-estate">Existing Cassandra estate</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#example-application-stack">Example application stack</a></li>
+                    <li><a href="#multi-region-design">Multi-region design</a></li>
+                    <li><a href="#migration-strategy">Migration strategy</a></li>
+                    <li><a href="#observability">Observability</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#choosing-a-service-from-one-keyword">Choosing a service from one keyword</a></li>
+                            <li><a href="#leaving-public-access-wide-open">Leaving public access wide open</a></li>
+                            <li><a href="#ignoring-compatibility">Ignoring compatibility</a></li>
+                            <li><a href="#treating-managed-as-maintenance-free">Treating managed as maintenance-free</a></li>
+                            <li><a href="#no-restore-tests">No restore tests</a></li>
+                            <li><a href="#adding-specialized-databases-too-early">Adding specialized databases too early</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#practical-selection-sequence">Practical selection sequence</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed SQL Databases</a></li><li><a href="/articles/databases_notes/12_database_engines/13_clickhouse.html">ClickHouse</a></li><li><a href="/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">OpenSearch and Elasticsearch</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Choosing a Database on Microsoft Azure</h1>
+            <p>Azure provides several managed relational, NoSQL, cache, and distributed data services. The correct service depends on the data model, access pattern, transaction requirements, compatibility needs, recovery objectives, and team expertise.</p>
+            <p>A cloud provider can operate infrastructure for you, but it cannot choose a good schema or query pattern.</p>
+            <p>Official references:</p>
+            <ul>
+                <li><a href="https://learn.microsoft.com/en-us/azure/architecture/guide/technology-choices/data-stores-getting-started">Azure data-store selection guide</a></li>
+                <li><a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview">Azure SQL Database overview</a></li>
+                <li><a href="https://learn.microsoft.com/en-us/azure/postgresql/">Azure Database for PostgreSQL</a></li>
+                <li><a href="https://learn.microsoft.com/en-us/azure/mysql/">Azure Database for MySQL</a></li>
+                <li><a href="https://learn.microsoft.com/en-us/azure/redis/">Azure Managed Redis</a></li>
+            </ul>
+            <h2 id="workload-map">Workload map</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Need</th>
+                        <th>Candidate</th>
+                        <th>What to investigate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Managed SQL Server-compatible relational database</td>
+                        <td>Azure SQL Database</td>
+                        <td>compatibility, service tier, compute model, HA, networking</td>
+                    </tr>
+                    <tr>
+                        <td>Lift-and-shift SQL Server with broader instance compatibility</td>
+                        <td>Azure SQL Managed Instance</td>
+                        <td>feature compatibility, VNet integration, migration path</td>
+                    </tr>
+                    <tr>
+                        <td>Managed PostgreSQL</td>
+                        <td>Azure Database for PostgreSQL Flexible Server</td>
+                        <td>extensions, version, HA topology, storage, networking</td>
+                    </tr>
+                    <tr>
+                        <td>Managed MySQL</td>
+                        <td>Azure Database for MySQL Flexible Server</td>
+                        <td>version, HA, storage, read scaling</td>
+                    </tr>
+                    <tr>
+                        <td>Globally distributed NoSQL/document/key-value workloads</td>
+                        <td>Azure Cosmos DB</td>
+                        <td>API, partition key, consistency level, request-unit/capacity model</td>
+                    </tr>
+                    <tr>
+                        <td>Redis-compatible in-memory data</td>
+                        <td>Azure Managed Redis</td>
+                        <td>tier, persistence, clustering, region availability</td>
+                    </tr>
+                    <tr>
+                        <td>Managed Cassandra estate</td>
+                        <td>Azure Managed Instance for Apache Cassandra</td>
+                        <td>compatibility, topology, migration, operations</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server with full VM-level control</td>
+                        <td>SQL Server on Azure Virtual Machines</td>
+                        <td>OS/database patch ownership, HA, backup design</td>
+                    </tr>
+                    <tr>
+                        <td>Search</td>
+                        <td>Azure AI Search</td>
+                        <td>indexing, ranking, vector/text search, ingestion model</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Treat this table as a starting point, not an automatic decision.</p>
+            <h2 id="azure-sql-database">Azure SQL Database</h2>
+            <p>Azure SQL Database is a fully managed database-as-a-service based on the SQL Server engine.</p>
+            <p>Microsoft manages much of the platform work:</p>
+            <ul>
+                <li>patching,</li>
+                <li>backups,</li>
+                <li>built-in availability,</li>
+                <li>infrastructure maintenance,</li>
+                <li>monitoring integrations.</li>
+            </ul>
+            <p>The application team still owns:</p>
+            <ul>
+                <li>schema design,</li>
+                <li>indexes,</li>
+                <li>query tuning,</li>
+                <li>transaction correctness,</li>
+                <li>cost/capacity choices,</li>
+                <li>data-retention policy.</li>
+            </ul>
+            <h3 id="architecture">Architecture</h3>
+            <div>
+                <pre><code class="language-text">application
+    │
+    ▼
+Azure SQL logical server endpoint
+    │
+    ▼
+Azure SQL Database
+    │
+    ├── managed backups
+    ├── managed HA
+    └── monitoring</code></pre>
+            </div>
+            <p>This is not the same as managing a normal SQL Server VM.</p>
+            <h2 id="sql-database-versus-managed-instance">SQL Database versus Managed Instance</h2>
+            <p>A simplified comparison:</p>
+            <div>
+                <pre><code class="language-text">cloud-native app
+    │
+    └──► Azure SQL Database
+
+existing SQL Server app
+with more instance-level dependencies
+    │
+    └──► SQL Managed Instance may fit better</code></pre>
+            </div>
+            <p>Managed Instance is commonly considered for migrations that rely on more SQL Server instance-level behavior.</p>
+            <p>Do not assume perfect compatibility. Inventory:</p>
+            <ul>
+                <li>SQL Agent jobs,</li>
+                <li>linked servers,</li>
+                <li>CLR,</li>
+                <li>server-level configuration,</li>
+                <li>cross-database behavior,</li>
+                <li>authentication,</li>
+                <li>special extensions/features.</li>
+            </ul>
+            <h2 id="azure-database-for-postgresql">Azure Database for PostgreSQL</h2>
+            <p>Azure Database for PostgreSQL Flexible Server runs PostgreSQL as a managed service.</p>
+            <p>Typical fit:</p>
+            <ul>
+                <li>normal application OLTP,</li>
+                <li>PostGIS applications,</li>
+                <li>web backends,</li>
+                <li>services wanting PostgreSQL without operating the VM/database stack.</li>
+            </ul>
+            <h3 id="cli-example">CLI example</h3>
+            <p>With Azure CLI installed and authenticated:</p>
+            <div>
+                <pre><code class="language-bash">az login</code></pre>
+            </div>
+            <p>Create a resource group:</p>
+            <div>
+                <pre><code class="language-bash">az group create   --name db-notes-rg   --location eastus</code></pre>
+            </div>
+            <p>Create a development PostgreSQL server:</p>
+            <div>
+                <pre><code class="language-bash">az postgres flexible-server create   --resource-group db-notes-rg   --name &lt;globally-unique-server-name&gt;   --location eastus   --admin-user dbadmin   --admin-password '&lt;strong-password&gt;'   --tier Burstable   --public-access &lt;your-ip-address&gt;</code></pre>
+            </div>
+            <p>The exact SKU, PostgreSQL version, storage, HA, and network settings should be chosen deliberately.</p>
+            <p>For production, private networking and Microsoft Entra authentication may be preferable to broad public access.</p>
+            <h2 id="postgresql-high-availability">PostgreSQL high availability</h2>
+            <p>A managed PostgreSQL deployment can use zone-redundant high availability where available.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">availability zone 1         availability zone 2
+┌──────────────────┐        ┌──────────────────┐
+│ primary          │───────►│ standby          │
+└──────────────────┘        └──────────────────┘
+         │
+         ▼
+     application</code></pre>
+            </div>
+            <p>HA improves service availability.</p>
+            <p>Backups/PITR are still needed for recoverability.</p>
+            <h2 id="azure-database-for-mysql">Azure Database for MySQL</h2>
+            <p>Azure Database for MySQL Flexible Server is the managed MySQL option.</p>
+            <p>Typical fit:</p>
+            <ul>
+                <li>MySQL-backed web applications,</li>
+                <li>WordPress and common MySQL ecosystems,</li>
+                <li>applications wanting managed backups/HA.</li>
+            </ul>
+            <p>Before migration, validate:</p>
+            <ul>
+                <li>exact MySQL version,</li>
+                <li>authentication plugins,</li>
+                <li>storage engine behavior,</li>
+                <li>extensions/plugins,</li>
+                <li>replication assumptions,</li>
+                <li>SQL modes.</li>
+            </ul>
+            <p>"Managed MySQL" does not mean every self-hosted configuration transfers unchanged.</p>
+            <h2 id="azure-cosmos-db">Azure Cosmos DB</h2>
+            <p>Azure Cosmos DB is a distributed NoSQL database service.</p>
+            <p>It is commonly considered when applications need:</p>
+            <ul>
+                <li>global distribution,</li>
+                <li>low-latency document/key access,</li>
+                <li>automatic partitioning,</li>
+                <li>multiple consistency choices,</li>
+                <li>high availability across regions.</li>
+            </ul>
+            <p>A simplified model:</p>
+            <div>
+                <pre><code class="language-text">application
+   │
+   ▼
+Cosmos DB container
+   │
+   ▼
+partition key
+   │
+   ├── logical partition A
+   ├── logical partition B
+   └── logical partition C</code></pre>
+            </div>
+            <p>Partition-key choice is one of the most important decisions.</p>
+            <h2 id="cosmos-db-partition-key">Cosmos DB partition key</h2>
+            <p>Suppose orders are stored with:</p>
+            <div>
+                <pre><code class="language-text">partition key = customer_id</code></pre>
+            </div>
+            <p>Queries for one customer are naturally scoped.</p>
+            <div>
+                <pre><code class="language-text">customer 42 -&gt; partition
+             ├── order A
+             ├── order B
+             └── order C</code></pre>
+            </div>
+            <p>A bad key can cause:</p>
+            <ul>
+                <li>hot partitions,</li>
+                <li>skewed storage,</li>
+                <li>expensive cross-partition queries,</li>
+                <li>scalability limits.</li>
+            </ul>
+            <p>Choose the key from expected traffic and query patterns, not just entity identity.</p>
+            <h2 id="cosmos-db-consistency">Cosmos DB consistency</h2>
+            <p>Distributed reads/writes involve consistency trade-offs.</p>
+            <p>Azure Cosmos DB provides configurable consistency models.</p>
+            <p>The application should explicitly decide:</p>
+            <ul>
+                <li>must every read see the latest committed write?</li>
+                <li>can replicas lag?</li>
+                <li>is session-level consistency enough?</li>
+                <li>what latency/availability trade-off is acceptable?</li>
+            </ul>
+            <p>Do not choose eventual or strong consistency by slogan.</p>
+            <p>Test the actual user-facing behavior.</p>
+            <h2 id="request-capacity-model">Request/capacity model</h2>
+            <p>Cosmos DB capacity and cost are tied to operations and data characteristics.</p>
+            <p>Expensive patterns can include:</p>
+            <ul>
+                <li>cross-partition scans,</li>
+                <li>poorly indexed large documents,</li>
+                <li>high write volume,</li>
+                <li>hot partition keys.</li>
+            </ul>
+            <p>Model expected operations before production.</p>
+            <p>A database that scales automatically can also scale the bill automatically.</p>
+            <h2 id="azure-managed-redis">Azure Managed Redis</h2>
+            <p>Azure Managed Redis is Azure's current managed Redis offering for low-latency in-memory workloads.</p>
+            <p>Common uses:</p>
+            <ul>
+                <li>caching,</li>
+                <li>sessions,</li>
+                <li>rate limiting,</li>
+                <li>leaderboards,</li>
+                <li>transient state.</li>
+            </ul>
+            <p>Architecture:</p>
+            <div>
+                <pre><code class="language-text">application
+    │
+    ├──► Azure Managed Redis
+    │         │
+    │      cache hit
+    │
+    └──► durable database on miss</code></pre>
+            </div>
+            <p>Do not make Redis the only copy of critical transactional data unless the persistence/durability model is deliberately designed for that role.</p>
+            <p>Azure Cache for Redis has a retirement path; new designs should check Microsoft's current migration guidance and Azure Managed Redis availability rather than assuming the older service is the long-term target.</p>
+            <h2 id="azure-managed-instance-for-apache-cassandra">Azure Managed Instance for Apache Cassandra</h2>
+            <p>Organizations with Cassandra workloads can evaluate Azure Managed Instance for Apache Cassandra.</p>
+            <p>The relevant questions are:</p>
+            <ul>
+                <li>driver/CQL compatibility,</li>
+                <li>Cassandra version,</li>
+                <li>topology,</li>
+                <li>data migration,</li>
+                <li>repair/backup responsibilities,</li>
+                <li>network latency,</li>
+                <li>operational boundary between Azure and the customer.</li>
+            </ul>
+            <p>Managed Cassandra does not change the underlying need for query-first data modeling and good partition keys.</p>
+            <h2 id="azure-ai-search">Azure AI Search</h2>
+            <p>Azure AI Search is not a relational database.</p>
+            <p>It is a search/indexing service for:</p>
+            <ul>
+                <li>text search,</li>
+                <li>document retrieval,</li>
+                <li>faceting,</li>
+                <li>semantic/vector-oriented search workflows.</li>
+            </ul>
+            <p>A common architecture:</p>
+            <div>
+                <pre><code class="language-text">primary database / blob storage
+            │
+            ▼
+      indexing pipeline
+            │
+            ▼
+      Azure AI Search
+            │
+            ▼
+         search API</code></pre>
+            </div>
+            <p>The source database remains authoritative.</p>
+            <h2 id="sql-server-on-azure-vms">SQL Server on Azure VMs</h2>
+            <p>If an application needs full SQL Server and OS-level control, a VM can be appropriate.</p>
+            <p>You control more:</p>
+            <ul>
+                <li>SQL Server configuration,</li>
+                <li>operating system,</li>
+                <li>installed agents/software,</li>
+                <li>storage layout,</li>
+                <li>maintenance windows.</li>
+            </ul>
+            <p>You also own more:</p>
+            <ul>
+                <li>patching,</li>
+                <li>HA topology,</li>
+                <li>VM management,</li>
+                <li>monitoring,</li>
+                <li>backup integration.</li>
+            </ul>
+            <p>Use a VM when that control is required, not simply because it looks familiar.</p>
+            <h2 id="managed-database-versus-vm">Managed database versus VM</h2>
+            <div>
+                <pre><code class="language-text">more managed                         more control
+&lt;----------------------------------------------------&gt;
+Azure SQL DB   Managed Instance   SQL Server VM</code></pre>
+            </div>
+            <p>As control increases, operational responsibility usually increases.</p>
+            <h2 id="networking">Networking</h2>
+            <p>Production databases should normally use deliberate network boundaries.</p>
+            <p>Options include:</p>
+            <ul>
+                <li>private endpoints,</li>
+                <li>VNet integration,</li>
+                <li>firewall rules,</li>
+                <li>restricted public endpoints.</li>
+            </ul>
+            <p>A development quickstart using public access should not become a production architecture by accident.</p>
+            <h2 id="identity">Identity</h2>
+            <p>Azure integrates database services with Microsoft Entra ID.</p>
+            <p>Benefits can include:</p>
+            <ul>
+                <li>centralized identity,</li>
+                <li>managed identities,</li>
+                <li>reduced static-password use,</li>
+                <li>auditable role assignment.</li>
+            </ul>
+            <p>Where supported, prefer workload identity/managed identity over storing administrator passwords in application configuration.</p>
+            <h2 id="secrets">Secrets</h2>
+            <p>Do not put database credentials in:</p>
+            <ul>
+                <li>source code,</li>
+                <li>Docker images,</li>
+                <li>public CI variables,</li>
+                <li>repository files.</li>
+            </ul>
+            <p>Use:</p>
+            <ul>
+                <li>Azure Key Vault,</li>
+                <li>managed identity,</li>
+                <li>protected deployment secrets.</li>
+            </ul>
+            <p>Rotate credentials and test rotation.</p>
+            <h2 id="encryption">Encryption</h2>
+            <p>Azure managed services generally provide encryption capabilities at rest and in transit, but application requirements may include:</p>
+            <ul>
+                <li>customer-managed keys,</li>
+                <li>key rotation,</li>
+                <li>field-level encryption,</li>
+                <li>compliance boundaries.</li>
+            </ul>
+            <p>Understand which layer owns the encryption key and where decryption occurs.</p>
+            <h2 id="backups">Backups</h2>
+            <p>A managed service usually automates backup creation.</p>
+            <p>You still need to define:</p>
+            <ul>
+                <li>retention,</li>
+                <li>point-in-time recovery window,</li>
+                <li>geo-redundancy if required,</li>
+                <li>restore testing,</li>
+                <li>RPO,</li>
+                <li>RTO.</li>
+            </ul>
+            <div>
+                <pre><code class="language-text">backup exists
+    !=
+restore has been tested</code></pre>
+            </div>
+            <h2 id="high-availability-versus-disaster-recovery">High availability versus disaster recovery</h2>
+            <p>HA protects against local component failures.</p>
+            <p>DR protects against larger failures.</p>
+            <div>
+                <pre><code class="language-text">HA:
+zone / node failure
+      │
+      ▼
+local failover
+
+DR:
+region or account-level event
+      │
+      ▼
+separate recovery strategy</code></pre>
+            </div>
+            <p>Do not treat one as the other.</p>
+            <h2 id="cost-dimensions">Cost dimensions</h2>
+            <p>Managed database cost can include:</p>
+            <ul>
+                <li>compute,</li>
+                <li>storage,</li>
+                <li>backup storage,</li>
+                <li>provisioned throughput,</li>
+                <li>I/O,</li>
+                <li>replicas,</li>
+                <li>cross-region replication,</li>
+                <li>network egress,</li>
+                <li>reserved capacity.</li>
+            </ul>
+            <p>A technically correct architecture can still be economically wrong.</p>
+            <p>Benchmark and estimate bills before scaling.</p>
+            <h2 id="choosing-by-workload">Choosing by workload</h2>
+            <h3 id="conventional-transactional-application">Conventional transactional application</h3>
+            <p>Start with:</p>
+            <ul>
+                <li>Azure SQL Database,</li>
+                <li>Azure Database for PostgreSQL,</li>
+                <li>Azure Database for MySQL.</li>
+            </ul>
+            <p>Choose based on application compatibility and team expertise.</p>
+            <h3 id="existing-sql-server-enterprise-application">Existing SQL Server enterprise application</h3>
+            <p>Evaluate:</p>
+            <ul>
+                <li>Azure SQL Managed Instance,</li>
+                <li>SQL Server on Azure VM.</li>
+            </ul>
+            <h3 id="global-nosql-application">Global NoSQL application</h3>
+            <p>Evaluate:</p>
+            <ul>
+                <li>Cosmos DB.</li>
+            </ul>
+            <h3 id="cache-session-rate-limit">Cache/session/rate limit</h3>
+            <p>Evaluate:</p>
+            <ul>
+                <li>Azure Managed Redis.</li>
+            </ul>
+            <h3 id="search">Search</h3>
+            <p>Evaluate:</p>
+            <ul>
+                <li>Azure AI Search.</li>
+            </ul>
+            <h3 id="existing-cassandra-estate">Existing Cassandra estate</h3>
+            <p>Evaluate:</p>
+            <ul>
+                <li>Azure Managed Instance for Apache Cassandra.</li>
+            </ul>
+            <h2 id="example-application-stack">Example application stack</h2>
+            <p>A realistic Azure application might use:</p>
+            <div>
+                <pre><code class="language-text">ASP.NET API
+    │
+    ├──► Azure SQL Database
+    │       transactional truth
+    │
+    ├──► Azure Managed Redis
+    │       cache/session
+    │
+    ├──► Azure AI Search
+    │       product search
+    │
+    └──► Blob Storage
+            files</code></pre>
+            </div>
+            <p>Using several data stores is justified only when each solves a clear workload.</p>
+            <h2 id="multi-region-design">Multi-region design</h2>
+            <p>Before enabling multi-region features, answer:</p>
+            <ol>
+                <li>Where are users?</li>
+                <li>Where are writes performed?</li>
+                <li>What consistency is required?</li>
+                <li>What happens during failover?</li>
+                <li>Can two regions write simultaneously?</li>
+                <li>How is conflict resolution handled?</li>
+                <li>What is cross-region network cost?</li>
+                <li>What is the tested recovery procedure?</li>
+            </ol>
+            <p>A global checkbox does not replace distributed-system design.</p>
+            <h2 id="migration-strategy">Migration strategy</h2>
+            <p>For an existing database:</p>
+            <div>
+                <pre><code class="language-text">inventory dependencies
+        │
+        ▼
+choose target service
+        │
+        ▼
+compatibility testing
+        │
+        ▼
+schema + data migration
+        │
+        ▼
+replication / sync
+        │
+        ▼
+cutover rehearsal
+        │
+        ▼
+production cutover</code></pre>
+            </div>
+            <p>Do not discover unsupported extensions or authentication assumptions during cutover.</p>
+            <h2 id="observability">Observability</h2>
+            <p>Monitor both application and database:</p>
+            <ul>
+                <li>query latency,</li>
+                <li>connection count,</li>
+                <li>CPU,</li>
+                <li>storage,</li>
+                <li>IOPS,</li>
+                <li>lock waits,</li>
+                <li>deadlocks,</li>
+                <li>replication lag,</li>
+                <li>cache hit ratio,</li>
+                <li>request-unit/capacity consumption,</li>
+                <li>backup success,</li>
+                <li>failover events.</li>
+            </ul>
+            <p>Use Azure Monitor integration plus engine-native query diagnostics.</p>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="choosing-a-service-from-one-keyword">Choosing a service from one keyword</h3>
+            <p>"Global" does not automatically mean Cosmos DB.</p>
+            <p>"SQL Server" does not automatically mean Managed Instance.</p>
+            <h3 id="leaving-public-access-wide-open">Leaving public access wide open</h3>
+            <p>Development defaults should be tightened before production.</p>
+            <h3 id="ignoring-compatibility">Ignoring compatibility</h3>
+            <p>Managed PostgreSQL/MySQL/SQL Server services have platform-specific limits.</p>
+            <h3 id="treating-managed-as-maintenance-free">Treating managed as maintenance-free</h3>
+            <p>Schema, queries, incidents, and capacity still belong to the team.</p>
+            <h3 id="no-restore-tests">No restore tests</h3>
+            <p>Automated backups are only useful if recovery works.</p>
+            <h3 id="adding-specialized-databases-too-early">Adding specialized databases too early</h3>
+            <p>One relational database can support many applications for a long time.</p>
+            <h2 id="practical-selection-sequence">Practical selection sequence</h2>
+            <ol>
+                <li>Classify the workload: OLTP, distributed NoSQL, cache, search, analytics.</li>
+                <li>Identify mandatory engine/API compatibility.</li>
+                <li>List transaction and consistency requirements.</li>
+                <li>Estimate data size, growth, I/O, and latency.</li>
+                <li>Decide region/zone topology.</li>
+                <li>Design private networking and identity.</li>
+                <li>Define RPO/RTO.</li>
+                <li>Benchmark a representative workload.</li>
+                <li>Estimate total monthly cost.</li>
+                <li>Test backup and failover before production.</li>
+            </ol>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="09_sql_server.html">SQL Server</a></li>
+                <li><a href="03_postgresql.html">PostgreSQL</a></li>
+                <li><a href="02_mysql.html">MySQL</a></li>
+                <li><a href="10_redis.html">Redis</a></li>
+                <li><a href="11_cassandra.html">Cassandra</a></li>
+                <li><a href="06_aws_services.html">AWS database services</a></li>
+                <li><a href="08_gcp_services.html">Google Cloud database services</a></li>
+                <li><a href="07_choosing_database.html">Choosing a database</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

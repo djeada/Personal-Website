@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/ci_cd",
             "description": "CI/CD stands for Continuous Integration and Continuous Delivery (or Continuous Deployment).",
-            "dateModified": "2026-04-18",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/ci_cd" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="CI/CD stands for Continuous Integration and Continuous Delivery (or Continuous Deployment)." property="og:description" />
-    <meta content="2026-04-18" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -225,7 +225,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: April 18, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -621,11 +621,13 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
+          set -eu
+          umask 077
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" &gt; ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan "$DEPLOY_HOST" &gt;&gt; ~/.ssh/known_hosts
+          printf '%s\n' "$SSH_PRIVATE_KEY" &gt; ~/.ssh/id_rsa
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" &gt; ~/.ssh/known_hosts
           rsync -avz --delete dist/ deploy@"$DEPLOY_HOST":/var/www/myapp/
           ssh deploy@"$DEPLOY_HOST" 'sudo systemctl restart myapp'</code></pre>
             </div>
@@ -634,9 +636,10 @@ jobs:
                 <li><strong>Triggers</strong> (<code>on</code>) define what events start the workflow—pushes, pull requests, schedules, or manual dispatches.</li>
                 <li><strong>Jobs</strong> run on virtual machines called runners; <code>ubuntu-latest</code> gives you a full Linux environment.</li>
                 <li><strong>Steps</strong> are individual commands or reusable actions from the GitHub marketplace.</li>
-                <li><strong>Secrets</strong> are encrypted environment variables configured in repository settings, never exposed in logs.</li>
+                <li><strong>Secrets</strong> are stored securely in repository, organization, or environment settings and can be passed to a step through <code>env</code>. GitHub attempts to redact their values in logs, but transformed values or application output can still leak them. Avoid printing secrets or enabling shell tracing around them.</li>
                 <li><strong>Needs</strong> enforces job ordering—the deploy job waits for build-and-test to succeed.</li>
             </ul>
+            <p>For the deployment example, set <code>DEPLOY_KNOWN_HOSTS</code> to host-key entries whose fingerprints you have verified through a trusted channel. Running <code>ssh-keyscan</code> during deployment only collects the key offered at that moment; it does not authenticate it. See the <a href="https://man.openbsd.org/ssh-keyscan.1">ssh-keyscan manual</a> and <a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets">GitHub's secret-handling guidance</a>. The <code>--delete</code> option also removes destination files absent from <code>dist/</code>, so the destination must be dedicated to this application.</p>
             <h3 id="common-pipeline-patterns">Common Pipeline Patterns</h3>
             <h4 id="build-artifacts">Build Artifacts</h4>
             <p>Most pipelines produce an artifact in the build stage—a compiled binary, a Docker image, or a bundled archive—that later stages consume. This ensures every stage tests and deploys the same artifact rather than rebuilding from source.</p>

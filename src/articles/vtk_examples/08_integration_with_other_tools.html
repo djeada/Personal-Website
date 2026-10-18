@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/08_integration_with_other_tools",
             "description": "Integration of VTK with a variety of tools and libraries provides flexibility and power that can significantly broaden the scope of visualization projects.",
-            "dateModified": "2025-04-25",
+            "dateModified": "2026-10-18",
             "image": "https://adamdjellouli.com/resources/article-images/3c7403d5-b193-4252-898c-66468c501c58-9c8b6cf713.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Integration of VTK with a variety of tools and libraries provides flexibility and power that can significantly broaden the scope of visualization projects." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/3c7403d5-b193-4252-898c-66468c501c58-9c8b6cf713.webp" property="og:image" />
-    <meta content="2025-04-25" property="article:modified_time" />
+    <meta content="2026-10-18" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -154,10 +154,34 @@ messageStyle: "none"
                     </li>
                     <li><a href="#data-conversion-considerations">Data Conversion Considerations</a>
                         <ol>
-                            <li><a href="#tabular-to-3d-structure-conversion">Tabular to 3D Structure Conversion</a></li>
-                            <li><a href="#memory-management-strategies">Memory Management Strategies</a></li>
-                            <li><a href="#metadata-handling">Metadata Handling</a></li>
-                            <li><a href="#parallel-data-processing">Parallel Data Processing</a></li>
+                            <li><a href="#tabular-to-3d-structure-conversion">Tabular to 3D Structure Conversion</a>
+                                <ol>
+                                    <li><a href="#simple-point-cloud-example">Simple Point Cloud Example</a></li>
+                                    <li><a href="#mesh-connectivity-example">Mesh Connectivity Example</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#memory-management-strategies">Memory Management Strategies</a>
+                                <ol>
+                                    <li><a href="#downsampling-strategy">Downsampling Strategy</a></li>
+                                    <li><a href="#streaming-processing">Streaming Processing</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#metadata-handling">Metadata Handling</a>
+                                <ol>
+                                    <li><a href="#structured-metadata-storage">Structured Metadata Storage</a></li>
+                                    <li><a href="#self-documenting-data-structure">Self-Documenting Data Structure</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#parallel-data-processing">Parallel Data Processing</a>
+                                <ol>
+                                    <li><a href="#parallel-loading-and-processing">Parallel Loading and Processing</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#worked-integration-numpy-vtk-without-losing-array-meaning">Worked integration: NumPy ↔ VTK without losing array meaning</a>
+                        <ol>
+                            <li><a href="#check-these-integration-boundaries">Check these integration boundaries</a></li>
                         </ol>
                     </li>
                 </ol>
@@ -179,7 +203,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: April 25, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -200,8 +224,8 @@ messageStyle: "none"
             </div>
             <h1>Integration of VTK with Other Tools and Libraries</h1>
             <p>Integration of VTK with a variety of tools and libraries provides flexibility and power that can significantly broaden the scope of visualization projects. These integrations allow you to combine VTK’s 3D rendering capabilities with platforms that excel at data analysis, computational processing, and user-friendly interfaces. This discussion explores popular tools like ParaView, VisIt, and ITK, along with examples that showcase how to blend VTK with Python-based visualization libraries such as Matplotlib in order to achieve interactive and intuitive graphical outputs.</p>
-            <p>This process often involves converting data between formats, ensuring compatibility with different coordinate systems, and exploiting specialized libraries that introduce features ranging from volume rendering to advanced image segmentation.</p>
-            <p>Typical Workflow:</p>
+            <p>These integrations often require format conversion and coordinate-system checks. The workflow below is illustrative: use only the tools your application needs.</p>
+            <p>One possible workflow (ITK is optional):</p>
             <div>
                 <pre><code class="language-shell">+-----------------+
 |  Data Sources   |  (Large HPC simulation, medical imaging, etc.)
@@ -219,7 +243,7 @@ messageStyle: "none"
          |
          v
 +-----------------+
-| Python Scripts  |  (pyvista, vtkplotlib, Matplotlib integration)
+| Python Scripts  |  (PyVista, vtkplotlib, Matplotlib integration)
 +--------+--------+
          |
          v
@@ -230,17 +254,17 @@ messageStyle: "none"
 |   or inline)    |
 +-----------------+</code></pre>
             </div>
-            <h3 id="paraview">ParaView</h3>
-            <p>ParaView is an open-source, multi-platform data analysis and visualization application that builds upon the Visualization Toolkit (VTK) to offer a more user-friendly interface for handling complex visualization pipelines and managing large-scale datasets. Originally developed through collaborations between Kitware, Los Alamos National Laboratory, and various academic institutions, ParaView has evolved into a highly versatile tool embraced by researchers, engineers, and data scientists worldwide. Its design philosophy centers on enabling high-performance visualization of massive datasets, whether they reside on a local workstation or distributed across powerful supercomputers. </p>
+            <h2 id="paraview">ParaView</h2>
+            <p>ParaView is an open-source, multi-platform data analysis and visualization application that builds upon the Visualization Toolkit (VTK) to offer a more user-friendly interface for handling complex visualization pipelines and managing large-scale datasets. Originally developed through collaborations between Kitware, Los Alamos National Laboratory, and various academic institutions, ParaView has evolved into a highly versatile tool embraced by researchers, engineers, and data scientists worldwide. Its design philosophy centers on enabling high-performance visualization of massive datasets, whether they reside on a local workstation or distributed across powerful supercomputers.</p>
             <p>A major benefit of ParaView is its flexible architecture, which allows users to work with data ranging from small, straightforward cases to petabyte-scale simulations. This scalability is achieved through client–server architecture, making it possible to separate the intensive rendering tasks from the user interface. ParaView’s user interface is known for its intuitive layout, providing quick access to a range of filters, data manipulation options, and visualization parameters. The software also offers robust support for custom extensions, making it a popular choice in scientific computing, industrial design, and numerous other fields where data insight is crucial.</p>
             <ul>
                 <li>ParaView leverages MPI (Message Passing Interface) and other parallel processing frameworks to enable distributed data processing. This means you can harness the power of multiple CPU cores or even entire supercomputer clusters, dramatically reducing the time required to load, filter, and render large datasets. The application intelligently partitions data across resources, ensuring balanced workload distribution and efficient rendering. For users working with computational fluid dynamics (CFD), climate modeling, or other intensive simulations, ParaView’s ability to handle parallel workflows is a game-changer in productivity.</li>
                 <li>Beyond static visualization, ParaView provides a built-in suite of animation tools for creating dynamic visual sequences. Users can animate isosurfaces, volume renderings, particle trails, or any other data representation over a simulation timeline. These animations can be exported to various formats (e.g., AVI, MPEG, or a sequence of images), allowing researchers and presenters to showcase complex data evolutions in a compelling, time-dependent manner. The key benefit is the ability to better understand data transitions over time, highlighting growth, decay, or interaction effects that might be missed in a static snapshot.</li>
                 <li>ParaView includes comprehensive scripting capabilities through Python, providing automation and advanced data manipulation. By using Python scripts, one can programmatically apply filters, load data, create visualizations, and export results—without the need to navigate the graphical interface manually. This is especially beneficial for repetitive tasks or large parameter sweeps, where hundreds of similar visualization processes must be executed. Additionally, Python scripting allows integration with the broader scientific Python ecosystem, making it straightforward to perform numerical analysis and machine learning tasks in tandem with visualization workflows.</li>
-                <li>ParaView’s plugin architecture enables developers to create custom modules that extend core functionality. Researchers can implement specialized readers for proprietary data formats, develop new filters for domain-specific data processing, or customize rendering techniques to address niche visualization challenges. This extensibility paves the way for specialized applications built on top of ParaView’s framework—allowing organizations or research groups to tailor the software to unique project requirements. </li>
+                <li>ParaView’s plugin architecture enables developers to create custom modules that extend core functionality. Researchers can implement specialized readers for proprietary data formats, develop new filters for domain-specific data processing, or customize rendering techniques to address niche visualization challenges. This extensibility paves the way for specialized applications built on top of ParaView’s framework—allowing organizations or research groups to tailor the software to unique project requirements.</li>
             </ul>
             <p>For more details, visit the <a href="https://www.paraview.org/">official ParaView website</a>.</p>
-            <h3 id="visit">VisIt</h3>
+            <h2 id="visit">VisIt</h2>
             <p>VisIt is another interactive, open-source visualization and analysis tool built upon the foundation of VTK. Developed primarily at Lawrence Livermore National Laboratory (LLNL), VisIt is designed to manage and visualize extremely large, complex, and often time-varying datasets. The tool has been adopted by universities, national labs, and industries worldwide due to its robust feature set, ability to handle a diverse range of file formats, and focus on high-performance computing (HPC) environments. Like ParaView, VisIt adopts a client–server model, separating compute-intensive tasks from the user interface to efficiently process large-scale data.</p>
             <p>One of VisIt’s core strengths lies in its ability to ingest data from numerous simulation codes commonly used in areas such as astrophysics, computational fluid dynamics, material sciences, and nuclear research. Its interface caters to both novices—who may need a straightforward GUI for quick visual assessments—and experts, who require fine-grained control over data transformations, rendering options, and automation scripts.</p>
             <ul>
@@ -249,7 +273,7 @@ messageStyle: "none"
                 <li>Similar to ParaView, VisIt supports remote rendering and analysis, allowing users to connect to powerful servers or HPC clusters from a lightweight client. This setup is invaluable for analyzing extremely large datasets—sometimes terabytes or petabytes in size—where transferring the entire dataset to a local machine would be impractical or impossible. VisIt’s parallel architecture efficiently distributes data and rendering tasks across available computational resources, providing quick and interactive visualization despite the dataset’s size.</li>
             </ul>
             <p>For more information, check out the <a href="https://visit.llnl.gov/">official VisIt website</a>.</p>
-            <h3 id="itk">ITK</h3>
+            <h2 id="itk">ITK</h2>
             <p>The Insight Segmentation and Registration Toolkit (ITK) is a specialized, open-source library primarily focused on image analysis, processing, segmentation, and registration. While ITK’s functionality extends to many areas, it has gained particular renown in the biomedical and medical imaging fields. When combined with VTK, ITK becomes a powerful environment for building end-to-end applications that can process complex medical image datasets—such as MRI, CT, PET scans—and visualize the processed images with high fidelity.</p>
             <p>ITK emerged from the Visible Human Project, supported by the National Library of Medicine (NLM), to provide a robust, well-tested framework for algorithmic research and deployment in medical imaging. Written in C++ with wrappers in Python and other languages, it is portable across various platforms, making it suitable for both academic experimentation and commercial product development.</p>
             <ul>
@@ -258,18 +282,18 @@ messageStyle: "none"
                 <li>Although ITK excels in image processing, it does not focus on advanced 3D rendering. This is where VTK plays a key role. By seamlessly interfacing ITK with VTK, developers can create pipelines that process raw image data using ITK’s segmentation or registration algorithms and then visualize the results in 3D. This integrated workflow is particularly potent in medical applications, allowing clinicians or researchers to segment tumors, register patient scans from multiple modalities, and visualize the outcomes in interactive 3D environments for diagnostic or surgical planning purposes.</li>
             </ul>
             <p>Learn more on the <a href="https://itk.org/">official ITK website</a>.</p>
-            <h3 id="python-visualization-libraries">Python Visualization Libraries</h3>
+            <h2 id="python-visualization-libraries">Python Visualization Libraries</h2>
             <p>Python’s extensive scientific ecosystem offers a range of libraries that can either complement or directly integrate with VTK. These libraries provide Pythonic interfaces to VTK’s rendering and data processing capabilities, making advanced 3D visualization more approachable for users who are accustomed to well-known Python tools like NumPy, Matplotlib, and pandas. Python-based visualization frameworks lower the entry barrier for complex 3D graphics, enabling quicker prototyping, better reproducibility, and streamlined collaboration.</p>
             <p>Two noteworthy libraries that integrate with VTK are:</p>
-            <p><strong>vtkplotlib</strong> merges the simplicity and familiarity of Matplotlib’s plotting style with the power of VTK’s 3D rendering engine. For users who already know Matplotlib’s 2D plotting API, vtkplotlib provides a smoother transition into 3D visualization, offering similar function calls and concepts. Whether you’re visualizing 3D point clouds, surfaces, or volumetric data, vtkplotlib allows you to leverage VTK’s hardware-accelerated rendering while still enjoying a Pythonic workflow. It’s particularly useful for generating quick 3D plots in exploratory data analysis, educational demonstrations, or research tasks where you want the convenience of Matplotlib but need true 3D capabilities. </p>
+            <p><strong>vtkplotlib</strong> merges the simplicity and familiarity of Matplotlib’s plotting style with the power of VTK’s 3D rendering engine. For users who already know Matplotlib’s 2D plotting API, vtkplotlib provides a smoother transition into 3D visualization, offering similar function calls and concepts. Whether you’re visualizing 3D point clouds, surfaces, or volumetric data, vtkplotlib allows you to leverage VTK’s hardware-accelerated rendering while still enjoying a Pythonic workflow. It’s particularly useful for generating quick 3D plots in exploratory data analysis, educational demonstrations, or research tasks where you want the convenience of Matplotlib but need true 3D capabilities.</p>
             <p>Learn more about vtkplotlib <a href="https://vtkplotlib.readthedocs.io/">here</a>.</p>
-            <p><strong>pyvista</strong> offers a high-level wrapper around VTK that simplifies mesh analysis, point cloud processing, and volumetric visualization. By providing Pythonic abstractions for common tasks—such as reading various mesh formats, applying filters (e.g., clipping, contouring), and performing rendering—pyvista substantially lowers the learning curve for those new to VTK. It also integrates well with Jupyter notebooks, making it easy to embed interactive 3D visualizations in research papers, tutorials, or data dashboards.<br />
-                In addition, pyvista includes convenient methods for spatial operations, such as computing surface normals or intersecting meshes. This makes it ideal for rapid prototyping and algorithm development in fields like computational geometry, finite element analysis, and 3D printing workflows. </p>
+            <p><strong>pyvista</strong> offers a high-level wrapper around VTK that simplifies mesh analysis, point cloud processing, and volumetric visualization. By providing Pythonic abstractions for common tasks—such as reading various mesh formats, applying filters (e.g., clipping, contouring), and performing rendering—pyvista substantially lowers the learning curve for those new to VTK. It also integrates well with Jupyter notebooks, making it easy to embed interactive 3D visualizations in research papers, tutorials, or data dashboards.
+                In addition, pyvista includes convenient methods for spatial operations, such as computing surface normals or intersecting meshes. This makes it ideal for rapid prototyping and algorithm development in fields like computational geometry, finite element analysis, and 3D printing workflows.</p>
             <p>For more details, visit <a href="https://docs.pyvista.org/">pyvista’s official documentation</a>.</p>
-            <h3 id="equations-relevant-to-geometry-and-data-conversion">Equations Relevant to Geometry and Data Conversion</h3>
-            <p>A foundational concept when rendering shapes with VTK is the equation of the sphere in 3D space. If a sphere of radius $r$ is centered at the origin, any point $(x, y, z)$ on its surface satisfies </p>
-            <p>$$x^2 + y^2 + z^2 = r^2$$ </p>
-            <p>When converting a set of points from VTK to numpy arrays, consider that each point $p_i$ in the VTK structure might appear in a one-dimensional array. This means reshaping the array to the shape $(N, 3)$ (where $N$ is the number of points) to handle each coordinate as a separate column: </p>
+            <h2 id="equations-relevant-to-geometry-and-data-conversion">Equations Relevant to Geometry and Data Conversion</h2>
+            <p>A foundational concept when rendering shapes with VTK is the equation of the sphere in 3D space. If a sphere of radius $r$ is centered at the origin, any point $(x, y, z)$ on its surface satisfies</p>
+            <p>$$x^2 + y^2 + z^2 = r^2$$</p>
+            <p>When converting a set of points from VTK to numpy arrays, consider that each point $p_i$ in the VTK structure might appear in a one-dimensional array. This means reshaping the array to the shape $(N, 3)$ (where $N$ is the number of points) to handle each coordinate as a separate column:</p>
             <p>$$
                 \text{numpy points} = \begin{pmatrix}
                 x_1 &amp; y_1 &amp; z_1 \\
@@ -278,7 +302,7 @@ messageStyle: "none"
                 x_N &amp; y_N &amp; z_N
                 \end{pmatrix}
                 $$</p>
-            <h3 id="example-integrating-vtk-with-matplotlib">Example: Integrating VTK with Matplotlib</h3>
+            <h2 id="example-integrating-vtk-with-matplotlib">Example: Integrating VTK with Matplotlib</h2>
             <p>Combining VTK and Matplotlib often involves converting VTK’s data structures into formats that Matplotlib can understand, typically numpy arrays. This approach makes it possible to visualize 3D geometries in a more conventional 2D plotting environment or incorporate the 3D scatter into an existing Matplotlib workflow. The following code demonstrates the creation of a sphere using VTK, the transfer of its points to numpy arrays, and the final scatter plot in Matplotlib. The main difference between VTK’s 3D pipeline and Matplotlib’s typical usage is that Matplotlib fundamentally expects 2D data unless you invoke its 3D toolkit.</p>
             <div>
                 <pre><code class="language-python">import matplotlib.pyplot as plt
@@ -316,7 +340,7 @@ plt.show()</code></pre>
             </ul>
             <p><img alt="matplotlib_sphere" decoding="async" height="330" loading="lazy" src="../../resources/article-images/3c7403d5-b193-4252-898c-66468c501c58-9c8b6cf713.webp" width="487" /></p>
             <p>Integration of VTK with diverse software environments can dramatically expand the potential of scientific visualization workflows. Each platform brings its own strengths and features, and combining them with VTK often leads to efficient and powerful pipelines for data analysis and 3D rendering. The following sections explore more advanced themes, including high-performance computing (HPC) integration, VR and AR setups, deeper Python interactions, and extended mathematical considerations. The aim is to show how VTK’s core functionality can serve as a springboard for innovation when it intersects with specialized libraries and systems.</p>
-            <h3 id="hpc-integration-with-vtk">HPC Integration with VTK</h3>
+            <h2 id="hpc-integration-with-vtk">HPC Integration with VTK</h2>
             <p>HPC Integration with VTK is critical when data volumes and computational complexity exceed what a single workstation can handle comfortably. Scientific simulations that produce massive multi-terabyte data sets are common in domains such as climate modeling, astrophysics, and fluid dynamics. VTK can run in parallel using MPI (Message Passing Interface) to distribute data processing tasks across multiple computing nodes.</p>
             <p>Parallel reading and rendering of data in VTK rely on mechanisms that partition the dataset into manageable pieces. Each piece is processed independently before final aggregation. ParaView and VisIt implement this parallel model under the hood, but custom applications can also harness the parallel version of VTK directly.</p>
             <div>
@@ -397,15 +421,15 @@ int main(int argc, char* argv[]) {
             <ul>
                 <li>Each MPI process generates or processes part of a geometric shape.</li>
                 <li>The domain decomposition logic would ensure that only a subsection of the sphere (or other geometry) is handled by each rank.</li>
-                <li>Final results can be merged or passed to a parallel-aware writer. </li>
+                <li>Final results can be merged or passed to a parallel-aware writer.</li>
             </ul>
-            <h3 id="vr-and-ar-integration">VR and AR Integration</h3>
+            <h2 id="vr-and-ar-integration">VR and AR Integration</h2>
             <p>VR and AR Integration with VTK is becoming more common due to the need for interactive, immersive data exploration. VTK supports OpenVR and other backends that map VTK’s scene directly to VR headsets. This is especially valuable in fields like surgical planning or complicated volumetric data analysis, where hands-on immersion can enhance understanding.</p>
             <p>A typical VR pipeline relies on the same VTK rendering process but translates the user’s head and hand controller positions into transformations in the 3D scene. If $T$ is the transformation corresponding to the user’s headset position, the final rendering process applies the matrix</p>
             <p>$$M_{\text{final}} = M_{\text{view}} \times T$$</p>
             <p>where $\mathbf{M}_{\text{view}}$ is the standard view matrix and $T$ is updated in real time according to the user’s motion. AR extends this idea by integrating real-world camera images as the background, enabling overlay of VTK objects on real scenes.</p>
             <p>Most VR and AR solutions require specialized hardware and software toolkits. SteamVR, for instance, can help manage device tracking, while custom VTK modules handle real-time rendering updates. The potential to grab objects or slice through volumetric data with a virtual scalpel can foster deeper insights that are challenging to achieve on 2D screens.</p>
-            <h3 id="extended-python-integrations">Extended Python Integrations</h3>
+            <h2 id="extended-python-integrations">Extended Python Integrations</h2>
             <p>Extended Python integrations revolve around letting VTK cooperate with a spectrum of Python data analysis and machine learning packages. Libraries like NumPy, SciPy, and pandas make it simpler to perform advanced calculations, while scikit-learn or TensorFlow can run machine learning tasks. In these scenarios, data is often shifted between VTK data arrays and NumPy arrays using vtkmodules.util.numpy_support, ensuring minimal overhead in the conversion.</p>
             <p>Python Data Flow:</p>
             <div>
@@ -429,13 +453,13 @@ int main(int argc, char* argv[]) {
 +-----------------------------+</code></pre>
             </div>
             <p>A possible use case might involve training a model to classify regions of interest in a 3D medical image. After classification, the resulting labels are transformed back into a vtkImageData structure for 3D rendering in VTK. This loop helps domain experts see how the ML model performs on actual volumetric scans, leading to faster iterative improvements.</p>
-            <h3 id="advanced-geometry-and-data-transformations">Advanced Geometry and Data Transformations</h3>
+            <h2 id="advanced-geometry-and-data-transformations">Advanced Geometry and Data Transformations</h2>
             <p>As datasets grow in complexity and size, the need for sophisticated geometry and data transformations becomes increasingly important. VTK’s strong pipeline architecture supports a wide range of transformations, enabling you to adapt data between different coordinate systems, cut through or segment regions of interest, and create advanced visualizations that highlight internal or otherwise occluded structures. These capabilities are important across diverse fields, such as computational fluid dynamics (CFD), medical imaging, geospatial analysis, and structural engineering. Below, we delve deeper into the concepts, tools, and best practices involved in performing advanced geometric transformations and data manipulations with VTK.</p>
-            <h4 id="coordinate-system-transformations">Coordinate System Transformations</h4>
+            <h3 id="coordinate-system-transformations">Coordinate System Transformations</h3>
             <p>Many scientific and engineering applications define their datasets in a parametric space (e.g., $(u, v)$) rather than standard Cartesian coordinates $(x, y, z)$. Common examples include:</p>
             <ul>
-                <li>Surface Parametrization in computational geometry (e.g., describing NURBS surfaces or parametric patches). </li>
-                <li>Geospatial Projections converting latitude–longitude data into 3D Earth-centered coordinates (or projected 2D coordinates). </li>
+                <li>Surface Parametrization in computational geometry (e.g., describing NURBS surfaces or parametric patches).</li>
+                <li>Geospatial Projections converting latitude–longitude data into 3D Earth-centered coordinates (or projected 2D coordinates).</li>
                 <li>Magnetic or Material Field Lines used in physics, where parametric variables represent theoretical constructs that need mapping onto physical space.</li>
             </ul>
             <p>VTK accommodates these transformations by allowing you to write a custom mapping function:</p>
@@ -444,16 +468,16 @@ int main(int argc, char* argv[]) {
             <p>This function can be implemented in Python or C++ (or other language bindings) via specialized filters or through classes like <code>vtkProgrammableFilter</code>. The idea is to read each parametric coordinate from your dataset, apply the transformation equations $f, g, h$, and generate corresponding Cartesian coordinates. Once transformed, the data can be further processed or visualized using VTK’s standard toolset.</p>
             <p>For unstructured grids or large-scale meshes, transformations can be more involved, especially if:</p>
             <ul>
-                <li>Elements have irregular shapes (e.g., tetrahedra, hexahedra, mixed-element meshes). </li>
-                <li>Connectivity between points is non-trivial. </li>
+                <li>Elements have irregular shapes (e.g., tetrahedra, hexahedra, mixed-element meshes).</li>
+                <li>Connectivity between points is non-trivial.</li>
                 <li>Multiple subdomains must be combined or stitched together.
                     VTK’s filters, such as <code>vtkTransformFilter</code>, <code>vtkWarpScalar</code>, or <code>vtkWarpVector</code>, help apply transformations to each point in a mesh. Internally, these filters recalculate the geometry by iterating over all points and cells. The pipeline then propagates these updates to subsequent visualization stages, ensuring that rendering, slicing, and other operations reflect the newly transformed coordinates.</li>
             </ul>
-            <h4 id="data-subsetting-slicing-and-thresholding">Data Subsetting, Slicing, and Thresholding</h4>
+            <h3 id="data-subsetting-slicing-and-thresholding">Data Subsetting, Slicing, and Thresholding</h3>
             <p>Beyond just mapping coordinates, advanced workflows often require extracting specific regions of a dataset to focus analysis on areas of interest. These operations are important in fields like:</p>
             <ul>
-                <li>Medical Imaging (e.g., isolating a certain organ or tumor region). </li>
-                <li>CFD (e.g., looking at a specific cross-section of airflow around an airfoil). </li>
+                <li>Medical Imaging (e.g., isolating a certain organ or tumor region).</li>
+                <li>CFD (e.g., looking at a specific cross-section of airflow around an airfoil).</li>
                 <li>Seismic or Geological Analysis (e.g., selecting a depth range to visualize subsurface layers).</li>
             </ul>
             <p>VTK addresses these needs through an extensive library of filters:</p>
@@ -462,23 +486,23 @@ int main(int argc, char* argv[]) {
                 <li>Cut through a volume or mesh with a plane (or multiple planes), returning a 2D cross-section (e.g., <code>vtkCutter</code>).</li>
                 <li>Filter data points or cells based on scalar or vector values (e.g., <code>vtkThreshold</code>).</li>
             </ul>
-            <h4 id="clipping-and-cutting">Clipping and Cutting</h4>
+            <h3 id="clipping-and-cutting">Clipping and Cutting</h3>
             <p>Clipping and cutting operations are necessary for revealing internal structures or discarding irrelevant data. They operate by defining a geometric plane or volume and removing portions of the dataset that lie on one side of that boundary. For instance, in fluid simulations, clipping can reveal cross-sections of flow patterns, while in medical imaging, it can unveil the internal anatomy of a scanned organ.</p>
-            <p>I. Plane Definition </p>
-            <p>A plane in 3D can be described by the equation: </p>
-            <p>$$\alpha x + \beta y + \gamma z + d = 0$$ </p>
+            <p>I. Plane Definition</p>
+            <p>A plane in 3D can be described by the equation:</p>
+            <p>$$\alpha x + \beta y + \gamma z + d = 0$$</p>
             <p>where $\alpha, \beta, \gamma$ form the plane’s normal vector, and $d$ is the distance from the origin. By adjusting these parameters, you can arbitrarily orient and position the clipping plane.</p>
-            <p>II. Clip Functions </p>
+            <p>II. Clip Functions</p>
             <p>VTK provides objects like <code>vtkPlane</code>, <code>vtkBox</code>, or <code>vtkImplicitFunction</code> to define clipping boundaries. You can set more complicated implicit functions if your clipping region is non-planar (e.g., spherical or cylindrical clip functions).</p>
-            <p>III. Clip Filters </p>
+            <p>III. Clip Filters</p>
             <ul>
-                <li><code>vtkClipPolyData</code> for polygonal (surface) data. </li>
-                <li><code>vtkClipVolume</code> for volumetric data. </li>
-                <li><code>vtkTableBasedClipDataSet</code> for structured/unstructured grid data. </li>
+                <li><code>vtkClipPolyData</code> for polygonal (surface) data.</li>
+                <li><code>vtkClipVolume</code> for volumetric data.</li>
+                <li><code>vtkTableBasedClipDataSet</code> for structured/unstructured grid data.</li>
             </ul>
-            <p>IV. Preserving or Capping Clipped Regions </p>
+            <p>IV. Preserving or Capping Clipped Regions</p>
             <p>Sometimes, after clipping, you want to “cap” the newly exposed boundary with a surface (e.g., <code>vtkClipClosedSurface</code>). This is especially relevant for 3D printing workflows or engineering simulations where the cross-section itself is an important part of the geometry.</p>
-            <h4 id="example-clipping-a-dataset">Example: Clipping a Dataset</h4>
+            <h3 id="example-clipping-a-dataset">Example: Clipping a Dataset</h3>
             <p>Below is a Python code snippet illustrating how to use <code>vtkPlane</code> and <code>vtkClipPolyData</code> to clip a polygonal dataset:</p>
             <div>
                 <pre><code class="language-python">import vtkmodules.all as vtk
@@ -503,49 +527,49 @@ clippedOutput = clipper.GetOutput()
 </code></pre>
             </div>
             <ul>
-                <li>The plane is defined by its origin and normal vector. In this example, the plane coincides with the y–z plane and normal is along x. </li>
-                <li>Any geometry on the negative side of the plane (depending on the sign of $\alpha x + \beta y + \gamma z + d$) is excluded from the output. </li>
+                <li>The plane is defined by its origin and normal vector. In this example, the plane coincides with the y–z plane and normal is along x.</li>
+                <li>Any geometry on the negative side of the plane (depending on the sign of $\alpha x + \beta y + \gamma z + d$) is excluded from the output.</li>
                 <li>Clipping is invaluable in examining internal features—for instance, revealing the interior of a turbine blade, slicing through a geological formation to see fault lines, or slicing a blood vessel mesh to view blood flow.</li>
             </ul>
-            <h3 id="bridging-with-data-analytics-frameworks">Bridging with Data Analytics Frameworks</h3>
+            <h2 id="bridging-with-data-analytics-frameworks">Bridging with Data Analytics Frameworks</h2>
             <p>As the volume and complexity of data continue to soar, modern data visualization pipelines must handle far more than static, moderate-sized datasets. In many industries—ranging from finance and telecommunications to genomics and social media—datasets can reach petabyte scale, requiring distributed computational solutions such as Apache Spark. While Spark excels at large-scale data processing and numerical analysis, it does not inherently provide advanced 3D visualization capabilities. This is where VTK comes in: by combining Spark’s big-data crunching power with VTK’s high-quality rendering, users can unlock detailed, interactive visual insights into massive datasets.</p>
-            <h4 id="spark-and-vtk">Spark and VTK</h4>
+            <h3 id="spark-and-vtk">Spark and VTK</h3>
             <p>Apache Spark is a unified analytics engine that supports SQL queries, machine learning, graph processing, and streaming on large-scale datasets. It efficiently partitions tasks across a cluster, performing in-memory computations that significantly reduce the time and cost required for data-intensive operations. However, Spark’s native visualization features are limited to basic charts, and typical workflows rely on notebooks (e.g., Databricks, Jupyter) for plotting smaller data samples.</p>
             <p>VTK, on the other hand, specializes in advanced 3D rendering, mesh processing, and volume visualization. It can display complicated geometric structures, scalar/vector fields, and volumetric data with interactive controls, making it indispensable in fields like computational fluid dynamics, medical imaging, and scientific research. By bridging these two technologies, you can effectively:</p>
             <ul>
-                <li>Use Spark to handle large-scale ingestion, aggregation, feature extraction, and transformations. </li>
+                <li>Use Spark to handle large-scale ingestion, aggregation, feature extraction, and transformations.</li>
                 <li>Use VTK to convert the processed results into visually rich representations—whether as point clouds, surface meshes, or volumes.</li>
             </ul>
             <p>This pipeline helps to unearth complex patterns and correlations within large datasets that would be difficult to interpret through spreadsheets or static, low-dimensional plots alone.</p>
-            <h4 id="typical-data-flow-pipeline">Typical Data Flow Pipeline</h4>
+            <h3 id="typical-data-flow-pipeline">Typical Data Flow Pipeline</h3>
             <p>A common workflow for integrating Spark and VTK looks like this:</p>
             <div>
                 <pre><code class="language-shell">Spark job -&gt; output in Parquet -&gt; read into Python -&gt; convert to VTK data -&gt; render</code></pre>
             </div>
-            <p>I. Spark Job </p>
+            <p>I. Spark Job</p>
             <ul>
-                <li>Data is loaded into Spark from distributed file systems (e.g., HDFS, cloud storage) or streaming sources. </li>
-                <li>Spark executes transformations (e.g., filtering, grouping, aggregations) and applies ML or graph algorithms if needed. </li>
+                <li>Data is loaded into Spark from distributed file systems (e.g., HDFS, cloud storage) or streaming sources.</li>
+                <li>Spark executes transformations (e.g., filtering, grouping, aggregations) and applies ML or graph algorithms if needed.</li>
                 <li>Final results are written out as structured files—most often CSV or Parquet.</li>
             </ul>
-            <p>II. Output in Parquet (or CSV) </p>
+            <p>II. Output in Parquet (or CSV)</p>
             <ul>
-                <li>Spark’s dataset is stored in a columnar format (Parquet) for efficiency, or in CSV for simplicity. </li>
+                <li>Spark’s dataset is stored in a columnar format (Parquet) for efficiency, or in CSV for simplicity.</li>
                 <li>Parquet retains type information and compresses well, which can be necessary for large datasets.</li>
             </ul>
-            <p>III. Read into Python </p>
+            <p>III. Read into Python</p>
             <ul>
-                <li>Python (often using pandas or PySpark) reads the Parquet/CSV files. </li>
-                <li>Data is loaded into a DataFrame, allowing further cleanup or reshaping to fit VTK’s requirements. </li>
+                <li>Python (often using pandas or PySpark) reads the Parquet/CSV files.</li>
+                <li>Data is loaded into a DataFrame, allowing further cleanup or reshaping to fit VTK’s requirements.</li>
             </ul>
-            <p>IV. Convert to VTK Data Structures </p>
+            <p>IV. Convert to VTK Data Structures</p>
             <ul>
-                <li>Create a VTK-compatible data object (e.g., <code>vtkPolyData</code>, <code>vtkStructuredGrid</code>, <code>vtkUnstructuredGrid</code>) by mapping DataFrame columns to geometric coordinates and any associated scalar or vector fields. </li>
+                <li>Create a VTK-compatible data object (e.g., <code>vtkPolyData</code>, <code>vtkStructuredGrid</code>, <code>vtkUnstructuredGrid</code>) by mapping DataFrame columns to geometric coordinates and any associated scalar or vector fields.</li>
                 <li>This step can be done manually or with helper libraries that help bridging between pandas DataFrames and VTK.</li>
             </ul>
-            <p>V. Render </p>
+            <p>V. Render</p>
             <ul>
-                <li>VTK (or Python wrappers like PyVista) handles the final visualization. </li>
+                <li>VTK (or Python wrappers like PyVista) handles the final visualization.</li>
                 <li>Users can apply filters (e.g., clipping, thresholding) or advanced rendering techniques (e.g., volume rendering) to explore the data interactively.</li>
             </ul>
             <p>Here's the complete implementation demonstrating the workflow:</p>
@@ -640,32 +664,32 @@ def visualize_vtk(polydata):
             </ul>
             <p><img alt="Spark VTK Integration Example" decoding="async" height="522" loading="lazy" src="../../resources/article-images/11dc3a90-cd05-4d07-8ba7-801441259963-b781d4923e.webp" width="643" /></p>
             <p><em>The visualization shows 1000 random 3D points colored by their distance from the origin. Points closer to the origin appear in blue, while those farther away are shown in red.</em></p>
-            <h4 id="practical-example-large-scale-geospatial-analysis">Practical Example: Large-Scale Geospatial Analysis</h4>
+            <h3 id="practical-example-large-scale-geospatial-analysis">Practical Example: Large-Scale Geospatial Analysis</h3>
             <p>Consider a large geospatial dataset containing billions of latitude-longitude points with associated attributes (e.g., population density, elevation, pollution metrics). Using Spark:</p>
-            <p>I. Ingest &amp; Process: </p>
+            <p>I. Ingest &amp; Process:</p>
             <ul>
-                <li>Load data from distributed storage (e.g., HDFS or S3). </li>
-                <li>Filter out incomplete records, group data by region, and compute summary statistics in Spark. </li>
+                <li>Load data from distributed storage (e.g., HDFS or S3).</li>
+                <li>Filter out incomplete records, group data by region, and compute summary statistics in Spark.</li>
                 <li>Write the aggregated data to Parquet, drastically reducing dataset size by focusing on necessary features.</li>
             </ul>
-            <p>II. Convert to 3D Coordinates: </p>
+            <p>II. Convert to 3D Coordinates:</p>
             <ul>
-                <li>In Python, read the Parquet file with pandas or PySpark. </li>
-                <li>Map latitude-longitude to a 3D Earth-centered coordinate system (x, y, z). </li>
+                <li>In Python, read the Parquet file with pandas or PySpark.</li>
+                <li>Map latitude-longitude to a 3D Earth-centered coordinate system (x, y, z).</li>
                 <li>Generate a <code>vtkPoints</code> object from these coordinates.</li>
             </ul>
-            <p>III. Build VTK Data Objects: </p>
+            <p>III. Build VTK Data Objects:</p>
             <ul>
-                <li>Create a <code>vtkPolyData</code> or <code>vtkUnstructuredGrid</code>, populating point and cell arrays. </li>
+                <li>Create a <code>vtkPolyData</code> or <code>vtkUnstructuredGrid</code>, populating point and cell arrays.</li>
                 <li>Attach scalar data arrays (e.g., population density) to each point or cell for color mapping in VTK.</li>
             </ul>
-            <p>IV. Visualize: </p>
+            <p>IV. Visualize:</p>
             <ul>
-                <li>Use VTK or PyVista to render the Earth’s surface or a specific region of interest. </li>
-                <li>Use color maps to highlight high-population or high-pollution regions. </li>
+                <li>Use VTK or PyVista to render the Earth’s surface or a specific region of interest.</li>
+                <li>Use color maps to highlight high-population or high-pollution regions.</li>
                 <li>Interactively rotate, zoom, or slice through the data to identify hotspots or patterns that might require further investigation.</li>
             </ul>
-            <p>The <img alt="script" decoding="async" loading="lazy" src="https://raw.githubusercontent.com/djeada/Vtk-Examples/main/src/08_integration_with_ui/geospatial_data.py"/> includes several key components:</p>
+            <p>The <a href="https://github.com/djeada/Vtk-Examples/blob/main/src/08_integration_with_ui/geospatial_data.py">script</a> includes several key components:</p>
             <ol>
                 <li>Data Generation and Processing:</li>
             </ol>
@@ -717,29 +741,29 @@ def visualize_vtk(polydata):
                 <li>Political boundaries</li>
                 <li>More sophisticated data sampling techniques</li>
             </ul>
-            <h4 id="advanced-use-cases">Advanced Use Cases</h4>
-            <p>I. Large-Scale Graph Analytics </p>
+            <h3 id="advanced-use-cases">Advanced Use Cases</h3>
+            <p>I. Large-Scale Graph Analytics</p>
             <ul>
-                <li>Spark’s GraphX library or GraphFrames can process node and edge data for social networks, communication networks, or biological interactions. </li>
-                <li>Once Spark completes computations (e.g., identifying connected components, calculating PageRank), you can output node coordinates or generate them in a force-directed layout. </li>
+                <li>Spark’s GraphX library or GraphFrames can process node and edge data for social networks, communication networks, or biological interactions.</li>
+                <li>Once Spark completes computations (e.g., identifying connected components, calculating PageRank), you can output node coordinates or generate them in a force-directed layout.</li>
                 <li>VTK can then render these large graphs as 3D networks, enabling users to find your way through clusters, identify bridges, or see the impact of removing certain nodes.</li>
             </ul>
-            <p>II. Machine Learning Workflows </p>
+            <p>II. Machine Learning Workflows</p>
             <ul>
-                <li>Spark MLlib trains models on huge datasets (e.g., for anomaly detection in high-dimensional data). </li>
+                <li>Spark MLlib trains models on huge datasets (e.g., for anomaly detection in high-dimensional data).</li>
                 <li>The anomalies or cluster assignments can be exported and matched with coordinates in VTK for 3D representation—helping domain experts visually inspect clusters or outliers in real-time.</li>
             </ul>
-            <p>III. Time-Series Simulations </p>
+            <p>III. Time-Series Simulations</p>
             <ul>
-                <li>Spark processes sensor data from IoT devices or real-time streaming sources. </li>
-                <li>After aggregating or segmenting time steps, the results can be arranged as multiple frames in VTK, creating time-dependent animations. </li>
+                <li>Spark processes sensor data from IoT devices or real-time streaming sources.</li>
+                <li>After aggregating or segmenting time steps, the results can be arranged as multiple frames in VTK, creating time-dependent animations.</li>
                 <li>This approach is especially valuable in monitoring industrial equipment or weather patterns, offering a dynamic view of how systems evolve.</li>
             </ul>
-            <h3 id="data-conversion-considerations">Data Conversion Considerations</h3>
+            <h2 id="data-conversion-considerations">Data Conversion Considerations</h2>
             <p>Some things are worth to keep in mind when converting large-scale distributed data from Spark/pandas formats to VTK visualization structures, with concrete examples and best practices.</p>
-            <h4 id="tabular-to-3d-structure-conversion">Tabular to 3D Structure Conversion</h4>
+            <h3 id="tabular-to-3d-structure-conversion">Tabular to 3D Structure Conversion</h3>
             <p>Converting tabular data to 3D structures requires careful mapping of columns to spatial coordinates and attributes. The most common case is converting point cloud data, where each row represents a point with its coordinates and properties.</p>
-            <h5>Simple Point Cloud Example</h5>
+            <h4 id="simple-point-cloud-example">Simple Point Cloud Example</h4>
             <p>The following example demonstrates converting a temperature dataset from a pandas DataFrame to VTK points with associated scalar values:</p>
             <div>
                 <pre><code class="language-python"># Input DataFrame structure
@@ -761,7 +785,7 @@ for idx, row in df.iterrows():
             </div>
             <p>This creates a VTK dataset with 3 points in 3D space, each with an associated temperature value. The temperature data is preserved as a named array that can be used for color mapping in visualization.</p>
             <p>For more complex geometries like meshes, we need to handle both vertex positions and their connectivity information. Here's how to handle mesh data:</p>
-            <h5>Mesh Connectivity Example</h5>
+            <h4 id="mesh-connectivity-example">Mesh Connectivity Example</h4>
             <p>When dealing with mesh data, we typically have two tables: one for vertex positions and another describing how these vertices connect to form faces:</p>
             <div>
                 <pre><code class="language-python"># Input DataFrames
@@ -796,9 +820,9 @@ for idx, row in faces_df.iterrows():
     triangles.InsertNextCell(triangle)</code></pre>
             </div>
             <p>Creates a triangulated surface consisting of 4 vertices and 2 triangular faces. This structure is suitable for surface rendering and can be extended with additional per-vertex or per-face attributes.</p>
-            <h4 id="memory-management-strategies">Memory Management Strategies</h4>
+            <h3 id="memory-management-strategies">Memory Management Strategies</h3>
             <p>When working with large datasets, memory becomes a critical concern. Here are practical approaches to handle data that exceeds available RAM.</p>
-            <h5>Downsampling Strategy</h5>
+            <h4 id="downsampling-strategy">Downsampling Strategy</h4>
             <p>This example shows how to intelligently reduce dataset size while maintaining data distribution:</p>
             <div>
                 <pre><code class="language-python"># Original data
@@ -818,7 +842,7 @@ print(f"Downsampled size: {len(downsampled_df)} points")</code></pre>
             </div>
             <p>Reduces dataset size while preserving spatial distribution. For example, a 10 million point dataset might be reduced to 1 million points while maintaining overall data patterns.</p>
             <p>For datasets too large to load at once, streaming processing provides an effective solution:</p>
-            <h5>Streaming Processing</h5>
+            <h4 id="streaming-processing">Streaming Processing</h4>
             <p>This approach processes data in manageable chunks without loading the entire dataset into memory:</p>
             <div>
                 <pre><code class="language-python"># Process data in chunks
@@ -836,9 +860,9 @@ for chunk in pd.read_parquet("large_dataset.parquet", chunksize=chunk_size):
     print(f"Processed {points.GetNumberOfPoints()} points")</code></pre>
             </div>
             <p>Allows processing of arbitrarily large datasets with constant memory usage. A 100GB dataset can be processed with only a few GB of RAM.</p>
-            <h4 id="metadata-handling">Metadata Handling</h4>
+            <h3 id="metadata-handling">Metadata Handling</h3>
             <p>Preserving metadata is crucial for maintaining data context and enabling proper interpretation of values. Here's how to handle metadata systematically:</p>
-            <h5>Structured Metadata Storage</h5>
+            <h4 id="structured-metadata-storage">Structured Metadata Storage</h4>
             <p>This example demonstrates comprehensive metadata preservation through the Parquet format:</p>
             <div>
                 <pre><code class="language-python"># Save data with metadata
@@ -867,7 +891,7 @@ print(f"Length unit: {stored_metadata['units']['length']}")</code></pre>
             </div>
             <p>Creates a self-documenting dataset where units, coordinate systems, and temporal information are preserved and easily accessible.</p>
             <p>For cases where metadata must be encoded in the data structure itself:</p>
-            <h5>Self-Documenting Data Structure</h5>
+            <h4 id="self-documenting-data-structure">Self-Documenting Data Structure</h4>
             <p>This approach embeds metadata directly in column names:</p>
             <div>
                 <pre><code class="language-python"># Clear column naming convention
@@ -881,9 +905,9 @@ df = pd.DataFrame({
 })</code></pre>
             </div>
             <p>Creates an immediately interpretable dataset where units and meanings are clear from column names, reducing the chance of misinterpretation.</p>
-            <h4 id="parallel-data-processing">Parallel Data Processing</h4>
+            <h3 id="parallel-data-processing">Parallel Data Processing</h3>
             <p>For large datasets, parallel processing can significantly improve conversion speed. Here's a practical implementation:</p>
-            <h5>Parallel Loading and Processing</h5>
+            <h4 id="parallel-loading-and-processing">Parallel Loading and Processing</h4>
             <p>This example uses Dask to parallelize data loading and processing:</p>
             <div>
                 <pre><code class="language-python">import dask.dataframe as dd
@@ -913,6 +937,33 @@ results = dask_df.map_partitions(
 ).compute(scheduler='processes')</code></pre>
             </div>
             <p>Achieves near-linear speedup with number of CPU cores. A conversion that takes 1 hour serially might complete in 15 minutes on a 4-core system.</p>
+            <h2 id="worked-integration-numpy-vtk-without-losing-array-meaning">Worked integration: NumPy ↔ VTK without losing array meaning</h2>
+            <p>NumPy is convenient for numerical work, while VTK supplies spatial structure and a rendering pipeline. Conversion succeeds only when tuple counts, component counts, and attribute associations agree.</p>
+            <p>~~~python
+                import numpy as np
+                import vtk
+                from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy</p>
+            <p>image = vtk.vtkImageData()
+                image.SetDimensions(3, 2, 1)
+                pressure = np.linspace(1.0, 6.0, 6, dtype=np.float64)</p>
+            <p>vtk_values = numpy_to_vtk(pressure, deep=True)
+                vtk_values.SetName("pressure")
+                image.GetPointData().SetScalars(vtk_values)</p>
+            <p>converted = vtk_to_numpy(image.GetPointData().GetScalars()).copy()
+                assert converted.shape == (image.GetNumberOfPoints(),)
+                assert np.allclose(converted, pressure)
+                ~~~</p>
+            <p>Setting <code>deep=True</code> makes an independent VTK allocation. In the opposite direction, <code>vtk_to_numpy</code> may return a view into VTK-owned memory. Keep the owning object alive or make a copy if the NumPy result must outlive it or should not mutate the source.</p>
+            <h3 id="check-these-integration-boundaries">Check these integration boundaries</h3>
+            <ol>
+                <li><strong>Physical coordinates:</strong> are values in meters, millimeters, image voxel indices, projected map units, or geographic coordinates?</li>
+                <li><strong>Association:</strong> does one row map to a point, a cell, or an entire time step?</li>
+                <li><strong>Components:</strong> is each tuple a scalar, 3-vector, or higher-order tensor?</li>
+                <li><strong>Missing data:</strong> what should a filter do with NaNs or absent values?</li>
+                <li><strong>Memory:</strong> can intermediate copies double the memory footprint of a large simulation?</li>
+                <li><strong>File format:</strong> will metadata, multi-block structure, and array associations survive export?</li>
+            </ol>
+            <p>For NumPy-to-VTK conversion of points, use an <code>N × 3</code> coordinate array and attach it to <code>vtkPoints</code>; attaching an <code>N</code>-element scalar array only adds attributes, not geometry.</p>
         </article-section>
     </div>
     </main>

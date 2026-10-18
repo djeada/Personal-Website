@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/05_mpi",
             "description": "The Message Passing Interface (MPI) is a standardized, portable interface for message passing across a wide range of parallel-computing systems.",
-            "dateModified": "2026-09-12",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/05_mpi" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="The Message Passing Interface (MPI) is a standardized, portable interface for message passing across a wide range of parallel-computing systems." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -143,6 +143,7 @@
                     </li>
                     <li><a href="#non-blocking-communication">Non-Blocking Communication</a>
                         <ol>
+                            <li><a href="#buffer-lifetime-and-completion">Buffer Lifetime and Completion</a></li>
                             <li><a href="#example-non-blocking-communication">Example: Non-Blocking Communication</a></li>
                         </ol>
                     </li>
@@ -219,7 +220,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -254,8 +255,8 @@
             <h4 id="process-model">Process Model</h4>
             <ul>
                 <li>In a typical MPI program, the number of processes is chosen when the job starts. Each process runs independently and may be placed on a separate core, share a node with other processes, or run on another node. MPI also supports dynamic process management, though it is less common.</li>
-                <li>Each process has a unique identifier called a <strong>rank</strong>, which ranges from <code>0</code> to <code>N-1</code>, where <code>N</code> is the total number of processes.</li>
-                <li>A communicator defines a group of processes that can communicate with each other. The default communicator, <code>MPI_COMM_WORLD</code>, includes all processes.</li>
+                <li>A <strong>rank</strong> identifies a process within a communicator, from <code>0</code> to that communicator's size minus one. It is not an operating-system PID. The same process can have different ranks in different communicators.</li>
+                <li>A <strong>communicator</strong> combines a process group with a communication context, which separates its messages from those in other communicators. In the usual <code>MPI_Init</code> model, <code>MPI_COMM_WORLD</code> contains the processes in the initial job.</li>
             </ul>
             <h4 id="communication-types">Communication Types</h4>
             <ul>
@@ -548,6 +549,40 @@ Process 1 received number 42 from process 0
                     </tr>
                 </tbody>
             </table>
+            <h4 id="buffer-lifetime-and-completion">Buffer Lifetime and Completion</h4>
+            <p>Starting an operation and completing it are separate events:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operation</th>
+                        <th>Before completion</th>
+                        <th>After completion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>MPI_Isend</code></td>
+                        <td>Keep the send buffer alive and unchanged.</td>
+                        <td>The buffer may be reused; this does not establish that the receiving application has processed the message.</td>
+                    </tr>
+                    <tr>
+                        <td><code>MPI_Irecv</code></td>
+                        <td>Keep the receive buffer alive and do not access it.</td>
+                        <td>The received data may be read.</td>
+                    </tr>
+                    <tr>
+                        <td><code>MPI_Test</code></td>
+                        <td>A false completion flag means the operation is still pending.</td>
+                        <td>A true flag establishes completion.</td>
+                    </tr>
+                    <tr>
+                        <td><code>MPI_Wait</code></td>
+                        <td>The calling thread waits.</td>
+                        <td>The request has completed.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Compute only on data that does not conflict with pending communication buffers. Nonblocking calls create an opportunity for overlap; they do not guarantee background progress or remove the need to complete requests. See <a href="https://docs.open-mpi.org/en/main/man-openmpi/man3/MPI_Isend.3.html">nonblocking send semantics</a>.</p>
             <h4 id="example-non-blocking-communication">Example: Non-Blocking Communication</h4>
             <div>
                 <pre><code class="language-c">
@@ -1268,9 +1303,9 @@ while (!done) {
                 <li>Prefer collective operations when the communication pattern is naturally collective; MPI implementations can optimize them for the platform.</li>
                 <li>Balance work across processes so that some ranks do not remain idle while others become bottlenecks.</li>
                 <li>Check MPI return codes when using an error handler that returns errors, and handle failures deliberately.</li>
-                <li>Make sure point-to-point sends and receives are matched consistently by communicator, source/destination, tag, datatype, and count.</li>
+                <li>Match point-to-point messages by communicator, source/destination, and tag. Use compatible datatype signatures and a receive buffer large enough for the message. The receive count is a capacity, so it can exceed the send count; inspect the actual count with <code>MPI_Get_count</code>. See <a href="https://docs.open-mpi.org/en/main/man-openmpi/man3/MPI_Recv.3.html">receive semantics</a>.</li>
                 <li>Use patterns such as <code>MPI_Sendrecv</code> or carefully completed non-blocking operations to avoid common cyclic-wait deadlocks; non-blocking calls alone do not guarantee deadlock freedom.</li>
-                <li>Free communicators, derived datatypes, requests, and other resources when they are no longer needed.</li>
+                <li>Complete outstanding communication before reusing its buffers or shutting down. Ordinary nonpersistent requests are released by successful completion through <code>MPI_Wait</code> or <code>MPI_Test</code>; manage other MPI resources according to their lifetimes.</li>
                 <li>Design algorithms to reduce communication frequency and volume as process counts grow.</li>
                 <li>Measure scalability rather than assuming that adding processes will improve performance.</li>
             </ol>

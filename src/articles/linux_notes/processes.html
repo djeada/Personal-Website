@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/processes",
             "description": "In any operating system, a process is the fundamental unit of execution\u2014a live instance of a program.",
-            "dateModified": "2026-06-01",
+            "dateModified": "2026-10-17",
             "image": "https://adamdjellouli.com/resources/article-images/ed119dd8-90c7-4f01-9c0b-e8268771876d-2229737c4a.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="In any operating system, a process is the fundamental unit of execution—a live instance of a program." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/ed119dd8-90c7-4f01-9c0b-e8268771876d-2229737c4a.webp" property="og:image" />
-    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -208,7 +208,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -233,8 +233,8 @@
             <p>In the context of multicore CPUs, each core can handle its own set of processes independently. This multi-core processing enables even more efficient and faster handling of multiple processes.</p>
             <p>Processes in a system can be broadly categorized into two types:</p>
             <ul>
-                <li>A <strong>Shell Job</strong> refers to a process started from a user's command line interface or shell. It is typically interactive, requiring user input and providing output directly to the user's console. Examples of shell jobs include editing a document in a text editor or running a custom script.</li>
-                <li>In contrast, a <strong>Daemon</strong> is a background process that usually starts at system boot and runs with elevated privileges. Daemons do not interact directly with the user interface; instead, they operate silently in the background, handling various system-related tasks. Common examples include the print spooler daemon, which manages print jobs, and the network daemon, which handles network connections.</li>
+                <li>A <strong>Shell Job</strong> is a process or pipeline managed by a shell's job control. It may run in the foreground or background and need not be interactive. Examples include editing a document or running a script.</li>
+                <li>A <strong>Daemon</strong> provides a background service, such as printing or networking. It may start at boot or on demand, and many daemons run under dedicated unprivileged accounts. These are useful descriptions, not an exhaustive classification of all processes.</li>
             </ul>
             <h3 id="process-management-commands">Process Management Commands</h3>
             <p>Process management is integral to system administration. The <code>ps</code> and <code>top</code> commands are pivotal for this purpose.</p>
@@ -287,7 +287,7 @@ root         1  0.0  0.1 169560  5892 ?        Ss   Apr10   0:01 /sbin/init
 ...</code></pre>
             </div>
             <div>
-                <pre><code class="language-shell">ps -o</code></pre>
+                <pre><code class="language-shell">ps -o pid,ppid,stat,cmd</code></pre>
             </div>
             <p>Customizes the output by specifying column names, tailored for specific requirements.</p>
             <h4 id="the-top-command">The <code>top</code> Command</h4>
@@ -316,43 +316,55 @@ KiB Swap:  8388604 total,  8388604 free,        0 used. 11585756 avail Mem
                 <li>In the <strong>Running</strong> state, the process is actively executing instructions on the CPU.</li>
                 <li>A process can be <strong>Interrupted</strong>, meaning it is temporarily stopped. This may occur to allow other processes to run or because the process is waiting for an input or an event.</li>
                 <li>The <strong>Exit</strong> state indicates that the process has completed its execution and is ready to be removed from the system.</li>
-                <li>If a process is <strong>Terminated</strong>, it means that an error occurred or an explicit kill command was issued, resulting in the process being forcefully stopped.</li>
+                <li>A process is <strong>Terminated</strong> when it has finished, whether through a normal exit or a signal. A terminated child can remain as a zombie until its parent collects its exit status with a wait function.</li>
             </ul>
+            <p>The diagram uses conceptual lifecycle stages. Linux tools report states such as <code>R</code> (running or runnable), <code>S</code> (interruptible sleep), <code>D</code> (uninterruptible sleep), <code>T</code> (stopped), and <code>Z</code> (zombie). See <a href="task_state_analysis.html">Task-State Analysis</a> for the distinction between waiting, stopping, and exiting.</p>
             <h3 id="process-spawning">Process Spawning</h3>
             <p>Process spawning is a fundamental aspect of any operating system. It's the action of creating a new process from an existing one. Whether it's running a command from a terminal or a process creating another, spawning processes is a routine operation in system workflows.</p>
             <ul>
                 <li>The first process that initiates when a system boots up is assigned Process ID (PID) 1. </li>
                 <li>This initial process is known as <code>systemd</code> or <code>init</code>, based on the Linux distribution in use. </li>
-                <li>Being the first process, it acts as the parent to all subsequently spawned processes.</li>
+                <li>PID 1 starts the user-space service tree and normally adopts orphaned descendants unless a nearer child subreaper does so. It is not the direct parent of every process; kernel threads have a separate ancestry.</li>
             </ul>
             <p>Spawning a process can be as straightforward as executing a command or running a program from the command line. For instance:</p>
             <div>
                 <pre><code class="language-bash">echo "Hello, world!"</code></pre>
             </div>
-            <p>This command creates a new process that executes the echo command, resulting in the specified text being printed on the terminal.</p>
+            <p>This prints the text. In Bash, <code>echo</code> is normally a builtin, so this particular command does not create a new process. Running an external command such as <code>/bin/echo "Hello, world!"</code> normally makes the shell create a child and execute that program.</p>
             <p>For more complex operations, you might need to spawn processes programmatically. In the C programming language, the fork and exec functions are frequently used for this purpose.</p>
             <ul>
                 <li><code>fork()</code> creates a copy of the currently executing process, generating a new child process.</li>
-                <li><code>exec()</code> replaces the current process with a new one.</li>
+                <li>The <code>exec</code> family replaces the current process's program image while retaining its PID; it does not create another process. In C, use a concrete function such as <code>execl()</code> or <code>execvp()</code> rather than a function literally named <code>exec()</code>.</li>
             </ul>
             <p>Consider the following example:</p>
             <div>
                 <pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;sys/wait.h&gt;
 #include &lt;unistd.h&gt;
 
-int main() {
+int main(void) {
   pid_t pid = fork();
-  if (pid == 0) {
-    // This is the child process
-    exec("/bin/ls");
-  } else {
-    // This is the parent process
-    printf("Child process ID: %d\n", pid);
+  if (pid == -1) {
+    perror("fork");
+    return EXIT_FAILURE;
   }
-  return 0;
+  if (pid == 0) {
+    execl("/bin/ls", "ls", (char *)NULL);
+    // Reached only if execl fails.
+    perror("execl");
+    _exit(127);
+  }
+  printf("Child process ID: %ld\n", (long)pid);
+  int status;
+  if (waitpid(pid, &amp;status, 0) == -1) {
+    perror("waitpid");
+    return EXIT_FAILURE;
+  }
+  return WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
 }</code></pre>
             </div>
-            <p>In this program, a new process is created using the fork function, which then gets replaced by the <code>ls</code> command via the exec function. The parent process simply prints the child process ID on the terminal.</p>
+            <p>Here <code>fork()</code> creates the child, <code>execl()</code> loads <code>ls</code> into that child, and the parent prints the child PID and waits for its exit status. Save it as <code>spawn.c</code>, compile with <code>cc -Wall -Wextra -Werror spawn.c -o spawn</code>, and run <code>./spawn</code> in a practice directory. See the Linux manuals for <a href="https://man7.org/linux/man-pages/man2/execve.2.html">execve</a> and <a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid</a>.</p>
             <p>There are several other methods to spawn processes in Linux. Functions like <code>system</code>, <code>popen</code>, or <code>posix_spawn</code> from the POSIX library also provide process spawning capabilities.</p>
             <h3 id="process-termination">Process Termination</h3>
             <p>To manage system resources effectively, it is sometimes necessary to terminate running processes. Depending on your needs, this can be accomplished in several ways.</p>
@@ -416,19 +428,20 @@ int main() {
             <ul>
                 <li>Using <strong><code>-1</code></strong> as a signal target sends the signal to all processes that the user has permission to signal, excluding the process itself and process ID 1 (the init process).</li>
                 <li>The <strong><code>0</code></strong> target sends the signal to all processes in the same process group as the calling process, allowing for group-wide signaling.</li>
-                <li>When <strong>negative values less than -1</strong> are used, the signal is sent to all processes in the process group corresponding to the absolute value of the given number. For example, executing <code>kill -2 -SIGTERM</code> sends the SIGTERM signal to all processes in the process group with PGID 2.</li>
+                <li>When <strong>negative values less than -1</strong> are used, the signal is sent to the process group whose ID is the absolute value of the target. For example, <code>kill -s TERM -- -2</code> targets PGID 2. Put the signal option before the target and use <code>--</code> to separate options from negative targets.</li>
             </ul>
             <p>These special values allow for more flexible management of processes and process groups, especially in scenarios where you need to signal multiple related processes at once. Here are examples of using these special values:</p>
             <div>
                 <pre><code class="language-bash"># Sending SIGTERM to all processes the user can signal
-kill -1 -SIGTERM
+kill -s TERM -- -1
 
 # Sending SIGTERM to all processes in the same process group as the current process
-kill 0 -SIGTERM
+kill -s TERM -- 0
 
 # Sending SIGTERM to all processes in the process group with PGID 2
-kill -2 -SIGTERM</code></pre>
+kill -s TERM -- -2</code></pre>
             </div>
+            <p>These broad-target examples explain signal semantics; run them only in an isolated lab process group or session. They can terminate your shell and unrelated work. Prefer an inspected, specific PID for normal administration. The exclusion of the caller for target <code>-1</code> describes Linux's <a href="https://man7.org/linux/man-pages/man2/kill.2.html">kill system call</a>; when an external <code>kill</code> program is the caller, the invoking shell may still be a target.</p>
             <h3 id="finding-processes">Finding Processes</h3>
             <p>Whether you need a quick “What’s that PID?” or a detailed, real-time view, Linux gives you several handy tools</p>
             <h4 id="ps-grep-the-classic-one-liner"><code>ps</code> + <code>grep</code> — the classic one-liner</h4>
@@ -473,7 +486,7 @@ user      2411  2345  0 11:02 ?        00:00:00 /usr/lib/firefox/firefox -conten
                 </tbody>
             </table>
             <blockquote>
-                <p><strong>Tip:</strong> End the pipeline with <code>grep -v grep</code> or use <code>ps -ef | grep [f]irefox</code> so the <code>grep</code> process doesn’t show up in the results.</p>
+                <p><strong>Tip:</strong> End the pipeline with <code>grep -v grep</code> or use <code>ps -ef | grep '[f]irefox'</code> so the <code>grep</code> process doesn't show up in the results. Quoting prevents the shell from treating <code>[f]</code> as a filename glob.</p>
             </blockquote>
             <h4 id="pgrep-faster-script-friendly"><code>pgrep</code> — faster, script-friendly</h4>
             <p>Command:</p>
@@ -501,8 +514,8 @@ user      2411  2345  0 11:02 ?        00:00:00 /usr/lib/firefox/firefox -conten
             <h4 id="htop-interactive-real-time-dashboard"><code>htop</code> — interactive, real-time dashboard</h4>
             <ol>
                 <li><code>htop</code> ↵ to open the UI.</li>
-                <li>Press <strong>F4</strong> (or <code>/</code>) and start typing a name—e.g., <code>python</code>.</li>
-                <li>Matching rows highlight instantly; everything else is temporarily hidden.</li>
+                <li>Press <strong>F4</strong> to filter rows, or <strong>F3</strong> (often also <code>/</code>) to search, and type a name such as <code>python</code>.</li>
+                <li>Filtering hides nonmatching rows; searching locates a match without hiding the other processes. Check the key labels in your installed version.</li>
                 <li>Use the <strong>arrow keys</strong> to move, <strong>F9</strong> to send a signal if you need to kill/stop a misbehaving process.</li>
             </ol>
             <div>

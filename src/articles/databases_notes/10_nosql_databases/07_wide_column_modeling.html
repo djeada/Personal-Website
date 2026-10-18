@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing</title>
+    <meta content="Wide-column databases such as Cassandra and HBase are designed around partitioned, distributed access patterns." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling",
+            "description": "Wide-column databases such as Cassandra and HBase are designed around partitioned, distributed access patterns.",
+            "dateModified": "2026-10-04",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Wide-column databases such as Cassandra and HBase are designed around partitioned, distributed access patterns." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>NoSQL Databases</li><li><span aria-current="page">Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#query-first-design">Query-first design</a></li>
+                    <li><a href="#partition-key">Partition key</a></li>
+                    <li><a href="#clustering-columns">Clustering columns</a></li>
+                    <li><a href="#runnable-cassandra-example">Runnable Cassandra example</a></li>
+                    <li><a href="#unbounded-partitions">Unbounded partitions</a></li>
+                    <li><a href="#time-bucket">Time bucket</a></li>
+                    <li><a href="#bucket-granularity">Bucket granularity</a></li>
+                    <li><a href="#estimate-partition-size">Estimate partition size</a></li>
+                    <li><a href="#duplicate-tables-for-duplicate-queries">Duplicate tables for duplicate queries</a></li>
+                    <li><a href="#write-fan-out">Write fan-out</a></li>
+                    <li><a href="#materialized-projections">Materialized projections</a></li>
+                    <li><a href="#no-joins-by-default">No joins by default</a></li>
+                    <li><a href="#historical-versus-current-copied-values">Historical versus current copied values</a></li>
+                    <li><a href="#cassandra-cql-example">Cassandra CQL example</a></li>
+                    <li><a href="#partition-local-range-query">Partition-local range query</a></li>
+                    <li><a href="#query-not-supported-by-the-table">Query not supported by the table</a></li>
+                    <li><a href="#allow-filtering">ALLOW FILTERING</a></li>
+                    <li><a href="#secondary-indexes">Secondary indexes</a></li>
+                    <li><a href="#consistency-levels">Consistency levels</a></li>
+                    <li><a href="#replication-factor">Replication factor</a></li>
+                    <li><a href="#quorum-intuition">Quorum intuition</a></li>
+                    <li><a href="#multi-datacenter-design">Multi-datacenter design</a></li>
+                    <li><a href="#hot-partitions">Hot partitions</a></li>
+                    <li><a href="#write-sharding">Write sharding</a></li>
+                    <li><a href="#time-series-modeling">Time-series modeling</a></li>
+                    <li><a href="#ttl-and-retention">TTL and retention</a></li>
+                    <li><a href="#tombstones">Tombstones</a></li>
+                    <li><a href="#compaction">Compaction</a></li>
+                    <li><a href="#read-amplification">Read amplification</a></li>
+                    <li><a href="#lightweight-transactions">Lightweight transactions</a></li>
+                    <li><a href="#idempotency">Idempotency</a></li>
+                    <li><a href="#batch-statements">Batch statements</a></li>
+                    <li><a href="#clock-time-semantics">Clock/time semantics</a></li>
+                    <li><a href="#query-first-workflow">Query-first workflow</a></li>
+                    <li><a href="#when-not-to-use-a-wide-column-store">When not to use a wide-column store</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#relational-normalization-carried-over-unchanged">Relational normalization carried over unchanged</a></li>
+                            <li><a href="#partition-key-has-low-cardinality">Partition key has low cardinality</a></li>
+                            <li><a href="#partition-grows-forever">Partition grows forever</a></li>
+                            <li><a href="#every-new-query-uses-filtering">Every new query uses filtering</a></li>
+                            <li><a href="#duplicated-data-has-no-ownership-rule">Duplicated data has no ownership rule</a></li>
+                            <li><a href="#global-analytics-run-on-transactional-partitions">Global analytics run on transactional partitions</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key-Value Modeling: Keys, TTLs, Caching, and Atomic Operations</a></li><li><a href="/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling: Nodes, Relationships, Paths, and Traversal</a></li><li><a href="/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling: Embedding, References, and Schema Evolution</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing</h1>
+            <p>Wide-column databases such as Cassandra and HBase are designed around partitioned,
+                distributed access patterns. The central modeling rule is different from a
+                relational database:</p>
+            <blockquote>
+                <p>Start from the query, then design the table that answers it directly.</p>
+            </blockquote>
+            <p>Normalization is not the primary goal. Predictable partition-key access is.</p>
+            <h2 id="query-first-design">Query-first design</h2>
+            <p>Suppose the bookstore needs:</p>
+            <blockquote>
+                <p>Show the latest 50 events for one customer.</p>
+            </blockquote>
+            <p>A query-shaped table can be:</p>
+            <div>
+                <pre><code class="language-text">events_by_customer
+partition key: customer_id
+clustering: event_time DESC, event_id</code></pre>
+            </div>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">customer 42 partition
+├── 2026-10-01 15:10 purchase
+├── 2026-10-01 14:55 login
+└── ...</code></pre>
+            </div>
+            <p>The query can route to one partition.</p>
+            <h2 id="partition-key">Partition key</h2>
+            <p>The partition key decides where data lives.</p>
+            <p>Good partition keys usually provide:</p>
+            <ul>
+                <li>predictable routing,</li>
+                <li>balanced distribution,</li>
+                <li>bounded partition size,</li>
+                <li>useful locality.</li>
+            </ul>
+            <p>Bad key:</p>
+            <div>
+                <pre><code class="language-text">country</code></pre>
+            </div>
+            <p>if 80% of all users are in one country.</p>
+            <p>That creates skew.</p>
+            <h2 id="clustering-columns">Clustering columns</h2>
+            <p>Clustering columns organize rows inside a partition.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PRIMARY KEY ((customer_id), event_time, event_id)</code></pre>
+            </div>
+            <p>The partition key is:</p>
+            <div>
+                <pre><code class="language-text">customer_id</code></pre>
+            </div>
+            <p>The clustering columns are:</p>
+            <div>
+                <pre><code class="language-text">event_time, event_id</code></pre>
+            </div>
+            <p>That shape supports ordered range reads within one customer.</p>
+            <h2 id="runnable-cassandra-example">Runnable Cassandra example</h2>
+            <p>The repository already contains:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/cassandra/demo.cql"><code>scripts/cassandra/demo.cql</code></a></p>
+            <p>This chapter adds:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/cassandra/nosql_bucketed_events.cql"><code>scripts/cassandra/nosql_bucketed_events.cql</code></a></p>
+            <p>The additional demo shows a time-bucketed partition key.</p>
+            <p>Run after starting the local Cassandra container:</p>
+            <div>
+                <pre><code class="language-bash">cd scripts/cassandra
+docker compose up -d
+docker exec -i cassandra-notes cqlsh &lt; nosql_bucketed_events.cql</code></pre>
+            </div>
+            <h2 id="unbounded-partitions">Unbounded partitions</h2>
+            <p>Bad design:</p>
+            <div>
+                <pre><code class="language-text">partition key = customer_id</code></pre>
+            </div>
+            <p>if one customer can accumulate billions of events over many years.</p>
+            <p>The partition keeps growing.</p>
+            <p>Use bucketing.</p>
+            <h2 id="time-bucket">Time bucket</h2>
+            <p>Partition key:</p>
+            <div>
+                <pre><code class="language-text">(customer_id, month)</code></pre>
+            </div>
+            <p>Example partitions:</p>
+            <div>
+                <pre><code class="language-text">(customer 42, 2026-08)
+(customer 42, 2026-09)
+(customer 42, 2026-10)</code></pre>
+            </div>
+            <p>Now each partition has a planned lifetime/size.</p>
+            <h2 id="bucket-granularity">Bucket granularity</h2>
+            <p>Choose bucket size from:</p>
+            <ul>
+                <li>write rate,</li>
+                <li>row size,</li>
+                <li>retention,</li>
+                <li>query window.</li>
+            </ul>
+            <p>High-volume telemetry may need:</p>
+            <div>
+                <pre><code class="language-text">hourly buckets</code></pre>
+            </div>
+            <p>Lower-volume application events may use:</p>
+            <div>
+                <pre><code class="language-text">monthly buckets</code></pre>
+            </div>
+            <p>Do not choose a calendar bucket without estimating partition size.</p>
+            <h2 id="estimate-partition-size">Estimate partition size</h2>
+            <p>Approximate:</p>
+            <div>
+                <pre><code class="language-text">rows per period
+× average row size
+= partition data size</code></pre>
+            </div>
+            <p>Then include indexing/storage overhead.</p>
+            <p>The exact acceptable size depends on the engine and workload.</p>
+            <h2 id="duplicate-tables-for-duplicate-queries">Duplicate tables for duplicate queries</h2>
+            <p>Suppose you need:</p>
+            <ol>
+                <li>latest events by customer,</li>
+                <li>all failures by service,</li>
+                <li>events by device and hour.</li>
+            </ol>
+            <p>A wide-column model may maintain:</p>
+            <div>
+                <pre><code class="language-text">events_by_customer
+failures_by_service
+events_by_device_hour</code></pre>
+            </div>
+            <p>The same logical event is duplicated.</p>
+            <p>This is intentional query-driven denormalization.</p>
+            <h2 id="write-fan-out">Write fan-out</h2>
+            <p>One logical event may produce several writes:</p>
+            <div>
+                <pre><code class="language-text">new event
+  │
+  ├──► events_by_customer
+  ├──► failures_by_service
+  └──► events_by_device_hour</code></pre>
+            </div>
+            <p>That shifts work from read time to write time.</p>
+            <p>The application must define what happens when only some writes succeed.</p>
+            <h2 id="materialized-projections">Materialized projections</h2>
+            <p>Possible strategies:</p>
+            <ul>
+                <li>application writes every table,</li>
+                <li>asynchronous event/CDC pipeline updates projections,</li>
+                <li>database-managed materialized view where supported.</li>
+            </ul>
+            <p>Each has different consistency and failure behavior.</p>
+            <h2 id="no-joins-by-default">No joins by default</h2>
+            <p>A wide-column database generally expects the read model to already contain the
+                fields needed by the query.</p>
+            <p>Instead of:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FROM orders
+JOIN customers ...</code></pre>
+            </div>
+            <p>Example relational input rows:</p>
+            <p><code>orders</code></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>501</td>
+                        <td>42</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>customers</code></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>customer_id</th>
+                        <th>name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>42</td>
+                        <td>Alice</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A relational join would return:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>501</td>
+                        <td>42</td>
+                        <td>Alice</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Cassandra does not execute this join; a query-shaped Cassandra row would store the fields needed by that read together.</p>
+            <p>store a query-shaped row.</p>
+            <p>That may include copied display fields.</p>
+            <h2 id="historical-versus-current-copied-values">Historical versus current copied values</h2>
+            <p>As with document modeling, duplicated values need semantics.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">customer_name_at_order</code></pre>
+            </div>
+            <p>can be intentionally historical.</p>
+            <p>But:</p>
+            <div>
+                <pre><code class="language-text">current_customer_plan</code></pre>
+            </div>
+            <p>may need propagation if the customer changes plan.</p>
+            <p>Name the field to make the meaning explicit.</p>
+            <h2 id="cassandra-cql-example">Cassandra CQL example</h2>
+            <div>
+                <pre><code class="language-sql">CREATE TABLE events_by_customer_month (
+    customer_id text,
+    bucket_month text,
+    event_time timestamp,
+    event_id uuid,
+    event_type text,
+    payload text,
+    PRIMARY KEY (
+        (customer_id, bucket_month),
+        event_time,
+        event_id
+    )
+) WITH CLUSTERING ORDER BY (event_time DESC);</code></pre>
+            </div>
+            <p>Query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM events_by_customer_month
+WHERE customer_id = 'customer-42'
+  AND bucket_month = '2026-10'
+LIMIT 50;</code></pre>
+            </div>
+            <p>Example input rows:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>customer_id</th>
+                        <th>bucket_month</th>
+                        <th>event_time</th>
+                        <th>event_id</th>
+                        <th>event_type</th>
+                        <th>payload</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>customer-42</td>
+                        <td>2026-10</td>
+                        <td>2026-10-01 12:05:00</td>
+                        <td>e2</td>
+                        <td>purchased</td>
+                        <td>book-101</td>
+                    </tr>
+                    <tr>
+                        <td>customer-42</td>
+                        <td>2026-10</td>
+                        <td>2026-10-01 12:00:00</td>
+                        <td>e1</td>
+                        <td>viewed</td>
+                        <td>book-101</td>
+                    </tr>
+                    <tr>
+                        <td>customer-42</td>
+                        <td>2026-09</td>
+                        <td>2026-09-30 23:00:00</td>
+                        <td>e0</td>
+                        <td>viewed</td>
+                        <td>book-205</td>
+                    </tr>
+                    <tr>
+                        <td>customer-77</td>
+                        <td>2026-10</td>
+                        <td>2026-10-01 12:10:00</td>
+                        <td>e3</td>
+                        <td>viewed</td>
+                        <td>book-205</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>customer_id</th>
+                        <th>bucket_month</th>
+                        <th>event_time</th>
+                        <th>event_id</th>
+                        <th>event_type</th>
+                        <th>payload</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>customer-42</td>
+                        <td>2026-10</td>
+                        <td>2026-10-01 12:05:00</td>
+                        <td>e2</td>
+                        <td>purchased</td>
+                        <td>book-101</td>
+                    </tr>
+                    <tr>
+                        <td>customer-42</td>
+                        <td>2026-10</td>
+                        <td>2026-10-01 12:00:00</td>
+                        <td>e1</td>
+                        <td>viewed</td>
+                        <td>book-101</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The query supplies the full partition key.</p>
+            <h2 id="partition-local-range-query">Partition-local range query</h2>
+            <p>Because <code>event_time</code> is a clustering column, a time range can be efficient:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM events_by_customer_month
+WHERE customer_id = 'customer-42'
+  AND bucket_month = '2026-10'
+  AND event_time &gt;= '2026-10-01T00:00:00Z'
+  AND event_time &lt;  '2026-10-02T00:00:00Z';</code></pre>
+            </div>
+            <p>Using the same rows, the time-range result is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>event_time</th>
+                        <th>event_id</th>
+                        <th>event_type</th>
+                        <th>payload</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2026-10-01 12:05:00</td>
+                        <td>e2</td>
+                        <td>purchased</td>
+                        <td>book-101</td>
+                    </tr>
+                    <tr>
+                        <td>2026-10-01 12:00:00</td>
+                        <td>e1</td>
+                        <td>viewed</td>
+                        <td>book-101</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The table exists for this query pattern.</p>
+            <h2 id="query-not-supported-by-the-table">Query not supported by the table</h2>
+            <p>Suppose you ask:</p>
+            <div>
+                <pre><code class="language-text">find every event where payload contains "database"</code></pre>
+            </div>
+            <p>The partition key does not help.</p>
+            <p>Possible solutions:</p>
+            <ul>
+                <li>search engine,</li>
+                <li>dedicated query table,</li>
+                <li>supported secondary-index feature,</li>
+                <li>analytics pipeline.</li>
+            </ul>
+            <p>Do not force a full-cluster filtering query into the transactional path.</p>
+            <h2 id="allow-filtering">ALLOW FILTERING</h2>
+            <p>In Cassandra, <code>ALLOW FILTERING</code> can permit queries the normal primary-key model
+                does not support.</p>
+            <p>It is not a replacement for data modeling.</p>
+            <p>Use it only when the data volume/query behavior is understood.</p>
+            <h2 id="secondary-indexes">Secondary indexes</h2>
+            <p>Modern wide-column systems provide secondary indexing options.</p>
+            <p>Use them selectively.</p>
+            <p>Ask:</p>
+            <ul>
+                <li>how selective is the field?</li>
+                <li>does the query still fan out?</li>
+                <li>what write/index cost exists?</li>
+                <li>is the index supported for the exact workload?</li>
+            </ul>
+            <p>The primary partition model remains fundamental.</p>
+            <h2 id="consistency-levels">Consistency levels</h2>
+            <p>Wide-column systems often let clients choose consistency per request.</p>
+            <p>Example concepts:</p>
+            <div>
+                <pre><code class="language-text">ONE
+LOCAL_QUORUM
+QUORUM
+ALL</code></pre>
+            </div>
+            <p>The choice affects:</p>
+            <ul>
+                <li>latency,</li>
+                <li>availability,</li>
+                <li>read freshness.</li>
+            </ul>
+            <p>See the dedicated consistency note for deeper treatment.</p>
+            <h2 id="replication-factor">Replication factor</h2>
+            <p>Replication factor controls how many replicas store a partition.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">RF = 3</code></pre>
+            </div>
+            <p>Each partition has three copies.</p>
+            <p>This improves fault tolerance but increases storage/network work.</p>
+            <h2 id="quorum-intuition">Quorum intuition</h2>
+            <p>For three replicas:</p>
+            <div>
+                <pre><code class="language-text">quorum = 2</code></pre>
+            </div>
+            <p>A quorum write waits for two acknowledgements.</p>
+            <p>A quorum read consults enough replicas to provide overlapping read/write sets.</p>
+            <p>Real behavior depends on topology and engine rules.</p>
+            <h2 id="multi-datacenter-design">Multi-datacenter design</h2>
+            <p>A production cluster may replicate across regions/datacenters.</p>
+            <p>Prefer topology-aware consistency such as local-quorum concepts when low
+                cross-region latency matters.</p>
+            <p>The exact design must follow business consistency requirements.</p>
+            <h2 id="hot-partitions">Hot partitions</h2>
+            <p>A partition key can be logically correct but operationally hot.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">partition key = global_event_type</code></pre>
+            </div>
+            <p>if every checkout writes:</p>
+            <div>
+                <pre><code class="language-text">event_type = purchase</code></pre>
+            </div>
+            <p>One partition/node range becomes overloaded.</p>
+            <p>Split by:</p>
+            <ul>
+                <li>tenant,</li>
+                <li>time,</li>
+                <li>random shard,</li>
+                <li>natural entity,</li>
+            </ul>
+            <p>when semantics allow.</p>
+            <h2 id="write-sharding">Write sharding</h2>
+            <p>A synthetic shard can spread writes:</p>
+            <div>
+                <pre><code class="language-text">partition key = (service, minute, shard)</code></pre>
+            </div>
+            <p>where:</p>
+            <div>
+                <pre><code class="language-text">shard = hash(event_id) % 16</code></pre>
+            </div>
+            <p>Reads must query all 16 shards and merge results.</p>
+            <p>Trade-off:</p>
+            <div>
+                <pre><code class="language-text">better write distribution
+vs
+more read fan-out</code></pre>
+            </div>
+            <p>Use only when the hotspot is real.</p>
+            <h2 id="time-series-modeling">Time-series modeling</h2>
+            <p>A common shape:</p>
+            <div>
+                <pre><code class="language-text">(device_id, day) -&gt; timestamp-ordered readings</code></pre>
+            </div>
+            <p>This supports:</p>
+            <ul>
+                <li>one device,</li>
+                <li>one bounded period,</li>
+                <li>chronological reads.</li>
+            </ul>
+            <p>It is very different from a warehouse query:</p>
+            <div>
+                <pre><code class="language-text">average temperature across every device for 3 years</code></pre>
+            </div>
+            <p>Send global analytics to an analytical system.</p>
+            <h2 id="ttl-and-retention">TTL and retention</h2>
+            <p>Wide-column systems often support per-row/cell TTL.</p>
+            <p>Useful for:</p>
+            <ul>
+                <li>telemetry retention,</li>
+                <li>temporary events,</li>
+                <li>session-like records.</li>
+            </ul>
+            <p>High-volume expiration has storage-engine consequences such as tombstones and
+                compaction work.</p>
+            <p>Retention is part of physical design.</p>
+            <h2 id="tombstones">Tombstones</h2>
+            <p>A delete/expiration may create a tombstone rather than immediately erasing data
+                from every replica.</p>
+            <p>Why:</p>
+            <div>
+                <pre><code class="language-text">replica A sees delete
+replica B temporarily offline</code></pre>
+            </div>
+            <p>Without a deletion marker, replica B might later reintroduce old data.</p>
+            <p>Too many tombstones can hurt reads.</p>
+            <h2 id="compaction">Compaction</h2>
+            <p>LSM-style engines create immutable files over time.</p>
+            <div>
+                <pre><code class="language-text">memtable
+   │ flush
+   ▼
+SSTables
+   │
+   ▼
+compaction</code></pre>
+            </div>
+            <p>Compaction:</p>
+            <ul>
+                <li>merges files,</li>
+                <li>removes obsolete values,</li>
+                <li>consumes I/O/CPU.</li>
+            </ul>
+            <p>Write-heavy/TTL-heavy workloads need operational planning.</p>
+            <h2 id="read-amplification">Read amplification</h2>
+            <p>A read may consult several SSTables/structures.</p>
+            <p>Compaction strategy and bloom filters can reduce unnecessary work.</p>
+            <p>This is why "writes are fast" does not mean read cost is free.</p>
+            <h2 id="lightweight-transactions">Lightweight transactions</h2>
+            <p>Cassandra provides compare-and-set style lightweight transactions.</p>
+            <p>They use consensus and cost more than normal writes.</p>
+            <p>Use them for narrow correctness requirements such as:</p>
+            <ul>
+                <li>claim a unique name,</li>
+                <li>update only if version matches.</li>
+            </ul>
+            <p>Do not make every write an LWT by default.</p>
+            <h2 id="idempotency">Idempotency</h2>
+            <p>Retries can produce repeated writes.</p>
+            <p>Choose stable identifiers:</p>
+            <div>
+                <pre><code class="language-text">event_id</code></pre>
+            </div>
+            <p>so a retried operation can overwrite/deduplicate the same logical record where
+                appropriate.</p>
+            <h2 id="batch-statements">Batch statements</h2>
+            <p>A batch does not automatically make unrelated writes faster.</p>
+            <p>Use batches for semantic grouping where the database documents that behavior.</p>
+            <p>Cross-partition batches can increase coordination.</p>
+            <h2 id="clock-time-semantics">Clock/time semantics</h2>
+            <p>If time controls clustering and retention:</p>
+            <ul>
+                <li>use UTC internally,</li>
+                <li>define event time versus ingestion time,</li>
+                <li>use stable tie-breakers such as event ID.</li>
+            </ul>
+            <p>Two events can share the same timestamp.</p>
+            <h2 id="query-first-workflow">Query-first workflow</h2>
+            <p>For every required query:</p>
+            <ol>
+                <li>Write the exact WHERE conditions.</li>
+                <li>Identify the partition key.</li>
+                <li>Decide clustering order.</li>
+                <li>Estimate partition growth.</li>
+                <li>Add time/random bucketing if needed.</li>
+                <li>Decide copied fields.</li>
+                <li>Define write fan-out.</li>
+                <li>Choose consistency level.</li>
+                <li>Define retention/TTL.</li>
+                <li>Test skew and hotspot cases.</li>
+            </ol>
+            <h2 id="when-not-to-use-a-wide-column-store">When not to use a wide-column store</h2>
+            <p>A relational database may be simpler when:</p>
+            <ul>
+                <li>joins are central,</li>
+                <li>transactions span many entities,</li>
+                <li>query patterns change frequently,</li>
+                <li>constraints must be enforced relationally,</li>
+                <li>data volume fits conventional scaling.</li>
+            </ul>
+            <p>A wide-column system is not required merely because data is "large."</p>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="relational-normalization-carried-over-unchanged">Relational normalization carried over unchanged</h3>
+            <p>Queries require joins the system is not designed to perform.</p>
+            <h3 id="partition-key-has-low-cardinality">Partition key has low cardinality</h3>
+            <p>Hotspots appear.</p>
+            <h3 id="partition-grows-forever">Partition grows forever</h3>
+            <p>Reads/maintenance degrade.</p>
+            <h3 id="every-new-query-uses-filtering">Every new query uses filtering</h3>
+            <p>Schema does not match access patterns.</p>
+            <h3 id="duplicated-data-has-no-ownership-rule">Duplicated data has no ownership rule</h3>
+            <p>Copies drift.</p>
+            <h3 id="global-analytics-run-on-transactional-partitions">Global analytics run on transactional partitions</h3>
+            <p>The wrong engine is doing the work.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="02_types_of_nosql_databases.html">Types of NoSQL databases</a></li>
+                <li><a href="03_querying_nosql_databases.html">Querying NoSQL databases</a></li>
+                <li><a href="06_key_value_modeling.html">Key-value modeling</a></li>
+                <li><a href="09_consistency_transactions_and_replication.html">Consistency, transactions, and replication</a></li>
+                <li><a href="../12_database_engines/11_cassandra.html">Cassandra engine note</a></li>
+                <li><a href="../06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

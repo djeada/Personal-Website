@@ -5,6 +5,15 @@ from scripts.improve_site_experience import ROOT, enhance
 
 
 class SiteExperienceTests(unittest.TestCase):
+    def test_existing_skip_link_moves_before_navigation(self):
+        text = '<html><head><link href="/resources/style.css"></head><body><nav><a href="/index.html">Home</a></nav><a class="skip-link" href="#container">Skip to content</a><main id="container"><h1>Example</h1></main><footer></footer></body></html>'
+        path = ROOT / 'tools/example/index.html'
+        result = enhance(text, path)
+        soup = BeautifulSoup(result, 'html.parser')
+        self.assertEqual(soup.body.find('a')['class'], ['skip-link'])
+        self.assertEqual(soup.body.find('a')['href'], '#container')
+        self.assertEqual(enhance(result, path), result)
+
     def test_rendered_pages_are_idempotent_and_keep_a_populated_main(self):
         checked = 0
         for path in ROOT.rglob('*.html'):

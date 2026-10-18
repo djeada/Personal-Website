@@ -22,8 +22,8 @@
             });
         })();
     </script>
-    <title>Two‑Phase Locking (2PL) | Adam Djellouli</title>
-    <meta content="Two‑Phase Locking (2PL) is a scheduling rule built into database engines to keep concurrent transactions from stepping on each other." name="description" />
+    <title>Two-Phase Locking (2PL) | Adam Djellouli</title>
+    <meta content="Two-Phase Locking, usually abbreviated 2PL, is a concurrency-control protocol for making interleaved transactions behave like some serial execution." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -39,7 +39,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Two\u2011Phase Locking (2PL)",
+            "headline": "Two-Phase Locking (2PL)",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -49,17 +49,17 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking",
-            "description": "Two\u2011Phase Locking (2PL) is a scheduling rule built into database engines to keep concurrent transactions from stepping on each other.",
-            "dateModified": "2025-05-18",
+            "description": "Two-Phase Locking, usually abbreviated 2PL, is a concurrency-control protocol for making interleaved transactions behave like some serial execution.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
-    <meta content="Two‑Phase Locking (2PL)" property="og:title" />
+    <meta content="Two-Phase Locking (2PL)" property="og:title" />
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Two‑Phase Locking (2PL) is a scheduling rule built into database engines to keep concurrent transactions from stepping on each other." property="og:description" />
-    <meta content="2025-05-18" property="article:modified_time" />
+    <meta content="Two-Phase Locking, usually abbreviated 2PL, is a concurrency-control protocol for making interleaved transactions behave like some serial execution." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -106,7 +106,7 @@
         </ul>
     </nav>
     <main class="site-main" id="main-content" tabindex="-1">
-<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Concurrency Control</li><li><span aria-current="page">Two‑Phase Locking (2PL)</span></li></ol></div>
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Concurrency Control</li><li><span aria-current="page">Two-Phase Locking (2PL)</span></li></ol></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
     <div id="article-wrapper">
@@ -114,26 +114,60 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#overview">Overview</a></li>
-                    <li><a href="#who-does-what-engine-vs-application">Who Does What? (Engine vs Application)</a></li>
-                    <li><a href="#the-two-phases-of-2pl">The Two Phases of 2PL</a></li>
-                    <li><a href="#variations-of-two-phase-locking">Variations of Two‑Phase Locking</a>
+                    <li><a href="#the-problem-2pl-is-trying-to-solve">The problem 2PL is trying to solve</a></li>
+                    <li><a href="#locks-first-shared-and-exclusive">Locks first: Shared and Exclusive</a></li>
+                    <li><a href="#the-two-phases">The two phases</a>
                         <ol>
-                            <li><a href="#strict-2pl-default-in-postgresql-mysql-innodb-sql-server">Strict 2PL (default in PostgreSQL, MySQL‑InnoDB, SQL Server)</a></li>
-                            <li><a href="#rigorous-2pl">Rigorous 2PL</a></li>
-                            <li><a href="#conservative-static-2pl">Conservative (Static) 2PL</a></li>
+                            <li><a href="#growing-phase">Growing phase</a></li>
+                            <li><a href="#shrinking-phase">Shrinking phase</a></li>
                         </ol>
                     </li>
-                    <li><a href="#concrete-example-funds-transfer">Concrete Example – Funds Transfer</a></li>
-                    <li><a href="#how-2pl-ensures-serializability">How 2PL Ensures Serializability</a></li>
-                    <li><a href="#challenges-remedies">Challenges &amp; Remedies</a></li>
-                    <li><a href="#best-practices-when-coding-with-2pl">Best Practices When Coding with 2PL</a></li>
-                    <li><a href="#further-reading">Further Reading</a></li>
+                    <li><a href="#the-lock-point">The lock point</a></li>
+                    <li><a href="#why-this-strange-rule-guarantees-conflict-serializability">Why this strange rule guarantees conflict serializability</a></li>
+                    <li><a href="#what-goes-wrong-if-the-two-phase-rule-is-broken">What goes wrong if the two-phase rule is broken</a></li>
+                    <li><a href="#basic-2pl-is-serializable-but-recovery-can-still-be-unpleasant">Basic 2PL is serializable, but recovery can still be unpleasant</a></li>
+                    <li><a href="#the-main-2pl-variants">The main 2PL variants</a></li>
+                    <li><a href="#strict-2pl">Strict 2PL</a></li>
+                    <li><a href="#strict-2pl-still-has-a-growing-and-shrinking-rule">Strict 2PL still has a growing and shrinking rule</a></li>
+                    <li><a href="#rigorous-2pl">Rigorous 2PL</a></li>
+                    <li><a href="#conservative-2pl">Conservative 2PL</a></li>
+                    <li><a href="#deadlocks-are-not-evidence-that-2pl-is-broken">Deadlocks are not evidence that 2PL is broken</a></li>
+                    <li><a href="#concrete-solution-always-lock-accounts-in-the-same-order">Concrete solution: always lock accounts in the same order</a></li>
+                    <li><a href="#lock-ordering-and-2pl-solve-different-problems">Lock ordering and 2PL solve different problems</a></li>
+                    <li><a href="#rows-are-not-the-only-things-that-may-need-locking">Rows are not the only things that may need locking</a></li>
+                    <li><a href="#row-locks-cannot-protect-a-row-that-does-not-exist">Row locks cannot protect a row that does not exist</a></li>
+                    <li><a href="#how-sql-server-solves-predicate-protection">How SQL Server solves predicate protection</a></li>
+                    <li><a href="#how-mysql-innodb-solves-range-conflicts">How MySQL/InnoDB solves range conflicts</a></li>
+                    <li><a href="#postgresql-does-something-importantly-different">PostgreSQL does something importantly different</a></li>
+                    <li><a href="#postgresql-serializable-is-not-lock-based-2pl">PostgreSQL Serializable is not lock-based 2PL</a></li>
+                    <li><a href="#predicate-lock-means-different-things-operationally">"Predicate lock" means different things operationally</a></li>
+                    <li><a href="#innodb-is-also-not-just-2pl">InnoDB is also not "just 2PL"</a></li>
+                    <li><a href="#sql-server-is-the-closest-of-the-three-to-the-textbook-locking-model">SQL Server is the closest of the three to the textbook locking model</a></li>
+                    <li><a href="#modern-sql-server-and-optimized-locking">Modern SQL Server and optimized locking</a></li>
+                    <li><a href="#technology-summary">Technology summary</a></li>
+                    <li><a href="#a-concrete-application-example-bank-transfer">A concrete application example: bank transfer</a></li>
+                    <li><a href="#why-an-ordinary-postgresql-reader-can-still-see-the-account">Why an ordinary PostgreSQL reader can still see the account</a></li>
+                    <li><a href="#another-concrete-example-reserving-a-seat">Another concrete example: reserving a seat</a></li>
+                    <li><a href="#a-useful-design-trick-create-a-row-that-represents-the-logical-resource">A useful design trick: create a row that represents the logical resource</a></li>
+                    <li><a href="#for-update-is-not-a-universal-magic-phrase">FOR UPDATE is not a universal magic phrase</a></li>
+                    <li><a href="#2pl-versus-mvcc">2PL versus MVCC</a></li>
+                    <li><a href="#blocking-versus-aborting">Blocking versus aborting</a></li>
+                    <li><a href="#deadlock-versus-serialization-failure">Deadlock versus serialization failure</a></li>
+                    <li><a href="#retry-the-complete-transaction">Retry the complete transaction</a></li>
+                    <li><a href="#keep-locked-transactions-short">Keep locked transactions short</a></li>
+                    <li><a href="#indexes-affect-locking-behavior">Indexes affect locking behavior</a></li>
+                    <li><a href="#2pl-and-2pc-are-completely-different">2PL and 2PC are completely different</a></li>
+                    <li><a href="#what-applications-control-and-what-databases-control">What applications control and what databases control</a></li>
+                    <li><a href="#nolock-is-not-use-smaller-locks">NOLOCK is not "use smaller locks"</a></li>
+                    <li><a href="#practical-comparison-of-concurrency-strategies">Practical comparison of concurrency strategies</a></li>
+                    <li><a href="#the-most-useful-mental-model">The most useful mental model</a></li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
             <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks in Database Systems</a></li><li><a href="/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Handling the Double-Booking Problem in Databases</a></li><li><a href="/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared and Exclusive Locks</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -197,6 +231,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -211,7 +251,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -237,6 +276,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -259,6 +304,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -273,6 +324,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -287,6 +343,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -295,7 +384,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -314,222 +403,1827 @@
                         </svg>
                     </button></div>
             </div>
-            <h1>Two‑Phase Locking (2PL)</h1>
-            <p>Two‑Phase Locking (2PL) is a <strong>scheduling rule</strong> built into database engines to keep concurrent transactions from stepping on each other. 2PL does <strong>not</strong> change <em>what</em> your application writes—it changes <em>when</em> each transaction is allowed to read or write shared data so that the overall result is the same as some serial order.</p>
+            <h1>Two-Phase Locking (2PL)</h1>
+            <p>Two-Phase Locking, usually abbreviated 2PL, is a concurrency-control protocol for making interleaved transactions behave like some serial execution.</p>
+            <p>The central problem it solves is this:</p>
             <blockquote>
-                <p>Every transaction first grows its set of locks, hits a lock‑point, and only then starts giving locks back. Once it starts giving locks back it may never take another one.</p>
+                <p>Two transactions may each perform individually valid reads and writes, but their operations can interleave in an order that produces a result that could never occur if the transactions had run one at a time.</p>
             </blockquote>
-            <p>Real‑World Analogy:</p>
+            <p>2PL prevents that class of problem by controlling when a transaction may acquire and release conflicting locks.</p>
+            <p>The name has nothing to do with distributed commit.</p>
+            <p>Two-Phase Locking (2PL) controls concurrent access to data.</p>
+            <p>Two-Phase Commit (2PC) coordinates commit/rollback across multiple participants in a distributed transaction.</p>
+            <p>A distributed system can use both, but they solve completely different problems.</p>
+            <h2 id="the-problem-2pl-is-trying-to-solve">The problem 2PL is trying to solve</h2>
+            <p>Suppose two transactions operate on two values, <code>A</code> and <code>B</code>.</p>
+            <p>A serial execution would look like:</p>
             <div>
-                <pre><code class="language-shell">┌── Growing Phase ─────┐         ┌── Shrinking Phase ──┐
-| Collect all library  |         | Start returning     |
-| books you need.      |  ===►   | books; you cannot   |
-| No returns allowed   |         | borrow more.        |
-└──────────────────────┘         └─────────────────────┘</code></pre>
+                <pre><code class="language-text">T1 completely finishes
+then T2 runs</code></pre>
             </div>
-            <p>While you hold a book, nobody else can annotate it. Once you drop it back, anyone may pick it up—but you may not take another.</p>
-            <p>After reading you should be able to answer…</p>
-            <ol>
-                <li>What is Two‑Phase Locking (2PL) and what are its two phases?</li>
-                <li>How does 2PL guarantee serializability among concurrent transactions?</li>
-                <li>What extra rules do <em>Strict</em>, <em>Rigorous</em>, and <em>Conservative</em> 2PL add and why?</li>
-                <li>Which parts are handled automatically by the database engine, and which must the application developer code explicitly?</li>
-                <li>Show a concrete transfer‑funds example that follows 2PL.</li>
-            </ol>
-            <h3 id="overview">Overview</h3>
-            <p>Before diving into lock types and variations, it helps to see <strong>where 2-phase locking draws the line</strong> between <em>taking</em> locks and <em>releasing</em> them.
-                The timeline below exaggerates every step so the <strong>lock-point</strong> is unmistakable.</p>
+            <p>or:</p>
             <div>
-                <pre><code class="language-text">#
-           ┌────────────────────────────── Growing Phase ───────────────────────────────┐               ┌──────────── Shrinking Phase ───────────┐
-Timeline ► │  S(A)  │  X(B)  │  X(C)  │  S(D)  │  X(E)  │                               │  ----╂----    │  rel S(A) │  rel X(B) │  … │  rel X(E) │
-           └────────┴────────┴────────┴────────┴────────┴── lock-point ─────────────────┘               └────────────────────────────────────────┘
-                                        ▲
-                                        └── no new locks may be taken past this point
+                <pre><code class="language-text">T2 completely finishes
+then T1 runs</code></pre>
+            </div>
+            <p>Real databases want more concurrency, so they interleave operations:</p>
+            <div>
+                <pre><code class="language-text">T1 reads A
+T2 reads B
+T1 writes B
+T2 writes A</code></pre>
+            </div>
+            <p>Some interleavings are harmless.</p>
+            <p>Others create contradictory ordering requirements.</p>
+            <p>For example, imagine this schedule:</p>
+            <div>
+                <pre><code class="language-text">T1 reads A
+T2 writes A
 
-Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
+T2 reads B
+T1 writes B</code></pre>
             </div>
-            <p>Your application decides <strong>which</strong> rows or tables to lock and <strong>when</strong> the transaction starts and ends.
-                The <strong>database engine</strong> enforces the arrows: once the transaction’s first lock is released it may <em>only</em> release—never again acquire—further locks.</p>
-            <h3 id="who-does-what-engine-vs-application">Who Does What? (Engine vs Application)</h3>
-            <p>The <strong>clean hand‑off</strong> between your code and the engine is what makes two‑phase locking practical. Think of it like a film crew:</p>
-            <ul>
-                <li>Your <strong>application</strong> is the <strong>director</strong>—it decides the story: which rows/tables to touch and when the scene (transaction) starts and ends.</li>
-                <li>The <strong>database engine</strong> is the <strong>stage manager</strong>—it controls access to the set so no actor bumps into another mid‑scene.</li>
-            </ul>
+            <p>Because T1 read <code>A</code> before T2 changed it, that interaction suggests:</p>
             <div>
-                <pre><code class="language-shell">┌───────────────────────┐          BEGIN / COMMIT / ROLLBACK
-│   Application Code    │ ───────────────────────────────────▶  starts &amp; ends txn
-└───────────────────────┘                                      (defines scope)
-           ▲   SQL stmts / lock hints                               │
-           │                                                        ▼
-┌───────────────────────┐     grants / blocks        ┌──────────────────────────┐
-│  DB Engine Scheduler  │◄───────────────────────────│  Lock Manager (2PL)      │
-│   (2PL enforcer)      │                            └──────────────────────────┘
-└───────────────────────┘              protects data while letting others run</code></pre>
+                <pre><code class="language-text">T1 → T2</code></pre>
             </div>
+            <p>But because T2 read <code>B</code> before T1 changed it, the second interaction suggests:</p>
+            <div>
+                <pre><code class="language-text">T2 → T1</code></pre>
+            </div>
+            <p>Together:</p>
+            <div>
+                <pre><code class="language-text">T1 → T2 → T1</code></pre>
+            </div>
+            <p>There is a cycle.</p>
+            <p>There is therefore no way to say:</p>
+            <div>
+                <pre><code class="language-text">T1 happened entirely before T2</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-text">T2 happened entirely before T1</code></pre>
+            </div>
+            <p>while preserving those conflicting operations.</p>
+            <p>The schedule is not conflict serializable.</p>
+            <p>Two-Phase Locking was designed to prevent exactly these cycles.</p>
+            <h2 id="locks-first-shared-and-exclusive">Locks first: Shared and Exclusive</h2>
+            <p>The textbook 2PL model usually begins with two lock types.</p>
             <table>
                 <thead>
                     <tr>
-                        <th>What needs to happen?</th>
-                        <th><strong>Handled inside the engine</strong></th>
-                        <th><strong>What <em>you</em> still write</strong></th>
+                        <th>Lock</th>
+                        <th>Meaning</th>
+                        <th>Compatible with another S lock?</th>
+                        <th>Compatible with an X lock?</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Get &amp; hold the right locks</td>
-                        <td>Automatic per statement and current isolation level</td>
-                        <td>Optionally request extras (<code>SELECT … FOR UPDATE</code>, <code>LOCK TABLE …</code>)</td>
+                        <td>Shared (<code>S</code>)</td>
+                        <td>Transaction wants to read the item</td>
+                        <td>Yes</td>
+                        <td>No</td>
                     </tr>
                     <tr>
-                        <td>Detect / resolve deadlocks</td>
-                        <td>Wait‑for graph, timeouts, victim selection</td>
-                        <td>Decide retry/back‑off strategy; set <code>lock_timeout</code> if offered</td>
-                    </tr>
-                    <tr>
-                        <td>Mark txn start / finish</td>
-                        <td>—</td>
-                        <td><code>BEGIN</code>, <code>COMMIT</code>, <code>ROLLBACK</code></td>
-                    </tr>
-                    <tr>
-                        <td>Pick isolation level rules</td>
-                        <td>— (engine just applies them)</td>
-                        <td><code>SET TRANSACTION ISOLATION LEVEL …</code></td>
-                    </tr>
-                    <tr>
-                        <td>Choose lock granularity</td>
-                        <td>Engine picks row / page / table automatically</td>
-                        <td>Provide hints via DDL or options (<code>ROWLOCK</code>, <code>NOLOCK</code>)</td>
+                        <td>Exclusive (<code>X</code>)</td>
+                        <td>Transaction wants to modify the item</td>
+                        <td>No</td>
+                        <td>No</td>
                     </tr>
                 </tbody>
             </table>
-            <blockquote>
-                <p><strong>Rule of thumb:</strong> your code says <em>when</em> a transaction runs and <em>what</em> it does; the engine decides <em>how</em> to guard the data while it happens.</p>
-            </blockquote>
-            <h3 id="the-two-phases-of-2pl">The Two Phases of 2PL</h3>
-            <p>During the <strong>growing phase</strong> the engine takes every lock the transaction asks for. The instant the transaction releases its <strong>first</strong> lock it has crossed the <strong>lock‑point</strong> and entered the <strong>shrinking phase</strong>; from that moment no new locks are permitted.</p>
+            <p>For a data item <code>A</code>:</p>
             <div>
-                <pre><code class="language-shell">time ►   ─┬─── acquire S(A) ── acquire X(B) ──┬─ commit ─▶
-          │         (growing)                 │  (shrinking)
-          │                                   │
-       lock‑point ────────────────────────────┘</code></pre>
+                <pre><code class="language-text">T1: S(A)</code></pre>
             </div>
-            <p>Why it works: if every transaction follows that pattern, their critical sections never overlap in a way that produces a non‑serial schedule.</p>
-            <h3 id="variations-of-two-phase-locking">Variations of Two‑Phase Locking</h3>
-            <h4 id="strict-2pl-default-in-postgresql-mysql-innodb-sql-server">Strict 2PL (default in PostgreSQL, MySQL‑InnoDB, SQL Server)</h4>
-            <blockquote>
-                <p>Keep <strong>X</strong> locks to the very end, release <strong>S</strong> locks earlier. Default in PostgreSQL, MySQL‑InnoDB, SQL Server</p>
-            </blockquote>
+            <p>means:</p>
             <div>
-                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
-              growing phase                                  shrinking phase
-Row A   S: ███████████▌ release
-Row A   X:            ████████████████████████████████████┐
-                                                          ├─ COMMIT ─► drop X locks
-Row B   S:     ███████▌ release                           │
-Row B   X:            ████████████████████████████████████┘</code></pre>
+                <pre><code class="language-text">T1 intends to read A.</code></pre>
             </div>
-            <p><em>Prevents</em> dirty reads &amp; cascading aborts while still letting read‑only transactions slip past once they no longer conflict.</p>
-            <h4 id="rigorous-2pl">Rigorous 2PL</h4>
-            <blockquote>
-                <p>Hold <strong>all</strong> locks (shared &amp; exclusive) until end of transaction.</p>
-            </blockquote>
+            <p>Another reader can also hold:</p>
             <div>
-                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
-Row A   S: █████████████████████████████████████████████████┐
-Row A   X:           ███████████████████████████████████████│
-Row B   S:      ████████████████████████████████████████████│  COMMIT ─► drop every lock
-Row B   X:                  ████████████████████████████████┘</code></pre>
+                <pre><code class="language-text">T2: S(A)</code></pre>
             </div>
-            <p><em>Simplest</em> to reason about and fully recoverable, but <strong>worst concurrency</strong>: even read locks block everybody else until the very end.</p>
-            <h4 id="conservative-static-2pl">Conservative (Static) 2PL</h4>
-            <blockquote>
-                <p>Grab <strong>every</strong> lock you will ever need <strong>before</strong> doing any work. If a lock is unavailable, wait. Deadlock‑free at the cost of longer initial waits.</p>
-            </blockquote>
+            <p>at the same time.</p>
+            <p>But:</p>
             <div>
-                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
-try‑lock {A,B,C} ─╢ acquired ─┬────────────── work (reads/writes) ─────────────┬── COMMIT ─► release all
-                            Row A X: ██████████████████████████████████████████
-                            Row B X: ██████████████████████████████████████████
-                            Row C S: ██████████████████████████████████████████</code></pre>
+                <pre><code class="language-text">T1: X(A)</code></pre>
             </div>
-            <p>Because the transaction <em>first</em> waits until it can lock <strong>every</strong> object it will ever touch, no cycle of wait‑for edges can form—hence no deadlocks. The trade‑off is potential under‑utilisation while the big lock request is waiting.</p>
-            <h3 id="concrete-example-funds-transfer">Concrete Example – Funds Transfer</h3>
-            <p>Below is <strong>everything you write</strong> (application layer) versus what the <strong>engine</strong> does silently.</p>
+            <p>means another transaction cannot obtain a conflicting <code>S(A)</code> or <code>X(A)</code> until that lock becomes available.</p>
+            <p>Conceptually:</p>
             <div>
-                <pre><code class="language-shell">-- application code ---------------------------------------------
-BEGIN TRANSACTION;           -- start growing phase
-SELECT balance               -- engine: S‑lock row A
-  FROM Accounts
- WHERE id = 'A'
- FOR UPDATE;                 -- engine upgrades to X‑lock row A
+                <pre><code class="language-text">S + S  → allowed
+S + X  → conflict
+X + S  → conflict
+X + X  → conflict</code></pre>
+            </div>
+            <p>Real database engines have many additional lock modes, such as update locks, intention locks, range locks, key-share locks, and metadata locks.</p>
+            <p>Those are implementation details built around the same general idea:</p>
+            <blockquote>
+                <p>operations that cannot safely occur concurrently must be made incompatible.</p>
+            </blockquote>
+            <h2 id="the-two-phases">The two phases</h2>
+            <p>A transaction following Basic 2PL moves through two phases.</p>
+            <h3 id="growing-phase">Growing phase</h3>
+            <p>The transaction may:</p>
+            <div>
+                <pre><code class="language-text">acquire new locks
+upgrade existing locks</code></pre>
+            </div>
+            <p>but it does not release locks.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">S(A)
+X(B)
+S(C)</code></pre>
+            </div>
+            <p>is still in the growing phase.</p>
+            <h3 id="shrinking-phase">Shrinking phase</h3>
+            <p>The shrinking phase begins when the transaction releases its first lock.</p>
+            <p>From that point onward, it may release additional locks, but it may not acquire a new lock or upgrade an existing one.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">S(A)
+X(B)
+S(C)
 
-SELECT balance               -- engine: S‑lock row B
-  FROM Accounts
- WHERE id = 'B'
- FOR UPDATE;                 -- engine upgrades to X‑lock row B
+release S(A)
 
-UPDATE Accounts SET balance = balance - 100 WHERE id = 'A';
-UPDATE Accounts SET balance = balance + 100 WHERE id = 'B';
-COMMIT;                      -- locks released automatically (strict 2PL)</code></pre>
+release X(B)
+release S(C)</code></pre>
             </div>
-            <p><strong>Under the hood (engine):</strong></p>
-            <ol>
-                <li>Acquires row‑level locks on <code>A</code> and <code>B</code> in exclusive mode (growing phase).</li>
-                <li>At <code>COMMIT</code> it flushes the log, marks the txn committed, then releases the locks (shrinking phase).</li>
-            </ol>
-            <h3 id="how-2pl-ensures-serializability">How 2PL Ensures Serializability</h3>
-            <p>Imagine two transactions T1 and T2 that both read and write the same rows. Because each must hold a conflicting lock before proceeding, either T1 obtains the lock first (T2 waits) <strong>or</strong> T2 obtains the lock first (T1 waits). The executed order is therefore serial—even though the waits happen inside one schedule.</p>
-            <h3 id="challenges-remedies">Challenges &amp; Remedies</h3>
+            <p>is valid.</p>
+            <p>But this is not:</p>
+            <div>
+                <pre><code class="language-text">S(A)
+X(B)
+
+release S(A)
+
+X(C)        &lt;-- illegal under 2PL</code></pre>
+            </div>
+            <p>Once shrinking has started, lock acquisition is finished.</p>
+            <h2 id="the-lock-point">The lock point</h2>
+            <p>The lock point is the instant at which a transaction obtains its final lock.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Acquire S(A)
+Acquire X(B)
+Acquire S(C)   &lt;-- lock point
+do work
+Release S(A)   &lt;-- shrinking begins
+Release X(B)
+Release S(C)</code></pre>
+            </div>
+            <p>Notice that:</p>
+            <div>
+                <pre><code class="language-text">lock point</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">first unlock</code></pre>
+            </div>
+            <p>are not necessarily the same instant.</p>
+            <p>There can be work between them.</p>
+            <p>The important fact is simply:</p>
+            <blockquote>
+                <p>after the first unlock, the transaction can never obtain another lock.</p>
+            </blockquote>
+            <h2 id="why-this-strange-rule-guarantees-conflict-serializability">Why this strange rule guarantees conflict serializability</h2>
+            <p>This is the part that is usually omitted from short 2PL notes.</p>
+            <p>Suppose two transactions conflict on some data item.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">T1 holds X(A)
+T2 needs S(A)</code></pre>
+            </div>
+            <p>T2 cannot obtain its conflicting lock until T1 releases its lock.</p>
+            <p>Because T1 follows 2PL, by the time it releases <code>A</code>, T1 has already obtained every lock it will ever need.</p>
+            <p>Its lock point has therefore already occurred.</p>
+            <p>T2 obtains its conflicting lock later.</p>
+            <p>So for this dependency:</p>
+            <div>
+                <pre><code class="language-text">T1 → T2</code></pre>
+            </div>
+            <p>we also know:</p>
+            <div>
+                <pre><code class="language-text">lockPoint(T1) &lt; lockPoint(T2)</code></pre>
+            </div>
+            <p>Now imagine the conflict graph contained a cycle:</p>
+            <div>
+                <pre><code class="language-text">T1 → T2
+T2 → T3
+T3 → T1</code></pre>
+            </div>
+            <p>The lock-point ordering would require:</p>
+            <div>
+                <pre><code class="language-text">lockPoint(T1) &lt; lockPoint(T2)
+lockPoint(T2) &lt; lockPoint(T3)
+lockPoint(T3) &lt; lockPoint(T1)</code></pre>
+            </div>
+            <p>Combining them would imply:</p>
+            <div>
+                <pre><code class="language-text">lockPoint(T1)
+&lt;
+lockPoint(T2)
+&lt;
+lockPoint(T3)
+&lt;
+lockPoint(T1)</code></pre>
+            </div>
+            <p>which is impossible.</p>
+            <p>Therefore the conflict graph cannot contain a cycle.</p>
+            <p>An acyclic conflict graph means the schedule is conflict serializable.</p>
+            <p>This is the fundamental reason 2PL works.</p>
+            <h2 id="what-goes-wrong-if-the-two-phase-rule-is-broken">What goes wrong if the two-phase rule is broken</h2>
+            <p>Consider this schedule:</p>
+            <div>
+                <pre><code class="language-text">T1: acquire S(A)
+T1: read A
+T1: release S(A)
+
+T2: acquire X(A)
+T2: write A
+
+T2: acquire S(B)
+T2: read B
+
+T1: acquire X(B)       &lt;-- T1 acquires a lock after releasing one
+T1: write B</code></pre>
+            </div>
+            <p>T1 violates 2PL because it released <code>A</code> and later acquired a new lock on <code>B</code>.</p>
+            <p>Now look at the conflicts.</p>
+            <p>On <code>A</code>:</p>
+            <div>
+                <pre><code class="language-text">T1 read A before T2 wrote A
+
+T1 → T2</code></pre>
+            </div>
+            <p>On <code>B</code>:</p>
+            <div>
+                <pre><code class="language-text">T2 read B before T1 wrote B
+
+T2 → T1</code></pre>
+            </div>
+            <p>Therefore:</p>
+            <div>
+                <pre><code class="language-text">T1 → T2 → T1</code></pre>
+            </div>
+            <p>The schedule is not conflict serializable.</p>
+            <p>The rule:</p>
+            <blockquote>
+                <p>never acquire another lock after releasing your first lock</p>
+            </blockquote>
+            <p>is therefore not arbitrary bookkeeping.</p>
+            <p>It prevents transactions from creating contradictory ordering relationships late in their execution.</p>
+            <h2 id="basic-2pl-is-serializable-but-recovery-can-still-be-unpleasant">Basic 2PL is serializable, but recovery can still be unpleasant</h2>
+            <p>Basic 2PL guarantees conflict serializability.</p>
+            <p>It does not require every lock to be held until commit.</p>
+            <p>That creates another problem.</p>
+            <p>Imagine T1 does:</p>
+            <div>
+                <pre><code class="language-text">T1:
+X(A)
+write A = 500
+release X(A)</code></pre>
+            </div>
+            <p>T1 has entered its shrinking phase and will not acquire another lock, so Basic 2PL has not been violated.</p>
+            <p>Before T1 commits, T2 obtains:</p>
+            <div>
+                <pre><code class="language-text">S(A)</code></pre>
+            </div>
+            <p>and reads:</p>
+            <div>
+                <pre><code class="language-text">A = 500</code></pre>
+            </div>
+            <p>Then T1 discovers an error and rolls back.</p>
+            <p>The value T2 read never really committed.</p>
+            <p>T2 has consumed dirty data and may itself need to roll back.</p>
+            <p>If another transaction depended on T2, the rollback could cascade further.</p>
+            <p>This is the motivation for Strict 2PL.</p>
+            <h2 id="the-main-2pl-variants">The main 2PL variants</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Challenge</th>
-                        <th>Why it happens</th>
-                        <th>Common remedies</th>
+                        <th>Variant</th>
+                        <th>Rule</th>
+                        <th>Main purpose</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Deadlock</strong></td>
-                        <td>T1 holds A wants B; T2 holds B wants A</td>
-                        <td>① Lock ordering, ② short transactions, ③ automatic deadlock detection + retry</td>
+                        <td>Basic 2PL</td>
+                        <td>Acquire locks during growing phase; after first release, acquire no more locks</td>
+                        <td>Conflict serializability</td>
                     </tr>
                     <tr>
-                        <td><strong>Reduced concurrency</strong></td>
-                        <td>Locks block readers/writers</td>
-                        <td>Choose proper isolation level (e.g. Snapshot/MVCC where possible), finer‑grained locks</td>
+                        <td>Strict 2PL</td>
+                        <td>Basic 2PL plus hold exclusive/write locks until commit or rollback</td>
+                        <td>Prevent dirty reads/writes of uncommitted changes through conflicting lock access; avoid cascading aborts</td>
                     </tr>
                     <tr>
-                        <td><strong>Lock management overhead</strong></td>
-                        <td>High‑throughput workloads</td>
-                        <td>Batch writes, keep transactions lean, use multiversion techniques</td>
+                        <td>Rigorous 2PL</td>
+                        <td>Hold both shared and exclusive locks until transaction end</td>
+                        <td>Makes transaction order and recovery particularly simple</td>
+                    </tr>
+                    <tr>
+                        <td>Conservative / Static 2PL</td>
+                        <td>Obtain the complete required lock set before execution proceeds</td>
+                        <td>Prevent lock deadlocks caused by gradually acquiring locks</td>
                     </tr>
                 </tbody>
             </table>
-            <p>Deadlock Illustration:</p>
+            <p>These variants address different problems.</p>
+            <p>They should not be thought of as four completely unrelated protocols.</p>
+            <p>For example, strictness is about how long write locks are retained, while conservative 2PL is about obtaining the required lock set before execution instead of discovering locks incrementally.</p>
+            <p>The ideas can therefore overlap.</p>
+            <h2 id="strict-2pl">Strict 2PL</h2>
+            <p>Under Strict Two-Phase Locking, a transaction does not release its exclusive locks until:</p>
             <div>
-                <pre><code class="language-shell">Wait‑for graph
-  T1 ───► T2
-  ▲       │
-  └───────┘  (cycle ⇒ deadlock)</code></pre>
+                <pre><code class="language-text">COMMIT</code></pre>
             </div>
-            <h3 id="best-practices-when-coding-with-2pl">Best Practices When Coding with 2PL</h3>
-            <ul>
-                <li>Keep transactions <strong>small and quick</strong>.</li>
-                <li><strong>Access objects in a consistent order</strong> (e.g. alphabetical by primary key).</li>
-                <li>Use <strong><code>SELECT … FOR UPDATE</code></strong> only when you truly need exclusive access.</li>
-                <li>Prefer <strong>row‑level locks</strong> over table locks for write heavy systems.</li>
-                <li><strong>Monitor</strong> blocked/locking sessions (<code>pg_stat_activity</code>, <code>INFORMATION_SCHEMA.INNODB_TRX</code>, etc.).</li>
-            </ul>
-            <h3 id="further-reading">Further Reading</h3>
-            <ul>
-                <li><strong>ANSI/ISO SQL Standard</strong> – isolation levels &amp; locking semantics</li>
-                <li>Bernstein &amp; Newcomer, <em>Principles of Transaction Processing</em></li>
-                <li>PostgreSQL docs – <em>Explicit Locking</em>, <em>Concurrency Control</em></li>
-                <li>Fekete et al., "Making Snapshot Isolation Serializable" (SIGMOD 2005)</li>
-            </ul>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-text">ROLLBACK</code></pre>
+            </div>
+            <p>Return to the earlier example.</p>
+            <p>T1 writes:</p>
+            <div>
+                <pre><code class="language-text">A = 500</code></pre>
+            </div>
+            <p>but has not committed.</p>
+            <p>Because T1 still holds:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>T2 cannot obtain a conflicting lock allowing it to read or overwrite that value.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1:
+X(A)
+write A = 500
+...
+COMMIT
+release X(A)
+
+T2:
+        waits...
+        S(A)
+        read A</code></pre>
+            </div>
+            <p>If T1 rolls back instead:</p>
+            <div>
+                <pre><code class="language-text">T2 never observes the uncommitted value.</code></pre>
+            </div>
+            <p>This makes recovery much easier.</p>
+            <p>A transaction cannot build committed work on top of another transaction's still-uncommitted write through conflicting locked access.</p>
+            <h2 id="strict-2pl-still-has-a-growing-and-shrinking-rule">Strict 2PL still has a growing and shrinking rule</h2>
+            <p>A subtle point:</p>
+            <p>Strict 2PL does not simply mean:</p>
+            <div>
+                <pre><code class="language-text">hold X locks until commit
+and do whatever you want with every other lock</code></pre>
+            </div>
+            <p>The transaction still follows Basic 2PL.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Acquire S(A)
+Acquire X(B)
+
+Release S(A)
+
+Acquire X(C)</code></pre>
+            </div>
+            <p>is not valid Strict 2PL.</p>
+            <p>The release of <code>S(A)</code> started the shrinking phase.</p>
+            <p>Acquiring <code>X(C)</code> afterward violates 2PL.</p>
+            <p>Holding <code>X(B)</code> until commit does not repair that violation.</p>
+            <h2 id="rigorous-2pl">Rigorous 2PL</h2>
+            <p>Rigorous 2PL goes further.</p>
+            <p>Instead of holding only write locks until the transaction ends, it holds both:</p>
+            <div>
+                <pre><code class="language-text">S locks
+X locks</code></pre>
+            </div>
+            <p>until commit or rollback.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">BEGIN
+
+S(A)
+X(B)
+S(C)
+
+read/write work
+
+COMMIT
+
+release S(A)
+release X(B)
+release S(C)</code></pre>
+            </div>
+            <p>There is effectively no normal shrinking phase before transaction completion.</p>
+            <p>This has a useful property:</p>
+            <blockquote>
+                <p>if T1 releases a conflicting lock before T2 obtains it, T1 must already have finished.</p>
+            </blockquote>
+            <p>That makes the committed transaction order especially easy to reason about.</p>
+            <p>However, keeping read locks until transaction completion can increase blocking.</p>
+            <p>That tradeoff is one reason modern database systems often combine locking with MVCC rather than using textbook rigorous 2PL for every ordinary read.</p>
+            <h2 id="conservative-2pl">Conservative 2PL</h2>
+            <p>Ordinary 2PL can deadlock because transactions usually discover the locks they need gradually.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">T1 locks A
+T2 locks B
+
+T1 requests B → waits
+T2 requests A → waits</code></pre>
+            </div>
+            <p>Neither transaction can continue.</p>
+            <p>Conservative 2PL avoids this specific problem by requiring a transaction to obtain its complete lock set before execution proceeds.</p>
+            <p>For example, T1 determines that it needs:</p>
+            <div>
+                <pre><code class="language-text">X(A)
+X(B)
+S(C)</code></pre>
+            </div>
+            <p>and asks for all of them.</p>
+            <p>If the complete set is unavailable, it does not start while holding only part of that set.</p>
+            <p>Therefore the classic pattern:</p>
+            <div>
+                <pre><code class="language-text">hold one resource
+while waiting for another</code></pre>
+            </div>
+            <p>does not develop.</p>
+            <p>The disadvantage is obvious.</p>
+            <p>Many database transactions do not know their complete lock set in advance.</p>
+            <p>A query might first read:</p>
+            <div>
+                <pre><code class="language-text">customer_id = 42</code></pre>
+            </div>
+            <p>then discover from that row which invoices, accounts, jobs, or child records must be accessed.</p>
+            <p>Predeclaring everything would be difficult or impossible.</p>
+            <p>It can also reduce concurrency by acquiring resources earlier than actually needed.</p>
+            <h2 id="deadlocks-are-not-evidence-that-2pl-is-broken">Deadlocks are not evidence that 2PL is broken</h2>
+            <p>Deadlocks are a normal consequence of lock-based concurrency.</p>
+            <p>Suppose two bank transfers execute simultaneously.</p>
+            <p>Transaction T1:</p>
+            <div>
+                <pre><code class="language-text">transfer from account 1 to account 2</code></pre>
+            </div>
+            <p>Transaction T2:</p>
+            <div>
+                <pre><code class="language-text">transfer from account 2 to account 1</code></pre>
+            </div>
+            <p>If they lock their source account first:</p>
+            <div>
+                <pre><code class="language-text">T1: X(account 1)
+T2: X(account 2)</code></pre>
+            </div>
+            <p>then:</p>
+            <div>
+                <pre><code class="language-text">T1 asks for account 2 → waits
+T2 asks for account 1 → waits</code></pre>
+            </div>
+            <p>We now have:</p>
+            <div>
+                <pre><code class="language-text">T1 waits for T2
+T2 waits for T1</code></pre>
+            </div>
+            <p>That is a deadlock.</p>
+            <p>The database normally detects the cycle, aborts one participant, and lets the other continue.</p>
+            <p>The application then retries the aborted transaction.</p>
+            <p>PostgreSQL automatically detects lock deadlocks and aborts one transaction; its documentation recommends acquiring multiple objects in a consistent order where possible. PostgreSQL uses SQLSTATE <code>40P01</code> for <code>deadlock_detected</code>.</p>
+            <p>MySQL/InnoDB similarly detects deadlocks. Error <code>1213</code>, <code>ER_LOCK_DEADLOCK</code>, uses SQLSTATE <code>40001</code>, and MySQL explicitly tells applications to restart the transaction.</p>
+            <p>SQL Server chooses a deadlock victim, rolls its transaction back, and returns error <code>1205</code>.</p>
+            <h2 id="concrete-solution-always-lock-accounts-in-the-same-order">Concrete solution: always lock accounts in the same order</h2>
+            <p>A common way to reduce the bank-transfer deadlock is to define a canonical lock order.</p>
+            <p>Instead of:</p>
+            <div>
+                <pre><code class="language-text">lock source
+then lock destination</code></pre>
+            </div>
+            <p>every transfer uses:</p>
+            <div>
+                <pre><code class="language-text">lock lower account_id
+then lock higher account_id</code></pre>
+            </div>
+            <p>For example, suppose <code>accounts</code> contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>1000</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>In PostgreSQL, the transaction first locks and reads both rows:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT account_id, balance
+FROM accounts
+WHERE account_id IN (1, 2)
+ORDER BY account_id
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>1000</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Then it verifies the rows and applies the transfer:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>900</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1100</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A concurrent reverse transfer should use the same account ordering.</p>
+            <p>Now both transactions attempt:</p>
+            <div>
+                <pre><code class="language-text">account 1
+then account 2</code></pre>
+            </div>
+            <p>instead of:</p>
+            <div>
+                <pre><code class="language-text">T1: 1 → 2
+T2: 2 → 1</code></pre>
+            </div>
+            <p>This greatly reduces the possibility of a cycle.</p>
+            <p>It does not mean an application can ignore deadlock handling entirely: databases can acquire additional internal/index locks and larger transactions can involve other resources.</p>
+            <p>Retry logic is still necessary.</p>
+            <h2 id="lock-ordering-and-2pl-solve-different-problems">Lock ordering and 2PL solve different problems</h2>
+            <p>These concepts are often mixed together.</p>
+            <p>2PL prevents non-serializable conflict schedules.</p>
+            <p>Consistent lock ordering reduces deadlocks.</p>
+            <p>A system can follow perfect 2PL and still deadlock.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">T1: lock A
+T2: lock B
+
+T1: request B
+T2: request A</code></pre>
+            </div>
+            <p>Neither transaction has released anything.</p>
+            <p>Both are still completely inside the growing phase.</p>
+            <p>They are obeying 2PL.</p>
+            <p>They are also deadlocked.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-text">2PL ⇒ serializability</code></pre>
+            </div>
+            <p>does not imply:</p>
+            <div>
+                <pre><code class="language-text">2PL ⇒ no deadlocks</code></pre>
+            </div>
+            <h2 id="rows-are-not-the-only-things-that-may-need-locking">Rows are not the only things that may need locking</h2>
+            <p>Textbook explanations often talk about:</p>
+            <div>
+                <pre><code class="language-text">lock(A)
+lock(B)</code></pre>
+            </div>
+            <p>as though every data item were one database row.</p>
+            <p>Real databases may lock or protect:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Why it may matter</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Row / tuple</td>
+                        <td>Protect one existing record</td>
+                    </tr>
+                    <tr>
+                        <td>Index entry</td>
+                        <td>Protect access to indexed data</td>
+                    </tr>
+                    <tr>
+                        <td>Key range</td>
+                        <td>Prevent matching keys from appearing</td>
+                    </tr>
+                    <tr>
+                        <td>Gap between keys</td>
+                        <td>Prevent inserts into a predicate range</td>
+                    </tr>
+                    <tr>
+                        <td>Page</td>
+                        <td>Protect a larger storage unit</td>
+                    </tr>
+                    <tr>
+                        <td>Table</td>
+                        <td>Protect many rows at once</td>
+                    </tr>
+                    <tr>
+                        <td>Metadata/schema object</td>
+                        <td>Protect table definitions and other metadata</td>
+                    </tr>
+                    <tr>
+                        <td>Logical transaction resource</td>
+                        <td>Used by some modern lock implementations</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This becomes especially important for queries based on predicates.</p>
+            <h2 id="row-locks-cannot-protect-a-row-that-does-not-exist">Row locks cannot protect a row that does not exist</h2>
+            <p>Consider a reservation system with this rule:</p>
+            <div>
+                <pre><code class="language-text">only one active reservation may exist
+for resource 42 at 10:00</code></pre>
+            </div>
+            <p>The <code>reservations</code> table has no row for resource 42 at 10:00:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>resource_id</th>
+                        <th>start_time</th>
+                    </tr>
+                </thead>
+            </table>
+            <p>Transaction T1 executes:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM reservations
+WHERE resource_id = 42
+  AND start_time = '10:00'
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Suppose no row exists.</p>
+            <p>What exactly did T1 row-lock?</p>
+            <p>Nothing.</p>
+            <p>There is no existing row corresponding to:</p>
+            <div>
+                <pre><code class="language-text">resource 42 at 10:00</code></pre>
+            </div>
+            <p>to lock.</p>
+            <p>Another transaction might also find no row and attempt to insert one.</p>
+            <p>This is the predicate / phantom problem.</p>
+            <p>The logical thing that needs protection is:</p>
+            <div>
+                <pre><code class="language-text">"all current and future rows satisfying this condition"</code></pre>
+            </div>
+            <p>rather than only:</p>
+            <div>
+                <pre><code class="language-text">"these rows that currently exist"</code></pre>
+            </div>
+            <p>Different database systems solve this in different ways.</p>
+            <h2 id="how-sql-server-solves-predicate-protection">How SQL Server solves predicate protection</h2>
+            <p>SQL Server's lock-based <code>SERIALIZABLE</code> isolation can use key-range locks.</p>
+            <p>Suppose <code>reservations</code> contains these rows:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>resource_id</th>
+                        <th>start_time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>42</td>
+                        <td>09:30</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>42</td>
+                        <td>10:15</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>42</td>
+                        <td>11:00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A query reads the indexed range:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM reservations
+WHERE resource_id = 42
+  AND start_time &gt;= '10:00'
+  AND start_time &lt; '11:00';</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>resource_id</th>
+                        <th>start_time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2</td>
+                        <td>42</td>
+                        <td>10:15</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Protecting only currently existing rows is insufficient.</p>
+            <p>Another transaction could insert a new index key that falls into that interval.</p>
+            <p>Under locking Serializable behavior, SQL Server can protect the relevant index range so another transaction cannot insert a qualifying key until the first transaction finishes. Microsoft explicitly describes key-range locks as the mechanism used at Serializable to prevent phantom insertions.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Existing keys:
+
+09:00
+09:30
+        [ protected range ]
+11:00</code></pre>
+            </div>
+            <p>The protected object is partly the space between keys, not only existing rows.</p>
+            <p>This is how lock-based serializable implementations extend the 2PL idea from individual rows to predicates.</p>
+            <h2 id="how-mysql-innodb-solves-range-conflicts">How MySQL/InnoDB solves range conflicts</h2>
+            <p>InnoDB combines MVCC with record and index-range locking.</p>
+            <p>Suppose <code>bookings</code> has these rows for event 42:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>booking_id</th>
+                        <th>event_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>501</td>
+                        <td>42</td>
+                    </tr>
+                    <tr>
+                        <td>502</td>
+                        <td>42</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A locking query such as:</p>
+            <div>
+                <pre><code class="language-sql">SELECT booking_id
+FROM bookings
+WHERE event_id = 42
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>booking_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>501</td>
+                    </tr>
+                    <tr>
+                        <td>502</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>can acquire locks on encountered index records.</p>
+            <p>At isolation levels and access patterns where range protection is needed, InnoDB also uses gap locks and next-key locks so that concurrent transactions cannot simply insert a new qualifying record between existing index entries.</p>
+            <p>This is how InnoDB protects situations in which:</p>
+            <div>
+                <pre><code class="language-text">the dangerous row does not exist yet</code></pre>
+            </div>
+            <p>or the logical resource is a range rather than one row.</p>
+            <p>MySQL's InnoDB documentation explicitly separates ordinary consistent MVCC reads from locking reads and documents next-key locking as its phantom-protection mechanism.</p>
+            <h2 id="postgresql-does-something-importantly-different">PostgreSQL does something importantly different</h2>
+            <p>PostgreSQL is an excellent example of why:</p>
+            <blockquote>
+                <p>"database locking" is not automatically the same thing as "the database uses textbook 2PL for everything. "</p>
+            </blockquote>
+            <p>Suppose <code>accounts</code> contains <code>(account_id=1, balance=1000)</code>. An ordinary PostgreSQL read is:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>1000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>It uses MVCC.</p>
+            <p>It does not normally acquire an <code>S</code> row lock that blocks a concurrent writer.</p>
+            <p>If another transaction has modified the row but not yet committed, PostgreSQL can often read an older committed version instead.</p>
+            <p>This differs fundamentally from a pure textbook scheme where every read must acquire an <code>S</code> lock conflicting with a writer's <code>X</code> lock.</p>
+            <p>PostgreSQL row locks such as:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE;</code></pre>
+            </div>
+            <p>do exist.</p>
+            <p>They block other writers and conflicting lockers until the transaction ends, but ordinary MVCC readers can continue reading suitable committed row versions. PostgreSQL explicitly documents that row-level locks do not prevent ordinary data querying.</p>
+            <p>Therefore:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL uses locks</code></pre>
+            </div>
+            <p>does not imply:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL implements all transaction isolation
+using classical 2PL.</code></pre>
+            </div>
+            <h2 id="postgresql-serializable-is-not-lock-based-2pl">PostgreSQL Serializable is not lock-based 2PL</h2>
+            <p>PostgreSQL's Serializable level is particularly important.</p>
+            <p>It is implemented using:</p>
+            <p>Serializable Snapshot Isolation (SSI).</p>
+            <p>PostgreSQL begins with snapshot isolation and monitors read/write dependencies between concurrent transactions.</p>
+            <p>When it detects a dependency structure that could allow a non-serializable result, it aborts one of the transactions.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Traditional lock-based approach:
+
+prevent dangerous access
+by blocking it with locks</code></pre>
+            </div>
+            <p>versus PostgreSQL SSI:</p>
+            <div>
+                <pre><code class="language-text">allow substantial concurrent snapshot execution
+
+track dependencies
+
+detect dangerous serialization structure
+
+abort one transaction if necessary</code></pre>
+            </div>
+            <p>PostgreSQL does use what its documentation calls predicate locks for SSI, represented as <code>SIReadLock</code>, but these are not ordinary blocking locks.</p>
+            <p>They exist to record read dependencies.</p>
+            <p>PostgreSQL explicitly states that its Serializable predicate locks do not themselves block other transactions and therefore do not participate in lock deadlocks.</p>
+            <p>That is very different from SQL Server Serializable key-range locks.</p>
+            <h2 id="predicate-lock-means-different-things-operationally">"Predicate lock" means different things operationally</h2>
+            <p>The terminology can therefore be confusing.</p>
+            <p>SQL Server Serializable:</p>
+            <div>
+                <pre><code class="language-text">range protection
+→ conflicting insert can be blocked</code></pre>
+            </div>
+            <p>PostgreSQL Serializable SSI:</p>
+            <div>
+                <pre><code class="language-text">predicate/read tracking
+→ conflicting work can continue
+→ dangerous dependency can later cause serialization failure</code></pre>
+            </div>
+            <p>Both protect serializability.</p>
+            <p>They do not protect it in the same way.</p>
+            <p>This is exactly why database isolation should be understood in terms of guarantees and mechanisms rather than assuming that every engine implements one textbook algorithm.</p>
+            <h2 id="innodb-is-also-not-just-2pl">InnoDB is also not "just 2PL"</h2>
+            <p>InnoDB is a hybrid.</p>
+            <p>Ordinary consistent reads use MVCC.</p>
+            <p>Suppose the <code>products</code> row is <code>(id=100, name='Desk lamp', stock=8)</code>. An ordinary query is:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM products
+WHERE id = 100;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>name</th>
+                        <th>stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>Desk lamp</td>
+                        <td>8</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>It can read a historical committed row version rather than waiting on a current writer.</p>
+            <p>But a locking read returns and locks the matching current row:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM products
+WHERE id = 100
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>name</th>
+                        <th>stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>Desk lamp</td>
+                        <td>8</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>It behaves differently.</p>
+            <p>It acquires locks on relevant records/index entries.</p>
+            <p>Those locks remain until commit or rollback.</p>
+            <p>MySQL documents that <code>FOR SHARE</code> and <code>FOR UPDATE</code> locks are released when the transaction commits or rolls back.</p>
+            <p>So InnoDB combines:</p>
+            <div>
+                <pre><code class="language-text">MVCC snapshot reading
++
+pessimistic locking
++
+record locks
++
+gap / next-key locks
++
+deadlock detection</code></pre>
+            </div>
+            <p>It should not be reduced to:</p>
+            <div>
+                <pre><code class="language-text">"MySQL uses 2PL."</code></pre>
+            </div>
+            <p>without explaining which operations and isolation mode are being discussed.</p>
+            <h2 id="sql-server-is-the-closest-of-the-three-to-the-textbook-locking-model">SQL Server is the closest of the three to the textbook locking model</h2>
+            <p>Traditional SQL Server isolation is easier to map onto lock-based theory.</p>
+            <p>Under pessimistic locking:</p>
+            <div>
+                <pre><code class="language-text">READ COMMITTED</code></pre>
+            </div>
+            <p>normally releases read locks after the statement.</p>
+            <p>Under:</p>
+            <div>
+                <pre><code class="language-text">REPEATABLE READ</code></pre>
+            </div>
+            <p>read locks are held longer so rows already read cannot be changed by another transaction before the current transaction ends.</p>
+            <p>Under:</p>
+            <div>
+                <pre><code class="language-text">SERIALIZABLE</code></pre>
+            </div>
+            <p>SQL Server additionally protects key ranges so new qualifying rows cannot appear.</p>
+            <p>Microsoft's locking documentation describes Repeatable Read as retaining read/write locks and Serializable as adding range locks to prevent phantom reads.</p>
+            <p>That behavior resembles the textbook progression from row-level locking toward a strict/range-aware locking protocol.</p>
+            <p>However, modern SQL Server adds an important complication.</p>
+            <h2 id="modern-sql-server-and-optimized-locking">Modern SQL Server and optimized locking</h2>
+            <p>Recent SQL Server versions and Azure SQL can use optimized locking.</p>
+            <p>Instead of necessarily retaining every physical row/page <code>X</code> lock until transaction completion, SQL Server can release many row/page locks earlier and retain a transaction-ID (<code>TID</code>) lock representing the uncommitted transaction.</p>
+            <p>Microsoft describes, for example, an update of many rows where individual row <code>X</code> locks may be released after modification while one transaction-level <code>X</code> lock remains until the transaction ends.</p>
+            <p>This means statements such as:</p>
+            <blockquote>
+                <p>"SQL Server implements rigorous 2PL by holding every S and X row lock until commit. "</p>
+            </blockquote>
+            <p>are too simplistic for modern SQL Server.</p>
+            <p>The observable isolation guarantee matters more than whether each internal physical lock exactly matches the textbook protocol.</p>
+            <p>This is an important general lesson:</p>
+            <blockquote>
+                <p>Textbook 2PL is a model for reasoning about concurrency. Production engines may implement equivalent guarantees using MVCC, dependency tracking, transaction-ID locks, range locks, or combinations of these mechanisms.</p>
+            </blockquote>
+            <h2 id="technology-summary">Technology summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technology</th>
+                        <th>Ordinary read mechanism</th>
+                        <th>Explicit locking</th>
+                        <th>Predicate/range protection</th>
+                        <th>Serializable strategy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>MVCC snapshot/read committed versions</td>
+                        <td><code>FOR UPDATE</code>, <code>FOR NO KEY UPDATE</code>, <code>FOR SHARE</code>, <code>FOR KEY SHARE</code></td>
+                        <td>SSI predicate-read tracking rather than ordinary blocking range locks</td>
+                        <td>Serializable Snapshot Isolation; dangerous dependency can abort a transaction</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL InnoDB</td>
+                        <td>MVCC consistent reads</td>
+                        <td><code>FOR UPDATE</code>, <code>FOR SHARE</code></td>
+                        <td>Record, gap, and next-key locks depending on operation/isolation</td>
+                        <td>Stronger locking behavior combined with InnoDB MVCC</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server</td>
+                        <td>Locking or row versioning depending on configuration</td>
+                        <td>S/U/X locks and locking hints</td>
+                        <td>Key-range locks at locking Serializable</td>
+                        <td>Primarily lock/range-lock based; newer versions can use optimized TID locking</td>
+                    </tr>
+                    <tr>
+                        <td>Textbook 2PL</td>
+                        <td>Reads acquire S locks</td>
+                        <td>Writes acquire X locks</td>
+                        <td>Requires locking the appropriate logical data item/range</td>
+                        <td>Serializability follows from the growing/shrinking rule</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>PostgreSQL's current documentation explicitly identifies its Serializable implementation as SSI rather than traditional blocking serializable locking. MySQL documents its combination of consistent MVCC reads and explicit locking reads. SQL Server documents both its traditional lock-based isolation behavior and its newer optimized-locking mechanism.</p>
+            <h2 id="a-concrete-application-example-bank-transfer">A concrete application example: bank transfer</h2>
+            <p>Consider:</p>
+            <div>
+                <pre><code class="language-text">account 1 = €500
+account 2 = €300</code></pre>
+            </div>
+            <p>We want to transfer:</p>
+            <div>
+                <pre><code class="language-text">€100 from account 1 to account 2</code></pre>
+            </div>
+            <p>The business operation is:</p>
+            <div>
+                <pre><code class="language-text">read/check source
+debit source
+credit destination</code></pre>
+            </div>
+            <p>Both account changes must belong to one transaction.</p>
+            <p>Suppose the two <code>accounts</code> rows each have a balance of 1000. A PostgreSQL implementation reads and locks them in order:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT account_id, balance
+FROM accounts
+WHERE account_id IN (1, 2)
+ORDER BY account_id
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>1000</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>After checking the balances, the transaction performs both updates and commits:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>900</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>1100</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The important design decisions are not merely:</p>
+            <div>
+                <pre><code class="language-text">"we used FOR UPDATE"</code></pre>
+            </div>
+            <p>but:</p>
+            <div>
+                <pre><code class="language-text">both rows are locked before the decision is completed
+
+all transfer code uses the same lock ordering
+
+the debit and credit occur in one transaction
+
+the transaction remains short</code></pre>
+            </div>
+            <p>A useful database constraint may also be appropriate:</p>
+            <div>
+                <pre><code class="language-sql">CHECK (balance &gt;= 0)</code></pre>
+            </div>
+            <p>if negative balances are never legal.</p>
+            <p>Constraints and locks solve different layers of the problem:</p>
+            <div>
+                <pre><code class="language-text">locking coordinates concurrent decisions
+
+constraints reject impossible final states</code></pre>
+            </div>
+            <p>Using both can be valuable.</p>
+            <h2 id="why-an-ordinary-postgresql-reader-can-still-see-the-account">Why an ordinary PostgreSQL reader can still see the account</h2>
+            <p>Suppose T1 holds:</p>
+            <div>
+                <pre><code class="language-text">FOR UPDATE</code></pre>
+            </div>
+            <p>on account <code>1</code>.</p>
+            <p>Suppose account 1 has a committed balance of 1000 while T1 holds <code>FOR UPDATE</code>. Another transaction executes:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>That ordinary PostgreSQL reader is not automatically blocked by the row lock.</p>
+            <p>Because PostgreSQL uses MVCC, it can read an appropriate committed version.</p>
+            <p>What is blocked are operations requiring a conflicting row lock or modification.</p>
+            <p>PostgreSQL documents exactly this distinction: row-level locks block writers and lockers of the same row, but do not prevent ordinary querying.</p>
+            <p>Therefore the intuition:</p>
+            <div>
+                <pre><code class="language-text">X lock exists
+→ nobody can even read the row</code></pre>
+            </div>
+            <p>is a textbook-locking intuition that does not directly describe MVCC engines.</p>
+            <h2 id="another-concrete-example-reserving-a-seat">Another concrete example: reserving a seat</h2>
+            <p>Suppose an application stores seats individually:</p>
+            <div>
+                <pre><code class="language-text">seat 1
+seat 2
+seat 3
+...</code></pre>
+            </div>
+            <p>Suppose <code>seats</code> contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>seat_id</th>
+                        <th>reserved_by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>42</td>
+                        <td>NULL</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>To reserve seat 42, the query reads and locks the existing row:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM seats
+WHERE seat_id = 42
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>seat_id</th>
+                        <th>reserved_by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>42</td>
+                        <td>NULL</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Then the transaction updates it:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE seats SET reserved_by = 1001 WHERE seat_id = 42;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>seat_id</th>
+                        <th>reserved_by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>42</td>
+                        <td>1001</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This maps naturally to row locking because the logical resource already exists as one row.</p>
+            <p>The lockable object:</p>
+            <div>
+                <pre><code class="language-text">seat 42</code></pre>
+            </div>
+            <p>is explicit.</p>
+            <p>Now compare a different data model:</p>
+            <div>
+                <pre><code class="language-text">event capacity = 100
+
+bookings are separate rows</code></pre>
+            </div>
+            <p>The rule is:</p>
+            <div>
+                <pre><code class="language-text">COUNT(bookings WHERE event_id = 5) &lt;= 100</code></pre>
+            </div>
+            <p>There is no single booking row representing:</p>
+            <div>
+                <pre><code class="language-text">"the last remaining unit of capacity"</code></pre>
+            </div>
+            <p>Two transactions can both count 99 and insert booking number 100 independently.</p>
+            <p>The invariant is now predicate-based.</p>
+            <p>Possible designs include:</p>
+            <div>
+                <pre><code class="language-text">lock one event/capacity row and update a counter atomically
+
+use database Serializable isolation
+
+use suitable range locking where the engine supports it
+
+redesign the invariant as a directly lockable or constrained resource</code></pre>
+            </div>
+            <p>This shows why concurrency design depends heavily on the schema.</p>
+            <h2 id="a-useful-design-trick-create-a-row-that-represents-the-logical-resource">A useful design trick: create a row that represents the logical resource</h2>
+            <p>Predicate locking can be complicated.</p>
+            <p>Sometimes the easiest solution is to transform an abstract invariant into a concrete lockable row.</p>
+            <p>Suppose <code>bookings</code> currently has rows for event 42:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>booking_id</th>
+                        <th>event_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>501</td>
+                        <td>42</td>
+                    </tr>
+                    <tr>
+                        <td>502</td>
+                        <td>42</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Instead of repeatedly checking:</p>
+            <div>
+                <pre><code class="language-sql">SELECT COUNT(*)
+FROM bookings
+WHERE event_id = 42;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>the <code>events</code> table might contain:</p>
+            <div>
+                <pre><code class="language-text">event_id
+capacity
+reserved_count</code></pre>
+            </div>
+            <p>Then reservation can use one atomic statement:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE events
+SET reserved_count = reserved_count + 1
+WHERE event_id = 42
+  AND reserved_count &lt; capacity;</code></pre>
+            </div>
+            <p>If:</p>
+            <div>
+                <pre><code class="language-text">rows affected = 1</code></pre>
+            </div>
+            <p>capacity was successfully reserved.</p>
+            <p>If:</p>
+            <div>
+                <pre><code class="language-text">rows affected = 0</code></pre>
+            </div>
+            <p>the event was already full.</p>
+            <p>This may be simpler than protecting:</p>
+            <div>
+                <pre><code class="language-text">all current and future booking rows</code></pre>
+            </div>
+            <p>with a complex locking protocol.</p>
+            <p>The broader lesson is:</p>
+            <blockquote>
+                <p>Good schema and statement design can remove the need for complicated locking.</p>
+            </blockquote>
+            <h2 id="for-update-is-not-a-universal-magic-phrase"><code>FOR UPDATE</code> is not a universal magic phrase</h2>
+            <p>Adding:</p>
+            <div>
+                <pre><code class="language-sql">FOR UPDATE</code></pre>
+            </div>
+            <p>does not automatically make every business rule safe.</p>
+            <p>Suppose the <code>users</code> table has no <code>alice@example.com</code> row:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>user_id</th>
+                        <th>email</th>
+                    </tr>
+                </thead>
+            </table>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM users
+WHERE email = 'alice@example.com'
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>If no user exists, there may be no existing row to lock.</p>
+            <p>Two transactions may both conclude:</p>
+            <div>
+                <pre><code class="language-text">email is available</code></pre>
+            </div>
+            <p>and both attempt the insert.</p>
+            <p>The correct solution for uniqueness is normally:</p>
+            <div>
+                <pre><code class="language-sql">UNIQUE(email)</code></pre>
+            </div>
+            <p>not relying on a pre-check plus row locking.</p>
+            <p>Likewise, use:</p>
+            <div>
+                <pre><code class="language-text">FOREIGN KEY</code></pre>
+            </div>
+            <p>for referential integrity where appropriate rather than manually reproducing all parent/child locking behavior in application code.</p>
+            <p>Locking is most useful when the business decision itself cannot be represented directly by a database constraint or atomic statement.</p>
+            <h2 id="2pl-versus-mvcc">2PL versus MVCC</h2>
+            <p>The cleanest contrast is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Traditional 2PL intuition</th>
+                        <th>MVCC intuition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Reader takes an S lock</td>
+                        <td>Reader often reads a version</td>
+                    </tr>
+                    <tr>
+                        <td>Writer takes X lock</td>
+                        <td>Writer creates/changes a newer version and uses write-related locks</td>
+                    </tr>
+                    <tr>
+                        <td>Reader and writer may block each other</td>
+                        <td>Reader may continue from an older committed version</td>
+                    </tr>
+                    <tr>
+                        <td>Serializability comes from lock ordering</td>
+                        <td>Serializability may come from locks, validation, dependency tracking, or a hybrid</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Neither technique is inherently "better. "</p>
+            <p>They make different tradeoffs.</p>
+            <p>Locking tends to discover some conflicts by:</p>
+            <div>
+                <pre><code class="language-text">waiting before proceeding</code></pre>
+            </div>
+            <p>Optimistic/MVCC techniques may instead allow more concurrency and discover problems through:</p>
+            <div>
+                <pre><code class="language-text">validation
+serialization failure
+transaction retry</code></pre>
+            </div>
+            <p>Modern databases frequently combine both approaches.</p>
+            <h2 id="blocking-versus-aborting">Blocking versus aborting</h2>
+            <p>Consider two transactions that cannot both safely complete.</p>
+            <p>A pessimistic lock-based system may behave as:</p>
+            <div>
+                <pre><code class="language-text">T1 obtains resource
+
+T2 requests resource
+T2 waits
+
+T1 commits
+
+T2 continues</code></pre>
+            </div>
+            <p>An optimistic/SSI-style system can behave more like:</p>
+            <div>
+                <pre><code class="language-text">T1 proceeds
+
+T2 proceeds concurrently
+
+database detects incompatible dependency pattern
+
+one transaction aborts
+
+application retries it</code></pre>
+            </div>
+            <p>The application experiences very different operational behavior:</p>
+            <div>
+                <pre><code class="language-text">locking → latency from waiting
+
+optimistic detection → retry cost</code></pre>
+            </div>
+            <p>Yet both approaches can provide serializable outcomes.</p>
+            <h2 id="deadlock-versus-serialization-failure">Deadlock versus serialization failure</h2>
+            <p>These are also different concepts.</p>
+            <p>A deadlock means transactions are waiting in a cycle:</p>
+            <div>
+                <pre><code class="language-text">T1 waits for T2
+T2 waits for T1</code></pre>
+            </div>
+            <p>The database must break the cycle.</p>
+            <p>A serialization failure means allowing all participating transactions to commit could violate serializable ordering.</p>
+            <p>There does not have to be a lock-wait cycle.</p>
+            <p>PostgreSQL Serializable SSI is the clearest example: its dependency tracking can abort a transaction with SQLSTATE <code>40001</code> even though its predicate locks themselves do not block.</p>
+            <p>Therefore:</p>
+            <div>
+                <pre><code class="language-text">deadlock retry</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">serialization-failure retry</code></pre>
+            </div>
+            <p>belong to the same broad application pattern but arise for different reasons.</p>
+            <h2 id="retry-the-complete-transaction">Retry the complete transaction</h2>
+            <p>When the database aborts a transaction because of a deadlock or serialization conflict, the application should normally retry the transaction from the beginning.</p>
+            <p>Not:</p>
+            <div>
+                <pre><code class="language-text">retry only the UPDATE that failed</code></pre>
+            </div>
+            <p>but:</p>
+            <div>
+                <pre><code class="language-text">BEGIN
+
+repeat the reads
+
+repeat the business decision
+
+repeat the writes
+
+COMMIT</code></pre>
+            </div>
+            <p>The earlier reads may no longer be valid.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">read balance = 500
+decide €400 debit is safe</code></pre>
+            </div>
+            <p>followed by an aborted transaction cannot safely become:</p>
+            <div>
+                <pre><code class="language-text">retry only debit €400</code></pre>
+            </div>
+            <p>because another transaction may have changed the balance before the retry.</p>
+            <p>PostgreSQL's documentation explicitly recommends retrying the whole transaction for serialization failures and identifies <code>40P01</code> deadlock failures as another case applications may retry.</p>
+            <p>MySQL likewise tells applications encountering InnoDB deadlock error <code>1213</code> to run all operations in the transaction again.</p>
+            <h2 id="keep-locked-transactions-short">Keep locked transactions short</h2>
+            <p>Locks are held resources.</p>
+            <p>A dangerous pattern is:</p>
+            <div>
+                <pre><code class="language-text">BEGIN
+
+lock customer row
+
+call external HTTP service
+
+wait 5 seconds
+
+ask user for confirmation
+
+perform more queries
+
+COMMIT</code></pre>
+            </div>
+            <p>During the network call or user wait, other transactions may be blocked.</p>
+            <p>Long lock durations increase:</p>
+            <div>
+                <pre><code class="language-text">contention
+deadlock probability
+tail latency
+lock memory consumption
+transaction timeout risk</code></pre>
+            </div>
+            <p>PostgreSQL explicitly advises against leaving transactions holding locks while waiting for external/user interaction.</p>
+            <p>A better design is generally:</p>
+            <div>
+                <pre><code class="language-text">perform slow external work outside the database transaction
+
+BEGIN
+perform short concurrency-sensitive work
+COMMIT</code></pre>
+            </div>
+            <p>When external side effects must be coordinated with database state, patterns such as an outbox or idempotency mechanism are often more appropriate than keeping a database transaction open during the external operation.</p>
+            <h2 id="indexes-affect-locking-behavior">Indexes affect locking behavior</h2>
+            <p>Indexes are not only performance structures.</p>
+            <p>They can also determine:</p>
+            <div>
+                <pre><code class="language-text">which records are scanned
+
+which index keys are touched
+
+which gaps or ranges need protection
+
+how many locks are acquired</code></pre>
+            </div>
+            <p>InnoDB explicitly recommends good indexes as one method of reducing the number of index records scanned and therefore the amount of locking and deadlock exposure.</p>
+            <p>SQL Server's documented key-range locking also depends on index-based range protection.</p>
+            <p>Therefore a query changing from:</p>
+            <div>
+                <pre><code class="language-text">targeted index lookup</code></pre>
+            </div>
+            <p>to:</p>
+            <div>
+                <pre><code class="language-text">large scan</code></pre>
+            </div>
+            <p>can alter not only query cost but also concurrency behavior.</p>
+            <p>This is one reason concurrency testing must use realistic schema, indexes, and execution plans.</p>
+            <h2 id="2pl-and-2pc-are-completely-different">2PL and 2PC are completely different</h2>
+            <p>The similar names cause constant confusion.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Two-Phase Locking</th>
+                        <th>Two-Phase Commit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Concurrency-control protocol</td>
+                        <td>Distributed atomic-commit protocol</td>
+                    </tr>
+                    <tr>
+                        <td>Concerned with acquiring/releasing locks</td>
+                        <td>Concerned with prepare/commit decisions</td>
+                    </tr>
+                    <tr>
+                        <td>Prevents non-serializable conflicting schedules</td>
+                        <td>Ensures distributed participants agree to commit or abort</td>
+                    </tr>
+                    <tr>
+                        <td>Phases: growing → shrinking</td>
+                        <td>Phases: prepare → commit/abort</td>
+                    </tr>
+                    <tr>
+                        <td>Can deadlock</td>
+                        <td>Can suffer coordinator/participant availability problems</td>
+                    </tr>
+                    <tr>
+                        <td>Usually discussed inside database concurrency control</td>
+                        <td>Usually discussed across multiple resource managers/nodes</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A distributed transaction may use:</p>
+            <div>
+                <pre><code class="language-text">2PL for isolation
++
+2PC for distributed atomic commit</code></pre>
+            </div>
+            <p>so the presence of one tells you nothing about whether the other is being used.</p>
+            <h2 id="what-applications-control-and-what-databases-control">What applications control and what databases control</h2>
+            <p>The application typically controls:</p>
+            <div>
+                <pre><code class="language-text">where a transaction begins and ends
+
+which statements execute inside it
+
+which explicit locking clauses are requested
+
+which isolation level is chosen
+
+the order in which logical resources are accessed
+
+how deadlocks/serialization failures are retried</code></pre>
+            </div>
+            <p>The database engine typically controls:</p>
+            <div>
+                <pre><code class="language-text">the concrete lock manager
+
+lock compatibility
+
+physical row/page/index/range locks
+
+MVCC version visibility
+
+wait queues
+
+deadlock detection
+
+lock escalation or optimized locking
+
+which transaction becomes a deadlock victim</code></pre>
+            </div>
+            <p>The division matters.</p>
+            <p>An application saying:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ... FOR UPDATE;</code></pre>
+            </div>
+            <p>expresses a locking requirement.</p>
+            <p>It does not generally dictate every internal lock object or storage-level mechanism the engine will use.</p>
+            <h2 id="nolock-is-not-use-smaller-locks"><code>NOLOCK</code> is not "use smaller locks"</h2>
+            <p>SQL Server's:</p>
+            <div>
+                <pre><code class="language-sql">WITH (NOLOCK)</code></pre>
+            </div>
+            <p>is often badly named in informal explanations.</p>
+            <p>It does not mean:</p>
+            <div>
+                <pre><code class="language-text">please use more lightweight row locks</code></pre>
+            </div>
+            <p>It changes the read semantics approximately to <code>READ UNCOMMITTED</code> for the referenced data.</p>
+            <p>That can allow dirty/inconsistent reads.</p>
+            <p>It is therefore an isolation choice, not a lock-granularity tuning switch.</p>
+            <p>Microsoft's own locking documentation shows that using <code>NOLOCK</code> can bypass the key-range locks that would otherwise be needed for Serializable behavior, meaning serializability is no longer guaranteed for that access.</p>
+            <h2 id="practical-comparison-of-concurrency-strategies">Practical comparison of concurrency strategies</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Problem</th>
+                        <th>Common mechanism</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Two transactions update exactly the same row</td>
+                        <td>Exclusive/write lock or optimistic version check</td>
+                    </tr>
+                    <tr>
+                        <td>Read a row, then make a decision before updating it</td>
+                        <td>Locking read such as <code>FOR UPDATE</code>, or atomic conditional update</td>
+                    </tr>
+                    <tr>
+                        <td>Prevent duplicate logical value</td>
+                        <td><code>UNIQUE</code> constraint</td>
+                    </tr>
+                    <tr>
+                        <td>Prevent negative quantity</td>
+                        <td><code>CHECK</code>, atomic conditional update, or appropriate locking</td>
+                    </tr>
+                    <tr>
+                        <td>Protect a range against new matching rows</td>
+                        <td>Range/gap/next-key locks or Serializable predicate protection</td>
+                    </tr>
+                    <tr>
+                        <td>Multi-row business invariant</td>
+                        <td>Explicit locking protocol or Serializable isolation</td>
+                    </tr>
+                    <tr>
+                        <td>Deadlock</td>
+                        <td>Database aborts a victim; application retries</td>
+                    </tr>
+                    <tr>
+                        <td>Serializable dependency conflict</td>
+                        <td>Database rejects an execution; application retries</td>
+                    </tr>
+                    <tr>
+                        <td>Long reader should not block writers</td>
+                        <td>MVCC / row-versioning approach</td>
+                    </tr>
+                    <tr>
+                        <td>Need deterministic resource acquisition</td>
+                        <td>Canonical lock ordering</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="the-most-useful-mental-model">The most useful mental model</h2>
+            <p>Do not memorize 2PL as:</p>
+            <div>
+                <pre><code class="language-text">phase 1 = lock
+phase 2 = unlock</code></pre>
+            </div>
+            <p>That is technically correct but not very useful.</p>
+            <p>Remember:</p>
+            <div>
+                <pre><code class="language-text">A transaction is allowed to expand
+the set of resources it depends on.
+
+Once it begins giving resources back,
+it may never expand that dependency set again.</code></pre>
+            </div>
+            <p>Why?</p>
+            <p>Because that creates a single ordering point for the transaction.</p>
+            <p>Conflicting transactions can then be ordered by their lock points.</p>
+            <p>That prevents dependency cycles.</p>
+            <p>Then remember the variants:</p>
+            <div>
+                <pre><code class="language-text">Basic 2PL
+    solves conflict serializability
+
+Strict 2PL
+    additionally keeps uncommitted writes protected
+
+Rigorous 2PL
+    holds all read/write locks until transaction end
+
+Conservative 2PL
+    obtains the required lock set up front
+    to avoid incremental lock deadlocks</code></pre>
+            </div>
+            <p>Finally, remember that real systems are hybrids:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL
+    MVCC ordinary reads
+    explicit row locks when requested
+    SSI for Serializable
+
+MySQL InnoDB
+    MVCC consistent reads
+    row/index locking
+    gap and next-key locking
+
+SQL Server
+    traditional pessimistic locking
+    key-range locking at Serializable
+    row versioning options
+    modern optimized TID locking</code></pre>
+            </div>
+            <p>The important question is therefore not:</p>
+            <div>
+                <pre><code class="language-text">"Does this database use 2PL?"</code></pre>
+            </div>
+            <p>but:</p>
+            <blockquote>
+                <p>For this operation and isolation level, what is being protected, how is it protected, when is that protection released, and what happens when two transactions conflict?</p>
+            </blockquote>
+            <p>That question transfers directly from textbook theory to production systems.</p>
+            <h2 id="references">References</h2>
+            <p>PostgreSQL's explicit-locking documentation describes its table and row lock modes, <code>FOR UPDATE</code> behavior, transaction-end lock release, and automatic deadlock detection.</p>
+            <p>PostgreSQL's transaction-isolation documentation explains that Serializable uses Serializable Snapshot Isolation, including nonblocking predicate locks used to detect dangerous dependencies rather than traditional blocking range locking.</p>
+            <p>MySQL's InnoDB locking documentation describes its combination of MVCC, record locks, gap/next-key locking, locking reads, and deadlock handling.</p>
+            <p>Microsoft's SQL Server locking documentation describes shared/exclusive locking, Repeatable Read behavior, Serializable key-range protection, deadlock handling, and modern optimized TID locking.</p>
         </article-section>
     </div>
     </main>

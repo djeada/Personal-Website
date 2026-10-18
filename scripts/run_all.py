@@ -141,6 +141,7 @@ def run_all():
 
     run_script("python3 bundle_css.py", [])
     run_script("python3 improve_site_experience.py", [])
+    run_script("python3 create_article_redirects.py", [])
     logging.info("All scripts executed successfully.")
 
 

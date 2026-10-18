@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Multithreading | Adam Djellouli</title>
-    <meta content="Multithreading is the use of multiple threads within a process so that work can proceed concurrently." name="description" />
+    <meta content="Multithreading lets several threads make progress within one process." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/02_multithreading"
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/02_multithreading",
-            "description": "Multithreading is the use of multiple threads within a process so that work can proceed concurrently.",
-            "dateModified": "2026-09-12",
+            "description": "Multithreading lets several threads make progress within one process.",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/02_multithreading" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Multithreading is the use of multiple threads within a process so that work can proceed concurrently." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="Multithreading lets several threads make progress within one process." property="og:description" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -117,6 +117,7 @@
                     <li><a href="#thread-pool-vs-on-demand-thread">Thread Pool vs On-Demand Thread</a></li>
                     <li><a href="#worker-threads">Worker Threads</a></li>
                     <li><a href="#advantages-of-threads-over-processes">Advantages of Threads over Processes</a></li>
+                    <li><a href="#choosing-a-synchronization-primitive">Choosing a Synchronization Primitive</a></li>
                     <li><a href="#challenges-with-multithreading">Challenges with Multithreading</a>
                         <ol>
                             <li><a href="#data-race">Data Race</a></li>
@@ -126,8 +127,8 @@
                             <li><a href="#livelock">Livelock</a></li>
                             <li><a href="#semaphore">Semaphore</a></li>
                             <li><a href="#common-misconceptions">Common Misconceptions</a></li>
-                            <li><a href="#problems-for-which-multithreading-is-the-answer">Problems for which multithreading is the answer</a></li>
-                            <li><a href="#problems-for-which-multithreading-is-not-the-answer">Problems for which multithreading is not the answer</a></li>
+                            <li><a href="#when-multithreading-helps">When Multithreading Helps</a></li>
+                            <li><a href="#when-to-try-another-approach">When to Try Another Approach</a></li>
                             <li><a href="#typical-applications">Typical Applications</a></li>
                         </ol>
                     </li>
@@ -157,7 +158,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -177,7 +178,9 @@
                     </button></div>
             </div>
             <h1>Multithreading</h1>
-            <p><strong>Multithreading</strong> is the use of multiple threads within a process so that work can proceed concurrently. A thread is a unit of execution that the operating system can schedule. Threads in the same process share an address space and many process resources, while each thread has its own execution state, such as a stack and registers. Depending on the hardware and runtime, threads may run in parallel on different cores or take turns on the same core. Multithreading is especially useful for I/O-bound work because one thread can make progress while another waits for I/O. Because threads can access shared memory, shared state must be synchronized carefully to avoid data races and other concurrency bugs.</p>
+            <p><strong>Multithreading</strong> lets several threads make progress within one process. Threads share its address space and resources such as open files, while each thread has its own stack, registers, and execution position.</p>
+            <p>Threads may run in parallel on different cores or take turns on one core. They can also overlap blocking I/O: one thread continues while another waits. Whether CPU work becomes faster depends on the runtime, available cores, and coordination costs.</p>
+            <p>The main correctness question is who may read or change each shared value. Establish that rule before choosing a synchronization primitive.</p>
             <h3 id="thread-pool-vs-on-demand-thread">Thread Pool vs On-Demand Thread</h3>
             <div>
                 <pre><code class="language-shell">+----------------+        +----------------+        +------------------+
@@ -220,6 +223,49 @@
                 <li>Switching between threads in the same process is often cheaper than switching between processes, although the exact cost depends on the operating system and workload.</li>
                 <li>Threads also make sharing in-process data and resources straightforward because they use the same address space.</li>
             </ul>
+            <h3 id="choosing-a-synchronization-primitive">Choosing a Synchronization Primitive</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Usual starting point</th>
+                        <th>Detail to check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Update several related values together</td>
+                        <td>Mutex</td>
+                        <td>Every conflicting access must follow the same locking rule.</td>
+                    </tr>
+                    <tr>
+                        <td>Increment one shared counter</td>
+                        <td>Atomic read-modify-write operation</td>
+                        <td>Separate atomic loads and stores do not make their combination atomic.</td>
+                    </tr>
+                    <tr>
+                        <td>Limit concurrent access to a pool of resources</td>
+                        <td>Counting semaphore</td>
+                        <td>A count greater than one allows simultaneous access; it does not protect a shared mutable object by itself.</td>
+                    </tr>
+                    <tr>
+                        <td>Wait until shared state satisfies a condition</td>
+                        <td>Condition variable and mutex</td>
+                        <td>Check the predicate while holding the mutex, including after waking.</td>
+                    </tr>
+                    <tr>
+                        <td>Wait for one batch of work to finish</td>
+                        <td>Latch</td>
+                        <td>A latch is used once.</td>
+                    </tr>
+                    <tr>
+                        <td>Meet at the end of repeated phases</td>
+                        <td>Barrier</td>
+                        <td>All required participants must reach each phase.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Ownership, ordering, and lifetime still matter when a primitive is used correctly. A lock protects the chosen critical section; it does not automatically protect every access to the same data.</p>
             <h3 id="challenges-with-multithreading">Challenges with Multithreading</h3>
             <ul>
                 <li>Threads can share state directly, which makes communication efficient but requires care when that state is mutable.</li>
@@ -255,6 +301,7 @@ funB()</code></pre>
             </ul>
             <p>Analogy: </p>
             <p><em>Imagine several chefs working on the same dish. Sharing the kitchen is fine, but if two chefs change the same ingredient at the same time without coordinating, the result becomes unpredictable. Threads have the same problem when they perform conflicting accesses to shared state without synchronization.</em></p>
+            <p>The following example deliberately contains a data race. In C++, this is undefined behavior: a low final count is one possible observation, but even the expected count would not show that the program is correct. The interleaving diagram below illustrates a lost update, rather than defining every behavior the program may exhibit. See the <a href="https://eel.is/c++draft/intro.races">C++ memory model</a>.</p>
             <p>Example:</p>
             <div>
                 <pre><code class="language-cpp">#include &lt;iostream&gt;
@@ -478,7 +525,7 @@ Time taken: 0.234567 seconds</code></pre>
             <p>What do we lose by using atomics?</p>
             <ul>
                 <li>Atomics require careful reasoning about memory ordering when synchronization extends beyond the atomic variable itself.</li>
-                <li>A single atomic variable is easy to use, but coordinating multi-step invariants or complex data structures is much harder.</li>
+                <li>Atomic accesses protect individual operations. For example, <code>counter.store(counter.load() + 1)</code> can lose updates because another thread may change the counter between the load and store. Use <code>counter.fetch_add(1)</code> for a single atomic increment, and a mutex when several values must change together.</li>
                 <li>Lock-free algorithms can introduce subtle problems such as livelock and the ABA problem.</li>
                 <li>Under heavy contention, atomics may perform no better than lock-based approaches and can sometimes perform worse.</li>
             </ul>
@@ -673,7 +720,7 @@ forward progress: a livelock.)</code></pre>
             <p>A <strong>semaphore</strong> is a synchronization primitive that uses a counter to limit how many threads may proceed at once. An <code>acquire</code> operation waits until the count is positive and then decrements it atomically. A <code>release</code> operation increments the count and may wake a waiting thread.</p>
             <p>Analogy: </p>
             <p><em>Think of a parking garage with a limited number of spaces. Each car (thread) must check if a space is available before entering (acquire). If no space is free, the car must wait. When a car leaves (release), a space opens up for the next waiting car.</em></p>
-            <p>Example (using C++20 counting semaphore):</p>
+            <p>Example (using a C++20 counting semaphore): two threads may enter the limited-capacity region at once. Shared mutable data inside that region would still need its own synchronization.</p>
             <div>
                 <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;thread&gt;
@@ -754,48 +801,24 @@ int main() {
             <p>It is often assumed that creating more threads will consistently boost performance. In reality, once the number of threads exceeds the available CPU cores or the nature of the task’s concurrency limits, performance may degrade. Excessive thread creation can lead to increased scheduling overhead, cache thrashing, and resource contention—ultimately harming efficiency.</p>
             <p>Multithreaded Code Is Always Harder to Write and Maintain </p>
             <p>While concurrency introduces challenges—such as synchronization, potential race conditions, and timing-related bugs—multithreaded code is not necessarily more difficult to manage than single-threaded code. Modern languages and frameworks provide abstractions (e.g., thread pools, futures, async/await mechanisms) that simplify parallelism. With proper design, testing strategies, and usage of these tools, writing reliable and maintainable multithreaded applications becomes more approachable.</p>
-            <h4 id="problems-for-which-multithreading-is-the-answer">Problems for which multithreading is the answer</h4>
+            <h4 id="when-multithreading-helps">When Multithreading Helps</h4>
             <ul>
-                <li>CPU-intensive computations that can be divided into independent work and can actually run in parallel in the chosen language/runtime.</li>
-                <li>Servers that must handle many independent client requests or connections concurrently.</li>
-                <li>Tasks that can be intuitively split into independent processing steps, allowing different threads to handle separate parts of a workflow concurrently.</li>
-                <li>Continuous access to a large read-only data set, where multiple threads can efficiently read and process the data without needing to modify it.</li>
-                <li>Tasks whose performance would be unacceptable as a single thread, necessitating parallel execution to meet performance requirements.</li>
-                <li>Managing concurrent access to multiple resources, such as an operating system coordinating access to hardware components, memory, and peripherals.</li>
-                <li>Processing a stream of large data files, enabling different threads to handle different segments of the data simultaneously for faster processing.</li>
-                <li>Problems where each step has a clear input and output, facilitating parallel processing of sequential steps in a pipeline.</li>
-                <li>Processes where the workload cannot be anticipated, allowing the system to dynamically allocate threads to handle varying loads effectively.</li>
-                <li>Real-time data processing tasks, such as financial trading systems that require immediate handling of incoming market data to execute trades without delay.</li>
-                <li>Blocking I/O workloads where multiple threads can overlap waits for files, networks, or other external resources.</li>
-                <li>Maintaining user interface responsiveness in applications by offloading long-running tasks to background threads, ensuring the UI remains interactive.</li>
-                <li>Parallel data processing pipelines, like ETL (Extract, Transform, Load) processes in data warehousing, where different stages run concurrently to enhance throughput.</li>
-                <li>Simulation and modeling applications, such as climate models or physics simulations, that divide the environment into regions processed in parallel to speed up computations.</li>
-                <li>Network servers and web services that handle multiple client connections simultaneously, with each thread managing a separate client session to ensure efficient request handling.</li>
-                <li>Machine learning model training, where large neural networks are trained by parallelizing computations across multiple threads or cores to accelerate the learning process.</li>
-                <li>Multimedia processing tasks, including audio and video encoding or decoding, where different streams or segments are processed in parallel to reduce latency and improve performance.</li>
-                <li>Automated testing and continuous integration systems that run multiple test suites or build processes in parallel to speed up the development and deployment pipeline.</li>
+                <li>Independent CPU work can run across cores when the runtime permits parallel execution.</li>
+                <li>Blocking I/O can overlap without requiring every library to expose an async API.</li>
+                <li>Background work can keep a UI or request-handling thread responsive.</li>
+                <li>A pipeline can process different inputs in different stages at the same time.</li>
+                <li>A bounded pool can distribute irregular tasks among reusable workers.</li>
             </ul>
-            <h4 id="problems-for-which-multithreading-is-not-the-answer">Problems for which multithreading is not the answer</h4>
+            <h4 id="when-to-try-another-approach">When to Try Another Approach</h4>
             <ul>
-                <li>Tasks with sequential dependencies require operations to be performed in a strict order without the possibility of parallel execution, making multithreading ineffective.</li>
-                <li>Minimal processing tasks involve simple or quick operations where the overhead of creating and managing threads outweighs any potential performance gains.</li>
-                <li>High contention for shared resources occurs when multiple threads frequently compete for the same resources, leading to excessive locking and reduced performance.</li>
-                <li>Applications relying on single-threaded libraries or APIs are not designed to be thread-safe, making multithreading difficult or error-prone.</li>
-                <li>Limited hardware resources mean environments have insufficient CPU cores or memory, where adding more threads could degrade overall system performance.</li>
-                <li>Systems with strict timing guarantees may not benefit from ordinary, unmanaged multithreading because general-purpose scheduling can introduce unpredictable delays. Real-time systems can still use threads when paired with appropriate real-time scheduling and design.</li>
-                <li>Applications requiring high synchronization involve tasks that need extensive coordination between threads, resulting in bottlenecks and diminishing returns from parallelism.</li>
-                <li>Debugging and maintenance complexity arises in projects where the added complexity of multithreading introduces significant challenges in debugging, testing, and maintaining the codebase.</li>
-                <li>Deterministic execution needs are present in applications that require consistent and repeatable behavior for debugging, security, or compliance reasons, which can be disrupted by the non-deterministic nature of multithreading.</li>
-                <li>Environments with poor multithreading support have programming languages or runtime environments that lack robust multithreading capabilities, making implementation difficult or inefficient.</li>
-                <li>Tasks better suited for asynchronous programming benefit from asynchronous, non-blocking approaches that provide better performance and scalability without the complexities of multithreading.</li>
-                <li>Problems better addressed by multiprocessing or distributed computing involve situations where using multiple processes or distributing tasks across different machines is more effective than using multiple threads within a single process.</li>
-                <li>Memory-constrained applications need to minimize memory usage, as each thread consumes additional memory for its stack and management overhead.</li>
-                <li>Simple, single-user applications operate with a single user or do not require concurrent processing, where multithreading offers no tangible benefits.</li>
-                <li>Tasks with high initialization costs involve operations where the cost of starting and stopping threads is prohibitively high compared to the task's execution time.</li>
-                <li>Security-sensitive applications could introduce vulnerabilities through race conditions or improper handling of shared data when using multithreading.</li>
-                <li>Legacy codebases are existing applications that were not designed with multithreading in mind, where retrofitting multithreading could be risky or impractical.</li>
-                <li>Energy-constrained devices are battery-powered or low-energy devices where the additional power consumption from managing multiple threads is a concern.</li>
+                <li>For tiny tasks, thread and queue overhead may exceed the useful work.</li>
+                <li>A long dependency chain leaves little work that can run in parallel.</li>
+                <li>Heavy contention on one shared resource may serialize most of the program.</li>
+                <li>A library may require calls from one specific thread, such as a UI thread.</li>
+                <li>CPU-bound Python code in a GIL-enabled CPython build may benefit more from processes or native code.</li>
+                <li>Many waiting network connections may fit an event loop well.</li>
             </ul>
+            <p>Choose using measurements and the library's concurrency requirements. More threads can improve throughput, reduce it, or leave it unchanged.</p>
             <h4 id="typical-applications">Typical Applications</h4>
             <table>
                 <thead>
@@ -1214,7 +1237,7 @@ int main() {
             <p>In this example, <code>std::atomic&lt;int&gt;</code> ensures that the increment operation is atomic, preventing data races.</p>
             <h5>Memory Orderings</h5>
             <p>When using atomic operations in C++, we not only specify <em>which</em> operations should be atomic, but also <em>how</em> they synchronize with other memory operations in the program. This “how” is controlled by <strong>memory orderings</strong>—a set of rules that govern visibility and ordering of reads and writes.</p>
-            <p>C++ provides six memory order enumerations in <code>std::memory_order</code>:</p>
+            <p>The C++20 examples use the following <code>std::memory_order</code> enumerators:</p>
             <ol>
                 <li><strong><code>std::memory_order_relaxed</code></strong> </li>
                 <li><strong><code>std::memory_order_consume</code></strong> (mostly unimplemented in mainstream compilers) </li>
@@ -1228,58 +1251,52 @@ int main() {
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Memory Order</strong></th>
-                        <th><strong>Brief Description</strong></th>
-                        <th><strong>Guarantees</strong></th>
-                        <th><strong>Common Use Cases</strong></th>
-                        <th><strong>Pitfalls &amp; Advice</strong></th>
+                        <th>Ordering</th>
+                        <th>Applies to</th>
+                        <th>Main guarantee</th>
+                        <th>Typical use</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong><code>std::memory_order_relaxed</code></strong></td>
-                        <td>Provides atomicity without synchronization ordering for other memory accesses</td>
-                        <td>- The atomic operation itself is indivisible <br /> - Operations on the same atomic still follow its modification order, but there is no cross-thread synchronization for unrelated memory</td>
-                        <td>- Counters or statistics where only the atomic value matters <br /> - Flags that do not publish other data</td>
-                        <td>- Easy to choose incorrectly when other state depends on the atomic update <br /> - Use only when no ordering relationship is required</td>
+                        <td><code>relaxed</code></td>
+                        <td>Loads, stores, read-modify-write operations</td>
+                        <td>The operation is atomic; it does not publish other data.</td>
+                        <td>A counter whose value is the only shared result.</td>
                     </tr>
                     <tr>
-                        <td><strong><code>std::memory_order_consume</code></strong></td>
-                        <td>Intended to enforce data dependency ordering (rarely implemented properly)</td>
-                        <td>- Theoretically only dependent reads are ordered <br /> - In practice, compilers often treat it like <code>acquire</code></td>
-                        <td>- Very specialized, mostly replaced by <code>acquire</code> in real-world code</td>
-                        <td>- Not well supported by most compilers <br /> - Avoid in portable or production code</td>
+                        <td><code>consume</code></td>
+                        <td>Loads and the read part of read-modify-write operations</td>
+                        <td>Legacy dependency-based ordering; compiler support is problematic.</td>
+                        <td>Avoid in these examples; use acquire when publishing data.</td>
                     </tr>
                     <tr>
-                        <td><strong><code>std::memory_order_acquire</code></strong></td>
-                        <td>Prevents later operations from being reordered before the acquire</td>
-                        <td>- When an acquire reads a value from a matching release sequence, earlier writes from the releasing thread become visible to the acquiring thread <br /> - Acts as a one-way ordering barrier after the acquire</td>
-                        <td>- Loading a “ready” flag before reading published data <br /> - Consumer-side synchronization</td>
-                        <td>- An acquire only synchronizes when it observes the relevant release/release sequence <br /> - Usually paired with <code>release</code> in producer-consumer patterns</td>
+                        <td><code>acquire</code></td>
+                        <td>Loads and read-modify-write operations</td>
+                        <td>Reading from a matching release orders its published data before later accesses.</td>
+                        <td>Read a ready flag, then use the published data.</td>
                     </tr>
                     <tr>
-                        <td><strong><code>std::memory_order_release</code></strong></td>
-                        <td>Prevents earlier operations from being reordered after the release</td>
-                        <td>- Publishes prior writes to a thread whose matching acquire observes this release (or its release sequence) <br /> - Acts as a one-way ordering barrier before the release</td>
-                        <td>- Setting a “ready” flag after preparing shared data <br /> - Producer-side synchronization</td>
-                        <td>- A release alone does not make another thread observe the data <br /> - It must participate in a matching synchronization relationship</td>
+                        <td><code>release</code></td>
+                        <td>Stores and read-modify-write operations</td>
+                        <td>Earlier accesses are published to a matching acquire.</td>
+                        <td>Prepare data, then set its ready flag.</td>
                     </tr>
                     <tr>
-                        <td><strong><code>std::memory_order_acq_rel</code></strong></td>
-                        <td>Acquire + Release in one read-modify-write operation</td>
-                        <td>- Combines the effects of <code>acquire</code> and <code>release</code> for RMW ops (e.g., <code>fetch_add</code>, <code>compare_exchange</code>) <br /> - Ensures no reorder before or after the operation</td>
-                        <td>- Updating shared state in a single atomic step where you must see previous writes and publish new writes (e.g., lock-free structures)</td>
-                        <td>- Can be stronger (thus slower) than needed if you only require a one-way barrier <br /> - Must be used carefully in highly concurrent scenarios</td>
+                        <td><code>acq_rel</code></td>
+                        <td>Read-modify-write operations</td>
+                        <td>Combines acquire and release effects.</td>
+                        <td>Observe published state while publishing an update.</td>
                     </tr>
                     <tr>
-                        <td><strong><code>std::memory_order_seq_cst</code></strong></td>
-                        <td>Enforces total sequential consistency across all threads</td>
-                        <td>- Provides a single, global order of all sequentially consistent operations <br /> - Easiest model to reason about, strongest ordering guarantee</td>
-                        <td>- When correctness is paramount and performance concerns are secondary <br /> - Prototyping concurrency code before optimizing</td>
-                        <td>- Highest potential performance cost <br /> - May introduce unnecessary fences on weaker architectures</td>
+                        <td><code>seq_cst</code></td>
+                        <td>Loads, stores, read-modify-write operations</td>
+                        <td>Appropriate acquire/release effects plus a common total order for sequentially consistent operations.</td>
+                        <td>The default starting point for reasoning about atomic state.</td>
                     </tr>
                 </tbody>
             </table>
+            <p>Choose an ordering that is valid for the operation: an acquire store or a release load is not valid. The table concerns ordering between accesses, not an instruction to insert a physical fence at every operation. A weaker ordering must preserve the required synchronization; it is not automatically faster. See <a href="https://eel.is/c++draft/atomics.order">C++ atomic ordering</a>.</p>
             <p>What Do We Gain By Careful Use of Memory Orderings?</p>
             <ul>
                 <li><strong>Weaker orderings</strong> such as <code>relaxed</code>, <code>acquire</code>, and <code>release</code> can compile to more efficient instructions on some hardware, resulting in better performance compared to using a blanket <code>seq_cst</code>.</li>
@@ -1341,8 +1358,9 @@ int main() {
 }</code></pre>
             </div>
             <ul>
-                <li>The <strong>producer</strong> writes <code>data.value = 42</code> and then calls <code>ready.store(true, std::memory_order_release)</code>, ensuring that any subsequent acquire operation on <code>ready</code> will see the updated <code>data.value</code>.</li>
-                <li>The <strong>consumer</strong> spins until <code>ready.load(std::memory_order_acquire)</code> becomes true, and because it’s an acquire load, once it returns true, the consumer also sees <code>data.value = 42</code>.</li>
+                <li>The producer writes <code>data.value</code> before publishing <code>true</code> with a release store.</li>
+                <li>The consumer may initially read <code>false</code>. When its acquire load reads the <code>true</code> written by that release store, the earlier write to <code>data.value</code> is ordered before the consumer reads the data.</li>
+                <li>This is one-time publication: the producer does not modify <code>data.value</code> again. Repeated updates would need an additional protocol. See <a href="https://eel.is/c++draft/atomics.order">acquire and release ordering</a>.</li>
             </ul>
             <p>What is happening:</p>
             <div>
@@ -1353,7 +1371,7 @@ int main() {
  ready.store(true, release)     ready.load(acquire) --&gt; sees true
          |                              |
          v                              |
-    [ memory fence ]                    v
+    [ release store ]                    v
                                  sees data.value = 42</code></pre>
             </div>
             <ul>
@@ -1367,85 +1385,86 @@ int main() {
                 <li>Protect shared mutable data with synchronization appropriate to the access pattern. That may mean a mutex, an atomic, a reader-writer lock, a concurrent data structure, or another mechanism that establishes safe access and ordering.</li>
                 <li>Utilizing modern features introduced in C++11 and later, such as <code>std::thread</code>, <code>std::mutex</code>, <code>std::lock_guard</code>, and <code>std::future</code>, can greatly simplify thread management and help avoid common pitfalls. These features provide robust and standardized ways to handle concurrency, making the code more maintainable and less error-prone.</li>
             </ul>
-            <p>Here are some example code snippets demonstrating various aspects of multithreading in C++:</p>
+            <p>The following examples use the files in <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading">the C++ multithreading directory</a>. Most need a C++20 compiler and <code>-pthread</code>; the download example also requires libcurl. Examples marked <strong>antipattern</strong> deliberately demonstrate a problem.</p>
             <table>
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Example</th>
-                        <th>Description</th>
+                        <th>What to look for</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>1</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/01_single_worker_thread.cpp">single_worker_thread</a></td>
-                        <td>Introduce the concept of threads by creating a single worker thread using <code>std::thread</code>.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/thread_life_cycle.cpp">thread_life_cycle.cpp</a></td>
+                        <td>Start workers, signal them to stop, and join them.</td>
                     </tr>
                     <tr>
-                        <td>2</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/02_thread_subclass.cpp">thread_subclass</a></td>
-                        <td>Demonstrate a custom thread wrapper built around <code>std::thread</code>.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/thread_wrapper.cpp">thread_wrapper.cpp</a></td>
+                        <td>Wrap <code>std::thread</code> and manage its lifetime.</td>
                     </tr>
                     <tr>
-                        <td>3</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/03_multiple_worker_threads.cpp">multiple_worker_threads</a></td>
-                        <td>Show how to create and manage multiple worker threads using <code>std::thread</code>.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/is_joinable.cpp">is_joinable.cpp</a></td>
+                        <td>Check whether a thread object still needs joining or detaching.</td>
                     </tr>
                     <tr>
-                        <td>4</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/04_race_condition.cpp">race_condition</a></td>
-                        <td>Explain race conditions and their impact on multi-threaded applications using C++ examples.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/simple_data_race_antipattern.cpp">simple_data_race_antipattern.cpp</a></td>
+                        <td><strong>Antipattern:</strong> conflicting updates to an ordinary counter.</td>
                     </tr>
                     <tr>
-                        <td>5</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/05_mutex.cpp">mutex</a></td>
-                        <td>Illustrate the use of <code>std::mutex</code> to protect shared resources and avoid race conditions in C++ applications.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/race_condition.cpp">race_condition.cpp</a></td>
+                        <td>A mutex prevents data races; the final result can still depend on operation order.</td>
                     </tr>
                     <tr>
-                        <td>6</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/06_semaphore.cpp">semaphore</a></td>
-                        <td>Demonstrate the use of <code>std::counting_semaphore</code> to limit the number of concurrent threads accessing a shared resource in C++ applications.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/simple_mutex.cpp">simple_mutex.cpp</a></td>
+                        <td>Protect a shared counter with a mutex.</td>
                     </tr>
                     <tr>
-                        <td>7</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/07_producer_consumer.cpp">producer_consumer</a></td>
-                        <td>Present a classic multi-threading problem (Producer-Consumer) and its solution using C++ synchronization mechanisms like <code>std::mutex</code> and <code>std::condition_variable</code>.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/atomic.cpp">atomic.cpp</a></td>
+                        <td>Increment a shared counter with atomic operations.</td>
                     </tr>
                     <tr>
-                        <td>8</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/08_fetch_parallel.cpp">fetch_parallel</a></td>
-                        <td>Showcase a practical application of multi-threading for parallel fetching of data from multiple sources using C++ threads.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/std_semaphore.cpp">std_semaphore.cpp</a></td>
+                        <td>Limit concurrent resource use with a C++20 semaphore.</td>
                     </tr>
                     <tr>
-                        <td>9</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/09_merge_sort.cpp">merge_sort</a></td>
-                        <td>Use multi-threading in C++ to parallelize a merge sort algorithm, demonstrating the potential for performance improvements.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/producer_consumer.cpp">producer_consumer.cpp</a></td>
+                        <td>Coordinate a queue with a mutex and condition variable.</td>
                     </tr>
                     <tr>
-                        <td>10</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/10_schedule_every_n_sec.cpp">schedule_every_n_sec</a></td>
-                        <td>Show how to schedule tasks to run periodically at fixed intervals using C++ threads.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/download_images.cpp">download_images.cpp</a></td>
+                        <td>Overlap HTTP downloads; requires libcurl and reachable URLs.</td>
                     </tr>
                     <tr>
-                        <td>11</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/11_barrier.cpp">barrier</a></td>
-                        <td>Demonstrate the use of <code>std::barrier</code> to synchronize multiple threads at a specific point in the execution.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/merge_sort.cpp">merge_sort.cpp</a></td>
+                        <td>Split sorting work and compare sequential and parallel timing.</td>
                     </tr>
                     <tr>
-                        <td>12</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/12_thread_local_storage.cpp">thread_local_storage</a></td>
-                        <td>Illustrate the concept of Thread Local Storage (TLS) and how it can be used to store thread-specific data.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/scheduler.cpp">scheduler.cpp</a></td>
+                        <td>Run periodic work in a background thread.</td>
                     </tr>
                     <tr>
-                        <td>13</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/13_thread_pool.cpp">thread_pool</a></td>
-                        <td>Show how to create and use a thread pool to efficiently manage a fixed number of worker threads for executing multiple tasks.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/std_barrier.cpp">std_barrier.cpp</a></td>
+                        <td>Synchronize repeated phases with a C++20 barrier.</td>
                     </tr>
                     <tr>
-                        <td>14</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/14_reader_writer_lock.cpp">reader_writer_lock</a></td>
-                        <td>Explain the concept of Reader-Writer Locks and their use for efficient access to shared resources with multiple readers and a single writer.</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/std_latch.cpp">std_latch.cpp</a></td>
+                        <td>Wait for a one-time batch of work.</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/thread_local_storage.cpp">thread_local_storage.cpp</a></td>
+                        <td>Give each thread its own copy of a variable.</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/thread_pool.cpp">thread_pool.cpp</a></td>
+                        <td>Reuse a fixed group of workers.</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/shared_mutex.cpp">shared_mutex.cpp</a></td>
+                        <td>Allow concurrent readers while writers hold exclusive access.</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/memory_order.cpp">memory_order.cpp</a></td>
+                        <td>Explore ordering between atomic and ordinary memory accesses.</td>
                     </tr>
                 </tbody>
             </table>
@@ -1988,7 +2007,7 @@ parentPort.postMessage(primes);</code></pre>
                     </tr>
                     <tr>
                         <td>4</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/04_race_condition.js">race_condition</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/04_race_condition_antipattern.js">race_condition</a></td>
                         <td>⚠️ ANTIPATTERN — unsynchronised SharedArrayBuffer counter; result is unpredictable.</td>
                     </tr>
                     <tr>
@@ -2003,7 +2022,7 @@ parentPort.postMessage(primes);</code></pre>
                     </tr>
                     <tr>
                         <td>7</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/07_producer_consumer.js">producer_consumer</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/07_producer_consumer_antipattern.js">producer_consumer</a></td>
                         <td>⚠️ ANTIPATTERN — circular buffer with TOCTOU races on writeIdx/readIdx when using multiple producers/consumers.</td>
                     </tr>
                     <tr>
@@ -2038,7 +2057,7 @@ parentPort.postMessage(primes);</code></pre>
                     </tr>
                     <tr>
                         <td>14</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/14_reader_writer_lock.js">reader_writer_lock</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multithreading/14_reader_writer_lock_antipattern.js">reader_writer_lock</a></td>
                         <td>⚠️ ANTIPATTERN — naive polling reader-writer lock with TOCTOU races on both reader and writer paths.</td>
                     </tr>
                     <tr>

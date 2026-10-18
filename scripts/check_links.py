@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
-from urllib.parse import urldefrag
+from urllib.parse import unquote, urldefrag, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -46,6 +46,7 @@ LINK_ATTRS: List[Tuple[str, str]] = [
 
 
 EXTERNAL_SCHEMES = ("http://", "https://")
+SITE_HOSTS = {"adamdjellouli.com", "www.adamdjellouli.com"}
 
 
 SKIP_PATTERNS = re.compile(r"^(javascript:|mailto:|tel:|data:|#|$)", re.IGNORECASE)
@@ -80,6 +81,7 @@ class LinkReport:
     internal_links_checked: int = 0
     external_links_checked: int = 0
     broken_links: List[BrokenLink] = field(default_factory=list)
+    unverified_links: List[BrokenLink] = field(default_factory=list)
 
     @property
     def broken_count(self) -> int:
@@ -109,12 +111,22 @@ def extract_links(
         soup = BeautifulSoup(content, "html.parser")
     for tag_name, attr in LINK_ATTRS:
         for element in soup.find_all(tag_name):
+            if tag_name == "link" and set(element.get("rel", [])) & {
+                "preconnect",
+                "dns-prefetch",
+            }:
+                continue
             value = element.get(attr)
             if value and isinstance(value, str):
                 value = value.strip()
                 if not SKIP_PATTERNS.match(value):
                     results.append((tag_name, attr, value))
     return results
+
+
+def is_external_url(url: str) -> bool:
+    parsed = urlsplit(url)
+    return bool(parsed.netloc) and parsed.hostname not in SITE_HOSTS
 
 
 def resolve_internal_link(
@@ -124,27 +136,35 @@ def resolve_internal_link(
 
     Returns *None* when the URL is external or cannot be mapped to a file.
     """
-    if any(url.startswith(s) for s in EXTERNAL_SCHEMES):
+    parsed = urlsplit(url)
+    if is_external_url(url) or parsed.scheme not in ("", "http", "https"):
         return None
 
-    url_no_frag, _ = urldefrag(url)
-    if not url_no_frag:
+    path = unquote(parsed.path)
+    if not path:
         return None
 
-    base_dir = source_file.parent
-    target = (base_dir / url_no_frag).resolve()
+    target = (
+        src_root / path.lstrip("/")
+        if path.startswith("/") or parsed.netloc
+        else source_file.parent / path
+    ).resolve()
 
     try:
         target.relative_to(src_root.resolve())
     except ValueError:
         return None
 
+    if target.is_dir() and (target / "index.html").is_file():
+        return target / "index.html"
+    if not target.suffix and target.with_suffix(".html").is_file():
+        return target.with_suffix(".html")
     return target
 
 
 def check_internal_link(target: Path) -> Optional[str]:
     """Return a reason string if the internal link is broken, else None."""
-    if target.exists():
+    if target.is_file():
         return None
     return "File not found"
 
@@ -206,7 +226,9 @@ def scan_links(
     seen_external: Dict[str, Optional[str]] = {}
 
     for html_path, tag_name, attr, url in all_links:
-        if any(url.startswith(s) for s in EXTERNAL_SCHEMES):
+        if is_external_url(url):
+            if url.startswith("//"):
+                url = "https:" + url
             external_queue.append((html_path, tag_name, attr, url))
             continue
 
@@ -261,7 +283,13 @@ def scan_links(
             clean, _ = urldefrag(url)
             reason = seen_external.get(clean)
             if reason:
-                report.broken_links.append(
+
+                destination = (
+                    report.broken_links
+                    if reason in {"HTTP 404", "HTTP 410"}
+                    else report.unverified_links
+                )
+                destination.append(
                     BrokenLink(
                         source_file=str(html_path.relative_to(src_root)),
                         tag=tag_name,
@@ -290,6 +318,7 @@ def print_report(report: LinkReport) -> None:
     print(f"Internal links checked: {report.internal_links_checked}")
     print(f"External links checked: {report.external_links_checked}")
     print(f"Broken links:           {report.broken_count}")
+    print(f"Unverified links:       {len(report.unverified_links)}")
     print("=" * 70)
 
     if report.broken_links:
@@ -302,6 +331,12 @@ def print_report(report: LinkReport) -> None:
         print()
     else:
         print("\nNo broken links found. \u2705\n")
+    if report.unverified_links:
+        print("External links requiring verification (not confirmed broken):")
+        for entry in report.unverified_links:
+            print(
+                f"  {entry.url}\n    Source: {entry.source_file}\n    Reason: {entry.reason}"
+            )
 
 
 def write_json_report(report: LinkReport, path: Path) -> None:
@@ -313,6 +348,8 @@ def write_json_report(report: LinkReport, path: Path) -> None:
         "external_links_checked": report.external_links_checked,
         "broken_count": report.broken_count,
         "broken_links": [asdict(b) for b in report.broken_links],
+        "unverified_count": len(report.unverified_links),
+        "unverified_links": [asdict(b) for b in report.unverified_links],
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     logger.info("JSON report written to %s", path)

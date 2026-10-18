@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Document Modeling: Embedding, References, and Schema Evolution</title>
+    <meta content="A document database stores records as documents rather than normalized rows spread across many tables." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Document Modeling: Embedding, References, and Schema Evolution",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling",
+            "description": "A document database stores records as documents rather than normalized rows spread across many tables.",
+            "dateModified": "2026-10-01",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Document Modeling: Embedding, References, and Schema Evolution" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="A document database stores records as documents rather than normalized rows spread across many tables." property="og:description" />
+    <meta content="2026-10-01" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>NoSQL Databases</li><li><span aria-current="page">Document Modeling: Embedding, References, and Schema Evolution</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#a-bookstore-example">A bookstore example</a></li>
+                    <li><a href="#document-boundary">Document boundary</a></li>
+                    <li><a href="#embedding">Embedding</a></li>
+                    <li><a href="#why-historical-snapshots-are-different-from-duplication-bugs">Why historical snapshots are different from duplication bugs</a></li>
+                    <li><a href="#reference-instead-of-embed">Reference instead of embed</a></li>
+                    <li><a href="#embed-or-reference-decision">Embed or reference decision</a></li>
+                    <li><a href="#one-to-few">One-to-few</a></li>
+                    <li><a href="#one-to-many-with-a-bound">One-to-many with a bound</a></li>
+                    <li><a href="#unbounded-arrays-are-dangerous">Unbounded arrays are dangerous</a></li>
+                    <li><a href="#bucket-pattern">Bucket pattern</a></li>
+                    <li><a href="#atomic-document-updates">Atomic document updates</a></li>
+                    <li><a href="#multi-document-transactions">Multi-document transactions</a></li>
+                    <li><a href="#denormalization">Denormalization</a>
+                        <ol>
+                            <li><a href="#historical-snapshot">Historical snapshot</a></li>
+                            <li><a href="#current-projection">Current projection</a></li>
+                            <li><a href="#rebuildable-derived-view">Rebuildable derived view</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#source-of-truth">Source of truth</a></li>
+                    <li><a href="#schema-flexibility-does-not-mean-no-schema">Schema flexibility does not mean no schema</a></li>
+                    <li><a href="#validation">Validation</a></li>
+                    <li><a href="#missing-versus-null">Missing versus null</a></li>
+                    <li><a href="#replacement-versus-partial-update">Replacement versus partial update</a></li>
+                    <li><a href="#schema-evolution">Schema evolution</a></li>
+                    <li><a href="#version-field">Version field</a></li>
+                    <li><a href="#lazy-migration">Lazy migration</a></li>
+                    <li><a href="#eager-migration">Eager migration</a></li>
+                    <li><a href="#indexes-follow-access-patterns">Indexes follow access patterns</a></li>
+                    <li><a href="#array-indexes">Array indexes</a></li>
+                    <li><a href="#compound-index-order">Compound index order</a></li>
+                    <li><a href="#projection">Projection</a></li>
+                    <li><a href="#pagination">Pagination</a></li>
+                    <li><a href="#duplicate-data-and-write-amplification">Duplicate data and write amplification</a></li>
+                    <li><a href="#event-driven-propagation">Event-driven propagation</a></li>
+                    <li><a href="#optimistic-concurrency">Optimistic concurrency</a></li>
+                    <li><a href="#idempotent-writes">Idempotent writes</a></li>
+                    <li><a href="#sharding-implications">Sharding implications</a></li>
+                    <li><a href="#document-modeling-workflow">Document modeling workflow</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#documents-remove-joins-so-embed-everything">"Documents remove joins, so embed everything"</a></li>
+                            <li><a href="#schema-less-means-migration-less">"Schema-less means migration-less"</a></li>
+                            <li><a href="#current-values-copied-as-if-they-were-historical">Current values copied as if they were historical</a></li>
+                            <li><a href="#unbounded-arrays">Unbounded arrays</a></li>
+                            <li><a href="#whole-document-replacement-from-partial-input">Whole-document replacement from partial input</a></li>
+                            <li><a href="#index-every-field">Index every field</a></li>
+                            <li><a href="#no-source-of-truth-definition">No source-of-truth definition</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#when-a-relational-model-may-be-simpler">When a relational model may be simpler</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">CRUD in SQL vs NoSQL</a></li><li><a href="/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key-Value Modeling: Keys, TTLs, Caching, and Atomic Operations</a></li><li><a href="/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying NoSQL Databases: Query Shape Follows the Data Model</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 01, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Document Modeling: Embedding, References, and Schema Evolution</h1>
+            <p>A document database stores records as documents rather than normalized rows spread
+                across many tables. The main modeling question is not "can this be JSON?" but:</p>
+            <blockquote>
+                <p>Which data is read, written, and versioned together?</p>
+            </blockquote>
+            <p>A good document boundary follows application operations.</p>
+            <h2 id="a-bookstore-example">A bookstore example</h2>
+            <p>A product document might look like:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "book-101",
+  "title": "Database Systems",
+  "price_cents": 4990,
+  "publisher": {
+    "name": "Example Press",
+    "country": "DE"
+  },
+  "tags": ["database", "systems"],
+  "dimensions": {
+    "pages": 720,
+    "format": "hardcover"
+  }
+}</code></pre>
+            </div>
+            <p>The document groups fields that are commonly loaded together.</p>
+            <p>A relational representation might use several tables:</p>
+            <div>
+                <pre><code class="language-text">products
+publishers
+product_tags
+product_dimensions</code></pre>
+            </div>
+            <p>A document representation can retrieve one product without a join.</p>
+            <p>That is useful only if the embedded data has compatible ownership and update
+                semantics.</p>
+            <h2 id="document-boundary">Document boundary</h2>
+            <p>Think of one document as an aggregate boundary:</p>
+            <div>
+                <pre><code class="language-text">product
+├── identity
+├── descriptive fields
+├── dimensions
+├── tags
+└── embedded publisher snapshot?</code></pre>
+            </div>
+            <p>Ask:</p>
+            <ol>
+                <li>Is the nested data owned by the parent?</li>
+                <li>Is it usually read with the parent?</li>
+                <li>Does it change at roughly the same time?</li>
+                <li>Can it grow without bound?</li>
+                <li>Does another part of the system need independent access to it?</li>
+            </ol>
+            <p>These questions decide whether to embed or reference.</p>
+            <h2 id="embedding">Embedding</h2>
+            <p>Embedding stores related data inside the parent document.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "order-1001",
+  "customer_id": "customer-42",
+  "placed_at": "2026-10-01T12:00:00Z",
+  "items": [
+    {
+      "product_id": "book-101",
+      "title_at_purchase": "Database Systems",
+      "unit_price_cents": 4990,
+      "quantity": 1
+    },
+    {
+      "product_id": "book-205",
+      "title_at_purchase": "Distributed Data",
+      "unit_price_cents": 3500,
+      "quantity": 2
+    }
+  ]
+}</code></pre>
+            </div>
+            <p>The line items belong to the order.</p>
+            <p>The order is normally read as one unit.</p>
+            <p>Embedding is a natural fit.</p>
+            <h2 id="why-historical-snapshots-are-different-from-duplication-bugs">Why historical snapshots are different from duplication bugs</h2>
+            <p>The order stores:</p>
+            <div>
+                <pre><code class="language-text">title_at_purchase
+unit_price_cents</code></pre>
+            </div>
+            <p>even though the current product record already has a title and price.</p>
+            <p>That duplication is intentional because the values represent historical facts.</p>
+            <p>If the product price changes tomorrow, yesterday's order should not change.</p>
+            <div>
+                <pre><code class="language-text">current product price
+        │
+        ├── may change
+        │
+order purchase price
+        └── historical fact</code></pre>
+            </div>
+            <p>Document duplication is not automatically denormalization debt.</p>
+            <p>The meaning of the copied field matters.</p>
+            <h2 id="reference-instead-of-embed">Reference instead of embed</h2>
+            <p>Suppose the same publisher record is used by 100,000 books and its legal name
+                changes.</p>
+            <p>Embedding the current publisher name in every product creates a large fan-out
+                update.</p>
+            <p>A reference may be better:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "book-101",
+  "title": "Database Systems",
+  "publisher_id": "publisher-7"
+}</code></pre>
+            </div>
+            <p>Separate document:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "publisher-7",
+  "name": "Example Press GmbH",
+  "country": "DE"
+}</code></pre>
+            </div>
+            <p>Now the publisher can change independently.</p>
+            <h2 id="embed-or-reference-decision">Embed or reference decision</h2>
+            <p>A useful decision table:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Embed tends to fit</th>
+                        <th>Reference tends to fit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Read together?</td>
+                        <td>usually</td>
+                        <td>not always</td>
+                    </tr>
+                    <tr>
+                        <td>Updated together?</td>
+                        <td>usually</td>
+                        <td>independently</td>
+                    </tr>
+                    <tr>
+                        <td>Child has independent identity?</td>
+                        <td>weak/no</td>
+                        <td>strong</td>
+                    </tr>
+                    <tr>
+                        <td>Child shared by many parents?</td>
+                        <td>rarely</td>
+                        <td>often</td>
+                    </tr>
+                    <tr>
+                        <td>Child collection grows without bound?</td>
+                        <td>no</td>
+                        <td>possibly</td>
+                    </tr>
+                    <tr>
+                        <td>Need independent queries?</td>
+                        <td>rarely</td>
+                        <td>often</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This is not a law. It is a way to reason about the access pattern.</p>
+            <h2 id="one-to-few">One-to-few</h2>
+            <p>Embedding works especially well for bounded "one-to-few" relationships.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">customer
+└── shipping_addresses
+    ├── home
+    └── office</code></pre>
+            </div>
+            <p>The address count is naturally small.</p>
+            <h2 id="one-to-many-with-a-bound">One-to-many with a bound</h2>
+            <p>A product may embed:</p>
+            <div>
+                <pre><code class="language-text">last 10 reviews</code></pre>
+            </div>
+            <p>while all reviews live separately.</p>
+            <p>This hybrid design can optimize a common read:</p>
+            <div>
+                <pre><code class="language-text">product page
+  └── needs recent reviews immediately</code></pre>
+            </div>
+            <p>The full review archive remains independently queryable.</p>
+            <h2 id="unbounded-arrays-are-dangerous">Unbounded arrays are dangerous</h2>
+            <p>Bad model:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "customer-42",
+  "events": [
+    "... millions more over years ..."
+  ]
+}</code></pre>
+            </div>
+            <p>Problems include:</p>
+            <ul>
+                <li>document growth,</li>
+                <li>expensive rewrites,</li>
+                <li>large network payloads,</li>
+                <li>update contention,</li>
+                <li>product-specific document-size limits.</li>
+            </ul>
+            <p>Instead, use independent event documents or buckets.</p>
+            <h2 id="bucket-pattern">Bucket pattern</h2>
+            <p>Group time-series/event records into bounded buckets.</p>
+            <p>Example key:</p>
+            <div>
+                <pre><code class="language-text">customer-42 / 2026-10</code></pre>
+            </div>
+            <p>Document:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "customer-42:2026-10",
+  "customer_id": "customer-42",
+  "month": "2026-10",
+  "events": [
+    {"ts": "...", "type": "login"},
+    {"ts": "...", "type": "purchase"}
+  ]
+}</code></pre>
+            </div>
+            <p>Now each bucket has a planned upper size.</p>
+            <h2 id="atomic-document-updates">Atomic document updates</h2>
+            <p>Document databases often provide atomicity at the document level.</p>
+            <p>That makes document boundary a correctness decision.</p>
+            <p>Suppose an inventory document stores:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "sku-101",
+  "available": 7,
+  "reserved": 3
+}</code></pre>
+            </div>
+            <p>Updating both fields in one document can preserve an invariant more simply than
+                coordinating several independent records.</p>
+            <p>But do not assume every product/database offers the same transaction scope.
+                Check the exact engine.</p>
+            <h2 id="multi-document-transactions">Multi-document transactions</h2>
+            <p>Modern document databases may support multi-document transactions.</p>
+            <p>That does not make document design irrelevant.</p>
+            <p>A transaction spanning many documents can still increase:</p>
+            <ul>
+                <li>coordination,</li>
+                <li>lock/transaction duration,</li>
+                <li>failure handling,</li>
+                <li>latency.</li>
+            </ul>
+            <p>Prefer natural aggregate boundaries first.</p>
+            <p>Use multi-document transactions when the business rule genuinely spans them.</p>
+            <h2 id="denormalization">Denormalization</h2>
+            <p>Document models often duplicate derived/read-optimized data.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">orders
+  ├── customer_id
+  └── customer_display_name_snapshot</code></pre>
+            </div>
+            <p>Possible strategies:</p>
+            <h3 id="historical-snapshot">Historical snapshot</h3>
+            <p>Value is intentionally frozen.</p>
+            <p>No propagation required.</p>
+            <h3 id="current-projection">Current projection</h3>
+            <p>Value should track another source.</p>
+            <p>Requires update propagation.</p>
+            <h3 id="rebuildable-derived-view">Rebuildable derived view</h3>
+            <p>Value can be regenerated from source data.</p>
+            <p>The strategy must be explicit.</p>
+            <h2 id="source-of-truth">Source of truth</h2>
+            <p>When values appear in several places, define an authority.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">customers.name = authoritative current display name
+
+orders.customer_name_at_purchase
+    = immutable historical snapshot
+
+search_index.customer_name
+    = rebuildable projection</code></pre>
+            </div>
+            <p>Without this distinction, teams cannot tell which copy should win after a conflict.</p>
+            <h2 id="schema-flexibility-does-not-mean-no-schema">Schema flexibility does not mean no schema</h2>
+            <p>Documents still have expectations.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">orders
+├── _id
+├── customer_id
+├── placed_at
+└── items[]
+    ├── product_id
+    ├── quantity
+    └── unit_price_cents</code></pre>
+            </div>
+            <p>Applications, indexes, validators, and analytics all depend on these fields.</p>
+            <p>The schema may be:</p>
+            <ul>
+                <li>application-enforced,</li>
+                <li>database-validated,</li>
+                <li>versioned,</li>
+                <li>partly optional.</li>
+            </ul>
+            <p>It still exists.</p>
+            <h2 id="validation">Validation</h2>
+            <p>MongoDB, for example, can apply collection validation rules.</p>
+            <p>A simplified validation shape:</p>
+            <div>
+                <pre><code class="language-javascript">{
+  $jsonSchema: {
+    bsonType: "object",
+    required: ["customer_id", "placed_at", "items"]
+  }
+}</code></pre>
+            </div>
+            <p>Validation reduces accidental malformed documents.</p>
+            <p>It does not replace business validation.</p>
+            <h2 id="missing-versus-null">Missing versus null</h2>
+            <p>Document systems often distinguish:</p>
+            <div>
+                <pre><code class="language-text">field missing</code></pre>
+            </div>
+            <p>from:</p>
+            <div>
+                <pre><code class="language-json">{"field": null}</code></pre>
+            </div>
+            <p>These may mean different things.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">middle_name missing -&gt; not collected
+middle_name null    -&gt; explicitly no value</code></pre>
+            </div>
+            <p>The repository already contains a MongoDB demonstration:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/mongo/null_vs_missing_fields.py"><code>scripts/mongo/null_vs_missing_fields.py</code></a></p>
+            <p>Use it to inspect how those cases behave in queries.</p>
+            <h2 id="replacement-versus-partial-update">Replacement versus partial update</h2>
+            <p>Document databases often support both:</p>
+            <ul>
+                <li>replacing the whole document,</li>
+                <li>updating selected fields.</li>
+            </ul>
+            <p>Those operations have different risks.</p>
+            <p>Repository demo:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/mongo/replace_one_vs_update_one.py"><code>scripts/mongo/replace_one_vs_update_one.py</code></a></p>
+            <p>A replacement can accidentally remove fields the caller did not include.</p>
+            <p>A partial update can preserve unrelated fields.</p>
+            <p>Choose based on ownership semantics.</p>
+            <h2 id="schema-evolution">Schema evolution</h2>
+            <p>Suppose version 1 stores:</p>
+            <div>
+                <pre><code class="language-json">{
+  "name": "Alice"
+}</code></pre>
+            </div>
+            <p>Version 2 wants:</p>
+            <div>
+                <pre><code class="language-json">{
+  "first_name": "Alice",
+  "last_name": null
+}</code></pre>
+            </div>
+            <p>A rolling migration may temporarily need to read both shapes.</p>
+            <div>
+                <pre><code class="language-text">old app -&gt; old shape
+new app -&gt; understands old + new
+migration -&gt; rewrites records
+new app -&gt; writes new only
+cleanup -&gt; remove old compatibility</code></pre>
+            </div>
+            <p>This is an expand-and-contract pattern.</p>
+            <h2 id="version-field">Version field</h2>
+            <p>Some systems include an explicit schema version:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "customer-42",
+  "schema_version": 3,
+  ...
+}</code></pre>
+            </div>
+            <p>This can help application migration logic.</p>
+            <p>Do not add version fields mechanically. Use them when records genuinely need
+                version-dependent interpretation.</p>
+            <h2 id="lazy-migration">Lazy migration</h2>
+            <p>Instead of rewriting every document at deployment time, the application can
+                upgrade a document when it is read or changed.</p>
+            <p>Advantages:</p>
+            <ul>
+                <li>lower migration burst,</li>
+                <li>easier gradual rollout.</li>
+            </ul>
+            <p>Risks:</p>
+            <ul>
+                <li>old shapes persist for a long time,</li>
+                <li>reads become more complex,</li>
+                <li>rare records may never migrate.</li>
+            </ul>
+            <h2 id="eager-migration">Eager migration</h2>
+            <p>Rewrite all matching documents in a controlled job.</p>
+            <p>Advantages:</p>
+            <ul>
+                <li>consistent final state,</li>
+                <li>simpler application after completion.</li>
+            </ul>
+            <p>Risks:</p>
+            <ul>
+                <li>high write volume,</li>
+                <li>large replication load,</li>
+                <li>long-running backfill,</li>
+                <li>rollback complexity.</li>
+            </ul>
+            <p>Measure on production-scale data.</p>
+            <h2 id="indexes-follow-access-patterns">Indexes follow access patterns</h2>
+            <p>Suppose the application loads:</p>
+            <div>
+                <pre><code class="language-text">all open orders for customer 42
+ordered newest first</code></pre>
+            </div>
+            <p>The index should reflect the filter/sort pattern.</p>
+            <p>In MongoDB-style notation:</p>
+            <div>
+                <pre><code class="language-javascript">{ customer_id: 1, status: 1, placed_at: -1 }</code></pre>
+            </div>
+            <p>Do not create indexes just because fields exist.</p>
+            <p>Each index costs:</p>
+            <ul>
+                <li>disk,</li>
+                <li>memory,</li>
+                <li>write amplification.</li>
+            </ul>
+            <h2 id="array-indexes">Array indexes</h2>
+            <p>An array field can create multiple index entries per document.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "tags": ["database", "distributed", "sql"]
+}</code></pre>
+            </div>
+            <p>Indexing <code>tags</code> supports membership queries.</p>
+            <p>But large arrays increase index size and write cost.</p>
+            <h2 id="compound-index-order">Compound index order</h2>
+            <p>Index field order matters.</p>
+            <p>A typical reasoning sequence is:</p>
+            <ol>
+                <li>equality filters,</li>
+                <li>range filters,</li>
+                <li>sort requirements.</li>
+            </ol>
+            <p>Always verify with the engine's query planner rather than applying a formula blindly.</p>
+            <h2 id="projection">Projection</h2>
+            <p>Return only needed fields.</p>
+            <p>Instead of fetching a full product document containing:</p>
+            <ul>
+                <li>large description,</li>
+                <li>images metadata,</li>
+                <li>supplier history,</li>
+                <li>reviews,</li>
+            </ul>
+            <p>a listing page may need only:</p>
+            <div>
+                <pre><code class="language-text">_id
+title
+price
+thumbnail</code></pre>
+            </div>
+            <p>Projection reduces network and deserialization work.</p>
+            <h2 id="pagination">Pagination</h2>
+            <p>Offset pagination can become expensive for deep pages.</p>
+            <p>Keyset-style pagination can use a stable sort key:</p>
+            <div>
+                <pre><code class="language-text">placed_at DESC, _id DESC</code></pre>
+            </div>
+            <p>Then request records after the last seen pair.</p>
+            <p>The exact syntax depends on the database.</p>
+            <h2 id="duplicate-data-and-write-amplification">Duplicate data and write amplification</h2>
+            <p>Suppose product title appears in:</p>
+            <ul>
+                <li>product document,</li>
+                <li>open cart items,</li>
+                <li>search index,</li>
+                <li>recommendation projection.</li>
+            </ul>
+            <p>Changing the title may require several updates.</p>
+            <p>A document design should list all derived copies and define:</p>
+            <ul>
+                <li>update mechanism,</li>
+                <li>tolerated staleness,</li>
+                <li>rebuild procedure.</li>
+            </ul>
+            <h2 id="event-driven-propagation">Event-driven propagation</h2>
+            <p>One pattern:</p>
+            <div>
+                <pre><code class="language-text">product update
+    │
+    ▼
+database commit
+    │
+    ▼
+event / CDC
+    │
+    ├──► search projection
+    └──► recommendation projection</code></pre>
+            </div>
+            <p>Derived copies become eventually consistent.</p>
+            <p>That may be acceptable for search but not for payment totals.</p>
+            <h2 id="optimistic-concurrency">Optimistic concurrency</h2>
+            <p>A version field can detect lost updates.</p>
+            <p>Document:</p>
+            <div>
+                <pre><code class="language-json">{
+  "_id": "product-101",
+  "version": 7,
+  "price_cents": 4990
+}</code></pre>
+            </div>
+            <p>Update condition:</p>
+            <div>
+                <pre><code class="language-text">_id = product-101
+AND version = 7</code></pre>
+            </div>
+            <p>Update:</p>
+            <div>
+                <pre><code class="language-text">price = 5190
+version = 8</code></pre>
+            </div>
+            <p>If zero documents match, another writer changed the record first.</p>
+            <h2 id="idempotent-writes">Idempotent writes</h2>
+            <p>Retries happen in distributed systems.</p>
+            <p>A create operation can include a business idempotency key:</p>
+            <div>
+                <pre><code class="language-text">checkout_request_id = 6f...</code></pre>
+            </div>
+            <p>The database/application can reject duplicate processing.</p>
+            <p>Do not rely on "the client only sends once."</p>
+            <h2 id="sharding-implications">Sharding implications</h2>
+            <p>Document key design matters when the database is sharded.</p>
+            <p>A shard key affects:</p>
+            <ul>
+                <li>distribution,</li>
+                <li>query routing,</li>
+                <li>hotspots,</li>
+                <li>resharding complexity.</li>
+            </ul>
+            <p>Bad keys can concentrate writes.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">created_at increasing forever</code></pre>
+            </div>
+            <p>may route all newest writes to one range/shard depending on the engine.</p>
+            <p>Choose from actual workload and engine behavior.</p>
+            <h2 id="document-modeling-workflow">Document modeling workflow</h2>
+            <p>For each feature:</p>
+            <ol>
+                <li>List the exact reads.</li>
+                <li>List the exact writes.</li>
+                <li>Identify data that changes together.</li>
+                <li>Identify unbounded relationships.</li>
+                <li>Mark historical snapshots versus current projections.</li>
+                <li>Decide embed versus reference.</li>
+                <li>Define validation.</li>
+                <li>Design required indexes.</li>
+                <li>Define schema-evolution strategy.</li>
+                <li>Test concurrency and retry behavior.</li>
+                <li>Estimate maximum document size/growth.</li>
+                <li>Check sharding implications if distributed.</li>
+            </ol>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="documents-remove-joins-so-embed-everything">"Documents remove joins, so embed everything"</h3>
+            <p>Unbounded/shared data becomes painful.</p>
+            <h3 id="schema-less-means-migration-less">"Schema-less means migration-less"</h3>
+            <p>Applications still depend on structure.</p>
+            <h3 id="current-values-copied-as-if-they-were-historical">Current values copied as if they were historical</h3>
+            <p>Updates become inconsistent.</p>
+            <h3 id="unbounded-arrays">Unbounded arrays</h3>
+            <p>Documents grow indefinitely.</p>
+            <h3 id="whole-document-replacement-from-partial-input">Whole-document replacement from partial input</h3>
+            <p>Fields disappear unexpectedly.</p>
+            <h3 id="index-every-field">Index every field</h3>
+            <p>Write and memory cost grows.</p>
+            <h3 id="no-source-of-truth-definition">No source-of-truth definition</h3>
+            <p>Conflicting copies cannot be reconciled.</p>
+            <h2 id="when-a-relational-model-may-be-simpler">When a relational model may be simpler</h2>
+            <p>Prefer a relational design when:</p>
+            <ul>
+                <li>many entities change independently,</li>
+                <li>joins are central,</li>
+                <li>constraints across records matter,</li>
+                <li>ad-hoc query patterns evolve frequently,</li>
+                <li>transactional rules span several entities.</li>
+            </ul>
+            <p>A document database is not a default replacement for normalized relational
+                models.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="01_nosql_databases_intro.html">NoSQL introduction</a></li>
+                <li><a href="02_types_of_nosql_databases.html">Types of NoSQL databases</a></li>
+                <li><a href="03_querying_nosql_databases.html">Querying NoSQL databases</a></li>
+                <li><a href="04_crud_in_sql_vs_nosql.html">CRUD in SQL vs NoSQL</a></li>
+                <li><a href="../12_database_engines/04_mongodb.html">MongoDB engine note</a></li>
+                <li><a href="09_consistency_transactions_and_replication.html">Consistency, transactions, and replication</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

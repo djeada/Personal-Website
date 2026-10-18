@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code",
             "description": "If you have ever spent hours manually configuring Linux servers, installing packages one by one, editing configuration files by hand, and then trying to\u2026",
-            "dateModified": "2026-04-18",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="If you have ever spent hours manually configuring Linux servers, installing packages one by one, editing configuration files by hand, and then trying to…" property="og:description" />
-    <meta content="2026-04-18" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -221,7 +221,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: April 18, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -684,12 +684,13 @@ terraform {
     bucket         = "my-terraform-state"
     key            = "production/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-locks"
+    use_lockfile   = true
     encrypt        = true
   }
 }</code></pre>
             </div>
             <p>🔴 <strong>Caution</strong>: The state file can contain sensitive information such as database passwords and API keys. Always store it securely and never commit it to a public Git repository.</p>
+            <p>The example uses S3-native state locking (<code>use_lockfile</code>, available in Terraform 1.10 and later). Older configurations may use <code>dynamodb_table = "terraform-locks"</code>; DynamoDB-based locking is deprecated. Create the bucket first and grant the required state/lockfile permissions. See the <a href="https://developer.hashicorp.com/terraform/language/backend/s3">S3 backend documentation</a>.</p>
             <h3 id="terraform-practical-examples">Terraform Practical Examples</h3>
             <h4 id="creating-a-web-server-instance">Creating a Web Server Instance</h4>
             <p>This example provisions an EC2 instance configured as a web server, pulling together networking and compute concepts:</p>
@@ -921,6 +922,7 @@ ansible-vault encrypt group_vars/production/secrets.yml
 # Run a playbook that uses encrypted variables
 ansible-playbook site.yml --ask-vault-pass</code></pre>
             </div>
+            <p>Vault protects data at rest, not every later use of the decrypted value. Use <code>no_log: true</code> on tasks that handle secrets and avoid exposing them through debugging or diff output. See <a href="https://docs.ansible.com/ansible/latest/vault_guide/vault.html">Ansible Vault's scope</a>.</p>
             <p>II. Use environment variables or a secrets manager for Terraform:</p>
             <div>
                 <pre><code class="language-hcl"># Reference a variable without hardcoding the value
@@ -1075,7 +1077,7 @@ terraform apply</code></pre>
                     <p>Set up a project directory following the modular structure described in the best practices section, with separate Ansible roles for a web server, a database server, and a common baseline configuration. Each role should handle its own packages, services, configuration files, and firewall rules. Write a <code>site.yml</code> that applies the appropriate roles to each host group.</p>
                 </li>
                 <li>
-                    <p>Create an Ansible Vault-encrypted file containing sensitive variables (such as a database password and an API key) and write a playbook that references those variables. Run the playbook using <code>--ask-vault-pass</code> and verify that the secrets are never displayed in the playbook output. Then try running the playbook without the vault password to confirm it fails securely.</p>
+                    <p>Create an Ansible Vault-encrypted file containing sensitive variables (such as a database password and an API key) and write a playbook that references those variables. Use <code>no_log: true</code> on secret-bearing tasks, run the playbook using <code>--ask-vault-pass</code>, and inspect the output for accidental disclosure. Vault encryption alone does not suppress runtime output. Then try running the playbook without the vault password to confirm that decryption fails.</p>
                 </li>
                 <li>
                     <p>Build a complete IaC pipeline that uses Terraform to provision a virtual machine and then uses Ansible to configure it, combining both tools in a single workflow. The Terraform output should generate an Ansible inventory file dynamically, and the Ansible playbook should install and configure a web server with a firewall. Document each step and verify the end-to-end process by accessing the deployed web application.</p>

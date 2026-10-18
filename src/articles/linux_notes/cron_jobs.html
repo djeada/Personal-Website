@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/cron_jobs",
             "description": "Cron is a powerful utility in Unix-like operating systems that automates the execution of scripts or commands at specified times, dates, or intervals.",
-            "dateModified": "2026-06-01",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/cron_jobs" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Cron is a powerful utility in Unix-like operating systems that automates the execution of scripts or commands at specified times, dates, or intervals." property="og:description" />
-    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -251,7 +251,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -335,7 +335,9 @@
                 <li>Crontab files serve as a way for users to <em>define</em> automated actions, whether for personal maintenance tasks or regular system checks.</li>
             </ul>
             <h3 id="understanding-crontab-syntax">Understanding Crontab Syntax</h3>
-            <p>A crontab file consists of lines with six fields: five time fields and a command field.</p>
+            <p>A user crontab job has five time fields followed by the command. <code>/etc/crontab</code> and <code>/etc/cron.d/</code> add a username field between the time fields and command; do not copy that username into <code>crontab -e</code>.</p>
+            <p>Schedules are calendar matches, not elapsed-time timers. <code>*/15</code> in the minute field means minutes 0, 15, 30, and 45 of each hour. When both day-of-month and day-of-week are restricted, traditional cron runs on either match (OR), not only when both match. An unescaped <code>%</code> in the command is also special to cron, even inside shell quotes; use <code>\%</code> for a literal percent sign, for example <code>date +\%F</code>.</p>
+            <p>Jobs usually run through <code>/bin/sh</code> with a smaller environment than your interactive shell. Choose Bash explicitly when a script needs Bash features. Time-zone and daylight-saving behavior varies between cron implementations; check <code>man 5 crontab</code>, especially for jobs in a skipped or repeated local hour. See the <a href="https://man7.org/linux/man-pages/man5/crontab.5.html">Cronie crontab reference</a>.</p>
             <h4 id="crontab-field-structure">Crontab Field Structure</h4>
             <div>
                 <pre><code class="language-shell">┌───────────── Minute (0 - 59)
@@ -502,7 +504,7 @@
             <p><code>run-parts</code> is a utility that executes all scripts in the specified directory.</p>
             <h2 id="anacron">Anacron</h2>
             <p>While <code>cron</code> schedules jobs at precise times, it assumes the system is always running. This is not suitable for laptops or systems that may be powered off during scheduled execution times. <code>anacron</code> ensures that missed scheduled tasks are executed when the system becomes available again.</p>
-            <p>Anacron is commonly used together with cron. Cron provides precise scheduling, while Anacron guarantees reliability for systems with irregular uptime.</p>
+            <p>Anacron is commonly used together with cron or systemd timers. It can catch up an overdue daily or longer-period job when it is next invoked, subject to configured delays and allowed running hours. It does not guarantee that a job succeeds or replay every missed occurrence.</p>
             <h3 id="how-anacron-works">How Anacron Works</h3>
             <p>Anacron checks timestamps of previously executed jobs. If a scheduled job was missed because the system was powered off, Anacron executes it after a specified delay once the system starts.</p>
             <p>Unlike cron, Anacron does not support minute-level scheduling. Instead, it focuses on daily or longer intervals such as daily, weekly, or monthly tasks.</p>
@@ -655,7 +657,7 @@
             <h3 id="practical-examples-of-anacron">Practical Examples of Anacron</h3>
             <p>Below are common scenarios where Anacron is used to ensure vital tasks are not skipped on systems with irregular uptime.</p>
             <h4 id="1-daily-database-backup">1. Daily Database Backup</h4>
-            <p>Ensure a local database backup is performed every day. If the laptop is closed at midnight, the backup will trigger 15 minutes after the user logs in the next morning.</p>
+            <p>Schedule a daily local database backup. When Anacron is next invoked after the job becomes overdue, it waits at least the configured 15-minute delay before starting it; this is not specifically tied to a user logging in.</p>
             <div>
                 <pre><code class="language-shell">period    delay    job-id       command
 1          15     db_backup   /usr/local/bin/backup_script.sh</code></pre>
@@ -746,7 +748,7 @@
             <ul>
                 <li>The <code>/etc/cron.allow</code> file is used to specify which users are allowed to access and use the cron service for scheduling tasks.</li>
                 <li>Conversely, the <code>/etc/cron.deny</code> file lists users who are explicitly denied permission to use cron for task automation.</li>
-                <li>If <strong>neither</strong> of these files exists on the system, only the superuser is permitted to use cron, restricting access to regular users.</li>
+                <li>If <strong>neither</strong> file exists, the default access policy depends on the cron implementation and distribution. Check <code>man crontab</code>; PAM rules can impose additional restrictions. These files primarily control access to the <code>crontab</code> command and do not necessarily stop already scheduled jobs.</li>
             </ul>
             <h4 id="editing-system-wide-crontab">Editing System-Wide Crontab</h4>
             <ul>

@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Redis | Adam Djellouli</title>
+    <meta content="Redis is an in-memory data store built around specialized data structures such as strings, hashes, lists, sets, sorted sets, streams, JSON, geospatial…" name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Redis",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis",
+            "description": "Redis is an in-memory data store built around specialized data structures such as strings, hashes, lists, sets, sorted sets, streams, JSON, geospatial\u2026",
+            "dateModified": "2026-10-04",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Redis" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Redis is an in-memory data store built around specialized data structures such as strings, hashes, lists, sets, sorted sets, streams, JSON, geospatial…" property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Engines</li><li><span aria-current="page">Redis</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#mental-model">Mental model</a></li>
+                    <li><a href="#local-setup">Local setup</a></li>
+                    <li><a href="#strings">Strings</a></li>
+                    <li><a href="#expiration">Expiration</a></li>
+                    <li><a href="#hashes">Hashes</a></li>
+                    <li><a href="#sets">Sets</a></li>
+                    <li><a href="#sorted-sets">Sorted sets</a></li>
+                    <li><a href="#lists">Lists</a></li>
+                    <li><a href="#streams">Streams</a></li>
+                    <li><a href="#atomic-operations">Atomic operations</a></li>
+                    <li><a href="#transactions">Transactions</a></li>
+                    <li><a href="#optimistic-checks-with-watch">Optimistic checks with WATCH</a></li>
+                    <li><a href="#caching-patterns">Caching patterns</a>
+                        <ol>
+                            <li><a href="#cache-aside">Cache-aside</a></li>
+                            <li><a href="#write-through">Write-through</a></li>
+                            <li><a href="#write-behind">Write-behind</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#cache-invalidation">Cache invalidation</a></li>
+                    <li><a href="#cache-stampede">Cache stampede</a></li>
+                    <li><a href="#rate-limiting">Rate limiting</a></li>
+                    <li><a href="#lua-server-side-functions">Lua / server-side functions</a></li>
+                    <li><a href="#persistence">Persistence</a>
+                        <ol>
+                            <li><a href="#rdb-snapshots">RDB snapshots</a></li>
+                            <li><a href="#aof">AOF</a></li>
+                            <li><a href="#no-persistence">No persistence</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#replication">Replication</a></li>
+                    <li><a href="#redis-cluster">Redis Cluster</a></li>
+                    <li><a href="#sentinel">Sentinel</a></li>
+                    <li><a href="#eviction">Eviction</a></li>
+                    <li><a href="#data-modeling">Data modeling</a></li>
+                    <li><a href="#hot-keys">Hot keys</a></li>
+                    <li><a href="#big-keys">Big keys</a></li>
+                    <li><a href="#redis-versus-memcached">Redis versus Memcached</a></li>
+                    <li><a href="#redis-versus-a-relational-database">Redis versus a relational database</a></li>
+                    <li><a href="#managed-options">Managed options</a></li>
+                    <li><a href="#production-checklist">Production checklist</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#using-redis-as-an-invisible-dependency">Using Redis as an invisible dependency</a></li>
+                            <li><a href="#no-ttl-policy">No TTL policy</a></li>
+                            <li><a href="#storing-huge-blobs">Storing huge blobs</a></li>
+                            <li><a href="#assuming-persistence-equals-backup">Assuming persistence equals backup</a></li>
+                            <li><a href="#one-global-lock">One global lock</a></li>
+                            <li><a href="#using-keys-in-production">Using KEYS in production</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/12_database_engines/09_sql_server.html">Microsoft SQL Server</a></li><li><a href="/articles/databases_notes/12_database_engines/11_cassandra.html">Apache Cassandra</a></li><li><a href="/articles/databases_notes/12_database_engines/08_gcp_services.html">Choosing a Database on Google Cloud</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Redis</h1>
+            <p>Redis is an in-memory data store built around specialized data structures such as strings, hashes, lists, sets, sorted sets, streams, JSON, geospatial indexes, probabilistic structures, and newer vector-oriented capabilities.</p>
+            <p>It is commonly used as:</p>
+            <ul>
+                <li>a cache,</li>
+                <li>a session store,</li>
+                <li>a rate limiter,</li>
+                <li>a low-latency key-value store,</li>
+                <li>a leaderboard,</li>
+                <li>a queue or stream component,</li>
+                <li>short-lived coordination state.</li>
+            </ul>
+            <p>Redis can persist data, replicate it, and run in clustered deployments, but many applications deliberately use it as a <strong>derived</strong> or <strong>rebuildable</strong> layer in front of a durable database.</p>
+            <p>Official documentation:</p>
+            <ul>
+                <li><a href="https://redis.io/docs/latest/develop/data-types/">Redis data types</a></li>
+                <li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">Redis persistence</a></li>
+            </ul>
+            <h2 id="mental-model">Mental model</h2>
+            <p>A common production pattern is:</p>
+            <div>
+                <pre><code class="language-text">                    ┌───────────────┐
+request ───────────►│ Redis cache   │
+                    └──────┬────────┘
+                           │ miss
+                           ▼
+                    ┌───────────────┐
+                    │ primary DB    │
+                    └──────┬────────┘
+                           │
+                           └──► populate cache</code></pre>
+            </div>
+            <p>The primary database remains the source of truth.</p>
+            <p>Redis removes repeated work from the hot path.</p>
+            <h2 id="local-setup">Local setup</h2>
+            <p>The repository includes:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/redis/docker-compose.yml"><code>scripts/redis/docker-compose.yml</code></a></p>
+            <p>Start Redis:</p>
+            <div>
+                <pre><code class="language-bash">cd scripts/redis
+docker compose up -d
+docker compose ps</code></pre>
+            </div>
+            <p>Open the CLI:</p>
+            <div>
+                <pre><code class="language-bash">docker exec -it redis-notes redis-cli</code></pre>
+            </div>
+            <p>Check connectivity:</p>
+            <div>
+                <pre><code class="language-text">PING</code></pre>
+            </div>
+            <p>No key-value rows are needed for this health check. The command result is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>command</th>
+                        <th>result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>PING</code></td>
+                        <td><code>PONG</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Expected:</p>
+            <div>
+                <pre><code class="language-text">PONG</code></pre>
+            </div>
+            <p>Run the repository command demo:</p>
+            <div>
+                <pre><code class="language-bash">cat demo.redis | docker exec -i redis-notes redis-cli</code></pre>
+            </div>
+            <p>The file exercises strings, hashes, counters, sorted sets, and streams.</p>
+            <p>Stop it:</p>
+            <div>
+                <pre><code class="language-bash">docker compose down</code></pre>
+            </div>
+            <p>Use <code>docker compose down -v</code> only when you also want to delete the demo data volume.</p>
+            <h2 id="strings">Strings</h2>
+            <p>Strings are the simplest Redis value.</p>
+            <div>
+                <pre><code class="language-text">SET user:42:name "Alice"
+GET user:42:name</code></pre>
+            </div>
+            <p>Key-value input after <code>SET</code>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>user:42:name</code></td>
+                        <td>Alice</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Result of <code>GET user:42:name</code>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>returned value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>user:42:name</code></td>
+                        <td>Alice</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Counters are atomic:</p>
+            <div>
+                <pre><code class="language-text">SET page:home:views 0
+INCR page:home:views
+INCR page:home:views
+GET page:home:views</code></pre>
+            </div>
+            <p>Starting key-value rows: <code>page:home:views</code> is set to <code>0</code> before the two increments.</p>
+            <p>Expected:</p>
+            <div>
+                <pre><code class="language-text">"2"</code></pre>
+            </div>
+            <p>Result and final key-value row:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value returned by <code>GET</code></th>
+                        <th>stored value afterward</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>page:home:views</code></td>
+                        <td>2</td>
+                        <td>2</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Counters are useful for:</p>
+            <ul>
+                <li>request counts,</li>
+                <li>sequence-like values,</li>
+                <li>simple quotas,</li>
+                <li>metrics that do not need relational joins.</li>
+            </ul>
+            <h2 id="expiration">Expiration</h2>
+            <p>Keys can expire automatically.</p>
+            <div>
+                <pre><code class="language-text">SET session:abc123 "user=42" EX 3600
+TTL session:abc123</code></pre>
+            </div>
+            <p>The <code>SET</code> creates this key before <code>TTL</code> reads its remaining lifetime:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value</th>
+                        <th>expiry set</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>session:abc123</code></td>
+                        <td><code>user=42</code></td>
+                        <td>3600 seconds</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Example <code>TTL</code> result table (the exact remaining seconds decrease over time):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>TTL result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>session:abc123</code></td>
+                        <td>about 3600 seconds</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This is one reason Redis is popular for sessions and caches.</p>
+            <p>Expiration is not a substitute for application correctness. If a key must exist permanently, relying only on TTL-based Redis state is usually the wrong design.</p>
+            <h2 id="hashes">Hashes</h2>
+            <p>A Redis hash stores named fields:</p>
+            <div>
+                <pre><code class="language-text">HSET user:42 name "Alice" plan "pro" country "DE"
+HGET user:42 name
+HGETALL user:42</code></pre>
+            </div>
+            <p>Hash fields before the reads:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>field</th>
+                        <th>value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>user:42</code></td>
+                        <td>name</td>
+                        <td>Alice</td>
+                    </tr>
+                    <tr>
+                        <td><code>user:42</code></td>
+                        <td>plan</td>
+                        <td>pro</td>
+                    </tr>
+                    <tr>
+                        <td><code>user:42</code></td>
+                        <td>country</td>
+                        <td>DE</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Results:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>command</th>
+                        <th>result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>HGET user:42 name</code></td>
+                        <td>Alice</td>
+                    </tr>
+                    <tr>
+                        <td><code>HGETALL user:42</code></td>
+                        <td>name=Alice, plan=pro, country=DE</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">user:42
+├── name    -&gt; Alice
+├── plan    -&gt; pro
+└── country -&gt; DE</code></pre>
+            </div>
+            <p>Hashes are useful for compact object-like state when access is mostly by known key.</p>
+            <p>They do not provide relational joins or foreign-key constraints.</p>
+            <h2 id="sets">Sets</h2>
+            <p>Sets contain unique unordered members.</p>
+            <div>
+                <pre><code class="language-text">SADD article:7:tags redis database caching
+SMEMBERS article:7:tags
+SISMEMBER article:7:tags redis</code></pre>
+            </div>
+            <p>Set rows after <code>SADD</code>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>member</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>article:7:tags</code></td>
+                        <td>redis</td>
+                    </tr>
+                    <tr>
+                        <td><code>article:7:tags</code></td>
+                        <td>database</td>
+                    </tr>
+                    <tr>
+                        <td><code>article:7:tags</code></td>
+                        <td>caching</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Results (<code>SMEMBERS</code> order is unspecified):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>command</th>
+                        <th>result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>SMEMBERS article:7:tags</code></td>
+                        <td>caching, database, redis</td>
+                    </tr>
+                    <tr>
+                        <td><code>SISMEMBER article:7:tags redis</code></td>
+                        <td>1 (true)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Set operations can model intersections:</p>
+            <div>
+                <pre><code class="language-text">SINTER users:premium users:active</code></pre>
+            </div>
+            <p>Example input sets and result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>set key</th>
+                        <th>member</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>users:premium</code></td>
+                        <td>user:1</td>
+                    </tr>
+                    <tr>
+                        <td><code>users:premium</code></td>
+                        <td>user:2</td>
+                    </tr>
+                    <tr>
+                        <td><code>users:active</code></td>
+                        <td>user:2</td>
+                    </tr>
+                    <tr>
+                        <td><code>users:active</code></td>
+                        <td>user:3</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>command</th>
+                        <th>result member</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>SINTER users:premium users:active</code></td>
+                        <td>user:2</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Useful for:</p>
+            <ul>
+                <li>membership,</li>
+                <li>tags,</li>
+                <li>unique collections,</li>
+                <li>intersections/unions.</li>
+            </ul>
+            <h2 id="sorted-sets">Sorted sets</h2>
+            <p>A sorted set associates each member with a score.</p>
+            <div>
+                <pre><code class="language-text">ZADD leaderboard 1200 alice
+ZADD leaderboard 1500 bob
+ZADD leaderboard 1325 carol
+
+ZREVRANGE leaderboard 0 2 WITHSCORES</code></pre>
+            </div>
+            <p>Input sorted-set rows:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>member</th>
+                        <th>score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>leaderboard</code></td>
+                        <td>alice</td>
+                        <td>1200</td>
+                    </tr>
+                    <tr>
+                        <td><code>leaderboard</code></td>
+                        <td>bob</td>
+                        <td>1500</td>
+                    </tr>
+                    <tr>
+                        <td><code>leaderboard</code></td>
+                        <td>carol</td>
+                        <td>1325</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Result, highest score first:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rank</th>
+                        <th>member</th>
+                        <th>score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>bob</td>
+                        <td>1500</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>carol</td>
+                        <td>1325</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>alice</td>
+                        <td>1200</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Typical use cases:</p>
+            <ul>
+                <li>leaderboards,</li>
+                <li>priority ordering,</li>
+                <li>time-based queues,</li>
+                <li>ranked results.</li>
+            </ul>
+            <div>
+                <pre><code class="language-text">score
+1500  bob
+1325  carol
+1200  alice</code></pre>
+            </div>
+            <h2 id="lists">Lists</h2>
+            <p>Lists are ordered sequences.</p>
+            <div>
+                <pre><code class="language-text">LPUSH jobs email:1001
+LPUSH jobs email:1002
+RPOP jobs</code></pre>
+            </div>
+            <p>The two <code>LPUSH</code> commands leave this list before <code>RPOP</code>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>position</th>
+                        <th>value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1 (left)</td>
+                        <td>email:1002</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>email:1001</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Result and remaining list:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>item</th>
+                        <th>value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>popped by <code>RPOP</code></td>
+                        <td>email:1001</td>
+                    </tr>
+                    <tr>
+                        <td>remaining list, left to right</td>
+                        <td>email:1002</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Lists can support simple queues, but production task systems often need stronger delivery tracking, retries, visibility, and observability.</p>
+            <p>Redis Streams are often better when an append-only event log and consumer groups are needed.</p>
+            <h2 id="streams">Streams</h2>
+            <p>Redis Streams provide log-like entries with IDs.</p>
+            <div>
+                <pre><code class="language-text">XADD orders * order_id 1001 amount 49.90
+XADD orders * order_id 1002 amount 19.95
+
+XRANGE orders - +</code></pre>
+            </div>
+            <p>Example stream rows (Redis-generated entry IDs vary):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>entry id</th>
+                        <th>order_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>1727776800000-0</code></td>
+                        <td>1001</td>
+                        <td>49.90</td>
+                    </tr>
+                    <tr>
+                        <td><code>1727776800001-0</code></td>
+                        <td>1002</td>
+                        <td>19.95</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>XRANGE orders - +</code> returns both entries in ID order:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1001</td>
+                        <td>49.90</td>
+                    </tr>
+                    <tr>
+                        <td>1002</td>
+                        <td>19.95</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">orders stream
+│
+├── 1727...-0 -&gt; order_id=1001 amount=49.90
+└── 1727...-0 -&gt; order_id=1002 amount=19.95</code></pre>
+            </div>
+            <p>Streams can support consumer groups.</p>
+            <p>Kafka and Redis Streams overlap in some use cases, but they have different operational models, ecosystem depth, retention patterns, and scaling designs.</p>
+            <p>Choose based on required throughput, replay, consumer topology, persistence, and operational context.</p>
+            <h2 id="atomic-operations">Atomic operations</h2>
+            <p>A major Redis strength is that individual commands are atomic.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">INCR rate:user:42</code></pre>
+            </div>
+            <p>Example counter table before and after the command:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value before</th>
+                        <th><code>INCR</code> result</th>
+                        <th>value after</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>rate:user:42</code></td>
+                        <td>10</td>
+                        <td>11</td>
+                        <td>11</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>does not require a read-modify-write cycle in application code.</p>
+            <p>This matters under concurrency.</p>
+            <p>Bad application pattern:</p>
+            <div>
+                <pre><code class="language-text">GET counter -&gt; 10
+application computes 11
+SET counter 11</code></pre>
+            </div>
+            <p>Two clients can overwrite each other.</p>
+            <p>Use atomic commands whenever the operation can be expressed directly.</p>
+            <h2 id="transactions">Transactions</h2>
+            <p>Redis provides <code>MULTI</code> / <code>EXEC</code>:</p>
+            <div>
+                <pre><code class="language-text">MULTI
+INCR account:42:logins
+SET account:42:last_login "2026-09-30T20:00:00Z"
+EXEC</code></pre>
+            </div>
+            <p>Starting key-value rows: <code>account:42:logins = 4</code>; <code>account:42:last_login</code> is absent.</p>
+            <p>Example <code>EXEC</code> results and final key-value rows:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>command</th>
+                        <th>result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>INCR account:42:logins</code></td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td><code>SET account:42:last_login ...</code></td>
+                        <td>OK</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value after <code>EXEC</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>account:42:logins</code></td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td><code>account:42:last_login</code></td>
+                        <td><code>2026-09-30T20:00:00Z</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Commands are queued and executed as a transaction block.</p>
+            <p>Redis transactions are not the same as a relational database transaction with arbitrary rollback semantics.</p>
+            <p>If business correctness spans complex relational rules, a relational database transaction is usually a better source of truth.</p>
+            <h2 id="optimistic-checks-with-watch">Optimistic checks with WATCH</h2>
+            <p><code>WATCH</code> can detect whether a key changed before <code>EXEC</code>.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">WATCH inventory:42
+GET inventory:42
+      │
+      ▼
+application decides update
+      │
+      ▼
+MULTI
+SET inventory:42 ...
+EXEC</code></pre>
+            </div>
+            <p>If another client modifies the watched key first, the transaction aborts.</p>
+            <p>This is optimistic concurrency.</p>
+            <h2 id="caching-patterns">Caching patterns</h2>
+            <h3 id="cache-aside">Cache-aside</h3>
+            <p>Application controls the cache.</p>
+            <div>
+                <pre><code class="language-text">GET cache key
+    │
+    ├── hit -&gt; return
+    │
+    └── miss
+          │
+          ▼
+       query DB
+          │
+          ▼
+       SET cache</code></pre>
+            </div>
+            <p>Advantages:
+                - simple,
+                - only requested data is cached.</p>
+            <p>Risks:
+                - stale data,
+                - cache stampedes,
+                - invalidation complexity.</p>
+            <h3 id="write-through">Write-through</h3>
+            <p>Writes update cache through a layer that also updates durable storage.</p>
+            <p>This can simplify read freshness but adds coupling.</p>
+            <h3 id="write-behind">Write-behind</h3>
+            <p>Cache accepts writes and durable storage is updated later.</p>
+            <p>This can improve write latency but increases durability and failure complexity.</p>
+            <p>Use only when lost/delayed writes are acceptable and recovery is well understood.</p>
+            <h2 id="cache-invalidation">Cache invalidation</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">DB user name = Alice
+Redis cache  = Alice</code></pre>
+            </div>
+            <p>The database changes to Alicia.</p>
+            <p>The cache is now stale.</p>
+            <p>Common strategies:</p>
+            <ul>
+                <li>delete cache entry after DB update,</li>
+                <li>short TTL,</li>
+                <li>event-driven invalidation,</li>
+                <li>versioned keys,</li>
+                <li>refresh-ahead.</li>
+            </ul>
+            <p>No strategy is universally best.</p>
+            <h2 id="cache-stampede">Cache stampede</h2>
+            <p>If one popular key expires:</p>
+            <div>
+                <pre><code class="language-text">1000 requests
+      │
+      ▼
+same cache miss
+      │
+      ▼
+1000 DB queries</code></pre>
+            </div>
+            <p>Mitigations include:</p>
+            <ul>
+                <li>jittered TTLs,</li>
+                <li>request coalescing,</li>
+                <li>distributed locks,</li>
+                <li>stale-while-revalidate patterns,</li>
+                <li>prewarming.</li>
+            </ul>
+            <h2 id="rate-limiting">Rate limiting</h2>
+            <p>A basic fixed-window limiter:</p>
+            <div>
+                <pre><code class="language-text">INCR rate:api:42:2026093020
+EXPIRE rate:api:42:2026093020 3600</code></pre>
+            </div>
+            <p>Example key-value state and command results, assuming the counter starts at 7:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>key</th>
+                        <th>value after <code>INCR</code></th>
+                        <th>TTL after <code>EXPIRE</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>rate:api:42:2026093020</code></td>
+                        <td>8</td>
+                        <td>3600 seconds</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>If the counter exceeds the quota, reject further requests.</p>
+            <p>More accurate algorithms may use sorted sets or Lua scripts for sliding windows/token buckets.</p>
+            <p>The important property is that the update must be atomic.</p>
+            <h2 id="lua-server-side-functions">Lua / server-side functions</h2>
+            <p>Redis can execute server-side logic atomically.</p>
+            <p>Historically this is commonly demonstrated with Lua.</p>
+            <p>Use server-side logic when several commands must behave as one atomic operation, but keep scripts short and predictable because long-running server work blocks other operations on the same execution path.</p>
+            <h2 id="persistence">Persistence</h2>
+            <p>Redis supports multiple persistence strategies.</p>
+            <h3 id="rdb-snapshots">RDB snapshots</h3>
+            <p>Periodic point-in-time snapshots.</p>
+            <div>
+                <pre><code class="language-text">memory
+  │
+  └──► dump.rdb</code></pre>
+            </div>
+            <p>Advantages:
+                - compact,
+                - convenient for snapshots/backups.</p>
+            <p>Trade-off:
+                - writes since the latest snapshot may be lost after a failure.</p>
+            <h3 id="aof">AOF</h3>
+            <p>Append-only file records write operations.</p>
+            <div>
+                <pre><code class="language-text">SET ...
+INCR ...
+HSET ...
+      │
+      ▼
+ append-only log</code></pre>
+            </div>
+            <p>AOF can reduce the recovery-point gap but costs additional I/O and storage.</p>
+            <h3 id="no-persistence">No persistence</h3>
+            <p>A valid choice for disposable caches that can be rebuilt.</p>
+            <p>The correct choice depends on whether Redis is a cache or a primary data store.</p>
+            <h2 id="replication">Replication</h2>
+            <p>A basic topology:</p>
+            <div>
+                <pre><code class="language-text">          writes
+client ───────────► primary
+                    │
+              replication
+             ┌──────┴──────┐
+             ▼             ▼
+          replica A     replica B</code></pre>
+            </div>
+            <p>Replication improves availability and read-scaling options.</p>
+            <p>It does not replace backups.</p>
+            <h2 id="redis-cluster">Redis Cluster</h2>
+            <p>Redis Cluster shards keys across hash slots.</p>
+            <div>
+                <pre><code class="language-text">key
+ │
+ ▼
+hash slot
+ │
+ ├──► shard A
+ ├──► shard B
+ └──► shard C</code></pre>
+            </div>
+            <p>Multi-key operations can become constrained when keys belong to different slots.</p>
+            <p>Hash tags can force related keys into one slot:</p>
+            <div>
+                <pre><code class="language-text">cart:{user42}:items
+cart:{user42}:totals</code></pre>
+            </div>
+            <p>The text inside braces determines the shared slot.</p>
+            <p>Design keys intentionally before scaling.</p>
+            <h2 id="sentinel">Sentinel</h2>
+            <p>Redis Sentinel is used with non-clustered Redis deployments for monitoring and failover coordination.</p>
+            <p>It can:</p>
+            <ul>
+                <li>detect primary failure,</li>
+                <li>promote a replica,</li>
+                <li>provide discovery information to clients.</li>
+            </ul>
+            <p>Cluster mode and Sentinel solve related but different deployment problems.</p>
+            <h2 id="eviction">Eviction</h2>
+            <p>When Redis reaches a configured memory limit, an eviction policy decides what happens.</p>
+            <p>Possible strategies include:</p>
+            <ul>
+                <li>reject writes,</li>
+                <li>evict selected keys,</li>
+                <li>use recency/frequency-oriented eviction,</li>
+                <li>evict TTL keys.</li>
+            </ul>
+            <p>A cache should have an explicit memory and eviction policy.</p>
+            <p>Running an in-memory system without memory planning is an operational failure waiting to happen.</p>
+            <h2 id="data-modeling">Data modeling</h2>
+            <p>Good Redis design starts from access patterns.</p>
+            <p>Example session key:</p>
+            <div>
+                <pre><code class="language-text">session:&lt;token&gt;</code></pre>
+            </div>
+            <p>Example per-user rate key:</p>
+            <div>
+                <pre><code class="language-text">rate:&lt;user_id&gt;:&lt;window&gt;</code></pre>
+            </div>
+            <p>Example leaderboard:</p>
+            <div>
+                <pre><code class="language-text">leaderboard:&lt;season&gt;</code></pre>
+            </div>
+            <p>Avoid treating Redis as a relational database encoded into arbitrary key strings.</p>
+            <h2 id="hot-keys">Hot keys</h2>
+            <p>One key receiving enormous traffic can overload the node responsible for it.</p>
+            <p>Examples:</p>
+            <ul>
+                <li>one global counter,</li>
+                <li>one celebrity profile,</li>
+                <li>one huge sorted set,</li>
+                <li>one lock for the entire system.</li>
+            </ul>
+            <p>Mitigations depend on semantics:</p>
+            <ul>
+                <li>shard counters,</li>
+                <li>replicate/read-cache,</li>
+                <li>split data structures,</li>
+                <li>local caching,</li>
+                <li>redesign coordination.</li>
+            </ul>
+            <h2 id="big-keys">Big keys</h2>
+            <p>A key containing millions of members or a huge value can cause:</p>
+            <ul>
+                <li>long command latency,</li>
+                <li>large network responses,</li>
+                <li>expensive deletion,</li>
+                <li>replication pressure.</li>
+            </ul>
+            <p>Monitor key size, not only key count.</p>
+            <h2 id="redis-versus-memcached">Redis versus Memcached</h2>
+            <p>Memcached is simpler and focused on volatile key/value caching.</p>
+            <p>Redis provides richer structures, persistence options, replication, streams, scripting, and broader use cases.</p>
+            <p>Choose Memcached when simple distributed caching is enough.</p>
+            <p>Choose Redis when richer server-side operations materially simplify the system.</p>
+            <h2 id="redis-versus-a-relational-database">Redis versus a relational database</h2>
+            <p>Use Redis when:</p>
+            <ul>
+                <li>access is key-oriented,</li>
+                <li>very low latency matters,</li>
+                <li>data structures fit Redis operations,</li>
+                <li>cache/session/rate-limit semantics dominate.</li>
+            </ul>
+            <p>Use PostgreSQL/MySQL/SQL Server when:</p>
+            <ul>
+                <li>joins matter,</li>
+                <li>relational constraints matter,</li>
+                <li>durable transactional state is central,</li>
+                <li>ad-hoc querying is important.</li>
+            </ul>
+            <p>Often the right architecture is both:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL = source of truth
+Redis      = low-latency derived state</code></pre>
+            </div>
+            <h2 id="managed-options">Managed options</h2>
+            <p>Common managed Redis-compatible services include:</p>
+            <ul>
+                <li>Redis Cloud,</li>
+                <li>Azure Managed Redis,</li>
+                <li>Amazon ElastiCache,</li>
+                <li>Google Cloud Memorystore.</li>
+            </ul>
+            <p>Compatibility, persistence, clustering, modules, and command support differ by service.</p>
+            <p>Test required commands and failure behavior before migrating.</p>
+            <h2 id="production-checklist">Production checklist</h2>
+            <p>Before using Redis in production:</p>
+            <ol>
+                <li>Is this authoritative data or rebuildable derived data?</li>
+                <li>What is the memory limit?</li>
+                <li>What eviction policy applies?</li>
+                <li>Is persistence required?</li>
+                <li>What is the acceptable data-loss window?</li>
+                <li>Is replication configured?</li>
+                <li>Is clustering necessary?</li>
+                <li>How are hot and large keys detected?</li>
+                <li>Are application timeouts configured?</li>
+                <li>What happens when Redis is completely unavailable?</li>
+            </ol>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="using-redis-as-an-invisible-dependency">Using Redis as an invisible dependency</h3>
+            <p>Applications should have explicit behavior for cache failure.</p>
+            <h3 id="no-ttl-policy">No TTL policy</h3>
+            <p>Caches grow forever.</p>
+            <h3 id="storing-huge-blobs">Storing huge blobs</h3>
+            <p>Large values increase memory, replication, and network costs.</p>
+            <h3 id="assuming-persistence-equals-backup">Assuming persistence equals backup</h3>
+            <p>Operational mistakes can affect persistent Redis data too.</p>
+            <h3 id="one-global-lock">One global lock</h3>
+            <p>This serializes the system and creates a hot key.</p>
+            <h3 id="using-keys-in-production">Using KEYS in production</h3>
+            <p>A full keyspace scan can be disruptive. Prefer cursor-based <code>SCAN</code> for administrative iteration.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="07_choosing_database.html">Choosing a database</a></li>
+                <li><a href="11_cassandra.html">Cassandra</a></li>
+                <li><a href="12_elasticsearch_and_opensearch.html">OpenSearch and Elasticsearch</a></li>
+                <li><a href="../08_database_performance/03_database_caching.html">Database caching</a></li>
+                <li><a href="https://github.com/djeada/Databases-Notes/blob/main/notes/06_distributed_databases">Distributed databases</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

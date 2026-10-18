@@ -1,11 +1,40 @@
 import unittest
+import json
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 from bs4 import BeautifulSoup
 
-from scripts.generate_from_markdown import HtmlEnhancer, MarkdownProcessor
+from scripts.generate_from_markdown import HtmlEnhancer, MarkdownProcessor, UrlData
+from scripts import generate_from_markdown as generator
 
 
 class PrismCodeBlockTests(unittest.TestCase):
+    def test_database_source_discovery_removes_a_stale_cached_duplicate(self):
+        source = next(item for item in generator.SOURCE_REPOSITORIES if item['repo'] == 'Databases-Notes')
+        stale = {'url': 'https://raw.githubusercontent.com/djeada/Databases-Notes/main/notes/06_distributed_databases/08_distributed_database_systems.md', 'title': '08 Distributed Database Systems', 'category': ['Databases-Notes', '06_distributed_databases'], 'language': 'EN'}
+        response = Mock()
+        response.json.return_value = {'tree': [{'type': 'blob', 'path': 'notes/06_distributed_databases/01_distributed_database_systems.md'}]}
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'input.json'
+            config.write_text(json.dumps([stale]))
+            with patch.object(generator, 'PATH_TO_CONFIG', str(config)), patch.object(generator, 'SOURCE_REPOSITORIES', [source]), patch.object(generator.requests, 'get', return_value=response):
+                refreshed = generator.read_url_config()
+            self.assertEqual(len(refreshed), 1)
+            self.assertTrue(refreshed[0]['url'].endswith('/01_distributed_database_systems.md'))
+            self.assertEqual(json.loads(config.read_text()), refreshed)
+
+    def test_repository_images_resolve_relative_to_the_markdown_source(self):
+        source = UrlData(
+            url="https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/07_ui.md",
+            title="07 Ui", category=["Frontend-Notes"], language="EN",
+        )
+        html = '<img src="../assets/ui-patterns/modal.png"><img src="data:image/png;base64,eA==">'
+        soup = BeautifulSoup(HtmlEnhancer.rewrite_links(html, source), "html.parser")
+        self.assertEqual(soup.find_all("img")[0]["src"], "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/assets/ui-patterns/modal.png")
+        self.assertEqual(soup.find_all("img")[1]["src"], "data:image/png;base64,eA==")
+
     def test_unlabelled_ascii_block_keeps_its_top_line(self):
         source = """<p>```
 +-------+

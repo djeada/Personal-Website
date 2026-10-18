@@ -43,6 +43,32 @@ test('existing tool main ID and layout are preserved', async ({ page }) => {
     await expect(page.locator('.skip-link')).toHaveAttribute('href', '#container');
 });
 
+test('UI tutorial illustrations and resume logos load with external requests blocked', async ({ page }) => {
+    for (const [url, selector] of [
+        ['/articles/frontend_notes/07_ui.html', '#article-body img'],
+        ['/core/resume.html', 'img[alt="Apache Kafka"], img[alt="Kafka"], img[alt="C++"], img[alt="Flask"], img[alt="SQLite"], img[alt="OpenStack Swift"], img[alt="C"], img[alt="Prometheus"], img[alt="Grafana"]'],
+    ]) {
+        await page.goto(url);
+        const images = page.locator(selector);
+        expect(await images.count()).toBeGreaterThan(0);
+        for (const image of await images.all()) {
+            await image.evaluate(element => { element.loading = 'eager'; });
+            await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth > 0)).toBe(true);
+        }
+    }
+});
+
+test('the retired duplicate database article redirects to the current article', async ({ page }) => {
+    await page.goto('/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html');
+    await expect(page).toHaveURL(/\/01_distributed_database_systems\.html$/);
+    await expect(page.locator('#article-body')).toBeVisible();
+});
+
+test('the VTK geospatial example is available as a source-code link', async ({ page }) => {
+    await page.goto('/articles/vtk_examples/08_integration_with_other_tools.html');
+    await expect(page.locator('#article-body a[href$="/geospatial_data.py"]')).toBeVisible();
+});
+
 test('article has breadcrumbs, nearby recommendations, and an active writing section', async ({ page }) => {
     await page.goto('/articles/backend_engineers_guide/01_api_design/02_rest.html');
     await expect(page).toHaveTitle('REST APIs: Principles, HTTP Methods, and Examples');

@@ -885,7 +885,7 @@ function initBackToTop() {
 
 
 document.addEventListener("DOMContentLoaded", main);
-// Keep the full directory available when JavaScript is disabled.
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('tool-filters');
     if (!form) return;
@@ -896,16 +896,30 @@ document.addEventListener('DOMContentLoaded', () => {
         group,
         name: group.querySelector('h2').textContent.trim(),
         initiallyOpen: group.open,
-        cards: Array.from(group.querySelectorAll('.tool-card')).map(card => ({ card, text: card.textContent.toLocaleLowerCase() }))
+        cards: Array.from(group.querySelectorAll('.tool-card')).map(card => ({
+            card,
+            text: card.textContent.toLocaleLowerCase()
+        }))
     }));
-    groups.forEach(({ name }) => category.add(new Option(name, name)));
+    groups.forEach(({
+        name
+    }) => category.add(new Option(name, name)));
+
     function filter() {
         const terms = query.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
         const filtering = terms.length > 0 || category.value !== '';
         let count = 0;
-        groups.forEach(({ group, name, cards, initiallyOpen }) => {
+        groups.forEach(({
+            group,
+            name,
+            cards,
+            initiallyOpen
+        }) => {
             let visible = 0;
-            cards.forEach(({ card, text }) => {
+            cards.forEach(({
+                card,
+                text
+            }) => {
                 card.hidden = (category.value !== '' && category.value !== name) || !terms.every(term => text.includes(term));
                 if (!card.hidden) visible++;
             });
@@ -919,6 +933,10 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', event => event.preventDefault());
     query.addEventListener('input', filter);
     category.addEventListener('change', filter);
-    form.addEventListener('reset', () => { query.value = ''; category.value = ''; filter(); });
+    form.addEventListener('reset', () => {
+        query.value = '';
+        category.value = '';
+        filter();
+    });
     filter();
 });

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Synchronous and Asynchronous Replication | Adam Djellouli</title>
-    <meta content="Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more…" name="description" />
+    <meta content="The fundamental difference between synchronous and asynchronous replication is." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication",
-            "description": "Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more\u2026",
-            "dateModified": "2025-05-11",
+            "description": "The fundamental difference between synchronous and asynchronous replication is.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more…" property="og:description" />
-    <meta content="2025-05-11" property="article:modified_time" />
+    <meta content="The fundamental difference between synchronous and asynchronous replication is." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -107,26 +107,128 @@
     </nav>
     <main class="site-main" id="main-content" tabindex="-1">
 <div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Replication</li><li><span aria-current="page">Synchronous and Asynchronous Replication</span></li></ol></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#replication-strategies">Replication Strategies</a>
+                    <li><a href="#start-with-one-transaction">Start with one transaction</a></li>
+                    <li><a href="#the-replication-pipeline">The replication pipeline</a></li>
+                    <li><a href="#why-the-acknowledgment-point-matters">Why the acknowledgment point matters</a></li>
+                    <li><a href="#asynchronous-replication">Asynchronous replication</a></li>
+                    <li><a href="#asynchronous-does-not-mean-send-everything-later">"Asynchronous" does not mean "send everything later"</a></li>
+                    <li><a href="#failure-window-in-asynchronous-replication">Failure window in asynchronous replication</a></li>
+                    <li><a href="#replication-lag">Replication lag</a></li>
+                    <li><a href="#lag-in-seconds-can-be-misleading">Lag in seconds can be misleading</a>
                         <ol>
-                            <li><a href="#synchronous-replication">Synchronous Replication</a></li>
-                            <li><a href="#asynchronous-replication">Asynchronous Replication</a></li>
+                            <li><a href="#database-a">Database A</a></li>
+                            <li><a href="#database-b">Database B</a></li>
                         </ol>
                     </li>
-                    <li><a href="#choosing-between-synchronous-and-asynchronous-replication">Choosing Between Synchronous and Asynchronous Replication</a></li>
-                    <li><a href="#best-practices">Best Practices</a></li>
+                    <li><a href="#why-asynchronous-replicas-return-stale-reads">Why asynchronous replicas return stale reads</a></li>
+                    <li><a href="#read-your-writes-consistency">Read-your-writes consistency</a></li>
+                    <li><a href="#synchronous-replication">Synchronous replication</a></li>
+                    <li><a href="#synchronous-is-incomplete-without-the-acknowledgment-level">"Synchronous" is incomplete without the acknowledgment level</a></li>
+                    <li><a href="#receive-versus-durable-persistence">Receive versus durable persistence</a></li>
+                    <li><a href="#durable-versus-applied">Durable versus applied</a></li>
+                    <li><a href="#the-most-important-replication-distinction">The most important replication distinction</a></li>
+                    <li><a href="#postgresql-the-clearest-example">PostgreSQL: the clearest example</a></li>
+                    <li><a href="#postgresql-requires-a-synchronous-standby-configuration-too">PostgreSQL requires a synchronous standby configuration too</a></li>
+                    <li><a href="#postgresql-remote_write">PostgreSQL remote_write</a></li>
+                    <li><a href="#postgresql-synchronous_commit-on">PostgreSQL synchronous_commit = on</a></li>
+                    <li><a href="#postgresql-remote_apply">PostgreSQL remote_apply</a></li>
+                    <li><a href="#postgresql-summary">PostgreSQL summary</a></li>
+                    <li><a href="#postgresql-can-choose-which-standbys-count">PostgreSQL can choose which standbys count</a></li>
+                    <li><a href="#why-synchronous-replication-increases-commit-latency">Why synchronous replication increases commit latency</a></li>
+                    <li><a href="#geography-therefore-matters">Geography therefore matters</a></li>
+                    <li><a href="#mysql-uses-different-terminology-semisynchronous-replication">MySQL uses different terminology: semisynchronous replication</a></li>
+                    <li><a href="#what-does-a-mysql-semisynchronous-replica-acknowledge">What does a MySQL semisynchronous replica acknowledge?</a></li>
+                    <li><a href="#mysql-semisynchronous-durability-is-not-replica-read-freshness">MySQL semisynchronous durability is not replica read freshness</a></li>
+                    <li><a href="#mysql-after_sync">MySQL AFTER_SYNC</a></li>
+                    <li><a href="#mysql-after_commit">MySQL AFTER_COMMIT</a></li>
+                    <li><a href="#mysql-semisynchronous-can-fall-back-to-asynchronous">MySQL semisynchronous can fall back to asynchronous</a></li>
+                    <li><a href="#this-changes-the-durability-guarantee">This changes the durability guarantee</a></li>
+                    <li><a href="#mysql-can-require-several-acknowledgments">MySQL can require several acknowledgments</a></li>
+                    <li><a href="#waiting-for-application-is-separate-in-mysql-too">Waiting for application is separate in MySQL too</a></li>
+                    <li><a href="#sql-server-availability-groups">SQL Server Availability Groups</a></li>
+                    <li><a href="#sql-server-synchronous-commit">SQL Server synchronous commit</a></li>
+                    <li><a href="#sql-server-redo-is-separate">SQL Server redo is separate</a></li>
+                    <li><a href="#sql-server-synchronous-secondary-reads-can-therefore-be-stale">SQL Server synchronous secondary reads can therefore be stale</a></li>
+                    <li><a href="#sql-server-has-an-important-failure-nuance">SQL Server has an important failure nuance</a></li>
+                    <li><a href="#required_synchronized_secondaries_to_commit">REQUIRED_SYNCHRONIZED_SECONDARIES_TO_COMMIT</a></li>
+                    <li><a href="#technology-comparison">Technology comparison</a></li>
+                    <li><a href="#do-not-confuse-replication-mode-with-local-durability">Do not confuse replication mode with local durability</a></li>
+                    <li><a href="#a-useful-two-axis-model">A useful two-axis model</a></li>
+                    <li><a href="#what-if-the-replica-fails">What if the replica fails?</a></li>
+                    <li><a href="#what-if-a-required-synchronous-replica-fails">What if a required synchronous replica fails?</a></li>
+                    <li><a href="#so-synchronous-is-less-available-needs-qualification">So "synchronous is less available" needs qualification</a></li>
+                    <li><a href="#durability-versus-availability-during-a-partition">Durability versus availability during a partition</a>
+                        <ol>
+                            <li><a href="#preserve-remote-durability-guarantee">Preserve remote durability guarantee</a></li>
+                            <li><a href="#preserve-write-availability">Preserve write availability</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#failover-requires-more-than-synchronous-replication">Failover requires more than synchronous replication</a></li>
+                    <li><a href="#synchronous-replication-does-not-automatically-prevent-split-brain">Synchronous replication does not automatically prevent split brain</a></li>
+                    <li><a href="#which-replica-should-be-promoted">Which replica should be promoted?</a></li>
+                    <li><a href="#rpo-recovery-point-objective">RPO: Recovery Point Objective</a></li>
+                    <li><a href="#rpo-is-not-simply-replication-lag">RPO is not simply "replication lag"</a></li>
+                    <li><a href="#rto-recovery-time-objective">RTO: Recovery Time Objective</a></li>
+                    <li><a href="#apply-lag-can-hurt-rto-too">Apply lag can hurt RTO too</a></li>
+                    <li><a href="#rpo-and-rto-are-independent-dimensions">RPO and RTO are independent dimensions</a>
+                        <ol>
+                            <li><a href="#system-a">System A</a></li>
+                            <li><a href="#system-b">System B</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#synchronous-replication-is-not-backup">Synchronous replication is not backup</a></li>
+                    <li><a href="#the-same-is-true-for-logical-corruption">The same is true for logical corruption</a></li>
+                    <li><a href="#monitoring-must-distinguish-the-pipeline-stages">Monitoring must distinguish the pipeline stages</a></li>
+                    <li><a href="#example-monitoring-diagnosis">Example monitoring diagnosis</a></li>
+                    <li><a href="#another-diagnosis">Another diagnosis</a></li>
+                    <li><a href="#postgresql-monitoring-example">PostgreSQL monitoring example</a></li>
+                    <li><a href="#sql-server-monitoring-example">SQL Server monitoring example</a></li>
+                    <li><a href="#mysql-monitoring-also-needs-two-stages">MySQL monitoring also needs two stages</a></li>
+                    <li><a href="#synchronous-replication-and-throughput">Synchronous replication and throughput</a></li>
+                    <li><a href="#group-commit-helps">Group commit helps</a></li>
+                    <li><a href="#synchronous-replication-and-tail-latency">Synchronous replication and tail latency</a></li>
+                    <li><a href="#one-slow-synchronous-participant-can-matter-greatly">One slow synchronous participant can matter greatly</a></li>
+                    <li><a href="#more-synchronous-copies-are-not-free">More synchronous copies are not free</a></li>
+                    <li><a href="#a-practical-architecture-example">A practical architecture example</a></li>
+                    <li><a href="#another-architecture-analytics-replica">Another architecture: analytics replica</a></li>
+                    <li><a href="#comparison-table">Comparison table</a></li>
+                    <li><a href="#technology-specific-summary">Technology-specific summary</a></li>
+                    <li><a href="#common-misconceptions">Common misconceptions</a></li>
+                    <li><a href="#questions-to-ask-when-someone-says-we-use-synchronous-replication">Questions to ask when someone says "we use synchronous replication"</a></li>
+                    <li><a href="#questions-to-ask-for-asynchronous-replication">Questions to ask for asynchronous replication</a></li>
+                    <li><a href="#choosing-based-on-the-business-operation">Choosing based on the business operation</a>
+                        <ol>
+                            <li><a href="#social-media-like-counter">Social-media like counter</a></li>
+                            <li><a href="#financial-transfer-ledger">Financial transfer ledger</a></li>
+                            <li><a href="#analytics">Analytics</a></li>
+                            <li><a href="#user-creates-profile-then-immediately-loads-it">User creates profile, then immediately loads it</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#postgresql-can-choose-durability-per-transaction">PostgreSQL can choose durability per transaction</a></li>
+                    <li><a href="#measure-the-workload-not-only-the-configuration">Measure the workload, not only the configuration</a></li>
+                    <li><a href="#test-failures-rather-than-only-normal-replication">Test failures rather than only normal replication</a></li>
+                    <li><a href="#rpo-rto-decision-matrix">RPO/RTO decision matrix</a></li>
+                    <li><a href="#final-mental-model">Final mental model</a>
+                        <ol>
+                            <li><a href="#asynchronous">Asynchronous</a></li>
+                            <li><a href="#remote-write-synchronous">Remote-write synchronous</a></li>
+                            <li><a href="#durable-synchronous">Durable synchronous</a></li>
+                            <li><a href="#apply-aware-synchronous">Apply-aware synchronous</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#final-principle">Final principle</a></li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Master Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master-Standby Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Database Replication</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Primary Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Primary–Standby Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Replication: Maintaining Copies of Database Changes</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -190,6 +292,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -204,7 +312,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -230,6 +337,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -252,6 +365,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -266,6 +385,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -280,6 +404,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -288,7 +445,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -308,193 +465,2227 @@
                     </button></div>
             </div>
             <h1>Synchronous and Asynchronous Replication</h1>
-            <p>Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more other servers called replicas. This process enhances data availability, fault tolerance, and load balancing across the system. Understanding the two main replication strategies—synchronous and asynchronous replication—is crucial for designing robust and efficient database architectures.</p>
-            <h3 id="replication-strategies">Replication Strategies</h3>
-            <p>At its core, replication ensures that data is consistently available across multiple servers. The key difference between synchronous and asynchronous replication lies in how and when data changes are propagated from the primary server to the replicas.</p>
-            <h4 id="synchronous-replication">Synchronous Replication</h4>
-            <p>In synchronous replication, every write operation on the primary database is immediately propagated to the replicas. The primary server waits for acknowledgments from all replicas before confirming the transaction to the client. This means that data is consistent across all servers at any given moment.</p>
-            <p><strong>How it works:</strong></p>
-            <ol>
-                <li>A client sends a write request to the primary server.</li>
-                <li>The primary server writes the data and sends the changes to all replicas.</li>
-                <li>Each replica writes the data and sends an acknowledgment back to the primary server.</li>
-                <li>Once all acknowledgments are received, the primary server confirms the transaction to the client.</li>
-            </ol>
-            <div>
-                <pre><code class="language-shell">Client
-  |
-  | (1) Write Request
-  v
-+--------------------+
-|   Primary Server   |
-+---------+----------+
-          |
-          | (2) Send Data to Replicas
-          v
-+---------+----------+       +---------+----------+
-|    Replica 1       |       |    Replica 2       |
-+---------+----------+       +---------+----------+
-          | (3) Ack                    | (3) Ack
-          +-----------+----------------+
-                      |
-             (4) Confirm Transaction
-                      |
-                      v
-        Transaction Confirmed to Client
-</code></pre>
-            </div>
+            <p>The fundamental difference between synchronous and asynchronous replication is:</p>
+            <blockquote>
+                <p>What must happen on another node before the database tells the client that the transaction succeeded?</p>
+            </blockquote>
+            <p>A simplified model is:</p>
+            <p>``<code>text id="cgayks"
+                    SYNCHRONOUS
+
+                    transaction
+                    |
+                    v
+                    local commit work
+                    |
+                    v
+                    required remote progress
+                    |
+                    v
+                    SUCCESS to client
+                </code>`<code></code></p>
+            <p>versus:</p>
+            <p>`<code>text id="jsh4qs"
+                    ASYNCHRONOUS
+
+                    transaction
+                    |
+                    v
+                    local commit work
+                    |
+                    v
+                    SUCCESS to client
+                    |
+                    +------ remote replicas continue catching up
+                </code>`<code></code></p>
+            <p>The key difference is therefore not:</p>
+            <p>`<code>text id="tsn6u7"
+                    "Are changes transmitted immediately?"
+                </code>`<code></code></p>
+            <p>but:</p>
+            <p>`<code>text id="z4d3ow"
+                    "Does client-visible commit success depend on
+                    replica progress?"
+                </code>`<code></code></p>
+            <p>An asynchronous system can begin transmitting changes almost immediately.</p>
+            <p>It is still asynchronous if the client does not have to wait for replica progress before receiving success.</p>
+            <h2 id="start-with-one-transaction">Start with one transaction</h2>
+            <p>Suppose the application creates an order:</p>
+            <p>`<code>sql id="oxq27b"
+                    BEGIN;
+
+                    INSERT INTO orders(order_id, customer_id, amount)
+                    VALUES (104, 27, 89.00);
+
+                    COMMIT;
+                </code>`<code></code></p>
+            <p>Assume:</p>
+            <p>`<code>text id="kdjqwz"
+                    Primary
+                    Replica
+                </code>`<code></code></p>
+            <p>The database must decide at what point:</p>
+            <p>`<code>text id="cjymc9"
+                    COMMIT
+                </code>`<code></code></p>
+            <p>is allowed to return:</p>
+            <p>`<code>text id="wsr84l"
+                    SUCCESS
+                </code>`<code></code></p>
+            <p>to the application.</p>
+            <p>There are several possible milestones.</p>
+            <h2 id="the-replication-pipeline">The replication pipeline</h2>
+            <p>A useful generic pipeline is:</p>
+            <p>`<code>text id="g7zvd8"
+                    PRIMARY
+
+                    transaction executes
+                    |
+                    v
+                    change/log record created
+                    |
+                    v
+                    local log write
+                    |
+                    v
+                    local durable flush
+                    |
+                    v
+                    send across network
+                    |
+                    v
+
+                    REPLICA
+
+                    receive
+                    |
+                    v
+                    write
+                    |
+                    v
+                    durably flush
+                    |
+                    v
+                    apply / replay
+                    |
+                    v
+                    visible to replica query
+                </code>`<code></code></p>
+            <p>Not every database exposes exactly these stages, but the model is extremely useful.</p>
+            <p>The important events are different:</p>
+            <p>`<code>text id="rzqlr9"
+                    received
+                    ≠
+                    durable
+                    ≠
+                    applied
+                    ≠
+                    visible to reads
+                </code>`<code></code></p>
+            <h2 id="why-the-acknowledgment-point-matters">Why the acknowledgment point matters</h2>
+            <p>Suppose a replica says:</p>
+            <p>`<code>text id="11apt3"
+                    "I received transaction 104."
+                </code>`<code></code></p>
+            <p>That might mean only:</p>
+            <p>`<code>text id="6rfkk6"
+                    the bytes reached my process
+                </code>`<code></code></p>
+            <p>If that machine immediately loses power, perhaps the change disappears.</p>
+            <p>A stronger acknowledgment is:</p>
+            <p>`<code>text id="dyvrde"
+                    "I flushed transaction 104 to durable storage."
+                </code>`<code></code></p>
+            <p>Now the transaction has survived more failure modes.</p>
+            <p>An even stronger acknowledgment might be:</p>
+            <p>`<code>text id="djj75p"
+                    "I replayed transaction 104
+                    and my queries can now see it."
+                </code>`<code></code></p>
+            <p>Each additional requirement generally increases:</p>
+            <p>`<code>text id="bq5rua"
+                    durability or visibility guarantees
+                </code>`<code></code></p>
+            <p>but also increases:</p>
+            <p>`<code>text id="qjmngk"
+                    commit latency
+                </code>`<code></code></p>
+            <p>because the primary must wait longer.</p>
+            <h2 id="asynchronous-replication">Asynchronous replication</h2>
+            <p>In asynchronous replication, replica progress is not part of the client-visible commit requirement.</p>
+            <p>Timeline:</p>
+            <p>`<code>text id="286t9h"
+                    Client Primary Replica
+                    | | |
+                    |---- INSERT -----&gt;| |
+                    | | |
+                    | | local durable commit |
+                    | | |
+                    |&lt;---- SUCCESS ----| |
+                    | | |
+                    | |------- changes -----&gt;|
+                    | | |
+                    | | receive
+                    | | persist
+                    | | apply
+                </code>`<code></code></p>
+            <p>The client may hear:</p>
+            <p>`<code>text id="0zo99d"
+                    SUCCESS
+                </code>`<code></code></p>
+            <p>while the replica still lacks the transaction.</p>
+            <p>This produces:</p>
+            <p>`<code>text id="4b17eq"
+                    lower commit latency
+                </code>`<code></code></p>
+            <p>but creates a window during which:</p>
+            <p>`<code>text id="8374rk"
+                    primary contains newer acknowledged data
+                    than replica
+                </code>`<code></code></p>
+            <h2 id="asynchronous-does-not-mean-send-everything-later">"Asynchronous" does not mean "send everything later"</h2>
+            <p>This is an important correction to a common misconception.</p>
+            <p>An asynchronous primary might stream changes while the transaction is still progressing.</p>
+            <p>For example:</p>
+            <p>`<code>text id="b4f3hu"
+                    Primary Replica
+
+                    generate log record 1 -----&gt; receive
+
+                    generate log record 2 -----&gt; receive
+
+                    generate commit record ----&gt; receive
+                </code>`<code></code></p>
+            <p>The replica may even be almost completely caught up by the time the primary commits.</p>
+            <p>The replication is still asynchronous if:</p>
+            <p>`<code>text id="y8y1l9"
+                    primary does not need a replica acknowledgment
+                    before reporting success
+                </code>`<code></code></p>
+            <p>So:</p>
+            <blockquote>
+                <p>Synchronous versus asynchronous describes the commit dependency, not necessarily when network transmission begins.</p>
+            </blockquote>
+            <h2 id="failure-window-in-asynchronous-replication">Failure window in asynchronous replication</h2>
+            <p>Suppose the sequence is:</p>
+            <p>`<code>text id="ydrsv6"
+                    1. Transaction 104 commits on primary.
+
+                    2. Primary returns SUCCESS.
+
+                    3. Transaction 104 has not reached replica.
+
+                    4. Primary suffers unrecoverable failure.
+
+                    5. Replica is promoted.
+                </code>`<code></code></p>
+            <p>The new primary may not contain:</p>
+            <p>`<code>text id="x8gxx1"
+                    transaction 104
+                </code>`<code></code></p>
+            <p>even though the application previously received:</p>
+            <p>`<code>text id="9lxg1t"
+                    SUCCESS
+                </code>`<code></code></p>
+            <p>This is the classic asynchronous replication data-loss window.</p>
+            <h2 id="replication-lag">Replication lag</h2>
+            <p>The distance between primary and replica progress is called replication lag.</p>
+            <p>Suppose:</p>
+            <p>`<code>text id="qbwc42"
+                    Primary:
+                    transactions through 10,000
+
+                    Replica:
+                    transactions through 9,970
+                </code>`<code></code></p>
+            <p>The replica is:</p>
+            <p>`<code>text id="dxc5ti"
+                    30 transactions behind
+                </code>`<code></code></p>
+            <p>But lag can be measured in several ways:</p>
+            <p>`<code>text id="p7u8wf"
+                    bytes
+
+                    log positions
+
+                    number of transactions
+
+                    estimated seconds
+
+                    apply queue size
+                </code>`<code></code></p>
+            <p>A single:</p>
+            <p>`<code>text id="iq3x27"
+                    lag = 2 seconds
+                </code>`<code></code></p>
+            <p>number can hide important details.</p>
+            <h2 id="lag-in-seconds-can-be-misleading">Lag in seconds can be misleading</h2>
+            <p>Consider two databases.</p>
+            <h3 id="database-a">Database A</h3>
+            <p>`<code>text id="fw8p3s"
+                    2 seconds behind
+
+                    primary generating 1 KB/sec
+                </code>`<code></code></p>
+            <p>Outstanding replication data is tiny.</p>
+            <h3 id="database-b">Database B</h3>
+            <p>`<code>text id="dev7bm"
+                    2 seconds behind
+
+                    primary generating 5 GB/sec
+                </code>`<code></code></p>
+            <p>Outstanding replication work is enormous.</p>
+            <p>Both display:</p>
+            <p>`<code>text id="vtsjkt"
+                    2 seconds lag
+                </code>`<code></code></p>
+            <p>but operationally they are radically different.</p>
+            <p>That is why production monitoring should inspect:</p>
+            <p>`<code>text id="w0xkfj"
+                    log positions
+                    bytes queued
+                    apply rates
+                </code>`<code></code></p>
+            <p>as well as time-based lag estimates.</p>
+            <h2 id="why-asynchronous-replicas-return-stale-reads">Why asynchronous replicas return stale reads</h2>
+            <p>Suppose:</p>
+            <p>`<code>text id="uwb5l6"
+                    Primary:
+                    order 104 exists
+
+                    Replica:
+                    order 104 has not been applied
+                </code>``</p>
+            <p>A user creates order <code>104</code>:</p>
+            <p>``<code>text id="k7yywv"
+                    POST /orders
+
+                    → Primary
+                    → SUCCESS
+                </code>`<code></code></p>
+            <p>Then immediately:</p>
+            <p>`<code>text id="7f7g52"
+                    GET /orders/104
+                </code>`<code></code></p>
+            <p>is routed to the replica.</p>
+            <p>The replica returns:</p>
+            <p>`<code>text id="5oxt0v"
+                    not found
+                </code>`<code></code></p>
+            <p>The database has not necessarily malfunctioned.</p>
+            <p>The read simply arrived before replication caught up.</p>
+            <h2 id="read-your-writes-consistency">Read-your-writes consistency</h2>
+            <p>Users often expect:</p>
+            <p>`<code>text id="n18pgo"
+                    I wrote X.
+
+                    Then I read X.
+
+                    Therefore I should see X.
+                </code>`<code></code></p>
+            <p>That property is often called:</p>
+            <p>`<code>text id="758v7m"
+                    read-your-writes consistency
+                </code>`<code></code></p>
+            <p>Plain asynchronous replicas do not automatically provide it.</p>
+            <p>Possible application strategies include:</p>
+            <p>`<code>text id="m1o1k0"
+                    write to primary
+                    then temporarily read from primary
+                </code>`<code></code></p>
+            <p>or:</p>
+            <p>`<code>text id="xeo8bq"
+                    return the newly created object
+                    directly from the write response
+                </code>`<code></code></p>
+            <p>or:</p>
+            <p>`<code>text id="jrjeww"
+                    record the write's replication position
+                    and wait until the chosen replica reaches it
+                </code>`<code></code></p>
+            <p>The correct solution depends on the application.</p>
+            <h2 id="synchronous-replication">Synchronous replication</h2>
+            <p>Synchronous replication changes when the client receives success.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="t8cdrb"
+                    Client Primary Replica
+                    | | |
+                    |---- write ------&gt;| |
+                    | | |
+                    | |------ change -------&gt;|
+                    | | |
+                    | | required
+                    | | progress
+                    | | |
+                    | |&lt;------- ACK ---------|
+                    | | |
+                    |&lt;---- SUCCESS ----| |
+                </code>`<code></code></p>
+            <p>The primary's commit is now dependent on a particular remote event.</p>
+            <p>But:</p>
+            <p>`<code>text id="3cmnfk"
+                    remote event
+                </code>`<code></code></p>
+            <p>must be defined.</p>
+            <h2 id="synchronous-is-incomplete-without-the-acknowledgment-level">"Synchronous" is incomplete without the acknowledgment level</h2>
+            <p>Consider these possible requirements:</p>
+            <p>`<code>text id="yu9v83"
+                    A. Replica received the data.
+
+                    B. Replica wrote it to its operating-system buffers.
+
+                    C. Replica durably flushed it to storage.
+
+                    D. Replica applied/replayed it.
+
+                    E. Replica made it visible to user queries.
+                </code>`<code></code></p>
+            <p>Each one is stronger than a simple:</p>
+            <p>`<code>text id="05er6y"
+                    "some network packet arrived"
+                </code>`<code></code></p>
+            <p>Different database engines expose different choices.</p>
+            <p>Therefore:</p>
+            <blockquote>
+                <p>Never document a system merely as "synchronous. " Document what acknowledgment is required.</p>
+            </blockquote>
+            <h2 id="receive-versus-durable-persistence">Receive versus durable persistence</h2>
+            <p>Suppose the replica receives:</p>
+            <p>`<code>text id="aal5vf"
+                    transaction 104
+                </code>`<code></code></p>
+            <p>into RAM.</p>
+            <p>It acknowledges.</p>
+            <p>Then:</p>
+            <p>`<code>text id="qfk98e"
+                    replica power fails
+                </code>`<code></code></p>
+            <p>If the change had not reached durable storage, it may disappear.</p>
+            <p>So:</p>
+            <p>`<code>text id="kg50n9"
+                    receive acknowledgment
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="t1op91"
+                    durability acknowledgment
+                </code>``</p>
+            <p>provide different guarantees.</p>
+            <h2 id="durable-versus-applied">Durable versus applied</h2>
+            <p>Now suppose the replica has safely written transaction <code>104</code> to its recovery log.</p>
+            <p>Its state is:</p>
+            <p>``<code>text id="p42xqt"
+                    log contains transaction 104
+
+                    database pages/read state
+                    still reflect transaction 103
+                </code>`<code></code></p>
+            <p>If the replica crashes and restarts, it can replay the durable log.</p>
+            <p>So the transaction is protected.</p>
+            <p>But an immediate query may still not see it.</p>
+            <p>Therefore:</p>
+            <p>`<code>text id="uh1fb8"
+                    durability
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="vjx79p"
+                    read freshness
+                </code>`<code></code></p>
+            <p>are separate properties.</p>
+            <h2 id="the-most-important-replication-distinction">The most important replication distinction</h2>
+            <p>Remember:</p>
+            <p>`<code>text id="ajqn8d"
+                    DURABLE ON REPLICA
+
+                    does not necessarily mean
+
+                    VISIBLE ON REPLICA
+                </code>`<code></code></p>
+            <p>That one distinction explains a surprising amount of behavior in:</p>
+            <p>`<code>text id="v819m9"
+                    PostgreSQL
+                    SQL Server
+                    MySQL
+                    other log-based replication systems
+                </code>`<code></code></p>
+            <h2 id="postgresql-the-clearest-example">PostgreSQL: the clearest example</h2>
+            <p>Current PostgreSQL exposes several commit levels through:</p>
+            <p>`<code>text id="b37569"
+                    synchronous_commit
+                </code>`<code></code></p>
+            <p>Relevant values include:</p>
+            <p>`<code>text id="1a9l55"
+                    remote_apply
+                    on
+                    remote_write
+                    local
+                    off
+                </code>``</p>
+            <p>When synchronous standbys have actually been configured, those values determine how much standby progress the transaction waits for. PostgreSQL documents <code>remote_write</code>, <code>on</code>, and <code>remote_apply</code> as distinct remote acknowledgment levels.</p>
+            <h2 id="postgresql-requires-a-synchronous-standby-configuration-too">PostgreSQL requires a synchronous standby configuration too</h2>
+            <p>A subtle but important point:</p>
+            <p>``<code>conf id="nyywqd"
+                    synchronous_commit = remote_apply
+                </code>`<code></code></p>
+            <p>alone does not magically create a synchronous replica.</p>
+            <p>The primary also needs:</p>
+            <p>`<code>conf id="00oc6z"
+                    synchronous_standby_names = '...'
+                </code>``</p>
+            <p>to identify which connected standbys participate in synchronous replication.</p>
+            <p>PostgreSQL's current documentation states that <code>synchronous_standby_names</code> must be non-empty before streaming replication becomes synchronous.</p>
+            <p>So there are two distinct questions:</p>
+            <p>``<code>text id="mawgpi"
+                    Which replicas count?
+
+                    What progress must they report?
+                </code>``</p>
+            <h2 id="postgresql-remote_write">PostgreSQL <code>remote_write</code></h2>
+            <p>With:</p>
+            <p>``<code>conf id="5jk0f6"
+                    synchronous_commit = remote_write
+                </code>``</p>
+            <p>the primary waits until the selected synchronous standby reports that the commit record has been received and written to the standby operating system.</p>
+            <p>It does not require that the WAL be durably flushed to persistent storage there.</p>
+            <p>PostgreSQL therefore documents <code>remote_write</code> as weaker than normal synchronous <code>on</code>, but potentially lower latency.</p>
+            <p>Conceptually:</p>
+            <p>``<code>text id="rlkrup"
+                    Primary durable
+
+                    Standby received
+                    Standby OS write completed
+
+                    → client SUCCESS
+                </code>``</p>
+            <h2 id="postgresql-synchronous_commit-on">PostgreSQL <code>synchronous_commit = on</code></h2>
+            <p>With a synchronous standby selected and:</p>
+            <p>``<code>conf id="85ssgn"
+                    synchronous_commit = on
+                </code>`<code></code></p>
+            <p>the primary waits for the synchronous standby to report that the commit WAL has been flushed to durable storage.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="62hmhd"
+                    Primary durable
+
+                    Standby received
+                    Standby durable
+
+                    → SUCCESS
+                </code>``</p>
+            <p>PostgreSQL describes this as the normal durable synchronous-replication level.</p>
+            <p>But the standby might still not have replayed the transaction.</p>
+            <h2 id="postgresql-remote_apply">PostgreSQL <code>remote_apply</code></h2>
+            <p>With:</p>
+            <p>``<code>conf id="3k9bxz"
+                    synchronous_commit = remote_apply
+                </code>`<code></code></p>
+            <p>the primary waits until the synchronous standby reports that it has:</p>
+            <p>`<code>text id="y4mlyw"
+                    received
+                    flushed
+                    and replayed
+                </code>`<code></code></p>
+            <p>the transaction.</p>
+            <p>PostgreSQL specifically says that at this point the transaction has become visible to queries on that standby.</p>
+            <p>Timeline:</p>
+            <p>`<code>text id="1quv73"
+                    Primary commit
+                    |
+                    v
+                    send WAL
+                    |
+                    v
+                    standby receive
+                    |
+                    v
+                    standby durable flush
+                    |
+                    v
+                    standby replay
+                    |
+                    v
+                    ACK
+                    |
+                    v
+                    SUCCESS
+                </code>``</p>
+            <p>This provides a stronger read-after-commit property at the cost of higher latency.</p>
+            <h2 id="postgresql-summary">PostgreSQL summary</h2>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Advantages</strong></th>
-                        <th><strong>Disadvantages</strong></th>
+                        <th><code>synchronous_commit</code></th>
+                        <th>Client success waits for</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Ensures strong data consistency across all servers</td>
-                        <td>Increases latency because the primary server waits for acknowledgments from replicas</td>
+                        <td><code>remote_write</code></td>
+                        <td>Remote filesystem write</td>
                     </tr>
                     <tr>
-                        <td>Minimizes the risk of data loss since data is committed on all servers before confirmation</td>
-                        <td>May impact performance, especially in environments with high network latency</td>
+                        <td><code>on</code></td>
+                        <td>Remote durable WAL flush</td>
                     </tr>
                     <tr>
-                        <td>Simplifies failover processes because replicas are always up-to-date</td>
-                        <td>Scalability can be limited due to the overhead of maintaining synchronization</td>
+                        <td><code>remote_apply</code></td>
+                        <td>Remote replay / read visibility</td>
+                    </tr>
+                    <tr>
+                        <td><code>local</code></td>
+                        <td>Local durable WAL only</td>
+                    </tr>
+                    <tr>
+                        <td><code>off</code></td>
+                        <td>Does not wait for local WAL flush before reporting success</td>
                     </tr>
                 </tbody>
             </table>
-            <h4 id="asynchronous-replication">Asynchronous Replication</h4>
-            <p>Asynchronous replication allows the primary server to confirm transactions without waiting for replicas to acknowledge the data writes. Data changes are sent to replicas after the transaction has been committed on the primary server, which means there may be a delay before replicas are updated.</p>
-            <p><strong>How it works:</strong></p>
-            <ol>
-                <li>A client sends a write request to the primary server.</li>
-                <li>The primary server writes the data and immediately confirms the transaction to the client.</li>
-                <li>The primary server queues the data changes for replication.</li>
-                <li>Replicas receive the data changes asynchronously and update their data.</li>
-            </ol>
-            <div>
-                <pre><code class="language-shell">Client
-  |
-  | (1) Write Request
-  v
-+--------------------+
-|   Primary Server   |
-+---------+----------+
-          | (2) Immediate ACK to Client
-          |
-          | (3) Send Data to Replicas
-          v
-+---------+----------+       +---------+----------+
-|    Replica 1       |       |    Replica 2       |
-+---------+----------+       +---------+----------+
-          | (4) ACK                    | (4) ACK
-          +-----------+----------------+
-                      |
-             [Replication Complete]</code></pre>
-            </div>
+            <p>For the remote modes to have their remote meaning, <code>synchronous_standby_names</code> must select synchronous standbys. PostgreSQL otherwise treats the non-<code>off</code> options as local durable commit behavior.</p>
+            <h2 id="postgresql-can-choose-which-standbys-count">PostgreSQL can choose which standbys count</h2>
+            <p>Suppose:</p>
+            <p>``<code>text id="xuzpgv"
+                    Primary
+
+                    A
+                    B
+                    C
+                </code>`<code></code></p>
+            <p>A priority configuration might say:</p>
+            <p>`<code>conf id="bn7ht8"
+                    synchronous_standby_names =
+                    'FIRST 1 (a, b, c)'
+                </code>`<code></code></p>
+            <p>meaning:</p>
+            <p>`<code>text id="ydhoif"
+                    wait for one synchronous standby,
+                    preferring A, then B, then C
+                </code>`<code></code></p>
+            <p>A quorum configuration might say:</p>
+            <p>`<code>conf id="8rvhn6"
+                    synchronous_standby_names =
+                    'ANY 2 (a, b, c)'
+                </code>`<code></code></p>
+            <p>meaning:</p>
+            <p>`<code>text id="0im5qs"
+                    wait for acknowledgments
+                    from any two candidates
+                </code>`<code></code></p>
+            <p>PostgreSQL supports both priority-based and quorum synchronous replication.</p>
+            <h2 id="why-synchronous-replication-increases-commit-latency">Why synchronous replication increases commit latency</h2>
+            <p>Suppose local storage commit takes:</p>
+            <p>`<code>text id="8q3jvi"
+                    1 ms
+                </code>`<code></code></p>
+            <p>but the required replica is:</p>
+            <p>`<code>text id="dc7olp"
+                    40 ms network round trip away
+                </code>`<code></code></p>
+            <p>The commit must now include enough remote communication to obtain the acknowledgment.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="19rcnm"
+                    local work 1 ms
+                    network/storage 40+ ms
+                    ----------------------
+                    commit latency much higher
+                </code>`<code></code></p>
+            <p>Actual latency is pipeline-dependent, so these numbers should not simply be added mechanically.</p>
+            <p>The important point is:</p>
+            <blockquote>
+                <p>Remote coordination is now on the transaction's critical path.</p>
+            </blockquote>
+            <h2 id="geography-therefore-matters">Geography therefore matters</h2>
+            <p>A synchronous replica in the same availability zone or nearby datacenter may have low round-trip latency.</p>
+            <p>A required synchronous replica on another continent can dramatically increase write latency.</p>
+            <p>This often produces architectures such as:</p>
+            <p>`<code>text id="n86xvo"
+                    Primary
+                    |
+                    +-- nearby synchronous standby
+                    |
+                    +-- remote asynchronous disaster-recovery standby
+                </code>`<code></code></p>
+            <p>Different copies have different purposes.</p>
+            <h2 id="mysql-uses-different-terminology-semisynchronous-replication">MySQL uses different terminology: semisynchronous replication</h2>
+            <p>Traditional MySQL source-to-replica replication is asynchronous.</p>
+            <p>MySQL 8. 4 also supports:</p>
+            <p>`<code>text id="51f68w"
+                    semisynchronous replication
+                </code>`<code></code></p>
+            <p>The source waits for acknowledgment from one or more configured semisynchronous replicas before returning to the committing session.</p>
+            <p>The name is intentional:</p>
+            <p>`<code>text id="b2gv86"
+                    semisynchronous
+                </code>`<code></code></p>
+            <p>rather than simply:</p>
+            <p>`<code>text id="otjo4r"
+                    fully synchronous apply
+                </code>`<code></code></p>
+            <p>because replica application remains separate.</p>
+            <h2 id="what-does-a-mysql-semisynchronous-replica-acknowledge">What does a MySQL semisynchronous replica acknowledge?</h2>
+            <p>MySQL documents that the replica acknowledges a transaction after its events have been written to the replica's relay log and flushed to disk.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="xphw76"
+                    SOURCE
+
+                    transaction
+                    |
+                    binary log
+                    |
+                    +--------------------&gt;
+                    REPLICA
+                    |
+                    relay log
+                    |
+                    durable flush
+                    |
+                    ACK
+                    &lt;----------------------+
+                    |
+                    client may continue
+                </code>`<code></code></p>
+            <p>The replica does not have to finish applying the transaction before sending that semisynchronous acknowledgment.</p>
+            <h2 id="mysql-semisynchronous-durability-is-not-replica-read-freshness">MySQL semisynchronous durability is not replica read freshness</h2>
+            <p>Immediately after the acknowledgment:</p>
+            <p>`<code>text id="hvh6ab"
+                    Replica relay log:
+                    contains transaction 104
+                </code>`<code></code></p>
+            <p>but:</p>
+            <p>`<code>text id="ksnbat"
+                    Replica SQL/applier:
+                    may not have applied 104 yet
+                </code>`<code></code></p>
+            <p>Therefore:</p>
+            <p>Before WAL has been applied on the replica, its relevant rows may look like this:</p>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Advantages</strong></th>
-                        <th><strong>Disadvantages</strong></th>
+                        <th>id</th>
+                        <th>total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Reduces latency since the primary server doesn't wait for replicas</td>
-                        <td>Potential for data inconsistency between the primary and replicas</td>
-                    </tr>
-                    <tr>
-                        <td>Improves performance and throughput on the primary server</td>
-                        <td>Risk of data loss if the primary server fails before replication occurs</td>
-                    </tr>
-                    <tr>
-                        <td>More scalable in environments with high network latency or geographically distributed replicas</td>
-                        <td>More complex failover procedures may be required to ensure data integrity</td>
+                        <td>103</td>
+                        <td>42.00</td>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="choosing-between-synchronous-and-asynchronous-replication">Choosing Between Synchronous and Asynchronous Replication</h3>
-            <p>Selecting the appropriate replication strategy depends on the specific needs of your application and infrastructure.</p>
+            <p>`<code>sql id="hdd8fn"
+                    SELECT *
+                    FROM orders
+                    WHERE id = 104;
+                </code>`<code></code></p>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Category</strong></th>
-                        <th><strong>Synchronous Replication</strong></th>
-                        <th><strong>Asynchronous Replication</strong></th>
+                        <th>rows returned</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Data Consistency</strong></td>
-                        <td>Strong—writes are confirmed only once all replicas have committed, ensuring identical data across nodes.</td>
-                        <td>Eventual—primary confirms writes immediately; replicas catch up afterward, so briefly divergent states are possible.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Latency Impact</strong></td>
-                        <td>Higher—each transaction waits for replica acknowledgments, adding round-trip delays.</td>
-                        <td>Lower—primary does not wait, so transactions complete as soon as local commit is done.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Throughput &amp; Performance</strong></td>
-                        <td>Moderate—overall throughput can suffer under high-load or high-latency conditions due to synchronization overhead.</td>
-                        <td>High—primary server can handle more transactions per second without waiting on replicas.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Scalability</strong></td>
-                        <td>Limited—scaling to many or geographically distant replicas exacerbates latency and coordination costs.</td>
-                        <td>Excellent—replicas can be added anywhere without significantly affecting primary performance.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Failover Complexity</strong></td>
-                        <td>Simple—since replicas are up-to-date, promoting one to primary is straightforward.</td>
-                        <td>Complex—need to detect and reconcile any unreplicated transactions; risk of data loss on failover.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Risk of Data Loss</strong></td>
-                        <td>Minimal—as long as a majority (or all, depending on quorum) of replicas acknowledge, data is safe.</td>
-                        <td>Present—writes acknowledged by primary may not yet exist on replicas if a sudden failure occurs.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Typical Use Cases</strong></td>
-                        <td>● Financial transaction systems<br />● Order-entry platforms<br />● Catalog updates requiring atomicity</td>
-                        <td>● Global content distribution<br />● Analytics or logging pipelines<br />● High-performance web applications where slight lag is acceptable</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Best Network Conditions</strong></td>
-                        <td>Low-latency, high-bandwidth links (e.g., within the same data center or region).</td>
-                        <td>Variable or high-latency networks (e.g., cross-continent, multi-cloud or edge deployments).</td>
+                        <td>0</td>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="best-practices">Best Practices</h3>
-            <p>Implementing replication effectively requires careful planning and consideration of several factors.</p>
-            <p><strong>Application Requirements:</strong></p>
-            <ul>
-                <li>Assess the criticality of data consistency versus performance needs.</li>
-                <li>Determine acceptable levels of latency and potential data loss.</li>
-                <li>Plan for failure scenarios and how the system should respond.</li>
-            </ul>
-            <p><strong>Monitoring and Maintenance:</strong></p>
-            <ul>
-                <li>Regularly monitor replication status and lag times.</li>
-                <li>Set up alerting mechanisms for replication failures or significant delays.</li>
-                <li>Perform routine testing of failover procedures.</li>
-            </ul>
-            <p><strong>Optimizing Network Infrastructure:</strong></p>
-            <ul>
-                <li>Ensure reliable, high-speed network connections between servers.</li>
-                <li>Use network optimization techniques to reduce latency.</li>
-                <li>Consider network security measures to protect data during replication.</li>
-            </ul>
-            <p><strong>Data Safety Measures:</strong></p>
-            <ul>
-                <li>Maintain regular backups, even when using replication.</li>
-                <li>Implement transaction logging to assist with recovery if needed.</li>
-                <li>Periodically validate data consistency between the primary and replicas.</li>
-            </ul>
+            <p>The query on the replica may still lag behind. After WAL applies the new row, the result becomes:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>89.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Again:</p>
+            <p>`<code>text id="ik5330"
+                    durable replication progress
+                    ≠
+                    query-visible application
+                </code>``</p>
+            <h2 id="mysql-after_sync">MySQL <code>AFTER_SYNC</code></h2>
+            <p>MySQL's default semisynchronous source wait point is:</p>
+            <p>``<code>text id="xf1qft"
+                    AFTER_SYNC
+                </code>`<code></code></p>
+            <p>At a high level:</p>
+            <p>`<code>text id="cprj66"
+                    source writes transaction to binary log
+
+                    source sends it toward replicas
+
+                    source syncs binary log
+
+                    source waits for required replica acknowledgment
+
+                    source commits to storage engine
+
+                    source returns result
+                </code>``</p>
+            <p>MySQL documents <code>AFTER_SYNC</code> as the default semisynchronous wait point.</p>
+            <p>This ordering is specifically chosen to improve consistency of what clients can observe on the source during failover scenarios.</p>
+            <h2 id="mysql-after_commit">MySQL <code>AFTER_COMMIT</code></h2>
+            <p>The alternative is:</p>
+            <p>``<code>text id="y36fd3"
+                    AFTER_COMMIT
+                </code>`<code></code></p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="8mcs6d"
+                    source writes/syncs binary log
+
+                    source commits locally
+
+                    source waits for replica acknowledgment
+
+                    source returns SUCCESS
+                </code>``</p>
+            <p>So the remote acknowledgment still affects when the client hears success, but it occurs after local storage-engine commit.</p>
+            <p>MySQL documents both <code>AFTER_SYNC</code> and <code>AFTER_COMMIT</code> as supported semisynchronous wait points.</p>
+            <h2 id="mysql-semisynchronous-can-fall-back-to-asynchronous">MySQL semisynchronous can fall back to asynchronous</h2>
+            <p>This is an extremely important operational detail.</p>
+            <p>Suppose the source requires a replica acknowledgment but no qualifying replica responds.</p>
+            <p>MySQL waits up to:</p>
+            <p>``<code>text id="6xosjk"
+                    rpl_semi_sync_source_timeout
+                </code>`<code></code></p>
+            <p>The default documented value is:</p>
+            <p>`<code>text id="t490r8"
+                    10,000 ms
+                </code>`<code></code></p>
+            <p>After that timeout, MySQL can revert to ordinary asynchronous replication.</p>
+            <p>So:</p>
+            <p>`<code>text id="8qp5qe"
+                    semisynchronous enabled
+                </code>`<code></code></p>
+            <p>does not necessarily mean:</p>
+            <p>`<code>text id="608mex"
+                    the source will refuse all future writes
+                    until a replica acknowledges.
+                </code>`<code></code></p>
+            <p>The configured fallback behavior matters.</p>
+            <h2 id="this-changes-the-durability-guarantee">This changes the durability guarantee</h2>
+            <p>Suppose semisynchronous replication is healthy:</p>
+            <p>`<code>text id="dsa1ay"
+                    Source
+                    |
+                    +----&gt; Replica
+                    ACK
+                </code>`<code></code></p>
+            <p>Now the replica disappears.</p>
+            <p>After the timeout:</p>
+            <p>`<code>text id="u82d08"
+                    source falls back to asynchronous mode
+                </code>`<code></code></p>
+            <p>The application may continue receiving successful commits.</p>
+            <p>Those newer commits do not have the same remote durability guarantee.</p>
+            <p>Therefore monitoring should distinguish:</p>
+            <p>`<code>text id="55p5cm"
+                    semisynchronous configured
+                </code>`<code></code></p>
+            <p>from:</p>
+            <p>`<code>text id="qpu234"
+                    semisynchronous currently operational
+                </code>`<code></code></p>
+            <p>MySQL exposes status variables specifically for that purpose.</p>
+            <h2 id="mysql-can-require-several-acknowledgments">MySQL can require several acknowledgments</h2>
+            <p>The setting:</p>
+            <p>`<code>text id="q5g6m4"
+                    rpl_semi_sync_source_wait_for_replica_count
+                </code>`<code></code></p>
+            <p>controls how many replica acknowledgments are required.</p>
+            <p>Its documented default is:</p>
+            <p>`<code>text id="v1lm6u"
+                    1
+                </code>`<code></code></p>
+            <p>For example:</p>
+            <p>`<code>text id="061539"
+                    source
+                    |
+                    +--&gt; replica A
+                    +--&gt; replica B
+                    +--&gt; replica C
+                </code>`<code></code></p>
+            <p>with:</p>
+            <p>`<code>text id="svua8c"
+                    wait_for_replica_count = 2
+                </code>`<code></code></p>
+            <p>the source waits for two replica acknowledgments before satisfying the semisynchronous requirement.</p>
+            <h2 id="waiting-for-application-is-separate-in-mysql-too">Waiting for application is separate in MySQL too</h2>
+            <p>MySQL provides synchronization functions that can wait until a replica has applied changes through a specified source binary-log position.</p>
+            <p>For example, current MySQL provides:</p>
+            <p>`<code>text id="w2xaqu"
+                    SOURCE_POS_WAIT()
+                </code>`<code></code></p>
+            <p>which waits until a replica has read and applied updates through a requested position.</p>
+            <p>This is a different operation from semisynchronous commit acknowledgment.</p>
+            <p>Semisynchronous acknowledgment answers:</p>
+            <p>`<code>text id="e966me"
+                    has enough remote durability been achieved?
+                </code>`<code></code></p>
+            <p>whereas position waiting can answer:</p>
+            <p>`<code>text id="xq702c"
+                    has this replica applied through
+                    the position I need to read?
+                </code>`<code></code></p>
+            <h2 id="sql-server-availability-groups">SQL Server Availability Groups</h2>
+            <p>SQL Server Always On Availability Groups provide:</p>
+            <p>`<code>text id="hotd83"
+                    asynchronous-commit mode
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="fqzmfk"
+                    synchronous-commit mode
+                </code>`<code></code></p>
+            <p>For an asynchronous secondary, the primary does not wait for that secondary to harden its transaction log before committing. Microsoft documents that this minimizes transaction latency but permits lag and possible data loss if failover uses a secondary that has not caught up.</p>
+            <h2 id="sql-server-synchronous-commit">SQL Server synchronous commit</h2>
+            <p>For a healthy synchronous-commit secondary:</p>
+            <p>`<code>text id="ocqvpq"
+                    Primary
+                    |
+                    send transaction log records
+                    |
+                    v
+                    Secondary
+                    |
+                    harden log
+                    |
+                    ACK
+                    |
+                    v
+                    Primary completes commit
+                </code>`<code></code></p>
+            <p>Microsoft explicitly describes the acknowledgment as the secondary confirming that it has hardened the log.</p>
+            <p>That is a durability milestone.</p>
+            <p>It is not yet necessarily a read-visibility milestone.</p>
+            <h2 id="sql-server-redo-is-separate">SQL Server redo is separate</h2>
+            <p>After the secondary hardens its transaction log:</p>
+            <p>`<code>text id="tn6odb"
+                    transaction is durable in secondary log
+                </code>`<code></code></p>
+            <p>SQL Server still runs redo to apply those log records to the secondary's database files.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="x5qllq"
+                    receive
+                    |
+                    v
+                    harden transaction log
+                    |
+                    v
+                    redo
+                    |
+                    v
+                    query-visible database state
+                </code>`<code></code></p>
+            <p>If redo cannot keep up, a:</p>
+            <p>`<code>text id="vgv91l"
+                    redo queue
+                </code>`<code></code></p>
+            <p>develops. Microsoft documents this explicitly.</p>
+            <h2 id="sql-server-synchronous-secondary-reads-can-therefore-be-stale">SQL Server synchronous secondary reads can therefore be stale</h2>
+            <p>Suppose:</p>
+            <p>`<code>text id="r5ja48"
+                    log hardened through LSN 500
+
+                    redo applied through LSN 450
+                </code>`<code></code></p>
+            <p>A transaction at:</p>
+            <p>`<code>text id="6v1q9q"
+                    LSN 480
+                </code>`<code></code></p>
+            <p>is durably present on the secondary.</p>
+            <p>But a read-only workload there may still not see its effects until redo catches up.</p>
+            <p>Microsoft specifically warns that readable secondaries can return stale data when hardened log records are waiting in the redo queue.</p>
+            <p>So:</p>
+            <p>`<code>text id="td512s"
+                    SQL Server synchronous commit
+                </code>`<code></code></p>
+            <p>does not mean:</p>
+            <p>`<code>text id="9cq3mv"
+                    every readable secondary is caught up for queries.
+                </code>`<code></code></p>
+            <h2 id="sql-server-has-an-important-failure-nuance">SQL Server has an important failure nuance</h2>
+            <p>A simplistic table often says:</p>
+            <p>`<code>text id="bcew57"
+                    synchronous replica disappears
+                    → primary blocks forever
+                </code>`<code></code></p>
+            <p>That is not universally correct for SQL Server Availability Groups.</p>
+            <p>If a synchronous secondary stops responding long enough, SQL Server can mark it:</p>
+            <p>`<code>text id="7kgidf"
+                    NOT SYNCHRONIZING
+                </code>``</p>
+            <p>and the primary can proceed rather than waiting for it under the normal/default behavior.</p>
+            <p>This means the data-protection state can change when the secondary becomes unhealthy.</p>
+            <h2 id="required_synchronized_secondaries_to_commit"><code>REQUIRED_SYNCHRONIZED_SECONDARIES_TO_COMMIT</code></h2>
+            <p>SQL Server 2017 and later provide:</p>
+            <p>``<code>text id="4e9543"
+                    REQUIRED_SYNCHRONIZED_SECONDARIES_TO_COMMIT
+                </code>`<code></code></p>
+            <p>This lets administrators specify a minimum number of synchronized secondaries that must be available for primary commits.</p>
+            <p>For example:</p>
+            <p>`<code>text id="fwajx6"
+                    required = 1
+                </code>`<code></code></p>
+            <p>can cause the primary to stop accepting normal commits if it cannot maintain the required synchronized-secondary condition.</p>
+            <p>Microsoft explicitly describes this as trading primary availability for stronger data protection.</p>
+            <p>This is an excellent example of why:</p>
+            <p>`<code>text id="3r15kg"
+                    "synchronous mode"
+                </code>``</p>
+            <p>by itself is not the complete configuration.</p>
+            <h2 id="technology-comparison">Technology comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technology</th>
+                        <th>Async mode</th>
+                        <th>Stronger mode</th>
+                        <th>What remote acknowledgment means</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>Streaming replication normally async</td>
+                        <td>Synchronous standby</td>
+                        <td><code>remote_write</code>, durable flush with <code>on</code>, or replay with <code>remote_apply</code></td>
+                    </tr>
+                    <tr>
+                        <td>MySQL</td>
+                        <td>Traditional source/replica async</td>
+                        <td>Semisynchronous replication</td>
+                        <td>Required replica has durably logged transaction events in relay log</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server AG</td>
+                        <td>Asynchronous commit</td>
+                        <td>Synchronous commit</td>
+                        <td>Secondary hardened transaction log</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server with required synchronized secondaries</td>
+                        <td>—</td>
+                        <td>Stronger availability/data-protection rule</td>
+                        <td>Minimum configured number must remain synchronized for commit availability</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The important differences are documented by PostgreSQL's synchronous-replication settings, MySQL's semisynchronous replication protocol, and SQL Server Availability Group modes.</p>
+            <h2 id="do-not-confuse-replication-mode-with-local-durability">Do not confuse replication mode with local durability</h2>
+            <p>There are actually two separate questions:</p>
+            <p>``<code>text id="oxzv4o"
+                    1. Has the transaction become durable
+                    on the local primary?
+
+                    2. Has it reached the required state
+                    on another replica?
+                </code>`<code></code></p>
+            <p>For example, PostgreSQL:</p>
+            <p>`<code>conf id="7t4i2i"
+                    synchronous_commit = off
+                </code>`<code></code></p>
+            <p>can report a transaction success before its WAL has been durably flushed locally.</p>
+            <p>That is a local durability choice, not simply:</p>
+            <p>`<code>text id="w63ehh"
+                    asynchronous replication
+                </code>``</p>
+            <p>PostgreSQL documents <code>off</code> separately from the remote synchronous modes.</p>
+            <p>Similarly, SQL Server supports delayed transaction durability independently of Availability Group replication.</p>
+            <h2 id="a-useful-two-axis-model">A useful two-axis model</h2>
+            <p>Think of:</p>
+            <p>``<code>text id="h8cgx7"
+                    LOCAL DURABILITY
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="7gf5dv"
+                    REMOTE REPLICATION
+                </code>`<code></code></p>
+            <p>as separate dimensions.</p>
+            <p>For example:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Local primary</th>
+                        <th>Replica</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Durable</td>
+                        <td>No acknowledgment required</td>
+                        <td>Traditional async replication</td>
+                    </tr>
+                    <tr>
+                        <td>Durable</td>
+                        <td>Replica receives/logs</td>
+                        <td>Semisynchronous-style guarantee</td>
+                    </tr>
+                    <tr>
+                        <td>Durable</td>
+                        <td>Replica durably flushes</td>
+                        <td>Strong synchronous durability</td>
+                    </tr>
+                    <tr>
+                        <td>Durable</td>
+                        <td>Replica applies</td>
+                        <td>Strong synchronous visibility</td>
+                    </tr>
+                    <tr>
+                        <td>Not yet durable</td>
+                        <td>No remote requirement</td>
+                        <td>Delayed local durability; weakest crash guarantee</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This prevents terminology such as:</p>
+            <p>`<code>text id="1v2a92"
+                    sync / async
+                </code>`<code></code></p>
+            <p>from hiding several independent choices.</p>
+            <h2 id="what-if-the-replica-fails">What if the replica fails?</h2>
+            <p>With asynchronous replication:</p>
+            <p>`<code>text id="le6r68"
+                    Primary --------X-------&gt; Replica
+                </code>`<code></code></p>
+            <p>the primary normally continues committing.</p>
+            <p>The replica simply falls further behind.</p>
+            <p>This favors:</p>
+            <p>`<code>text id="3zd7k5"
+                    write availability
+                </code>`<code></code></p>
+            <p>but reduces:</p>
+            <p>`<code>text id="bqr0e2"
+                    redundant durability
+                </code>`<code></code></p>
+            <p>until replication recovers.</p>
+            <h2 id="what-if-a-required-synchronous-replica-fails">What if a required synchronous replica fails?</h2>
+            <p>Now suppose the primary truly requires a remote acknowledgment.</p>
+            <p>The system must choose one of several policies:</p>
+            <p>`<code>text id="1gk5ph"
+                    wait indefinitely
+
+                    wait for another eligible synchronous replica
+
+                    fail the write
+
+                    stop write availability
+
+                    temporarily degrade to asynchronous behavior
+                </code>``</p>
+            <p>Different products/configurations choose differently.</p>
+            <p>PostgreSQL synchronous transactions can remain waiting when the required synchronous-standby condition cannot be satisfied. PostgreSQL recommends configuring enough candidate synchronous standbys to maintain HA.</p>
+            <p>MySQL semisynchronous replication, by contrast, can time out and fall back to asynchronous operation.</p>
+            <p>SQL Server's behavior depends additionally on synchronization health and <code>REQUIRED_SYNCHRONIZED_SECONDARIES_TO_COMMIT</code>.</p>
+            <h2 id="so-synchronous-is-less-available-needs-qualification">So "synchronous is less available" needs qualification</h2>
+            <p>A common statement is:</p>
+            <p>``<code>text id="fswfws"
+                    synchronous replication
+                    =
+                    replica failure blocks writes
+                </code>`<code></code></p>
+            <p>That can be true.</p>
+            <p>But the accurate version is:</p>
+            <blockquote>
+                <p>A strict remote acknowledgment requirement creates an availability dependency on the replicas needed to satisfy that requirement.</p>
+            </blockquote>
+            <p>If a technology automatically degrades to asynchronous operation:</p>
+            <p>`<code>text id="4zsezm"
+                    writes may remain available
+                </code>`<code></code></p>
+            <p>but:</p>
+            <p>`<code>text id="84rol6"
+                    the durability guarantee has weakened.
+                </code>`<code></code></p>
+            <p>So always ask:</p>
+            <p>`<code>text id="k0ou7e"
+                    What does the database do
+                    when the required replica disappears?
+                </code>`<code></code></p>
+            <h2 id="durability-versus-availability-during-a-partition">Durability versus availability during a partition</h2>
+            <p>Imagine:</p>
+            <p>`<code>text id="l877lb"
+                    Primary X synchronous replica
+                </code>`<code></code></p>
+            <p>The network is broken.</p>
+            <p>The primary can choose:</p>
+            <h3 id="preserve-remote-durability-guarantee">Preserve remote durability guarantee</h3>
+            <p>`<code>text id="marg4v"
+                    do not acknowledge new writes
+                </code>`<code></code></p>
+            <p>Availability suffers.</p>
+            <h3 id="preserve-write-availability">Preserve write availability</h3>
+            <p>`<code>text id="2lovge"
+                    continue local commits
+                </code>`<code></code></p>
+            <p>Remote durability guarantee is weakened.</p>
+            <p>This is another concrete manifestation of distributed-systems trade-offs.</p>
+            <h2 id="failover-requires-more-than-synchronous-replication">Failover requires more than synchronous replication</h2>
+            <p>Suppose:</p>
+            <p>`<code>text id="c6bh0k"
+                    Primary fails.
+
+                    Replica has every acknowledged transaction.
+                </code>`<code></code></p>
+            <p>Excellent.</p>
+            <p>But the system still has to:</p>
+            <p>`<code>text id="h24mps"
+                    detect the failure
+
+                    choose the new writer
+
+                    promote/elect it
+
+                    prevent the old primary from accepting writes
+
+                    redirect clients
+                </code>`<code></code></p>
+            <p>Synchronous replication solved:</p>
+            <p>`<code>text id="qeriy0"
+                    where the transaction existed
+                </code>`<code></code></p>
+            <p>not:</p>
+            <p>`<code>text id="5add41"
+                    who should now own write authority.
+                </code>`<code></code></p>
+            <p>Therefore synchronous replication and failover are separate concerns.</p>
+            <h2 id="synchronous-replication-does-not-automatically-prevent-split-brain">Synchronous replication does not automatically prevent split brain</h2>
+            <p>Suppose the old primary becomes isolated.</p>
+            <p>A standby is promoted.</p>
+            <p>Then the old primary reconnects only to clients and still believes it is writable.</p>
+            <p>Now:</p>
+            <p>`<code>text id="vsfdvn"
+                    Old primary:
+                    accepts X
+
+                    New primary:
+                    accepts Y
+                </code>`<code></code></p>
+            <p>There are two write histories.</p>
+            <p>This is split brain.</p>
+            <p>Preventing it requires:</p>
+            <p>`<code>text id="t8e09e"
+                    quorum
+                    fencing
+                    leases
+                    cluster coordination
+                    or another ownership mechanism
+                </code>`<code></code></p>
+            <p>depending on the technology.</p>
+            <p>Replication acknowledgment alone is not enough.</p>
+            <h2 id="which-replica-should-be-promoted">Which replica should be promoted?</h2>
+            <p>Suppose three async replicas exist:</p>
+            <p>`<code>text id="xfhjg0"
+                    A applied through 1000
+
+                    B applied through 995
+
+                    C applied through 970
+                </code>`<code></code></p>
+            <p>Primary fails.</p>
+            <p>Choosing C merely because:</p>
+            <p>`<code>text id="7i60fa"
+                    C responded first
+                </code>`<code></code></p>
+            <p>could lose more data than promoting A.</p>
+            <p>A failover manager therefore needs to understand:</p>
+            <p>`<code>text id="vu90x6"
+                    replication position
+
+                    durability state
+
+                    health
+
+                    topology
+
+                    authority
+                </code>`<code></code></p>
+            <p>Promotion policy is part of the consistency/durability architecture.</p>
+            <h2 id="rpo-recovery-point-objective">RPO: Recovery Point Objective</h2>
+            <p>RPO answers:</p>
+            <blockquote>
+                <p>How much committed business data may be lost after a disaster?</p>
+            </blockquote>
+            <p>Examples:</p>
+            <p>`<code>text id="m7um9h"
+                    RPO = 0
+                </code>`<code></code></p>
+            <p>means:</p>
+            <p>`<code>text id="td97bm"
+                    no acknowledged transactions may be lost
+                    for the failures included in the design.
+                </code>`<code></code></p>
+            <p>An RPO of:</p>
+            <p>`<code>text id="lgiijw"
+                    5 minutes
+                </code>`<code></code></p>
+            <p>means the business accepts recovery potentially losing up to approximately five minutes of recent data under the specified disaster scenario.</p>
+            <p>Replication design should follow the RPO requirement.</p>
+            <p>Not the reverse.</p>
+            <h2 id="rpo-is-not-simply-replication-lag">RPO is not simply "replication lag"</h2>
+            <p>Suppose normal lag is:</p>
+            <p>`<code>text id="02hd6v"
+                    200 ms
+                </code>`<code></code></p>
+            <p>That does not automatically mean:</p>
+            <p>`<code>text id="ty9fef"
+                    RPO = 200 ms
+                </code>`<code></code></p>
+            <p>RPO is a business/recovery objective.</p>
+            <p>Actual potential loss depends on:</p>
+            <p>`<code>text id="v46lhu"
+                    replication mode
+                    failure type
+                    which replicas survive
+                    which replica is promoted
+                    whether remote data is durable
+                </code>`<code></code></p>
+            <p>Monitoring lag helps determine whether the implementation is meeting the intended RPO.</p>
+            <h2 id="rto-recovery-time-objective">RTO: Recovery Time Objective</h2>
+            <p>RTO answers:</p>
+            <blockquote>
+                <p>How long can the service remain unavailable after failure?</p>
+            </blockquote>
+            <p>Suppose:</p>
+            <p>`<code>text id="pvs777"
+                    primary fails at 12:00:00
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="b584tn"
+                    service accepts writes again at 12:00:25
+                </code>`<code></code></p>
+            <p>recovery took:</p>
+            <p>`<code>text id="6icqbk"
+                    25 seconds
+                </code>`<code></code></p>
+            <p>RTO therefore concerns:</p>
+            <p>`<code>text id="8futs3"
+                    failure detection
+                    election/promotion
+                    recovery
+                    routing
+                    application reconnection
+                </code>`<code></code></p>
+            <p>not merely replication.</p>
+            <h2 id="apply-lag-can-hurt-rto-too">Apply lag can hurt RTO too</h2>
+            <p>Suppose a synchronous replica has every transaction durably recorded.</p>
+            <p>Excellent RPO.</p>
+            <p>But it has:</p>
+            <p>`<code>text id="z3zx3e"
+                    200 GB
+                </code>`<code></code></p>
+            <p>of unapplied recovery/redo work.</p>
+            <p>Failover may still require additional recovery work before the new database becomes fully usable.</p>
+            <p>Microsoft explicitly documents that a large SQL Server redo queue can extend failover time even when the log has already been hardened on the secondary.</p>
+            <p>Thus:</p>
+            <p>`<code>text id="rbt5kj"
+                    good RPO
+                </code>`<code></code></p>
+            <p>does not automatically imply:</p>
+            <p>`<code>text id="53sumo"
+                    good RTO.
+                </code>`<code></code></p>
+            <h2 id="rpo-and-rto-are-independent-dimensions">RPO and RTO are independent dimensions</h2>
+            <p>Imagine two systems.</p>
+            <h3 id="system-a">System A</h3>
+            <p>`<code>text id="890v8k"
+                    RPO = 0
+                    RTO = 2 hours
+                </code>`<code></code></p>
+            <p>No committed data is lost, but recovery is slow.</p>
+            <h3 id="system-b">System B</h3>
+            <p>`<code>text id="o80f6t"
+                    RPO = 5 minutes
+                    RTO = 15 seconds
+                </code>`<code></code></p>
+            <p>It comes back quickly but may lose several minutes of work.</p>
+            <p>Neither is inherently better.</p>
+            <p>The correct design depends on business requirements.</p>
+            <h2 id="synchronous-replication-is-not-backup">Synchronous replication is not backup</h2>
+            <p>Suppose the application executes:</p>
+            <p>`<code>sql id="jov6ak"
+                    DELETE FROM orders;
+                </code>`<code></code></p>
+            <p>Synchronous replication can ensure that the deletion is durably copied to another server before the primary reports success.</p>
+            <p>Now both contain:</p>
+            <p>`<code>text id="q60fvk"
+                    orders deleted
+                </code>`<code></code></p>
+            <p>The replication system worked perfectly.</p>
+            <p>It did not preserve the old data.</p>
+            <h2 id="the-same-is-true-for-logical-corruption">The same is true for logical corruption</h2>
+            <p>Examples:</p>
+            <p>`<code>text id="0xm8uy"
+                    bad deployment updates wrong rows
+
+                    administrator drops table
+
+                    application writes corrupted values
+
+                    attacker with valid DB permissions deletes data
+                </code>`<code></code></p>
+            <p>A replica faithfully copying current database state may reproduce every one of those changes.</p>
+            <p>You still need:</p>
+            <p>`<code>text id="j1t4i3"
+                    backups
+                    WAL/binlog/log retention
+                    point-in-time recovery
+                    restore testing
+                </code>`<code></code></p>
+            <p>for historical recovery.</p>
+            <h2 id="monitoring-must-distinguish-the-pipeline-stages">Monitoring must distinguish the pipeline stages</h2>
+            <p>A good monitoring model asks:</p>
+            <p>`<code>text id="1scbpd"
+                    How far has the primary generated?
+
+                    How far has the primary sent?
+
+                    How far has the replica received?
+
+                    How far has it durably persisted?
+
+                    How far has it applied?
+
+                    How far behind is the query-visible state?
+                </code>`<code></code></p>
+            <p>Different stages imply different operational failures.</p>
+            <h2 id="example-monitoring-diagnosis">Example monitoring diagnosis</h2>
+            <p>Suppose:</p>
+            <p>`<code>text id="jb5a5w"
+                    Primary position: 10000
+
+                    Replica received: 9998
+
+                    Replica durable: 9998
+
+                    Replica applied: 8000
+                </code>`<code></code></p>
+            <p>Network transport is healthy.</p>
+            <p>Durability is nearly current.</p>
+            <p>But application/replay is badly behind.</p>
+            <p>Likely investigation area:</p>
+            <p>`<code>text id="541r3w"
+                    replica CPU
+
+                    disk I/O
+
+                    long-running queries
+
+                    apply-thread capacity
+
+                    redo/replay blocking
+                </code>`<code></code></p>
+            <p>Adding network bandwidth would probably not solve that problem.</p>
+            <h2 id="another-diagnosis">Another diagnosis</h2>
+            <p>Now suppose:</p>
+            <p>`<code>text id="hn38y2"
+                    Primary position: 10000
+
+                    Replica received: 7000
+
+                    Replica durable: 7000
+
+                    Replica applied: 6999
+                </code>`<code></code></p>
+            <p>Apply is keeping pace with what arrives.</p>
+            <p>The big gap is before receipt.</p>
+            <p>Investigate:</p>
+            <p>`<code>text id="s8uut5"
+                    network
+
+                    sender throughput
+
+                    receiver throughput
+
+                    replication connection
+
+                    bandwidth
+                </code>`<code></code></p>
+            <p>Same high-level symptom:</p>
+            <p>`<code>text id="hxczl1"
+                    replica behind
+                </code>`<code></code></p>
+            <p>different cause.</p>
+            <h2 id="postgresql-monitoring-example">PostgreSQL monitoring example</h2>
+            <p>PostgreSQL exposes:</p>
+            <p>`<code>sql id="y6ot0u"
+                    SELECT
+                    application_name,
+                    state,
+                    sync_state,
+                    sent_lsn,
+                    write_lsn,
+                    flush_lsn,
+                    replay_lsn,
+                    write_lag,
+                    flush_lag,
+                    replay_lag
+                    FROM pg_stat_replication;
+                </code>`<code></code></p>
+            <p>Example output for one replica (lag intervals and WAL positions are illustrative):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>application_name</th>
+                        <th>state</th>
+                        <th>sync_state</th>
+                        <th>sent_lsn</th>
+                        <th>write_lsn</th>
+                        <th>flush_lsn</th>
+                        <th>replay_lsn</th>
+                        <th>write_lag</th>
+                        <th>flush_lag</th>
+                        <th>replay_lag</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>standby1</td>
+                        <td>streaming</td>
+                        <td>async</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/4FFFE00</td>
+                        <td>00:00:00.050</td>
+                        <td>00:00:00.050</td>
+                        <td>00:00:00.250</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The positions correspond to increasingly advanced stages of standby progress.</p>
+            <p>This is far more informative than a single:</p>
+            <p>`<code>text id="9xwgsn"
+                    replica connected = yes
+                </code>`<code></code></p>
+            <p>flag.</p>
+            <h2 id="sql-server-monitoring-example">SQL Server monitoring example</h2>
+            <p>SQL Server Availability Group monitoring includes concepts such as:</p>
+            <p>`<code>text id="i7ceeb"
+                    log send queue
+
+                    redo queue
+
+                    redo rate
+
+                    synchronization state
+                </code>`<code></code></p>
+            <p>If:</p>
+            <p>`<code>text id="38tuzm"
+                    log send queue large
+                </code>`<code></code></p>
+            <p>the secondary has not yet received/hardened all the primary's log.</p>
+            <p>If:</p>
+            <p>`<code>text id="hcc0pg"
+                    redo queue large
+                </code>`<code></code></p>
+            <p>the log may already be safely on the secondary but has not yet been applied to query-visible data. Microsoft explicitly distinguishes these states in its Availability Group diagnostics.</p>
+            <h2 id="mysql-monitoring-also-needs-two-stages">MySQL monitoring also needs two stages</h2>
+            <p>For traditional MySQL replication, distinguish:</p>
+            <p>`<code>text id="wlj07m"
+                    receiver progress
+                </code>`<code></code></p>
+            <p>from:</p>
+            <p>`<code>text id="qq7x41"
+                    applier progress
+                </code>`<code></code></p>
+            <p>The replica may have received transactions into its relay log while the SQL/applier side remains behind.</p>
+            <p>GTID sets or binary-log positions provide more useful progress information than a simple:</p>
+            <p>`<code>text id="3mfhuw"
+                    replica process running
+                </code>`<code></code></p>
+            <p>status.</p>
+            <h2 id="synchronous-replication-and-throughput">Synchronous replication and throughput</h2>
+            <p>Synchronous replication does not necessarily reduce raw transaction throughput by exactly:</p>
+            <p>`<code>text id="0nccu4"
+                    1 / network latency
+                </code>`<code></code></p>
+            <p>because databases pipeline:</p>
+            <p>`<code>text id="1jjfvl"
+                    WAL writes
+
+                    network transmission
+
+                    group commit
+
+                    replica acknowledgments
+                </code>`<code></code></p>
+            <p>across concurrent transactions.</p>
+            <p>A system can still process many synchronous commits concurrently.</p>
+            <p>However, individual transaction latency must include enough remote progress to satisfy the synchronization rule.</p>
+            <p>So the practical impact depends on:</p>
+            <p>`<code>text id="g3k5bt"
+                    network RTT
+                    storage latency
+                    group commit
+                    transaction rate
+                    replica performance
+                    number of required acknowledgments
+                </code>`<code></code></p>
+            <h2 id="group-commit-helps">Group commit helps</h2>
+            <p>Suppose 100 transactions become ready to commit at nearly the same time.</p>
+            <p>A database may avoid doing:</p>
+            <p>`<code>text id="rm5c64"
+                    100 independent disk syncs
+                </code>`<code></code></p>
+            <p>and instead combine durability work.</p>
+            <p>Conceptually:</p>
+            <p>`<code>text id="u5vxll"
+                    T1
+                    T2
+                    T3
+                    ...
+                    T100
+                    \
+                    +---- one batch WAL/log flush
+                </code>`<code></code></p>
+            <p>Similar batching can help replication.</p>
+            <p>Therefore synchronous replication can still provide substantial throughput even while adding remote commit latency.</p>
+            <h2 id="synchronous-replication-and-tail-latency">Synchronous replication and tail latency</h2>
+            <p>Average latency is not the only concern.</p>
+            <p>Suppose:</p>
+            <p>`<code>text id="hotgha"
+                    replica normally acknowledges in 2 ms
+                </code>`<code></code></p>
+            <p>but occasionally stalls for:</p>
+            <p>`<code>text id="f1enl1"
+                    200 ms
+                </code>`<code></code></p>
+            <p>If that replica is required for commit, user transaction latency may suddenly spike.</p>
+            <p>This produces high:</p>
+            <p>`<code>text id="1od2wk"
+                    p95
+                    p99
+                    p99.9
+                </code>`<code></code></p>
+            <p>latency even if average performance looks acceptable.</p>
+            <p>For user-facing workloads, monitor latency distributions rather than averages only.</p>
+            <h2 id="one-slow-synchronous-participant-can-matter-greatly">One slow synchronous participant can matter greatly</h2>
+            <p>Suppose the primary waits for:</p>
+            <p>`<code>text id="6gw5gg"
+                    ALL 3 replicas
+                </code>`<code></code></p>
+            <p>and their response times are:</p>
+            <p>`<code>text id="4omqph"
+                    A = 2 ms
+                    B = 3 ms
+                    C = 100 ms
+                </code>`<code></code></p>
+            <p>The slow replica may dominate the acknowledgment.</p>
+            <p>If the policy instead requires:</p>
+            <p>`<code>text id="hi5xma"
+                    ANY 2
+                </code>`<code></code></p>
+            <p>the transaction can potentially proceed after A and B respond.</p>
+            <p>This is why quorum/standby-selection policy has major performance consequences.</p>
+            <h2 id="more-synchronous-copies-are-not-free">More synchronous copies are not free</h2>
+            <p>Suppose the durability goal changes from:</p>
+            <p>`<code>text id="mre1j7"
+                    wait for one remote durable copy
+                </code>`<code></code></p>
+            <p>to:</p>
+            <p>`<code>text id="vyc353"
+                    wait for three remote durable copies
+                </code>`<code></code></p>
+            <p>The system may gain resilience against more simultaneous failures.</p>
+            <p>But it may also increase exposure to:</p>
+            <p>`<code>text id="qwfzys"
+                    slow replicas
+                    network jitter
+                    storage stalls
+                    partial outages
+                </code>`<code></code></p>
+            <p>Replication count should follow the failure model and business requirement.</p>
+            <h2 id="a-practical-architecture-example">A practical architecture example</h2>
+            <p>Suppose an online payment company deploys:</p>
+            <p>`<code>text id="iax7ys"
+                    Frankfurt Primary
+
+                    Frankfurt Standby A
+
+                    Berlin Standby B
+
+                    Virginia Standby C
+                </code>`<code></code></p>
+            <p>One possible policy:</p>
+            <p>`<code>text id="251g05"
+                    Standby A:
+                    required synchronous durable copy
+
+                    Standby B:
+                    synchronous candidate/failover
+
+                    Standby C:
+                    asynchronous disaster-recovery copy
+                </code>`<code></code></p>
+            <p>Why?</p>
+            <p>`<code>text id="00k70d"
+                    A/B:
+                    low enough latency for synchronous commits
+
+                    C:
+                    far away; synchronous waiting would add too much latency
+                </code>`<code></code></p>
+            <p>The topology balances:</p>
+            <p>`<code>text id="h3c3tv"
+                    RPO
+                    latency
+                    regional resilience
+                </code>`<code></code></p>
+            <p>rather than treating every replica identically.</p>
+            <h2 id="another-architecture-analytics-replica">Another architecture: analytics replica</h2>
+            <p>Suppose:</p>
+            <p>`<code>text id="som09q"
+                    Primary:
+                    OLTP
+
+                    Replica A:
+                    HA
+
+                    Replica B:
+                    analytics
+                </code>`<code></code></p>
+            <p>Replica B runs:</p>
+            <p>`<code>text id="4hu32t"
+                    large joins
+                    hour-long reports
+                    full scans
+                </code>``</p>
+            <p>It may deliberately be asynchronous because analytics freshness requirements allow lag.</p>
+            <p>Replica A, meanwhile, may use stricter synchronous behavior because it is a failover candidate.</p>
+            <p>This illustrates an important principle:</p>
+            <blockquote>
+                <p>Different replicas can have different jobs and therefore different replication guarantees.</p>
+            </blockquote>
+            <h2 id="comparison-table">Comparison table</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concern</th>
+                        <th>Synchronous</th>
+                        <th>Asynchronous</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Client commit</td>
+                        <td>Waits for configured remote progress</td>
+                        <td>Does not wait for replica progress</td>
+                    </tr>
+                    <tr>
+                        <td>Typical latency</td>
+                        <td>Higher</td>
+                        <td>Lower</td>
+                    </tr>
+                    <tr>
+                        <td>Dependency on remote replica</td>
+                        <td>Stronger</td>
+                        <td>Weaker</td>
+                    </tr>
+                    <tr>
+                        <td>Replica lag</td>
+                        <td>Can still exist after the acknowledged stage</td>
+                        <td>Expected</td>
+                    </tr>
+                    <tr>
+                        <td>Read freshness</td>
+                        <td>Depends on whether apply/replay is included</td>
+                        <td>Usually may be stale</td>
+                    </tr>
+                    <tr>
+                        <td>Primary failure</td>
+                        <td>Required durable copies can protect acknowledged commits</td>
+                        <td>Recent acknowledged commits may be missing</td>
+                    </tr>
+                    <tr>
+                        <td>Network partition</td>
+                        <td>Strict requirement may stop commits</td>
+                        <td>Primary may continue alone</td>
+                    </tr>
+                    <tr>
+                        <td>Geographic deployment</td>
+                        <td>WAN latency can affect commit</td>
+                        <td>Remote copies can lag without delaying commit</td>
+                    </tr>
+                    <tr>
+                        <td>Failover</td>
+                        <td>Still requires promotion/election and fencing</td>
+                        <td>Same, plus potential-loss decision</td>
+                    </tr>
+                    <tr>
+                        <td>Historical recovery</td>
+                        <td>Still needs backup/PITR</td>
+                        <td>Still needs backup/PITR</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The table is a starting point, not a substitute for knowing a product's exact acknowledgment and fallback rules.</p>
+            <h2 id="technology-specific-summary">Technology-specific summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Engine</th>
+                        <th>Mode</th>
+                        <th>Commit dependency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>Async streaming</td>
+                        <td>No standby required</td>
+                    </tr>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td><code>remote_write</code></td>
+                        <td>Required standby has written WAL to OS</td>
+                    </tr>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td><code>on</code> with sync standby</td>
+                        <td>Required standby durably flushed WAL</td>
+                    </tr>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td><code>remote_apply</code></td>
+                        <td>Required standby replayed commit</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL</td>
+                        <td>Async replication</td>
+                        <td>No replica required</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL</td>
+                        <td>Semisynchronous</td>
+                        <td>Configured replica count durably logged events before client proceeds</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server AG</td>
+                        <td>Async commit</td>
+                        <td>No secondary harden acknowledgment required</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server AG</td>
+                        <td>Sync commit</td>
+                        <td>Healthy synchronous secondary hardens transaction log</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server AG</td>
+                        <td>Required synchronized secondaries</td>
+                        <td>Configured minimum synchronization requirement can gate primary commit availability</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This demonstrates why:</p>
+            <p>``<code>text id="6ums28"
+                    sync
+                </code>`<code></code></p>
+            <p>and:</p>
+            <p>`<code>text id="36fn8a"
+                    async
+                </code>`<code></code></p>
+            <p>are families of behavior, not complete specifications.</p>
+            <h2 id="common-misconceptions">Common misconceptions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Better explanation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"Async sends changes only after commit. "</td>
+                        <td>Transmission can overlap; the client simply does not wait for replica progress</td>
+                    </tr>
+                    <tr>
+                        <td>"Sync means every replica is identical at commit. "</td>
+                        <td>Only the required replicas/stage must meet the configured acknowledgment condition</td>
+                    </tr>
+                    <tr>
+                        <td>"Replica received it, so it is safe. "</td>
+                        <td>Receipt may differ from durable persistence</td>
+                    </tr>
+                    <tr>
+                        <td>"Replica flushed it, so queries can see it. "</td>
+                        <td>Apply/replay may still lag</td>
+                    </tr>
+                    <tr>
+                        <td>"Sync replication guarantees fresh reads everywhere. "</td>
+                        <td>Read freshness depends on which replica and acknowledgment/apply policy</td>
+                    </tr>
+                    <tr>
+                        <td>"Sync replication guarantees zero data loss. "</td>
+                        <td>Only for the covered failure model and correct failover target</td>
+                    </tr>
+                    <tr>
+                        <td>"Async always loses data on failure. "</td>
+                        <td>It <em>can</em> lose recent acknowledged changes; whether loss actually occurs depends on timing</td>
+                    </tr>
+                    <tr>
+                        <td>"Synchronous secondary failure always blocks the primary. "</td>
+                        <td>Product/fallback policy matters</td>
+                    </tr>
+                    <tr>
+                        <td>"Semisync MySQL means replica applied the transaction. "</td>
+                        <td>The acknowledgment concerns durable relay-log receipt, not completed application</td>
+                    </tr>
+                    <tr>
+                        <td>"Replication gives us backup. "</td>
+                        <td>Bad changes replicate too</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="questions-to-ask-when-someone-says-we-use-synchronous-replication">Questions to ask when someone says "we use synchronous replication"</h2>
+            <p>Ask:</p>
+            <p>`<code>text id="4r46se"
+                    Which replicas participate?
+
+                    How many acknowledgments are required?
+
+                    What does acknowledgment mean?
+
+                    Received?
+
+                    Written?
+
+                    Durably flushed?
+
+                    Applied?
+
+                    Visible?
+
+                    What happens if one required replica disappears?
+
+                    Do writes block?
+
+                    Fail?
+
+                    Choose another replica?
+
+                    Fall back to asynchronous?
+
+                    Which node can be promoted?
+
+                    How is split brain prevented?
+
+                    Can reads come from a replica?
+
+                    How stale may they be?
+                </code>`<code></code></p>
+            <p>Until those questions are answered:</p>
+            <p>`<code>text id="yh3uiv"
+                    "We use synchronous replication"
+                </code>`<code></code></p>
+            <p>does not fully describe the guarantee.</p>
+            <h2 id="questions-to-ask-for-asynchronous-replication">Questions to ask for asynchronous replication</h2>
+            <p>Likewise:</p>
+            <p>`<code>text id="mk93nq"
+                    How far may replicas lag?
+
+                    How do we measure lag?
+
+                    Which reads can use replicas?
+
+                    How do we provide read-your-writes?
+
+                    Which replica is selected for failover?
+
+                    What acknowledged data might it be missing?
+
+                    What RPO does the business permit?
+
+                    How long can a replica remain behind
+                    before it must be rebuilt?
+
+                    How is WAL/binlog/log history retained?
+                </code>`<code></code></p>
+            <p>Asynchronous replication is not:</p>
+            <p>`<code>text id="k805fw"
+                    "bad replication"
+                </code>`<code></code></p>
+            <p>It is a deliberate latency/availability trade-off.</p>
+            <h2 id="choosing-based-on-the-business-operation">Choosing based on the business operation</h2>
+            <p>Consider several workloads.</p>
+            <h3 id="social-media-like-counter">Social-media like counter</h3>
+            <p>A small amount of temporary replica staleness may be harmless.</p>
+            <p>Asynchronous replication can be a good fit.</p>
+            <h3 id="financial-transfer-ledger">Financial transfer ledger</h3>
+            <p>Losing an acknowledged transaction may be unacceptable.</p>
+            <p>Stronger synchronous durability may be appropriate.</p>
+            <h3 id="analytics">Analytics</h3>
+            <p>Freshness within:</p>
+            <p>`<code>text id="o9qxnc"
+                    30 seconds
+                </code>`<code></code></p>
+            <p>may be perfectly adequate.</p>
+            <p>An asynchronous analytical replica may make sense.</p>
+            <h3 id="user-creates-profile-then-immediately-loads-it">User creates profile, then immediately loads it</h3>
+            <p>General replica lag may be acceptable, but this specific interaction requires:</p>
+            <p>`<code>text id="83cz3s"
+                    read-your-writes
+                </code>``</p>
+            <p>So the application might temporarily route the user's reads to the primary.</p>
+            <p>Different operations in the same application may need different guarantees.</p>
+            <h2 id="postgresql-can-choose-durability-per-transaction">PostgreSQL can choose durability per transaction</h2>
+            <p>PostgreSQL's <code>synchronous_commit</code> can be changed at transaction/session level.</p>
+            <p>That means one application could choose:</p>
+            <p>``<code>text id="kao36n"
+                    payment transaction:
+                    remote_apply / on
+                </code>`<code></code></p>
+            <p>while another less critical transaction uses:</p>
+            <p>`<code>text id="bw9xnn"
+                    local
+                    or
+                    off
+                </code>`<code></code></p>
+            <p>under an appropriate architecture.</p>
+            <p>PostgreSQL explicitly supports per-transaction synchronous-commit choices.</p>
+            <p>This can avoid imposing the highest durability cost on every piece of data.</p>
+            <h2 id="measure-the-workload-not-only-the-configuration">Measure the workload, not only the configuration</h2>
+            <p>Before changing replication mode, measure:</p>
+            <p>`<code>text id="4jmr5m"
+                    commit latency p50/p95/p99
+
+                    network RTT
+
+                    WAL/binlog/log generation rate
+
+                    replica receive rate
+
+                    flush rate
+
+                    replay/apply rate
+
+                    replica queue size
+
+                    replica read staleness
+
+                    failure/failover time
+
+                    storage latency
+                </code>`<code></code></p>
+            <p>A configuration that looks safe on paper can perform poorly if:</p>
+            <p>`<code>text id="cy26jv"
+                    one standby disk is overloaded
+                </code>`<code></code></p>
+            <p>or:</p>
+            <p>`<code>text id="zad5qy"
+                    network latency is unstable.
+                </code>`<code></code></p>
+            <h2 id="test-failures-rather-than-only-normal-replication">Test failures rather than only normal replication</h2>
+            <p>A meaningful replication test plan should include:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>Question answered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Normal write</td>
+                        <td>Does replication work?</td>
+                    </tr>
+                    <tr>
+                        <td>Immediate replica read</td>
+                        <td>How stale can reads be?</td>
+                    </tr>
+                    <tr>
+                        <td>Slow replica disk</td>
+                        <td>How does commit/apply latency react?</td>
+                    </tr>
+                    <tr>
+                        <td>Replica disconnect</td>
+                        <td>Does primary block, fail, or degrade?</td>
+                    </tr>
+                    <tr>
+                        <td>Network partition</td>
+                        <td>What happens to write availability?</td>
+                    </tr>
+                    <tr>
+                        <td>Primary crash just after commit</td>
+                        <td>Which acknowledged transactions survive?</td>
+                    </tr>
+                    <tr>
+                        <td>Failover while replica behind</td>
+                        <td>What data is lost?</td>
+                    </tr>
+                    <tr>
+                        <td>Large apply queue</td>
+                        <td>What happens to RTO?</td>
+                    </tr>
+                    <tr>
+                        <td>Old primary returns</td>
+                        <td>Is split brain prevented?</td>
+                    </tr>
+                    <tr>
+                        <td>Accidental delete</td>
+                        <td>Can backup/PITR restore the previous state?</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Replication is a failure-handling mechanism.</p>
+            <p>It should therefore be tested under failure.</p>
+            <h2 id="rpo-rto-decision-matrix">RPO/RTO decision matrix</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Likely architectural pressure</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>RPO approximately zero for covered primary failure</td>
+                        <td>Require durable remote acknowledgment</td>
+                    </tr>
+                    <tr>
+                        <td>Very low write latency</td>
+                        <td>Prefer local/asynchronous path</td>
+                    </tr>
+                    <tr>
+                        <td>Cross-continent replica</td>
+                        <td>Async often easier for latency</td>
+                    </tr>
+                    <tr>
+                        <td>Immediate read from secondary</td>
+                        <td>Need apply-aware synchronization</td>
+                    </tr>
+                    <tr>
+                        <td>Maximum write availability if replicas fail</td>
+                        <td>Async or degradable policy</td>
+                    </tr>
+                    <tr>
+                        <td>Must stop rather than weaken durability</td>
+                        <td>Strict synchronous requirement</td>
+                    </tr>
+                    <tr>
+                        <td>Fast failover</td>
+                        <td>Keep candidate caught up and monitor replay/redo</td>
+                    </tr>
+                    <tr>
+                        <td>Historical recovery</td>
+                        <td>Separate backups/PITR</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The correct mode follows the recovery objective.</p>
+            <p>Not a universal rule such as:</p>
+            <p>`<code>text id="1epb0g"
+                    "synchronous is always better."
+                </code>`<code></code></p>
+            <h2 id="final-mental-model">Final mental model</h2>
+            <p>Do not memorize:</p>
+            <p>`<code>text id="nxjhst"
+                    synchronous = same data everywhere
+
+                    asynchronous = delayed copy
+                </code>`<code></code></p>
+            <p>Instead memorize this pipeline:</p>
+            <p>`<code>text id="qb4iux"
+                    PRIMARY
+
+                    execute transaction
+                    |
+                    v
+                    local log
+                    |
+                    v
+                    local durable
+                    |
+                    v
+                    SEND
+                    |
+                    v
+                    ---------------- NETWORK ----------------
+                    |
+                    v
+                    REPLICA RECEIVE
+                    |
+                    v
+                    REPLICA WRITE
+                    |
+                    v
+                    REPLICA DURABLE FLUSH
+                    |
+                    v
+                    REPLICA APPLY / REPLAY
+                    |
+                    v
+                    VISIBLE TO READERS
+                </code>`<code></code></p>
+            <p>Then place:</p>
+            <p>`<code>text id="n05o0q"
+                    CLIENT SUCCESS
+                </code>`<code></code></p>
+            <p>somewhere on that timeline.</p>
+            <h3 id="asynchronous">Asynchronous</h3>
+            <p>`<code>text id="qwwkhd"
+                    local durability
+                    |
+                    SUCCESS
+                    |
+                    remote replication continues
+                </code>`<code></code></p>
+            <h3 id="remote-write-synchronous">Remote-write synchronous</h3>
+            <p>`<code>text id="jgoc2s"
+                    replica receives/writes
+                    |
+                    SUCCESS
+                </code>`<code></code></p>
+            <h3 id="durable-synchronous">Durable synchronous</h3>
+            <p>`<code>text id="70c7bo"
+                    replica durable
+                    |
+                    SUCCESS
+                </code>`<code></code></p>
+            <h3 id="apply-aware-synchronous">Apply-aware synchronous</h3>
+            <p>`<code>text id="vpu73l"
+                    replica replayed
+                    |
+                    SUCCESS
+                </code>`<code></code></p>
+            <p>Then ask:</p>
+            <p>`<code>text id="xsr5hs"
+                    How many replicas have to reach that point?
+
+                    What happens if they cannot?
+                </code>`<code></code></p>
+            <p>Those two questions define most of the practical replication guarantee.</p>
+            <h2 id="final-principle">Final principle</h2>
+            <p>The most useful question is not:</p>
+            <blockquote>
+                <p>"Is our replication synchronous or asynchronous? "</p>
+            </blockquote>
+            <p>It is:</p>
+            <blockquote>
+                <p>"When the application receives a successful commit, exactly which nodes possess that transaction, how durable is it on each of them, has it been applied there, and what will the system do if those nodes stop communicating at that exact moment? "</p>
+            </blockquote>
+            <p>Once that question can be answered precisely, the trade-offs between:</p>
+            <p>`<code>text id="z2ym2m"
+                    latency
+                    durability
+                    availability
+                    read freshness
+                    RPO
+                    RTO
+                    failover safety
+                </code>``</p>
+            <p>become much easier to reason about.</p>
+            <h2 id="references">References</h2>
+            <p>PostgreSQL's current documentation distinguishes <code>remote_write</code>, <code>on</code>, and <code>remote_apply</code>; explains the role of <code>synchronous_standby_names</code>; and documents both priority-based and quorum synchronous replication.</p>
+            <p>MySQL 8. 4 documents asynchronous source/replica replication and semisynchronous replication, including durable relay-log acknowledgment, configurable acknowledgment counts, <code>AFTER_SYNC</code>/<code>AFTER_COMMIT</code>, and timeout-based fallback to asynchronous replication.</p>
+            <p>Microsoft's current SQL Server Availability Group documentation distinguishes asynchronous and synchronous commit, defines synchronous acknowledgment as secondary log hardening, and documents <code>REQUIRED_SYNCHRONIZED_SECONDARIES_TO_COMMIT</code> for stronger availability/data-protection control.</p>
+            <p>Microsoft separately documents redo queuing, in which log records can already be hardened on a secondary while remaining unapplied and therefore not yet visible to readable-secondary queries.</p>
         </article-section>
     </div>
     </main>

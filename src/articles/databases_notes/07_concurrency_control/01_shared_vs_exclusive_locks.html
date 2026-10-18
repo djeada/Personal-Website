@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Shared and Exclusive Locks | Adam Djellouli</title>
-    <meta content="Shared and exclusive locks are used in database systems for managing concurrent access to data." name="description" />
+    <meta content="Locks coordinate concurrent access to database resources. The simplest textbook model has two lock modes: The basic idea is." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks",
-            "description": "Shared and exclusive locks are used in database systems for managing concurrent access to data.",
-            "dateModified": "2025-05-11",
+            "description": "Locks coordinate concurrent access to database resources. The simplest textbook model has two lock modes: The basic idea is.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Shared and exclusive locks are used in database systems for managing concurrent access to data." property="og:description" />
-    <meta content="2025-05-11" property="article:modified_time" />
+    <meta content="Locks coordinate concurrent access to database resources. The simplest textbook model has two lock modes: The basic idea is." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,26 +114,73 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#understanding-shared-locks">Understanding Shared Locks</a></li>
-                    <li><a href="#exploring-exclusive-locks">Exploring Exclusive Locks</a></li>
-                    <li><a href="#interaction-between-shared-and-exclusive-locks">Interaction Between Shared and Exclusive Locks</a></li>
-                    <li><a href="#practical-examples-with-commands">Practical Examples with Commands</a>
+                    <li><a href="#why-locks-are-needed">Why locks are needed</a></li>
+                    <li><a href="#shared-locks">Shared locks</a></li>
+                    <li><a href="#exclusive-locks">Exclusive locks</a></li>
+                    <li><a href="#basic-compatibility-matrix">Basic compatibility matrix</a></li>
+                    <li><a href="#example-two-readers">Example: two readers</a></li>
+                    <li><a href="#example-reader-versus-writer">Example: reader versus writer</a></li>
+                    <li><a href="#example-writer-versus-writer">Example: writer versus writer</a></li>
+                    <li><a href="#shared-exclusive-are-compatibility-modes-not-sql-commands">Shared/exclusive are compatibility modes, not SQL commands</a></li>
+                    <li><a href="#mvcc-changes-the-reader-writer-picture">MVCC changes the reader/writer picture</a></li>
+                    <li><a href="#postgresql-ordinary-reads-do-not-take-blocking-shared-row-locks">PostgreSQL ordinary reads do not take blocking shared row locks</a></li>
+                    <li><a href="#postgresql-locking-reads-are-explicit">PostgreSQL locking reads are explicit</a></li>
+                    <li><a href="#postgresql-for-share">PostgreSQL FOR SHARE</a>
                         <ol>
-                            <li><a href="#shared-vs-exclusive-locks-applicability">Shared vs. Exclusive Locks: Applicability</a></li>
-                            <li><a href="#example-reading-data-shared-lock">Example: Reading Data (Shared Lock)</a></li>
-                            <li><a href="#example-updating-data-exclusive-lock">Example: Updating Data (Exclusive Lock)</a></li>
-                            <li><a href="#lock-interaction-timeline">Lock Interaction Timeline</a></li>
-                            <li><a href="#considerations-and-variations">Considerations and Variations</a></li>
+                            <li><a href="#session-a">Session A</a></li>
                         </ol>
                     </li>
-                    <li><a href="#balancing-concurrency-and-integrity">Balancing Concurrency and Integrity</a></li>
-                    <li><a href="#best-practices-for-using-locks">Best Practices for Using Locks</a></li>
-                    <li><a href="#deadlocks-and-how-to-handle-them">Deadlocks and How to Handle Them</a></li>
+                    <li><a href="#compare-that-with-an-ordinary-postgresql-select">Compare that with an ordinary PostgreSQL SELECT</a></li>
+                    <li><a href="#why-would-an-application-use-for-update">Why would an application use FOR UPDATE?</a></li>
+                    <li><a href="#postgresql-for-update-example">PostgreSQL FOR UPDATE example</a></li>
+                    <li><a href="#mysql-innodb-makes-the-same-ordinary-versus-locking-distinction">MySQL/InnoDB makes the same ordinary-versus-locking distinction</a></li>
+                    <li><a href="#mysql-for-share">MySQL FOR SHARE</a></li>
+                    <li><a href="#mysql-for-update">MySQL FOR UPDATE</a></li>
+                    <li><a href="#innodb-locks-index-records-not-an-abstract-sql-row">InnoDB locks index records, not an abstract SQL row</a></li>
+                    <li><a href="#sql-server-maps-much-more-directly-onto-textbook-s-x-terminology">SQL Server maps much more directly onto textbook S/X terminology</a></li>
+                    <li><a href="#sql-server-read-committed-does-not-necessarily-hold-s-locks-until-commit">SQL Server READ COMMITTED does not necessarily hold S locks until commit</a></li>
+                    <li><a href="#sql-server-can-use-row-versions-instead-of-read-locks">SQL Server can use row versions instead of read locks</a></li>
+                    <li><a href="#sql-server-update-locks-u">SQL Server update locks (U)</a></li>
+                    <li><a href="#sql-server-updlock">SQL Server UPDLOCK</a></li>
+                    <li><a href="#what-does-holdlock-mean-in-sql-server">What does HOLDLOCK mean in SQL Server?</a></li>
+                    <li><a href="#modern-sql-server-makes-simple-lock-slogans-even-less-reliable">Modern SQL Server makes simple lock slogans even less reliable</a></li>
+                    <li><a href="#oracle-is-strongly-version-oriented-for-ordinary-reads">Oracle is strongly version-oriented for ordinary reads</a></li>
+                    <li><a href="#oracle-select-for-update">Oracle SELECT. .. FOR UPDATE</a></li>
+                    <li><a href="#technology-summary-ordinary-reads">Technology summary: ordinary reads</a></li>
+                    <li><a href="#technology-summary-explicit-locking-reads">Technology summary: explicit locking reads</a></li>
+                    <li><a href="#a-locking-read-protects-existing-resources-not-necessarily-a-business-rule">A locking read protects existing resources—not necessarily a business rule</a></li>
+                    <li><a href="#concrete-double-booking-example">Concrete double-booking example</a></li>
+                    <li><a href="#the-best-solution-for-uniqueness-is-usually-a-constraint">The best solution for uniqueness is usually a constraint</a></li>
+                    <li><a href="#rows-and-predicates-are-different-things">Rows and predicates are different things</a></li>
+                    <li><a href="#how-innodb-protects-ranges">How InnoDB protects ranges</a></li>
+                    <li><a href="#how-sql-server-protects-ranges">How SQL Server protects ranges</a></li>
+                    <li><a href="#postgresql-serializable-solves-this-differently">PostgreSQL Serializable solves this differently</a></li>
+                    <li><a href="#locks-exist-at-different-granularities">Locks exist at different granularities</a></li>
+                    <li><a href="#why-intention-locks-exist">Why intention locks exist</a></li>
+                    <li><a href="#sql-server-compatibility-is-therefore-richer-than-s-x">SQL Server compatibility is therefore richer than S/X</a></li>
+                    <li><a href="#lock-upgrades-can-produce-deadlocks">Lock upgrades can produce deadlocks</a></li>
+                    <li><a href="#lock-duration-matters-as-much-as-lock-type">Lock duration matters as much as lock type</a></li>
+                    <li><a href="#nowait-changes-waiting-behavior-not-compatibility">NOWAIT changes waiting behavior, not compatibility</a></li>
+                    <li><a href="#skip-locked">SKIP LOCKED</a></li>
+                    <li><a href="#queue-example">Queue example</a></li>
+                    <li><a href="#sqlite-uses-a-different-concurrency-model">SQLite uses a different concurrency model</a></li>
+                    <li><a href="#sqlite-rollback-mode-versus-wal">SQLite rollback mode versus WAL</a></li>
+                    <li><a href="#technology-comparison">Technology comparison</a></li>
+                    <li><a href="#do-not-use-locks-where-an-atomic-statement-is-simpler">Do not use locks where an atomic statement is simpler</a></li>
+                    <li><a href="#locks-and-constraints-solve-different-problems">Locks and constraints solve different problems</a></li>
+                    <li><a href="#shared-and-exclusive-locks-do-not-themselves-guarantee-serializability">Shared and exclusive locks do not themselves guarantee serializability</a></li>
+                    <li><a href="#shared-exclusive-locking-and-deadlocks">Shared/exclusive locking and deadlocks</a></li>
+                    <li><a href="#locks-waits-and-timeouts-are-different-concepts">Locks, waits, and timeouts are different concepts</a></li>
+                    <li><a href="#what-to-inspect-in-production">What to inspect in production</a></li>
+                    <li><a href="#practical-decision-table">Practical decision table</a></li>
+                    <li><a href="#final-mental-model">Final mental model</a></li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks in Database Systems</a></li><li><a href="/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two‑Phase Locking (2PL)</a></li><li><a href="/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Handling the Double-Booking Problem in Databases</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks in Database Systems</a></li><li><a href="/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two-Phase Locking (2PL)</a></li><li><a href="/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Handling the Double-Booking Problem in Databases</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -197,6 +244,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -211,7 +264,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -237,6 +289,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -259,6 +317,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -273,6 +337,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -287,6 +356,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -295,7 +397,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -315,178 +417,2317 @@
                     </button></div>
             </div>
             <h1>Shared and Exclusive Locks</h1>
-            <p>Shared and exclusive locks are used in database systems for managing concurrent access to data. They ensure that transactions occur without conflicting with each other, maintaining the integrity and consistency of the database.</p>
+            <p>Locks coordinate concurrent access to database resources.</p>
+            <p>The simplest textbook model has two lock modes:</p>
+            <ul>
+                <li>Shared (<code>S</code>) lock — usually associated with reading.</li>
+                <li>Exclusive (<code>X</code>) lock — usually associated with modifying.</li>
+            </ul>
+            <p>The basic idea is:</p>
             <div>
-                <pre><code class="language-shell">[Resource: Data Item X]
-   |
-   |-- Transaction A wants to READ --&gt; Acquires SHARED LOCK
-   |-- Transaction B wants to READ --&gt; Acquires SHARED LOCK
-   |
-[Both can read simultaneously]
+                <pre><code class="language-text">multiple readers can coexist
 
-[Resource: Data Item Y]
-   |
-   |-- Transaction C wants to WRITE --&gt; Acquires EXCLUSIVE LOCK
-   |
-[No other transaction can read or write until the lock is released]</code></pre>
+but
+
+a writer must exclude conflicting access</code></pre>
             </div>
-            <p>In the diagram above, Transactions A and B both acquire shared locks on Data Item X, allowing them to read the data at the same time without interference. Transaction C, however, obtains an exclusive lock on Data Item Y to perform a write operation, preventing other transactions from accessing it until the operation is complete.</p>
-            <p>After reading the material, you should be able to answer the following questions:</p>
-            <ol>
-                <li>What are shared and exclusive locks in database systems, and how do they differ in terms of access permissions for transactions?</li>
-                <li>How do shared and exclusive locks interact with each other, and what does the lock compatibility matrix illustrate about their behavior?</li>
-                <li>Can you provide examples of scenarios where shared locks are appropriate and where exclusive locks are necessary to maintain data integrity?</li>
-                <li>What best practices can be followed to balance concurrency and data integrity when using shared and exclusive locks in transactions?</li>
-                <li>How do deadlocks occur in the context of shared and exclusive locks, and what strategies can be implemented to prevent and resolve them?</li>
-            </ol>
-            <h3 id="understanding-shared-locks">Understanding Shared Locks</h3>
-            <p>Shared locks allow multiple transactions to read the same data concurrently. They are vital for operations where data needs to be read without being modified, ensuring that the data remains consistent for all reading transactions.</p>
-            <p>Imagine a library database where several users are looking up the same book information. Each user's transaction places a shared lock on the book's data, allowing everyone to read the information simultaneously without any conflicts.</p>
-            <h3 id="exploring-exclusive-locks">Exploring Exclusive Locks</h3>
-            <p>Exclusive locks grant a single transaction the sole right to read and modify a piece of data. This lock type is necessary when a transaction needs to ensure that no other transactions can interfere with its operation, such as when updating or deleting data.</p>
-            <p>Consider an online banking system where a user is transferring money from one account to another. The transaction places an exclusive lock on both account records to prevent other transactions from reading or modifying the balances until the transfer is complete, ensuring the accuracy of the transaction.</p>
-            <h3 id="interaction-between-shared-and-exclusive-locks">Interaction Between Shared and Exclusive Locks</h3>
-            <p>Understanding how shared and exclusive locks interact is essential for managing database concurrency effectively.</p>
+            <p>However, this is only the starting model.</p>
+            <p>A crucial practical fact is:</p>
+            <blockquote>
+                <p>Not every SQL <code>SELECT</code> acquires a shared row lock.</p>
+            </blockquote>
+            <p>PostgreSQL, MySQL/InnoDB, Oracle, and row-versioned SQL Server configurations can let ordinary readers observe committed row versions without taking the kind of blocking shared row lock described by the textbook model.</p>
+            <p>So there are two questions to keep separate:</p>
+            <div>
+                <pre><code class="language-text">1. What does S/X locking mean theoretically?
+
+2. How does this particular database engine
+   implement this particular operation?</code></pre>
+            </div>
+            <h2 id="why-locks-are-needed">Why locks are needed</h2>
+            <p>Suppose account <code>1</code> contains:</p>
+            <div>
+                <pre><code class="language-text">balance = €500</code></pre>
+            </div>
+            <p>Transaction T1 wants to subtract €100:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts
+SET balance = balance - 100
+WHERE account_id = 1;</code></pre>
+            </div>
+            <p>At almost the same time T2 wants to subtract €200.</p>
+            <p>Without concurrency control, both transactions could interfere while modifying the same logical value.</p>
+            <p>The database therefore needs some mechanism saying:</p>
+            <div>
+                <pre><code class="language-text">T1 is currently modifying this resource.
+
+T2 cannot perform an incompatible modification
+until T1 finishes.</code></pre>
+            </div>
+            <p>A lock is one way to express that dependency.</p>
+            <h2 id="shared-locks">Shared locks</h2>
+            <p>A shared lock, traditionally written:</p>
+            <div>
+                <pre><code class="language-text">S(A)</code></pre>
+            </div>
+            <p>means approximately:</p>
+            <blockquote>
+                <p>The transaction is using resource <code>A</code> in a way compatible with other readers but incompatible with a conflicting writer.</p>
+            </blockquote>
+            <p>Suppose T1 has:</p>
+            <div>
+                <pre><code class="language-text">S(account 1)</code></pre>
+            </div>
+            <p>T2 may generally also acquire:</p>
+            <div>
+                <pre><code class="language-text">S(account 1)</code></pre>
+            </div>
+            <p>because neither transaction is changing the resource.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1: S(A)
+T2: S(A)
+
+allowed</code></pre>
+            </div>
+            <p>This is why the lock is called shared.</p>
+            <p>Multiple transactions can share it.</p>
+            <h2 id="exclusive-locks">Exclusive locks</h2>
+            <p>An exclusive lock, written:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>means approximately:</p>
+            <blockquote>
+                <p>The transaction needs exclusive modification access to resource <code>A</code>.</p>
+            </blockquote>
+            <p>If T1 holds:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>then another transaction requesting:</p>
+            <div>
+                <pre><code class="language-text">S(A)</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>under the traditional locking model must wait or fail.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1: X(A)
+
+T2: S(A) → blocked
+T3: X(A) → blocked</code></pre>
+            </div>
+            <p>Hence the name:</p>
+            <div>
+                <pre><code class="language-text">exclusive</code></pre>
+            </div>
+            <h2 id="basic-compatibility-matrix">Basic compatibility matrix</h2>
+            <p>For traditional S/X locking on the same resource:</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Lock Held \ Requested</th>
-                        <th>Shared Lock Requested</th>
-                        <th>Exclusive Lock Requested</th>
+                        <th>Existing lock</th>
+                        <th>Request <code>S</code></th>
+                        <th>Request <code>X</code></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Shared Lock Held</strong></td>
-                        <td>Allowed</td>
-                        <td>Not Allowed</td>
+                        <td><code>S</code></td>
+                        <td>Compatible</td>
+                        <td>Conflict</td>
                     </tr>
                     <tr>
-                        <td><strong>Exclusive Lock Held</strong></td>
-                        <td>Not Allowed</td>
-                        <td>Not Allowed</td>
+                        <td><code>X</code></td>
+                        <td>Conflict</td>
+                        <td>Conflict</td>
                     </tr>
                 </tbody>
             </table>
-            <ul>
-                <li>When a shared lock is already held on a data item, other transactions can also acquire shared locks on it.</li>
-                <li>If a shared lock is held, an exclusive lock request will be blocked until all shared locks are released.</li>
-                <li>When an exclusive lock is held, all other lock requests (shared or exclusive) are blocked until the exclusive lock is released.</li>
-            </ul>
-            <h3 id="practical-examples-with-commands">Practical Examples with Commands</h3>
-            <p>These examples illustrate row-level locking behavior common to most modern relational databases—<strong>PostgreSQL</strong>, <strong>MySQL/InnoDB</strong>, <strong>MariaDB</strong>, <strong>SQL Server</strong>, and <strong>Oracle</strong>—which support shared (S) and exclusive (X) locks at the row level. They do <strong>not</strong> apply to engines or table types without row-level locking (e.g., MySQL’s <strong>MyISAM</strong>), nor to NoSQL stores that use different concurrency controls.</p>
-            <h4 id="shared-vs-exclusive-locks-applicability">Shared vs. Exclusive Locks: Applicability</h4>
-            <ul>
-                <li><strong>Supported</strong>: PostgreSQL, MySQL/InnoDB, MariaDB, SQL Server, Oracle.</li>
-                <li><strong>Not Supported</strong>: MySQL/MyISAM (table-level only), SQLite (uses database-level or page-level locks), many cloud-managed NoSQL databases.</li>
-            </ul>
-            <p>Locking behavior may vary slightly by isolation level and vendor syntax; the following examples assume the default <strong>READ COMMITTED</strong> isolation level.</p>
-            <h4 id="example-reading-data-shared-lock">Example: Reading Data (Shared Lock)</h4>
-            <p>In databases with row-level locking, a <strong>shared lock</strong> (S) permits multiple transactions to read the same rows concurrently but prevents any transaction from modifying them until all shared locks are released.</p>
+            <p>The simplest rule is:</p>
             <div>
-                <pre><code class="language-sql">-- Applies in PostgreSQL, MySQL/InnoDB, SQL Server, Oracle
-BEGIN TRANSACTION;
-SELECT * FROM Employees WHERE Department = 'Sales';
--- Shared (S) lock on matching rows until COMMIT
-COMMIT;</code></pre>
+                <pre><code class="language-text">S + S = allowed
+
+S + X = conflict
+
+X + S = conflict
+
+X + X = conflict</code></pre>
             </div>
-            <h4 id="example-updating-data-exclusive-lock">Example: Updating Data (Exclusive Lock)</h4>
-            <p>An <strong>exclusive lock</strong> (X) is required for row modifications. If another transaction holds a shared or exclusive lock on the same row, the update waits (or may deadlock under certain patterns).</p>
+            <p>This matrix is fundamental to lock-based concurrency control.</p>
+            <p>But it is only meaningful when we specify:</p>
             <div>
-                <pre><code class="language-sql">-- Applies in PostgreSQL, MySQL/InnoDB, SQL Server, Oracle
-BEGIN TRANSACTION;
-UPDATE Employees SET Salary = Salary * 1.05 WHERE Department = 'Sales';
--- Request X lock: waits until no other S or X locks exist on those rows
-COMMIT;</code></pre>
+                <pre><code class="language-text">same resource
+same relevant granularity
+same lock manager</code></pre>
             </div>
-            <h4 id="lock-interaction-timeline">Lock Interaction Timeline</h4>
+            <p>An <code>S</code> lock on one row obviously does not conflict with an <code>X</code> lock on an unrelated row.</p>
+            <h2 id="example-two-readers">Example: two readers</h2>
+            <p>Suppose two transactions read the same customer.</p>
+            <p>In a traditional lock-based system:</p>
+            <div>
+                <pre><code class="language-text">T1 obtains S(customer 42)
+T2 obtains S(customer 42)</code></pre>
+            </div>
+            <p>Both may proceed:</p>
+            <div>
+                <pre><code class="language-text">             customer 42
+
+              ┌─────┐
+T1 -- S ----&gt; │     │ &lt;---- S -- T2
+              └─────┘</code></pre>
+            </div>
+            <p>Neither is modifying the resource.</p>
+            <p>There is therefore no reason for one reader to wait for the other.</p>
+            <h2 id="example-reader-versus-writer">Example: reader versus writer</h2>
+            <p>Now suppose T1 has:</p>
+            <div>
+                <pre><code class="language-text">S(customer 42)</code></pre>
+            </div>
+            <p>and T2 requests:</p>
+            <div>
+                <pre><code class="language-text">X(customer 42)</code></pre>
+            </div>
+            <p>Traditional lock compatibility says:</p>
+            <div>
+                <pre><code class="language-text">S + X = conflict</code></pre>
+            </div>
+            <p>so T2 waits.</p>
+            <div>
+                <pre><code class="language-text">T1:
+S(customer 42)
+reading...
+
+T2:
+X(customer 42)
+      │
+      └── waits</code></pre>
+            </div>
+            <p>Once T1 releases the shared lock, T2 may obtain its exclusive lock.</p>
+            <p>This model is important for understanding classical lock-based systems.</p>
+            <p>But later we will see why PostgreSQL, Oracle, and other MVCC engines do not make ordinary readers and writers behave this way.</p>
+            <h2 id="example-writer-versus-writer">Example: writer versus writer</h2>
+            <p>Suppose T1 executes:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts
+SET balance = balance - 100
+WHERE account_id = 1;</code></pre>
+            </div>
+            <p>and has not committed.</p>
+            <p>T2 executes:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts
+SET balance = balance + 50
+WHERE account_id = 1;</code></pre>
+            </div>
+            <p>Both want to modify the same current row.</p>
+            <p>That conflict generally must be serialized.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1:
+X(account 1)
+
+T2:
+X(account 1)
+    │
+    └── wait</code></pre>
+            </div>
+            <p>This pattern exists even in MVCC databases.</p>
+            <p>MVCC can often eliminate reader/writer blocking.</p>
+            <p>It does not mean two transactions can freely create incompatible current versions of the same row.</p>
+            <h2 id="shared-exclusive-are-compatibility-modes-not-sql-commands">Shared/exclusive are compatibility modes, not SQL commands</h2>
+            <p>It is tempting to learn:</p>
+            <div>
+                <pre><code class="language-text">SELECT = S lock
+
+UPDATE = X lock</code></pre>
+            </div>
+            <p>That is too simplistic.</p>
+            <p>What is actually true is closer to:</p>
+            <div>
+                <pre><code class="language-text">S and X describe compatibility relationships
+between concurrent operations on resources.</code></pre>
+            </div>
+            <p>Different engines then map SQL operations onto those relationships differently.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">SQL Server pessimistic READ COMMITTED
+    ordinary read can use S locks
+
+PostgreSQL ordinary SELECT
+    reads through MVCC instead of taking
+    an S row lock that blocks a writer
+
+Oracle ordinary SELECT
+    reads a consistent version
+
+MySQL InnoDB ordinary consistent SELECT
+    uses MVCC
+
+SQLite
+    coordinates access mainly through
+    database/file/WAL-level mechanisms</code></pre>
+            </div>
+            <p>This distinction is essential.</p>
+            <h2 id="mvcc-changes-the-reader-writer-picture">MVCC changes the reader/writer picture</h2>
+            <p>Suppose T1 is changing:</p>
+            <div>
+                <pre><code class="language-text">salary = 50,000</code></pre>
+            </div>
+            <p>to:</p>
+            <div>
+                <pre><code class="language-text">salary = 55,000</code></pre>
+            </div>
+            <p>but has not committed.</p>
+            <p>A traditional lock-based mental model says:</p>
+            <div>
+                <pre><code class="language-text">writer has X lock
+reader asks for S lock
+
+S + X conflict
+
+reader waits</code></pre>
+            </div>
+            <p>An MVCC engine can instead say:</p>
+            <div>
+                <pre><code class="language-text">writer works on the new version
+
+reader reads an older committed version</code></pre>
+            </div>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">                 old committed version
+                 salary = 50,000
+                        ↑
+Reader ----------------┘
+
+
+Writer → new version = 55,000
+         not committed yet</code></pre>
+            </div>
+            <p>Now the reader and writer do not necessarily need incompatible locks on the same visible version.</p>
+            <p>This is the foundation of Multi-Version Concurrency Control.</p>
+            <h2 id="postgresql-ordinary-reads-do-not-take-blocking-shared-row-locks">PostgreSQL ordinary reads do not take blocking shared row locks</h2>
+            <p>Consider PostgreSQL. The sample <code>employees</code> table contains:</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Step</th>
-                        <th>Transaction</th>
-                        <th>Action</th>
-                        <th>Lock Held</th>
-                        <th>Outcome</th>
+                        <th>employee_id</th>
+                        <th>salary</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>1</td>
-                        <td>T1 (Reader)</td>
-                        <td><code>SELECT ... FOR SHARE</code> (implicit)</td>
-                        <td>S on Sales rows</td>
-                        <td>Allows other S locks; blocks X locks</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>T2 (Updater)</td>
-                        <td><code>UPDATE ...</code></td>
-                        <td>Requests X on Sales rows</td>
-                        <td>Waits until T1 commits and releases its S lock</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>T1</td>
-                        <td><code>COMMIT</code></td>
-                        <td>Releases S</td>
-                        <td>T2 acquires X lock, performs update, then COMMIT</td>
+                        <td>50000</td>
                     </tr>
                 </tbody>
             </table>
-            <blockquote>
-                <p><strong>Note</strong>: Some databases (e.g., Oracle) require explicit <code>SELECT ... FOR UPDATE</code> to acquire row locks for reads; others implicitly lock on <code>UPDATE</code>.</p>
-            </blockquote>
-            <h4 id="considerations-and-variations">Considerations and Variations</h4>
-            <ul>
-                <li>Under <strong>SERIALIZABLE</strong>, readers may acquire additional locks or trigger predicate locks. Under <strong>READ UNCOMMITTED</strong>, shared locks may be skipped (dirty reads).</li>
-                <li>MyISAM uses table-level locks, so the above does not apply. SQLite uses page or database locks.</li>
-                <li>If two transactions request locks in opposite order, a deadlock may occur. Most RDBMS detect and kill the victim.</li>
-            </ul>
-            <h3 id="balancing-concurrency-and-integrity">Balancing Concurrency and Integrity</h3>
-            <p>Efficient database systems strive to balance the need for high concurrency with the necessity of maintaining data integrity. Locks play a pivotal role in achieving this balance. Here are the key concepts:</p>
-            <ul>
-                <li>Shared locks enable multiple transactions to <strong>read the same data simultaneously</strong>, enhancing concurrency and system throughput. </li>
-                <li>Exclusive locks restrict access to a resource for modifications, ensuring <strong>data integrity</strong> by preventing conflicts and data corruption during concurrent updates. </li>
-                <li>Locking mechanisms must be carefully managed to avoid <strong>deadlocks</strong>, where two or more transactions wait indefinitely for each other to release locks. </li>
-                <li>Transaction isolation levels, such as <strong>serializable</strong> and <strong>read committed</strong>, provide a framework for managing concurrency while maintaining data consistency.</li>
-            </ul>
-            <h3 id="best-practices-for-using-locks">Best Practices for Using Locks</h3>
-            <p>To optimize database performance while ensuring data integrity, the following practices are recommended:</p>
-            <ul>
-                <li>Transactions should be designed to <strong>minimize the duration of locks</strong> by keeping operations concise, reducing contention and blocking of other processes. </li>
-                <li>Lock granularity should be chosen carefully, with <strong>row-level locks</strong> preferred over table-level locks for fine-grained control, promoting greater concurrency. </li>
-                <li>Avoiding unnecessary locks helps reduce overhead; for instance, adopting a <strong>read-uncommitted isolation level</strong> can be beneficial in scenarios where occasional dirty reads are acceptable. </li>
-                <li>Deadlock detection and resolution mechanisms should be implemented to <strong>automatically identify and address circular locking scenarios</strong>, ensuring system stability. </li>
-                <li>Prioritize using <strong>optimistic concurrency control</strong> techniques, such as timestamp-based validation, in read-heavy systems to reduce locking frequency. </li>
-                <li>Regularly monitor and analyze transaction logs to <strong>identify bottlenecks and locking conflicts</strong>, enabling proactive adjustments to database configuration or schema. </li>
-                <li>Employ <strong>indexing strategies</strong> to limit the range of locks required, as properly indexed queries reduce the amount of data scanned and locked. </li>
-            </ul>
-            <h3 id="deadlocks-and-how-to-handle-them">Deadlocks and How to Handle Them</h3>
-            <p>Deadlocks occur when two or more transactions are waiting indefinitely for each other to release locks.</p>
             <div>
-                <pre><code class="language-shell">Deadlock Scenario:
-
-Transaction 1:
-   LOCK Resource A
-   WAIT for Resource B
-
-Transaction 2:
-   LOCK Resource B
-   WAIT for Resource A</code></pre>
+                <pre><code class="language-sql">SELECT employee_id, salary
+FROM employees
+WHERE employee_id = 1;</code></pre>
             </div>
-            <p>In this situation, Transaction 1 holds a lock on Resource A and waits for Resource B, while Transaction 2 holds a lock on Resource B and waits for Resource A. Neither can proceed, resulting in a deadlock.</p>
-            <p><strong>Strategies to Prevent Deadlocks:</strong></p>
-            <ul>
-                <li>Establishing <strong>resource ordering</strong> ensures that locks are acquired in a consistent sequence, which prevents circular wait conditions from arising. </li>
-                <li>Setting a <strong>lock timeout</strong> allows transactions to fail gracefully by limiting the maximum time a lock request can wait, avoiding indefinite blocking. </li>
-                <li>Implementing <strong>deadlock detection</strong> systems enables the identification of deadlock situations, allowing resolution by aborting one of the conflicting transactions. </li>
-                <li>Using a <strong>wait-die or wound-wait algorithm</strong> enforces a structured priority-based approach to manage transactions and prevent deadlocks. </li>
-                <li>Designing transactions to <strong>lock resources in bulk</strong> at the beginning reduces the chances of mid-transaction lock conflicts, which can trigger deadlocks. </li>
-                <li>Minimizing <strong>long-running transactions</strong> reduces the risk of lock contention, as shorter transactions are less likely to encounter deadlock situations. </li>
-                <li>Optimizing <strong>index usage</strong> and query design decreases the number of locks required, reducing the probability of lock-related conflicts. </li>
-                <li>Regularly reviewing and analyzing <strong>deadlock logs</strong> aids in understanding the root causes and refining locking strategies accordingly. </li>
-            </ul>
+            <table>
+                <thead>
+                    <tr>
+                        <th>employee_id</th>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This ordinary query uses PostgreSQL's MVCC visibility rules.</p>
+            <p>It does not acquire a <code>FOR SHARE</code>-style row lock simply because it is reading the row.</p>
+            <p>PostgreSQL explicitly states that its row-level locks do not affect ordinary data querying; they block writers and other incompatible row lockers rather than ordinary readers.</p>
+            <p>Therefore, if T1 modifies employee <code>1</code>:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+UPDATE employees
+SET salary = salary + 100
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <p>T2 can usually still execute an ordinary:</p>
+            <div>
+                <pre><code class="language-sql">SELECT salary
+FROM employees
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <p>Its snapshot returns the previously committed value:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>without waiting for T1's row lock.</p>
+            <p>T2 sees a version allowed by its snapshot.</p>
+            <h2 id="postgresql-locking-reads-are-explicit">PostgreSQL locking reads are explicit</h2>
+            <p>Sometimes a transaction is not merely interested in observing a value.</p>
+            <p>It wants to make a later decision based on that value.</p>
+            <p>PostgreSQL provides explicit locking clauses:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ... FOR UPDATE;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">SELECT ... FOR NO KEY UPDATE;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">SELECT ... FOR SHARE;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">SELECT ... FOR KEY SHARE;</code></pre>
+            </div>
+            <p>These are real row-locking operations, and PostgreSQL's current <code>SELECT</code> documentation identifies all four as locking clauses.</p>
+            <p>So this:</p>
+            <div>
+                <pre><code class="language-sql">SELECT salary
+FROM employees
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>is fundamentally different from:</p>
+            <div>
+                <pre><code class="language-sql">SELECT salary
+FROM employees
+WHERE employee_id = 1
+FOR SHARE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-sql">SELECT salary
+FROM employees
+WHERE employee_id = 1
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="postgresql-for-share">PostgreSQL <code>FOR SHARE</code></h2>
+            <p>Consider two sessions.</p>
+            <h3 id="session-a">Session A</h3>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT employee_id, salary
+FROM employees
+WHERE employee_id = 1
+FOR SHARE;</code></pre>
+            </div>
+            <p>Session A has explicitly locked the selected row in a shared row-lock mode.</p>
+            <p>Now Session B tries:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+UPDATE employees
+SET salary = salary + 100
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <p>The update requires an incompatible lock.</p>
+            <p>Therefore Session B waits.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Session A
+FOR SHARE
+      │
+      ▼
+employee 1
+      ▲
+      │
+ UPDATE requested
+Session B
+
+B waits</code></pre>
+            </div>
+            <p>When Session A executes:</p>
+            <div>
+                <pre><code class="language-sql">COMMIT;</code></pre>
+            </div>
+            <p>its row lock is released.</p>
+            <p>Session B can then continue.</p>
+            <h2 id="compare-that-with-an-ordinary-postgresql-select">Compare that with an ordinary PostgreSQL SELECT</h2>
+            <p>Change Session A to:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT employee_id, salary
+FROM employees
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>employee_id</th>
+                        <th>salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>50000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This is merely an ordinary MVCC read.</p>
+            <p>Session B executes:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE employees
+SET salary = salary + 100
+WHERE employee_id = 1;</code></pre>
+            </div>
+            <p>The ordinary reader does not create the same row-lock conflict.</p>
+            <p>This is why saying:</p>
+            <blockquote>
+                <p>"SELECT takes a shared lock. "</p>
+            </blockquote>
+            <p>is wrong as a general description of PostgreSQL.</p>
+            <p>A more accurate statement is:</p>
+            <blockquote>
+                <p>PostgreSQL ordinary reads use MVCC; explicit <code>FOR SHARE</code>/<code>FOR UPDATE</code> clauses request row locks when the application needs locking semantics.</p>
+            </blockquote>
+            <h2 id="why-would-an-application-use-for-update">Why would an application use <code>FOR UPDATE</code>?</h2>
+            <p>Suppose the sample <code>accounts</code> table is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>We implement a withdrawal with:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The application receives:</p>
+            <div>
+                <pre><code class="language-text">balance = 500</code></pre>
+            </div>
+            <p>and decides:</p>
+            <div>
+                <pre><code class="language-text">€400 withdrawal is allowed.</code></pre>
+            </div>
+            <p>Before it writes anything, another transaction withdraws €300 and commits.</p>
+            <p>The first transaction then performs its old decision:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts
+SET balance = balance - 400
+WHERE account_id = 1;</code></pre>
+            </div>
+            <p>The problem was:</p>
+            <div>
+                <pre><code class="language-text">READ
+      ← concurrency gap →
+DECIDE
+      ← concurrency gap →
+WRITE</code></pre>
+            </div>
+            <p>The decision depended on data that another transaction could change.</p>
+            <p>A locking read can deliberately close that gap.</p>
+            <h2 id="postgresql-for-update-example">PostgreSQL <code>FOR UPDATE</code> example</h2>
+            <p>The transaction can instead do:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT balance
+FROM accounts
+WHERE account_id = 1
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-text">if balance &gt;= 400:
+    perform withdrawal</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE accounts
+SET balance = balance - 400
+WHERE account_id = 1;
+
+COMMIT;</code></pre>
+            </div>
+            <p>A competing transaction requiring an incompatible lock on that account must wait.</p>
+            <p>The application is saying:</p>
+            <blockquote>
+                <p>"I am reading this row specifically because I intend to make a decision that depends on its current state. "</p>
+            </blockquote>
+            <p>That is fundamentally different from ordinary reporting:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <h2 id="mysql-innodb-makes-the-same-ordinary-versus-locking-distinction">MySQL/InnoDB makes the same ordinary-versus-locking distinction</h2>
+            <p>InnoDB also uses MVCC for ordinary consistent reads. At its default <code>REPEATABLE READ</code> level, plain non-locking <code>SELECT</code>s in a transaction use the transaction's consistent snapshot. Suppose the <code>accounts</code> row has balance 500:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>is normally a consistent non-locking read.</p>
+            <p>If the application needs explicit protection, InnoDB supports:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR SHARE;</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE;</code></pre>
+            </div>
+            <p>MySQL states that <code>FOR SHARE</code> sets shared-mode locks on selected rows, while <code>FOR UPDATE</code> locks selected records similarly to an update.</p>
+            <h2 id="mysql-for-share">MySQL <code>FOR SHARE</code></h2>
+            <p>Suppose the <code>products</code> table contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>product_id</th>
+                        <th>name</th>
+                        <th>stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>Desk lamp</td>
+                        <td>8</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>T1 executes:</p>
+            <div>
+                <pre><code class="language-sql">START TRANSACTION;
+
+SELECT *
+FROM products
+WHERE product_id = 100
+FOR SHARE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>product_id</th>
+                        <th>name</th>
+                        <th>stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>Desk lamp</td>
+                        <td>8</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Another transaction may perform a compatible locking read.</p>
+            <p>But a transaction attempting to modify the protected record may need to wait.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1:
+S(product 100)
+
+T2:
+S(product 100) → compatible
+
+T3:
+UPDATE product 100 → conflict</code></pre>
+            </div>
+            <p>MySQL documents <code>FOR SHARE</code> specifically for cases where related data will subsequently be inserted or updated and an ordinary <code>SELECT</code> does not provide sufficient protection.</p>
+            <h2 id="mysql-for-update">MySQL <code>FOR UPDATE</code></h2>
+            <p>If the transaction intends to modify the row, use:</p>
+            <div>
+                <pre><code class="language-sql">START TRANSACTION;
+
+SELECT stock
+FROM products
+WHERE product_id = 100
+FOR UPDATE;</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET stock = stock - 1
+WHERE product_id = 100;
+
+COMMIT;</code></pre>
+            </div>
+            <p>The locking read protects the relevant current record/index entry from competing locking operations.</p>
+            <p>An ordinary InnoDB consistent reader can still behave differently because MVCC reads can use versions in their read view rather than conflicting with the locking read.</p>
+            <h2 id="innodb-locks-index-records-not-an-abstract-sql-row">InnoDB locks index records, not an abstract SQL row</h2>
+            <p>This becomes important in real systems.</p>
+            <p>Suppose <code>orders</code> contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>42</td>
+                        <td>25.00</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>42</td>
+                        <td>40.00</td>
+                    </tr>
+                    <tr>
+                        <td>103</td>
+                        <td>7</td>
+                        <td>15.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>When InnoDB executes a locking query such as:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM orders
+WHERE customer_id = 42
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>42</td>
+                        <td>25.00</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>42</td>
+                        <td>40.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>the lock behavior depends on the access path.</p>
+            <p>InnoDB locks index records and ranges that the statement scans.</p>
+            <p>For a unique-index equality search:</p>
+            <div>
+                <pre><code class="language-sql">WHERE order_id = 100</code></pre>
+            </div>
+            <p>it can lock the matching index record.</p>
+            <p>For range or non-unique searches:</p>
+            <div>
+                <pre><code class="language-sql">WHERE customer_id = 42</code></pre>
+            </div>
+            <p>it may protect a broader index range using record, gap, or next-key locking depending on the isolation level and operation. MySQL explicitly documents that locking reads, updates, and deletes are tied to index records/ranges scanned rather than a remembered abstract SQL predicate.</p>
+            <p>That is why indexes affect concurrency behavior as well as performance.</p>
+            <h2 id="sql-server-maps-much-more-directly-onto-textbook-s-x-terminology">SQL Server maps much more directly onto textbook S/X terminology</h2>
+            <p>SQL Server exposes the S/X model very explicitly.</p>
+            <p>Its lock manager includes:</p>
+            <div>
+                <pre><code class="language-text">Shared (S)
+Update (U)
+Exclusive (X)
+Intent locks
+Schema locks
+Key-range locks
+...</code></pre>
+            </div>
+            <p>Under pessimistic locking, SQL Server documents <code>S</code> as a read lock and <code>X</code> as the lock used for modification. It also documents the familiar compatibility rule: multiple shared locks may coexist, while an exclusive lock conflicts with other locks on the same resource.</p>
+            <p>This makes SQL Server particularly useful when learning classical locking theory.</p>
+            <h2 id="sql-server-read-committed-does-not-necessarily-hold-s-locks-until-commit">SQL Server READ COMMITTED does not necessarily hold S locks until commit</h2>
+            <p>Even in a lock-based SQL Server configuration, this is too simplistic:</p>
+            <div>
+                <pre><code class="language-text">SELECT takes S lock
+S lock remains until COMMIT</code></pre>
+            </div>
+            <p>At ordinary pessimistic <code>READ COMMITTED</code>, shared row/page locks are generally released after the data has been read rather than held until transaction end.</p>
+            <p>SQL Server documents that <code>READ COMMITTED</code> normally uses short-duration shared locks when row versioning is not being used.</p>
+            <p>Suppose <code>accounts</code> contains one row <code>(account_id=1, balance=500)</code>. So:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+
+SELECT *
+FROM accounts
+WHERE account_id = 1;
+
+-- do something for 20 seconds
+
+COMMIT;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>does not automatically mean that the ordinary <code>READ COMMITTED</code> shared lock on that row is retained for those entire 20 seconds.</p>
+            <p>The isolation level determines the required read-lock lifetime.</p>
+            <h2 id="sql-server-can-use-row-versions-instead-of-read-locks">SQL Server can use row versions instead of read locks</h2>
+            <p>SQL Server can also implement <code>READ COMMITTED</code> using row versioning through:</p>
+            <div>
+                <pre><code class="language-text">READ_COMMITTED_SNAPSHOT</code></pre>
+            </div>
+            <p>When <code>READ_COMMITTED_SNAPSHOT</code> is enabled, SQL Server can read row versions instead of acquiring ordinary shared data locks for <code>READ COMMITTED</code> reads. Microsoft documents this distinction directly.</p>
+            <p>Therefore even this statement:</p>
+            <blockquote>
+                <p>"SQL Server SELECT takes an S lock. "</p>
+            </blockquote>
+            <p>requires qualification.</p>
+            <p>It depends on:</p>
+            <div>
+                <pre><code class="language-text">isolation level
+database configuration
+query hints
+optimized locking features</code></pre>
+            </div>
+            <h2 id="sql-server-update-locks-u">SQL Server update locks (<code>U</code>)</h2>
+            <p>SQL Server introduces an additional mode that explains an important real-world problem:</p>
+            <div>
+                <pre><code class="language-text">Update lock (U)</code></pre>
+            </div>
+            <p>Suppose two transactions both do:</p>
+            <div>
+                <pre><code class="language-text">read row
+then maybe update row</code></pre>
+            </div>
+            <p>If both first acquire <code>S</code> locks:</p>
+            <div>
+                <pre><code class="language-text">T1: S(A)
+T2: S(A)</code></pre>
+            </div>
+            <p>they are compatible.</p>
+            <p>Later both want:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>Now each transaction's shared lock interferes with the other's upgrade.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">T1: S(A) → wants X(A)
+T2: S(A) → wants X(A)</code></pre>
+            </div>
+            <p>This can create an upgrade deadlock.</p>
+            <p>SQL Server's <code>U</code> lock is designed partly to address this pattern: many transactions may hold <code>S</code>, but only one transaction can normally hold the update lock for a particular resource. Microsoft explicitly describes this use case.</p>
+            <h2 id="sql-server-updlock">SQL Server <code>UPDLOCK</code></h2>
+            <p>Using the sample account <code>(account_id=1, balance=500)</code>, an application that expects to modify it can use:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts WITH (UPDLOCK)
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>UPDLOCK</code> tells SQL Server to take update locks for the read and retain them until the transaction completes.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">ordinary SELECT:
+"I am reading."
+
+UPDLOCK:
+"I am reading this because I may modify it;
+reserve the update path."</code></pre>
+            </div>
+            <p>This is not exactly identical to PostgreSQL <code>FOR UPDATE</code> internally, but it often serves a similar application-level purpose.</p>
+            <h2 id="what-does-holdlock-mean-in-sql-server">What does <code>HOLDLOCK</code> mean in SQL Server?</h2>
+            <p>SQL Server's:</p>
+            <div>
+                <pre><code class="language-sql">WITH (HOLDLOCK)</code></pre>
+            </div>
+            <p>is equivalent to using <code>SERIALIZABLE</code> semantics for that table reference.</p>
+            <p>Thus:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FROM reservations WITH (UPDLOCK, HOLDLOCK)
+WHERE resource_id = 42;</code></pre>
+            </div>
+            <p>is asking for both:</p>
+            <div>
+                <pre><code class="language-text">update-oriented locking
+
+and
+
+serializable-range protection</code></pre>
+            </div>
+            <p>for the referenced table.</p>
+            <p>That is much stronger than merely:</p>
+            <div>
+                <pre><code class="language-text">"lock this one existing row."</code></pre>
+            </div>
+            <p>This distinction becomes important for missing rows and predicates.</p>
+            <h2 id="modern-sql-server-makes-simple-lock-slogans-even-less-reliable">Modern SQL Server makes simple lock slogans even less reliable</h2>
+            <p>Current SQL Server versions can use optimized locking.</p>
+            <p>With optimized locking enabled, SQL Server can release many physical row/page locks associated with modifications earlier and retain a transaction-ID lock representing the uncommitted transaction instead.</p>
+            <p>Microsoft also recommends row-versioned <code>READ COMMITTED</code> where appropriate to maximize optimized-locking benefits.</p>
+            <p>Therefore statements such as:</p>
+            <div>
+                <pre><code class="language-text">"Every UPDATE keeps an X row lock
+until COMMIT."</code></pre>
+            </div>
+            <p>are no longer universally accurate descriptions of SQL Server internals.</p>
+            <p>The isolation guarantee matters more than memorizing one physical lock implementation.</p>
+            <h2 id="oracle-is-strongly-version-oriented-for-ordinary-reads">Oracle is strongly version-oriented for ordinary reads</h2>
+            <p>Oracle provides another useful counterexample to:</p>
+            <div>
+                <pre><code class="language-text">SELECT = shared row lock</code></pre>
+            </div>
+            <p>For ordinary querying, suppose <code>accounts</code> contains <code>(account_id=1, balance=500)</code>:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM accounts
+WHERE account_id = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>account_id</th>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Oracle uses consistent-read mechanisms.</p>
+            <p>Its documented concurrency model is essentially:</p>
+            <div>
+                <pre><code class="language-text">reader does not block writer
+
+writer does not block reader
+
+writer does block another writer
+of the same row</code></pre>
+            </div>
+            <p>Oracle uses undo information to provide readers with the appropriate consistent row version while another transaction modifies the current row.</p>
+            <p>So ordinary Oracle readers do not need a PostgreSQL-style <code>FOR SHARE</code> equivalent.</p>
+            <h2 id="oracle-select-for-update">Oracle <code>SELECT. .. FOR UPDATE</code></h2>
+            <p>When an Oracle application needs to read rows specifically in preparation for a modification, it can use:</p>
+            <div>
+                <pre><code class="language-sql">SELECT balance
+FROM accounts
+WHERE account_id = 1
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Oracle describes this operation as selecting and locking the rows so another user cannot change those row values before the current transaction performs its update.</p>
+            <p>The locks remain until transaction completion. Oracle's current locking documentation states that locks acquired through explicit transactional locking are released by commit or rollback.</p>
+            <p>So Oracle follows the same broad application distinction:</p>
+            <div>
+                <pre><code class="language-text">ordinary SELECT
+    observe consistent data
+
+SELECT FOR UPDATE
+    observe data and reserve it
+    for a subsequent decision/update</code></pre>
+            </div>
+            <h2 id="technology-summary-ordinary-reads">Technology summary: ordinary reads</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Database</th>
+                        <th>Ordinary <code>SELECT</code> behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>MVCC read; no blocking shared row lock like <code>FOR SHARE</code></td>
+                    </tr>
+                    <tr>
+                        <td>MySQL/InnoDB</td>
+                        <td>Usually consistent MVCC read</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server pessimistic READ COMMITTED</td>
+                        <td>Generally takes short-duration shared locks</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server with RCSI</td>
+                        <td>Uses row versions for READ COMMITTED reads</td>
+                    </tr>
+                    <tr>
+                        <td>Oracle</td>
+                        <td>Consistent-version read; ordinary readers do not block writers</td>
+                    </tr>
+                    <tr>
+                        <td>SQLite WAL mode</td>
+                        <td>Readers observe snapshots while one writer can append changes</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>PostgreSQL separates ordinary MVCC queries from explicit row-locking clauses. InnoDB similarly distinguishes consistent reads from <code>FOR SHARE</code>/<code>FOR UPDATE</code>. SQL Server can use either shared locks or row versions depending on configuration. Oracle explicitly documents nonblocking ordinary readers and writers.</p>
+            <h2 id="technology-summary-explicit-locking-reads">Technology summary: explicit locking reads</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Engine</th>
+                        <th>Read because data will be used for a decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td><code>SELECT. .. FOR UPDATE</code>, <code>FOR NO KEY UPDATE</code>, <code>FOR SHARE</code>, <code>FOR KEY SHARE</code></td>
+                    </tr>
+                    <tr>
+                        <td>MySQL/InnoDB</td>
+                        <td><code>SELECT. .. FOR UPDATE</code>, <code>SELECT. .. FOR SHARE</code></td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server</td>
+                        <td>Locking isolation or hints such as <code>UPDLOCK</code>; <code>HOLDLOCK</code> when serializable range protection is needed</td>
+                    </tr>
+                    <tr>
+                        <td>Oracle</td>
+                        <td><code>SELECT. .. FOR UPDATE</code></td>
+                    </tr>
+                    <tr>
+                        <td>SQLite</td>
+                        <td>No equivalent row-level <code>SELECT. .. FOR UPDATE</code> model</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The syntax is superficially similar between some engines, but the exact lock modes, ranges, lifetimes, and MVCC interaction differ.</p>
+            <h2 id="a-locking-read-protects-existing-resources-not-necessarily-a-business-rule">A locking read protects existing resources—not necessarily a business rule</h2>
+            <p>This is one of the most important limitations.</p>
+            <p>Suppose the requested reservation is not present in the <code>reservations</code> table:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>room_id</th>
+                        <th>reservation_date</th>
+                        <th>customer_id</th>
+                    </tr>
+                </thead>
+            </table>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM reservations
+WHERE room_id = 7
+  AND reservation_date = DATE '2026-10-15'
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The application concludes:</p>
+            <div>
+                <pre><code class="language-text">The room is available.</code></pre>
+            </div>
+            <p>Another transaction executes the same query.</p>
+            <p>It also returns:</p>
+            <div>
+                <pre><code class="language-text">0 rows</code></pre>
+            </div>
+            <p>What row did either transaction lock?</p>
+            <p>Possibly none.</p>
+            <p>The dangerous resource is:</p>
+            <div>
+                <pre><code class="language-text">"a reservation that does not exist yet"</code></pre>
+            </div>
+            <p>There is no existing row to row-lock.</p>
+            <h2 id="concrete-double-booking-example">Concrete double-booking example</h2>
+            <p>Initial state:</p>
+            <div>
+                <pre><code class="language-text">reservations table:
+
+(no reservation for room 7 on Oct 15)</code></pre>
+            </div>
+            <p>T1 and T2 both query an empty <code>reservations</code> table for the requested key:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>room_id</th>
+                        <th>reservation_date</th>
+                        <th>customer_id</th>
+                    </tr>
+                </thead>
+            </table>
+            <p>T1:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM reservations
+WHERE room_id = 7
+  AND reservation_date = '2026-10-15'
+FOR UPDATE;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>T2 executes the same query and also gets zero rows:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>T1 inserts:</p>
+            <div>
+                <pre><code class="language-sql">INSERT INTO reservations(room_id, reservation_date, customer_id)
+VALUES (7, '2026-10-15', 100);</code></pre>
+            </div>
+            <p>T2 inserts:</p>
+            <div>
+                <pre><code class="language-sql">INSERT INTO reservations(room_id, reservation_date, customer_id)
+VALUES (7, '2026-10-15', 200);</code></pre>
+            </div>
+            <p>If nothing else protects the invariant:</p>
+            <div>
+                <pre><code class="language-text">room 7 is double booked</code></pre>
+            </div>
+            <p>The mistake was assuming:</p>
+            <div>
+                <pre><code class="language-text">FOR UPDATE on zero rows</code></pre>
+            </div>
+            <p>somehow locks:</p>
+            <div>
+                <pre><code class="language-text">"the absence of a row."</code></pre>
+            </div>
+            <p>That is not generally a safe assumption.</p>
+            <h2 id="the-best-solution-for-uniqueness-is-usually-a-constraint">The best solution for uniqueness is usually a constraint</h2>
+            <p>If the business rule is:</p>
+            <div>
+                <pre><code class="language-text">one reservation per room per date</code></pre>
+            </div>
+            <p>represent it directly:</p>
+            <div>
+                <pre><code class="language-sql">CREATE UNIQUE INDEX reservation_room_date_uq
+ON reservations(room_id, reservation_date);</code></pre>
+            </div>
+            <p>Now both transactions may attempt the insert, but the database cannot commit two rows with the same unique key.</p>
+            <p>This is generally much better than:</p>
+            <div>
+                <pre><code class="language-text">SELECT to see whether value exists
+
+then
+
+INSERT if not found</code></pre>
+            </div>
+            <p>because the invariant is enforced where the race actually matters.</p>
+            <p>A useful principle is:</p>
+            <blockquote>
+                <p>If a business invariant can be expressed directly as a database constraint, prefer the constraint over trying to reproduce it with application locking.</p>
+            </blockquote>
+            <h2 id="rows-and-predicates-are-different-things">Rows and predicates are different things</h2>
+            <p>Suppose the rule is more complex:</p>
+            <div>
+                <pre><code class="language-text">no more than 10 active reservations
+for event 42</code></pre>
+            </div>
+            <p>Suppose <code>reservations</code> has nine active rows and one cancelled row for event 42:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>event_id</th>
+                        <th>status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>42</td>
+                        <td>active</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>42</td>
+                        <td>cancelled</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The transaction executes:</p>
+            <div>
+                <pre><code class="language-sql">SELECT COUNT(*)
+FROM reservations
+WHERE event_id = 42
+  AND status = 'active';</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>9</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>and obtains:</p>
+            <div>
+                <pre><code class="language-text">9</code></pre>
+            </div>
+            <p>The logical dependency is not one particular row.</p>
+            <p>It is:</p>
+            <div>
+                <pre><code class="language-text">the entire set of rows satisfying:
+
+event_id = 42
+AND status = 'active'</code></pre>
+            </div>
+            <p>A concurrent transaction can insert a new matching row.</p>
+            <p>So a row-locking solution must somehow protect not only existing rows but the relevant predicate/range.</p>
+            <p>This is where:</p>
+            <div>
+                <pre><code class="language-text">key-range locks
+gap locks
+next-key locks
+Serializable isolation
+predicate/dependency tracking</code></pre>
+            </div>
+            <p>become important.</p>
+            <h2 id="how-innodb-protects-ranges">How InnoDB protects ranges</h2>
+            <p>For many locking range queries under InnoDB, the engine can use:</p>
+            <div>
+                <pre><code class="language-text">record locks
++
+gap locks
+=
+next-key locks</code></pre>
+            </div>
+            <p>Suppose an index contains:</p>
+            <div>
+                <pre><code class="language-text">10
+20
+30</code></pre>
+            </div>
+            <p>and the transaction needs to protect:</p>
+            <div>
+                <pre><code class="language-text">10 &lt; key &lt; 30</code></pre>
+            </div>
+            <p>Locking only existing key:</p>
+            <div>
+                <pre><code class="language-text">20</code></pre>
+            </div>
+            <p>would not stop another transaction inserting:</p>
+            <div>
+                <pre><code class="language-text">25</code></pre>
+            </div>
+            <p>So the engine may also protect the relevant gaps.</p>
+            <p>MySQL documents this behavior for non-unique/range locking searches, where the index range scanned can be protected to block inserts into relevant gaps.</p>
+            <p>This is why InnoDB locking behavior depends strongly on indexes and isolation level.</p>
+            <h2 id="how-sql-server-protects-ranges">How SQL Server protects ranges</h2>
+            <p>At <code>SERIALIZABLE</code> isolation, SQL Server can use key-range locks.</p>
+            <p>Suppose the sample table has one October reservation and one September reservation:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>room_id</th>
+                        <th>reservation_date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>10</td>
+                        <td>7</td>
+                        <td>2026-10-15</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>7</td>
+                        <td>2026-09-15</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>T1 executes:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM reservations
+WHERE room_id = 7
+  AND reservation_date BETWEEN '2026-10-01'
+                           AND '2026-10-31';</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>reservation_id</th>
+                        <th>room_id</th>
+                        <th>reservation_date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>10</td>
+                        <td>7</td>
+                        <td>2026-10-15</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Protecting only existing rows would not prevent a new October reservation.</p>
+            <p>Serializable range locking protects the relevant key interval.</p>
+            <p>Microsoft describes key-range locks specifically as the mechanism preventing another transaction from inserting rows that would qualify for a serializable transaction's query.</p>
+            <p>So the lock is conceptually on:</p>
+            <div>
+                <pre><code class="language-text">existing keys
++
+relevant space between those keys</code></pre>
+            </div>
+            <p>rather than only existing rows.</p>
+            <h2 id="postgresql-serializable-solves-this-differently">PostgreSQL Serializable solves this differently</h2>
+            <p>PostgreSQL does not implement Serializable merely by turning every predicate into a traditional blocking range lock.</p>
+            <p>Its Serializable level uses Serializable Snapshot Isolation (SSI).</p>
+            <p>The database can allow transactions to execute concurrently using snapshots while tracking dependencies between their reads and concurrent writes.</p>
+            <p>If allowing every transaction to commit would create a non-serializable result, PostgreSQL aborts one of them.</p>
+            <p>Therefore the solution can look like:</p>
+            <div>
+                <pre><code class="language-text">SQL Server:
+    block conflicting range operation
+
+InnoDB:
+    record/gap/next-key locking
+
+PostgreSQL Serializable:
+    track dependency
+    detect dangerous structure
+    abort/retry</code></pre>
+            </div>
+            <p>All three are trying to protect the same logical property through different mechanisms.</p>
+            <h2 id="locks-exist-at-different-granularities">Locks exist at different granularities</h2>
+            <p>A resource does not necessarily mean:</p>
+            <div>
+                <pre><code class="language-text">one row</code></pre>
+            </div>
+            <p>Databases can lock or otherwise protect:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Granularity</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Row / tuple</td>
+                        <td>One customer</td>
+                    </tr>
+                    <tr>
+                        <td>Index key</td>
+                        <td>One indexed value</td>
+                    </tr>
+                    <tr>
+                        <td>Key range / gap</td>
+                        <td>Values between existing index entries</td>
+                    </tr>
+                    <tr>
+                        <td>Page</td>
+                        <td>A group of records</td>
+                    </tr>
+                    <tr>
+                        <td>Table</td>
+                        <td>Entire table</td>
+                    </tr>
+                    <tr>
+                        <td>Schema / metadata</td>
+                        <td>Table definition</td>
+                    </tr>
+                    <tr>
+                        <td>Transaction ID</td>
+                        <td>Another transaction's unresolved state</td>
+                    </tr>
+                    <tr>
+                        <td>File/database</td>
+                        <td>SQLite concurrency coordination</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>So when someone says:</p>
+            <blockquote>
+                <p>"Transaction T1 has an exclusive lock. "</p>
+            </blockquote>
+            <p>the next question should be:</p>
+            <blockquote>
+                <p>Exclusive lock on what?</p>
+            </blockquote>
+            <p>Granularity determines how much unrelated work can proceed concurrently.</p>
+            <h2 id="why-intention-locks-exist">Why intention locks exist</h2>
+            <p>Suppose a database supports both:</p>
+            <div>
+                <pre><code class="language-text">row locks</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">table locks</code></pre>
+            </div>
+            <p>T1 holds:</p>
+            <div>
+                <pre><code class="language-text">X(row 100)</code></pre>
+            </div>
+            <p>T2 now requests:</p>
+            <div>
+                <pre><code class="language-text">X(entire table)</code></pre>
+            </div>
+            <p>The lock manager needs an efficient way to notice that some lower-level resource inside the table is already protected.</p>
+            <p>Scanning millions of row locks every time somebody requests a table lock would be expensive.</p>
+            <p>This is the purpose of intention locks.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">IX(table)
+    │
+    └── X(row 100)</code></pre>
+            </div>
+            <p>The table-level <code>IX</code> does not mean:</p>
+            <div>
+                <pre><code class="language-text">the whole table is exclusively locked</code></pre>
+            </div>
+            <p>It means approximately:</p>
+            <blockquote>
+                <p>"This transaction has or intends to acquire exclusive locks on resources below this point in the hierarchy. "</p>
+            </blockquote>
+            <p>SQL Server explicitly exposes modes such as <code>IS</code>, <code>IX</code>, and <code>SIX</code> for this lock hierarchy.</p>
+            <p>InnoDB similarly uses intention locks as part of row/table lock coordination.</p>
+            <h2 id="sql-server-compatibility-is-therefore-richer-than-s-x">SQL Server compatibility is therefore richer than S/X</h2>
+            <p>The simple matrix:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Held</th>
+                        <th><code>S</code></th>
+                        <th><code>X</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>S</code></td>
+                        <td>Yes</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><code>X</code></td>
+                        <td>No</td>
+                        <td>No</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>is useful for learning.</p>
+            <p>Real SQL Server locking has a substantially larger matrix including:</p>
+            <div>
+                <pre><code class="language-text">IS
+IX
+S
+U
+SIX
+X
+range locks
+schema locks
+...</code></pre>
+            </div>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">S + U = compatible
+
+U + U = conflict</code></pre>
+            </div>
+            <p>This is intentional.</p>
+            <p>It lets many normal readers coexist while reserving only one transaction as the likely updater.</p>
+            <p>Microsoft publishes the full compatibility matrix for these modes.</p>
+            <h2 id="lock-upgrades-can-produce-deadlocks">Lock upgrades can produce deadlocks</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">T1 obtains S(A)
+T2 obtains S(A)</code></pre>
+            </div>
+            <p>That is fine.</p>
+            <p>Then both decide to update <code>A</code>.</p>
+            <p>T1 requests:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>but T2 still owns:</p>
+            <div>
+                <pre><code class="language-text">S(A)</code></pre>
+            </div>
+            <p>so T1 waits.</p>
+            <p>T2 requests:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>but T1 still owns:</p>
+            <div>
+                <pre><code class="language-text">S(A)</code></pre>
+            </div>
+            <p>so T2 waits.</p>
+            <p>Now:</p>
+            <div>
+                <pre><code class="language-text">T1 waits for T2
+T2 waits for T1</code></pre>
+            </div>
+            <p>Deadlock.</p>
+            <p>This is one reason that if an application already knows:</p>
+            <div>
+                <pre><code class="language-text">"I will probably update this row"</code></pre>
+            </div>
+            <p>using an update-oriented locking mode from the beginning can be safer than first obtaining a general read lock and attempting to upgrade it later.</p>
+            <p>SQL Server's <code>UPDLOCK</code> exists partly for this exact pattern.</p>
+            <h2 id="lock-duration-matters-as-much-as-lock-type">Lock duration matters as much as lock type</h2>
+            <p>Suppose T1 obtains an exclusive lock for:</p>
+            <div>
+                <pre><code class="language-text">2 milliseconds</code></pre>
+            </div>
+            <p>Contention may be insignificant.</p>
+            <p>The same lock held for:</p>
+            <div>
+                <pre><code class="language-text">30 seconds</code></pre>
+            </div>
+            <p>can create a queue of waiting transactions.</p>
+            <p>Therefore these questions belong together:</p>
+            <div>
+                <pre><code class="language-text">What lock?
+
+On what resource?
+
+At what granularity?
+
+For how long?</code></pre>
+            </div>
+            <p>A transaction such as:</p>
+            <div>
+                <pre><code class="language-text">BEGIN
+
+lock rows
+
+call external HTTP API
+
+wait 5 seconds
+
+perform more SQL
+
+COMMIT</code></pre>
+            </div>
+            <p>keeps concurrency-sensitive resources occupied while no useful database work is occurring.</p>
+            <p>Keep transactional sections short.</p>
+            <h2 id="nowait-changes-waiting-behavior-not-compatibility"><code>NOWAIT</code> changes waiting behavior, not compatibility</h2>
+            <p>Suppose a row is already locked.</p>
+            <p>Normally:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE;</code></pre>
+            </div>
+            <p>may wait.</p>
+            <p>PostgreSQL can instead use:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE NOWAIT;</code></pre>
+            </div>
+            <p>If the row cannot immediately be locked, the statement returns an error rather than waiting. PostgreSQL documents <code>NOWAIT</code> as exactly this alternative to waiting for a conflicting row lock.</p>
+            <p>The important point is:</p>
+            <div>
+                <pre><code class="language-text">NOWAIT does not make incompatible locks compatible.</code></pre>
+            </div>
+            <p>It changes:</p>
+            <div>
+                <pre><code class="language-text">what happens when a conflict is encountered</code></pre>
+            </div>
+            <p>from:</p>
+            <div>
+                <pre><code class="language-text">wait</code></pre>
+            </div>
+            <p>to:</p>
+            <div>
+                <pre><code class="language-text">fail immediately</code></pre>
+            </div>
+            <h2 id="skip-locked"><code>SKIP LOCKED</code></h2>
+            <p>PostgreSQL and MySQL also support patterns such as:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE SKIP LOCKED;</code></pre>
+            </div>
+            <p>Instead of waiting for already-locked rows, the query skips them.</p>
+            <p>This can be very useful for work queues.</p>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">job 1
+job 2
+job 3
+job 4</code></pre>
+            </div>
+            <p>Worker A locks:</p>
+            <div>
+                <pre><code class="language-text">job 1</code></pre>
+            </div>
+            <p>Worker B executes:</p>
+            <div>
+                <pre><code class="language-text">FOR UPDATE SKIP LOCKED</code></pre>
+            </div>
+            <p>and can select:</p>
+            <div>
+                <pre><code class="language-text">job 2</code></pre>
+            </div>
+            <p>instead of waiting behind Worker A.</p>
+            <p>PostgreSQL explicitly warns that <code>SKIP LOCKED</code> gives an intentionally inconsistent view and is suitable for queue-like workloads rather than general-purpose transactional reads.</p>
+            <h2 id="queue-example">Queue example</h2>
+            <p>A PostgreSQL worker might use:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+SELECT job_id
+FROM jobs
+WHERE status = 'pending'
+ORDER BY job_id
+FOR UPDATE SKIP LOCKED
+LIMIT 1;</code></pre>
+            </div>
+            <p>Suppose the pending queue contains jobs 100, 101, and 102, and another worker holds the lock on job 100:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                        <th>status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>pending (locked)</td>
+                    </tr>
+                    <tr>
+                        <td>101</td>
+                        <td>pending</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>pending</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Worker 1 gets:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Worker 2 skips that row and gets:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>With job 100 locked by another worker, the sample queue is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                        <th>status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                        <td>pending (locked)</td>
+                    </tr>
+                    <tr>
+                        <td>101</td>
+                        <td>pending</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>pending</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Worker 1 returns:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>100</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Worker 2 skips it and returns:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>job_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Suppose Worker 1 obtains:</p>
+            <div>
+                <pre><code class="language-text">job 100</code></pre>
+            </div>
+            <p>Worker 2 runs the same statement and skips job <code>100</code> because it is locked.</p>
+            <p>It obtains:</p>
+            <div>
+                <pre><code class="language-text">job 101</code></pre>
+            </div>
+            <p>Now two workers can process different jobs concurrently.</p>
+            <p>This is a good example of deliberately using locking semantics to partition work among consumers.</p>
+            <p>It is very different from using locking to obtain a consistent report.</p>
+            <h2 id="sqlite-uses-a-different-concurrency-model">SQLite uses a different concurrency model</h2>
+            <p>SQLite should not be forced into the row-lock model used by client/server databases.</p>
+            <p>Its concurrency control is built around the database file, journaling mode, and pager/WAL locking.</p>
+            <p>SQLite explicitly states that there can normally be only one writer at a time to a database, although multiple connections can exist and multiple readers can operate concurrently.</p>
+            <p>Therefore there is no ordinary equivalent of:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ...
+FOR UPDATE;</code></pre>
+            </div>
+            <p>that gives application-controlled row-level locking comparable to PostgreSQL or InnoDB.</p>
+            <h2 id="sqlite-rollback-mode-versus-wal">SQLite rollback mode versus WAL</h2>
+            <p>In traditional rollback-journal mode, SQLite coordinates access to the database file through states such as:</p>
+            <div>
+                <pre><code class="language-text">SHARED
+RESERVED
+PENDING
+EXCLUSIVE</code></pre>
+            </div>
+            <p>Its locking documentation describes <code>SHARED</code> as permitting multiple readers and <code>EXCLUSIVE</code> as providing exclusive access needed for writing the database file.</p>
+            <p>WAL mode changes the concurrency picture.</p>
+            <p>Readers can continue to access their snapshot while a writer appends to the write-ahead log.</p>
+            <p>SQLite documents:</p>
+            <div>
+                <pre><code class="language-text">readers do not block the writer
+
+writer does not block existing readers
+
+but only one writer can append at a time</code></pre>
+            </div>
+            <p>in ordinary WAL operation.</p>
+            <p>This is conceptually much closer to MVCC/snapshot thinking than to row-level <code>S/X</code> locking.</p>
+            <h2 id="technology-comparison">Technology comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technology</th>
+                        <th>Ordinary reader</th>
+                        <th>Same-row writer conflict</th>
+                        <th>Explicit locking read</th>
+                        <th>Predicate/range strategy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>MVCC</td>
+                        <td>Writers/lockers can block</td>
+                        <td><code>FOR UPDATE</code>, <code>FOR SHARE</code>, etc.</td>
+                        <td>Serializable SSI dependency tracking rather than traditional blocking range locks</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL/InnoDB</td>
+                        <td>MVCC consistent read</td>
+                        <td>Writers conflict through record/index locks</td>
+                        <td><code>FOR UPDATE</code>, <code>FOR SHARE</code></td>
+                        <td>Gap/next-key locking for relevant locking ranges</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server pessimistic</td>
+                        <td>Shared locks</td>
+                        <td>Exclusive/update locking</td>
+                        <td><code>UPDLOCK</code>, isolation/hints</td>
+                        <td>Key-range locks at Serializable</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server RCSI</td>
+                        <td>Row versions</td>
+                        <td>Writes still require modification coordination</td>
+                        <td>Lock hints can explicitly request pessimistic locks</td>
+                        <td>Serializable/locking hints when required</td>
+                    </tr>
+                    <tr>
+                        <td>Oracle</td>
+                        <td>Consistent versions</td>
+                        <td>Same-row writers block</td>
+                        <td><code>FOR UPDATE</code></td>
+                        <td>Serializable/versioning and application/schema design</td>
+                    </tr>
+                    <tr>
+                        <td>SQLite</td>
+                        <td>File/WAL snapshot mechanisms</td>
+                        <td>One normal writer at a time</td>
+                        <td>No comparable row-level <code>FOR UPDATE</code> mechanism</td>
+                        <td>Database/WAL-level concurrency model</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="do-not-use-locks-where-an-atomic-statement-is-simpler">Do not use locks where an atomic statement is simpler</h2>
+            <p>Suppose inventory contains:</p>
+            <div>
+                <pre><code class="language-text">stock = 1</code></pre>
+            </div>
+            <p>A naive application does:</p>
+            <div>
+                <pre><code class="language-sql">SELECT stock
+FROM products
+WHERE product_id = 42;</code></pre>
+            </div>
+            <p>Then in application code:</p>
+            <div>
+                <pre><code class="language-text">if stock &gt; 0:
+    stock = stock - 1</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET stock = ?
+WHERE product_id = 42;</code></pre>
+            </div>
+            <p>This creates a read/decision/write race.</p>
+            <p>You might solve it with a locking read.</p>
+            <p>But an even simpler solution can be:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET stock = stock - 1
+WHERE product_id = 42
+  AND stock &gt; 0;</code></pre>
+            </div>
+            <p>Then inspect:</p>
+            <div>
+                <pre><code class="language-text">affected rows</code></pre>
+            </div>
+            <p>If:</p>
+            <div>
+                <pre><code class="language-text">1</code></pre>
+            </div>
+            <p>the reservation succeeded.</p>
+            <p>If:</p>
+            <div>
+                <pre><code class="language-text">0</code></pre>
+            </div>
+            <p>there was no stock to reserve.</p>
+            <p>Atomic SQL can sometimes eliminate the need for explicit application-managed locking.</p>
+            <h2 id="locks-and-constraints-solve-different-problems">Locks and constraints solve different problems</h2>
+            <p>Suppose the invariant is:</p>
+            <div>
+                <pre><code class="language-text">email must be unique</code></pre>
+            </div>
+            <p>Use:</p>
+            <div>
+                <pre><code class="language-sql">UNIQUE(email)</code></pre>
+            </div>
+            <p>Suppose the invariant is:</p>
+            <div>
+                <pre><code class="language-text">balance must never be negative</code></pre>
+            </div>
+            <p>where the business model permits direct enforcement:</p>
+            <div>
+                <pre><code class="language-sql">CHECK (balance &gt;= 0)</code></pre>
+            </div>
+            <p>Suppose the operation requires:</p>
+            <div>
+                <pre><code class="language-text">read several existing rows
+make a business decision
+update them consistently</code></pre>
+            </div>
+            <p>Then explicit locking or Serializable isolation may be appropriate.</p>
+            <p>A useful hierarchy is:</p>
+            <div>
+                <pre><code class="language-text">Can a constraint enforce it?
+
+        ↓ no
+
+Can one atomic SQL statement enforce it?
+
+        ↓ no
+
+Can a simple well-defined row locking protocol enforce it?
+
+        ↓ no
+
+Do we need predicate/range protection
+or Serializable isolation?</code></pre>
+            </div>
+            <p>This tends to produce simpler systems than reflexively adding <code>FOR UPDATE</code> everywhere.</p>
+            <h2 id="shared-and-exclusive-locks-do-not-themselves-guarantee-serializability">Shared and exclusive locks do not themselves guarantee serializability</h2>
+            <p>Another common mistake is:</p>
+            <div>
+                <pre><code class="language-text">we use S and X locks
+
+therefore
+
+our execution must be serializable</code></pre>
+            </div>
+            <p>Not necessarily.</p>
+            <p>The protocol governing when locks are acquired and released matters.</p>
+            <p>For example, if a transaction:</p>
+            <div>
+                <pre><code class="language-text">lock A
+read A
+unlock A
+
+later:
+
+lock B
+write B</code></pre>
+            </div>
+            <p>another transaction may interleave conflicting operations in a way that creates a non-serializable cycle.</p>
+            <p>This is exactly why Two-Phase Locking (2PL) adds the rule:</p>
+            <div>
+                <pre><code class="language-text">once a transaction begins releasing locks,
+it may not acquire new ones</code></pre>
+            </div>
+            <p>Lock modes answer:</p>
+            <blockquote>
+                <p>"Which operations conflict? "</p>
+            </blockquote>
+            <p>2PL answers:</p>
+            <blockquote>
+                <p>"In what acquisition/release pattern must those locks be used to guarantee conflict serializability? "</p>
+            </blockquote>
+            <p>These are separate concepts.</p>
+            <h2 id="shared-exclusive-locking-and-deadlocks">Shared/exclusive locking and deadlocks</h2>
+            <p>Locks solve one concurrency problem but create another possibility:</p>
+            <div>
+                <pre><code class="language-text">waiting cycles</code></pre>
+            </div>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">T1 holds X(A)
+T2 holds X(B)</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-text">T1 requests X(B)
+T2 requests X(A)</code></pre>
+            </div>
+            <p>Now:</p>
+            <div>
+                <pre><code class="language-text">T1 → T2
+T2 → T1</code></pre>
+            </div>
+            <p>Deadlock.</p>
+            <p>The fact that the locks behaved correctly did not malfunction.</p>
+            <p>The locks successfully prevented conflicting operations.</p>
+            <p>The deadlock occurred because the transactions acquired resources in opposite orders.</p>
+            <p>Use a deterministic acquisition order where practical and retry deadlock victims.</p>
+            <h2 id="locks-waits-and-timeouts-are-different-concepts">Locks, waits, and timeouts are different concepts</h2>
+            <p>If T1 holds:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>and T2 requests:</p>
+            <div>
+                <pre><code class="language-text">X(A)</code></pre>
+            </div>
+            <p>T2 may wait.</p>
+            <p>That is ordinary lock contention.</p>
+            <p>If:</p>
+            <div>
+                <pre><code class="language-text">T1 waits for T2
+T2 waits for T1</code></pre>
+            </div>
+            <p>there is a deadlock.</p>
+            <p>If T2 has merely waited longer than the configured limit:</p>
+            <div>
+                <pre><code class="language-text">lock timeout</code></pre>
+            </div>
+            <p>may occur even without a deadlock.</p>
+            <p>So distinguish:</p>
+            <div>
+                <pre><code class="language-text">lock conflict
+    ↓
+wait
+
+circular wait
+    ↓
+deadlock
+
+wait exceeds policy
+    ↓
+timeout</code></pre>
+            </div>
+            <p>Those are three different states.</p>
+            <h2 id="what-to-inspect-in-production">What to inspect in production</h2>
+            <p>When investigating locking, ask:</p>
+            <div>
+                <pre><code class="language-text">What resource is locked?
+
+What lock mode exists?
+
+What mode is being requested?
+
+Which session owns it?
+
+Which session is waiting?
+
+How long has the transaction been open?
+
+What SQL acquired the lock?
+
+What indexes/ranges did the query scan?
+
+Is this an ordinary MVCC read
+or an explicit locking read?</code></pre>
+            </div>
+            <p>For PostgreSQL, relevant tools include:</p>
+            <div>
+                <pre><code class="language-text">pg_stat_activity
+pg_locks
+pg_blocking_pids()</code></pre>
+            </div>
+            <p>For InnoDB:</p>
+            <div>
+                <pre><code class="language-text">Performance Schema lock tables
+SHOW ENGINE INNODB STATUS</code></pre>
+            </div>
+            <p>For SQL Server:</p>
+            <div>
+                <pre><code class="language-text">dynamic management views
+Extended Events
+deadlock graphs</code></pre>
+            </div>
+            <p>The underlying question is always:</p>
+            <blockquote>
+                <p>Which incompatible dependencies exist, and why did these statements request them?</p>
+            </blockquote>
+            <h2 id="practical-decision-table">Practical decision table</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Situation</th>
+                        <th>Good first mechanism to consider</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Reporting/read-only query</td>
+                        <td>Ordinary MVCC/versioned read</td>
+                    </tr>
+                    <tr>
+                        <td>Read row and immediately update it</td>
+                        <td><code>FOR UPDATE</code> / <code>UPDLOCK</code> / equivalent</td>
+                    </tr>
+                    <tr>
+                        <td>Several readers must coexist but writers must wait</td>
+                        <td>Shared locking read where appropriate</td>
+                    </tr>
+                    <tr>
+                        <td>Unique value</td>
+                        <td><code>UNIQUE</code> constraint</td>
+                    </tr>
+                    <tr>
+                        <td>Reserve inventory counter</td>
+                        <td>Atomic conditional <code>UPDATE</code></td>
+                    </tr>
+                    <tr>
+                        <td>Existing row represents the logical resource</td>
+                        <td>Row locking can work well</td>
+                    </tr>
+                    <tr>
+                        <td>Logical resource does not yet exist</td>
+                        <td>Constraint, range protection, parent-row lock, or Serializable design</td>
+                    </tr>
+                    <tr>
+                        <td>Predicate covers possible future rows</td>
+                        <td>Range/gap locking or Serializable isolation</td>
+                    </tr>
+                    <tr>
+                        <td>Worker queue</td>
+                        <td><code>FOR UPDATE SKIP LOCKED</code> where supported</td>
+                    </tr>
+                    <tr>
+                        <td>Long read should not block writers</td>
+                        <td>MVCC / row-versioning</td>
+                    </tr>
+                    <tr>
+                        <td>Multiple resources need locks</td>
+                        <td>Deterministic lock order</td>
+                    </tr>
+                    <tr>
+                        <td>Cross-row business invariant</td>
+                        <td>Explicit protocol or Serializable isolation</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="final-mental-model">Final mental model</h2>
+            <p>Do not memorize:</p>
+            <div>
+                <pre><code class="language-text">SELECT = S
+UPDATE = X</code></pre>
+            </div>
+            <p>Memorize the abstract rule first:</p>
+            <div>
+                <pre><code class="language-text">Shared:
+    multiple compatible users may coexist.
+
+Exclusive:
+    conflicting access must be excluded.</code></pre>
+            </div>
+            <p>Then ask how the engine implements ordinary reads:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL
+    MVCC
+
+MySQL/InnoDB
+    MVCC consistent reads
+
+SQL Server
+    S locks or row versions,
+    depending on configuration
+
+Oracle
+    consistent versions
+
+SQLite
+    database/WAL-level concurrency</code></pre>
+            </div>
+            <p>Then distinguish an ordinary observation from a locking decision:</p>
+            <div>
+                <pre><code class="language-text">ordinary SELECT:
+    "show me data I am allowed to see"
+
+locking SELECT:
+    "I am basing a transactional decision
+     on this resource, so protect it"</code></pre>
+            </div>
+            <p>Finally, remember that:</p>
+            <div>
+                <pre><code class="language-text">row lock
+≠
+predicate lock
+≠
+unique constraint
+≠
+Serializable isolation</code></pre>
+            </div>
+            <p>A row lock protects a particular lockable resource.</p>
+            <p>A business rule may instead depend on:</p>
+            <div>
+                <pre><code class="language-text">a row that does not yet exist
+
+an index range
+
+several rows
+
+a count
+
+several tables
+
+an aggregate condition</code></pre>
+            </div>
+            <p>and those require different mechanisms.</p>
+            <p>The most useful question in production is therefore not:</p>
+            <blockquote>
+                <p>"Does this query take an S lock or an X lock? "</p>
+            </blockquote>
+            <p>It is:</p>
+            <blockquote>
+                <p>What logical invariant is this transaction relying on, which physical or logical resources protect that invariant, and how does this database engine handle concurrent readers and writers of those resources?</p>
+            </blockquote>
+            <p>That connects the simple S/X compatibility matrix to real database design.</p>
+            <h2 id="references">References</h2>
+            <p>PostgreSQL's current locking documentation describes its row-level lock modes, their conflicts, transaction lifetime, and the important fact that row locks do not block ordinary data querying.</p>
+            <p>MySQL's current InnoDB documentation distinguishes ordinary MVCC consistent reads from <code>FOR SHARE</code> and <code>FOR UPDATE</code> locking reads and explains record, range, gap, and next-key locking.</p>
+            <p>Microsoft's SQL Server documentation describes shared, update, exclusive, intention, schema, and key-range locks; row-versioned alternatives; <code>UPDLOCK</code>; <code>HOLDLOCK</code>; and modern optimized locking.</p>
+            <p>Oracle's concurrency documentation describes its consistent-read model, same-row writer conflicts, nonblocking ordinary readers/writers, and explicit <code>SELECT. .. FOR UPDATE</code> behavior.</p>
+            <p>SQLite's concurrency documentation explains its database/file locking model, single-writer behavior, and WAL snapshot concurrency rather than row-level <code>FOR UPDATE</code> locking.</p>
         </article-section>
     </div>
     </main>

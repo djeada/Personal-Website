@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/1_root_and_extrema_finding/golden_ratio_search",
             "description": "The Golden Ratio Search is a technique employed for locating the extremum (minimum or maximum) of a unimodal function over a given interval.",
-            "dateModified": "2026-09-28",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/805e7e1d-4f17-457f-88e9-3e26753d5f50-3bed0a1b76.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="The Golden Ratio Search is a technique employed for locating the extremum (minimum or maximum) of a unimodal function over a given interval." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/805e7e1d-4f17-457f-88e9-3e26753d5f50-3bed0a1b76.webp" property="og:image" />
-    <meta content="2026-09-28" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -234,7 +234,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 28, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -268,7 +268,7 @@ messageStyle: "none"
             <p>To apply the Golden Ratio Search for minimization, we start with an interval $[a,b]$ and choose two internal points $x_1$ and $x_2$ such that:</p>
             <p>$$x_1 = b - \frac{b-a}{\phi}, \quad x_2 = a + \frac{b-a}{\phi}.$$</p>
             <p>It follows from this construction that:</p>
-            <p>$$\frac{x_2 - a}{b - x_1} = \phi.$$</p>
+            <p>$$\frac{b - a}{x_2 - a} = \phi.$$</p>
             <p>Because of how $\phi$ partitions the interval, the ratio of the smaller subinterval to the larger subinterval is equal to $1/\phi$, ensuring a consistent and balanced reduction.</p>
             <h3 id="derivation">Derivation</h3>
             <p>I. <strong>Unimodality Assumption:</strong></p>
@@ -302,18 +302,20 @@ messageStyle: "none"
                 <li>Set iteration counter $k = 0$.</li>
             </ul>
             <p><strong>Iteration:</strong></p>
-            <p>I. Compute:</p>
-            <p>$$x_1 = b - \frac{b-a}{\phi}, \quad x_2 = a + \frac{b-a}{\phi}.$$</p>
-            <p>II. Evaluate $f(x_1)$ and $f(x_2)$.</p>
+            <p>I. Compute (only before the first iteration; later iterations reuse a point, see step III):</p>
+            <p>$$x_1 = b - \frac{b-a}{\phi}, \quad x_2 = a + \frac{b-a}{\phi},$$</p>
+            <p>and evaluate $f(x_1)$ and $f(x_2)$.</p>
+            <p>II. If $f(x_1) = f(x_2)$, the comparison gives no information about which side to discard. Stop and return $\frac{a+b}{2}$ (this is what the implementation does).</p>
             <p>III. If $f(x_1) &gt; f(x_2)$:</p>
-            <p>Set $a = x_1$.</p>
+            <p>Set $a = x_1$, $x_1 = x_2$, $f(x_1) = f(x_2)$, and compute a new $x_2 = a + \frac{b-a}{\phi}$.</p>
             <p>(The minimum is in the interval $[x_1,b]$)</p>
-            <p>Else:</p>
-            <p>Set $b = x_2$.</p>
+            <p>Else ($f(x_1) &lt; f(x_2)$):</p>
+            <p>Set $b = x_2$, $x_2 = x_1$, $f(x_2) = f(x_1)$, and compute a new $x_1 = b - \frac{b-a}{\phi}$.</p>
             <p>(The minimum is in the interval $[a,x_2]$)</p>
-            <p>IV. If $|b-a| &lt; \epsilon$ or $k \geq n_{\max}$:</p>
-            <p>Stop and approximate the minimum as $\frac{a+b}{2}$.</p>
-            <p>V. Increment iteration counter $k = k+1$ and go back to step I.</p>
+            <p>Because of the golden ratio, the surviving interior point is exactly one of the two interior points of the smaller interval, so only <strong>one new function evaluation</strong> is needed per iteration.</p>
+            <p>IV. If $|b-a| &lt; \epsilon$:</p>
+            <p>Stop and approximate the minimum as $\frac{a+b}{2}$. If $k \geq n_{\max}$ without reaching this, the implementation raises an error.</p>
+            <p>V. Otherwise evaluate $f$ at the new interior point, increment $k = k+1$ and go back to step II.</p>
             <p><strong>Output:</strong></p>
             <ul>
                 <li>Approximate location of the minimum.</li>
@@ -333,26 +335,24 @@ messageStyle: "none"
                 $$</p>
             <p>$$x_2 = a + \frac{b-a}{\phi} = -2 + \frac{4}{1.618} \approx - 2 + 2.472 = 0.472.$$</p>
             <p>Evaluate:</p>
-            <p>$$f(x_1) = (-0.472)^2 \approx 0.2225, \quad f(x_2) = (0.472)^2 \approx 0.2225.$$</p>
-            <p>Since $f(x_1) = f(x_2)$, we can choose either subinterval. Let’s choose $[a,b] = [-2, x_2] = [-2, 0.472]$ for simplicity. So:</p>
+            <p>$$f(x_1) = (-0.472)^2 \approx 0.2228, \quad f(x_2) = (0.472)^2 \approx 0.2228.$$</p>
+            <p>Since $f(x_1) = f(x_2)$, the comparison cannot rule out either side (the implementation would stop here and return the midpoint $0$, which happens to be exact for this symmetric case). To illustrate the iteration, let’s instead choose $[a,b] = [-2, x_2] = [-2, 0.472]$. So:</p>
             <p>$$b = 0.472.$$</p>
             <p><strong>Iteration 2:</strong></p>
             <p>New interval: $[a,b] = [-2,0.472]$</p>
             <p>Compute new points:</p>
             <p>$$
                 x_1 = b - \frac{b-a}{\phi} = 0.472 - \frac{0.472 - (-2)}{1.618} = 0.472 -
-                \frac{2.472}{1.618} \approx 0.472 - 1.526 \approx - 1.054.
+                \frac{2.472}{1.618} \approx 0.472 - 1.528 \approx - 1.056.
                 $$</p>
-            <p>$$x_2 = a + \frac{b-a}{\phi} = -2 + \frac{2.472}{1.618} \approx - 2 + 1.526 = -0.474.$$</p>
+            <p>$$x_2 = a + \frac{b-a}{\phi} = -2 + \frac{2.472}{1.618} \approx - 2 + 1.528 = -0.472.$$</p>
             <p>Evaluate:</p>
-            <p>$$f(x_1) = (-1.054)^2 \approx 1.110, \quad f(x_2) = (-0.474)^2 \approx 0.224.$$</p>
+            <p>$$f(x_1) = (-1.056)^2 \approx 1.115, \quad f(x_2) = (-0.472)^2 \approx 0.223.$$</p>
             <p>Compare:</p>
-            <p>$$f(x_1) = 1.110, \quad f(x_2) = 0.224.$$</p>
-            <p>Since $f(x_1) &gt; f(x_2)$, the minimum lies in $[x_1,b] = [-1.054,0.472]$? Actually, check logic:</p>
-            <p>We found $f(x_1) &gt; f(x_2)$, which means the smaller value is at $x_2$. Thus, we keep the interval on the side of $x_2$ because that is where the minimum is. According to the rules:</p>
-            <p>If $f(x_1) &gt; f(x_2)$, we set:</p>
-            <p>$$a = x_1 = -1.054$$</p>
-            <p>maintaining $[a,b] = [-1.054, 0.472]$.</p>
+            <p>$$f(x_1) = 1.115, \quad f(x_2) = 0.223.$$</p>
+            <p>Since $f(x_1) &gt; f(x_2)$, the minimum lies in $[x_1,b]$, so we set:</p>
+            <p>$$a = x_1 = -1.056$$</p>
+            <p>giving $[a,b] = [-1.056, 0.472]$. The old $x_2 = -0.472$ is also an interior point of the new interval (it becomes the new $x_1$), so its value $f(-0.472)$ is reused and only the new $x_2$ has to be evaluated.</p>
             <p><strong>Subsequent Iterations:</strong></p>
             <p>At each iteration, you would similarly compute new $x_1, x_2$, evaluate $f(x_1)$ and $f(x_2)$, and narrow down the interval. Ultimately, as you continue, the interval will shrink around $x=0$, since $f(x) = x^2$ achieves its minimum at $x=0$.</p>
             <h3 id="advantages">Advantages</h3>
@@ -361,13 +361,14 @@ messageStyle: "none"
                 <li><strong>Guaranteed reduction</strong> of the search interval by approximately $\frac{1}{\phi}$ (the Golden Ratio) in each iteration ensures steady progress toward locating the minimum.</li>
                 <li>The method's <strong>robustness</strong> guarantees convergence to a minimum within the provided interval, assuming the function is unimodal.</li>
                 <li><strong>Simplicity of implementation</strong> makes the algorithm accessible, as it involves straightforward iterative calculations without the need for complex procedures.</li>
+                <li><strong>One function evaluation per iteration</strong>, since one interior point is reused after each reduction, which matters when $f$ is expensive.</li>
             </ol>
             <h3 id="limitations">Limitations</h3>
             <ol>
                 <li><strong>Unimodality required</strong> means the method assumes the function has only one minimum in the interval; multiple minima can lead to convergence to a local minimum or failure to isolate a solution.</li>
                 <li><strong>Initial bracketing</strong> of the interval $[a, b]$ containing the minimum is essential, and determining this interval can be challenging if the function's behavior is poorly understood.</li>
                 <li>The method is <strong>not the fastest</strong> for all problems, particularly when gradient-based methods like Newton’s method or quasi-Newton methods can be used effectively.</li>
-                <li><strong>Slow convergence</strong> can occur in flat regions around the minimum, where reductions per iteration provide limited new information for further narrowing the interval.</li>
+                <li><strong>Limited attainable accuracy and ties</strong> arise because the method only compares function values. Near a smooth minimum $f$ is flat to first order, so $f(x_1)$ and $f(x_2)$ differ by roughly machine precision once $|x - x^*| \lesssim \sqrt{\epsilon_{\text{mach}}} \approx 10^{-8}$ (relative to the scale of $x^*$); asking for a smaller tolerance cannot improve the result and may stop on a tie or follow rounding noise. An exact tie $f(x_1)=f(x_2)$, for example on a constant plateau, carries no information, and the implementation returns the midpoint of the current interval. The interval still shrinks by the same factor $1/\phi$ per iteration, so convergence is never slowed in flat regions; it is the answer that becomes unreliable.</li>
             </ol>
         </article-section>
     </div>

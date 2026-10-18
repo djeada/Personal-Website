@@ -22,8 +22,8 @@
             });
         })();
     </script>
-    <title>Master-Standby Replication | Adam Djellouli</title>
-    <meta content="Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one…" name="description" />
+    <title>Primary–Standby Replication | Adam Djellouli</title>
+    <meta content="Primary–standby replication is a replication topology in which one database server acts as the authoritative writer and one or more standby servers…" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -39,7 +39,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Master-Standby Replication",
+            "headline": "Primary\u2013Standby Replication",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -49,17 +49,17 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication",
-            "description": "Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one\u2026",
-            "dateModified": "2025-05-11",
+            "description": "Primary\u2013standby replication is a replication topology in which one database server acts as the authoritative writer and one or more standby servers\u2026",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
-    <meta content="Master-Standby Replication" property="og:title" />
+    <meta content="Primary–Standby Replication" property="og:title" />
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one…" property="og:description" />
-    <meta content="2025-05-11" property="article:modified_time" />
+    <meta content="Primary–standby replication is a replication topology in which one database server acts as the authoritative writer and one or more standby servers…" property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -106,7 +106,7 @@
         </ul>
     </nav>
     <main class="site-main" id="main-content" tabindex="-1">
-<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Replication</li><li><span aria-current="page">Master-Standby Replication</span></li></ol></div>
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Database Replication</li><li><span aria-current="page">Primary–Standby Replication</span></li></ol></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
     <div id="article-wrapper">
@@ -114,26 +114,106 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#understanding-the-architecture">Understanding the Architecture</a></li>
-                    <li><a href="#the-purpose-of-master-standby-replication">The Purpose of Master-Standby Replication</a></li>
-                    <li><a href="#advantages">Advantages</a></li>
-                    <li><a href="#challenges">Challenges</a></li>
-                    <li><a href="#implementing-in-postgresql">Implementing in PostgreSQL</a>
+                    <li><a href="#what-problem-does-primary-standby-replication-solve">What problem does primary–standby replication solve?</a></li>
+                    <li><a href="#replication-and-failover-are-not-the-same-thing">Replication and failover are not the same thing</a></li>
+                    <li><a href="#follow-one-postgresql-transaction">Follow one PostgreSQL transaction</a></li>
+                    <li><a href="#postgresql-physical-replication-is-wal-replication">PostgreSQL physical replication is WAL replication</a></li>
+                    <li><a href="#receive-write-flush-and-replay-are-different-events">Receive, write, flush, and replay are different events</a></li>
+                    <li><a href="#lsn-postgresql-s-progress-coordinate">LSN: PostgreSQL's progress coordinate</a></li>
+                    <li><a href="#asynchronous-streaming-replication">Asynchronous streaming replication</a></li>
+                    <li><a href="#concrete-stale-read-example">Concrete stale-read example</a></li>
+                    <li><a href="#read-your-writes-consistency">Read-your-writes consistency</a>
                         <ol>
-                            <li><a href="#prerequisites">Prerequisites</a></li>
-                            <li><a href="#configuring-node-1-master">Configuring Node-1 (Master)</a></li>
-                            <li><a href="#configuring-node-2-and-node-3-replicas">Configuring Node-2 and Node-3 (Replicas)</a></li>
-                            <li><a href="#verifying-replication">Verifying Replication</a></li>
-                            <li><a href="#performing-a-fail-over">Performing a Fail-over</a></li>
-                            <li><a href="#optional-replication-slots-highly-recommended">Optional: Replication Slots (Highly Recommended)</a></li>
-                            <li><a href="#extra-hardening-performance-tweaks">Extra Hardening &amp; Performance Tweaks</a></li>
+                            <li><a href="#read-from-the-primary-after-a-write">Read from the primary after a write</a></li>
+                            <li><a href="#return-the-created-object-from-the-write-request">Return the created object from the write request</a></li>
+                            <li><a href="#wait-until-a-standby-reaches-a-known-wal-position">Wait until a standby reaches a known WAL position</a></li>
                         </ol>
                     </li>
+                    <li><a href="#hot-standby">Hot standby</a></li>
+                    <li><a href="#read-scaling">Read scaling</a></li>
+                    <li><a href="#replica-queries-can-compete-with-wal-replay">Replica queries can compete with WAL replay</a></li>
+                    <li><a href="#recovery-conflicts-on-a-hot-standby">Recovery conflicts on a hot standby</a></li>
+                    <li><a href="#hot_standby_feedback">hot_standby_feedback</a></li>
+                    <li><a href="#synchronous-replication-changes-the-commit-point">Synchronous replication changes the commit point</a></li>
+                    <li><a href="#postgresql-synchronous-replication-requires-two-concepts">PostgreSQL synchronous replication requires two concepts</a></li>
+                    <li><a href="#synchronous_commit-levels">synchronous_commit levels</a></li>
+                    <li><a href="#durability-and-read-visibility-are-different">Durability and read visibility are different</a></li>
+                    <li><a href="#remote_apply-and-immediate-standby-reads">remote_apply and immediate standby reads</a></li>
+                    <li><a href="#multiple-synchronous-standbys">Multiple synchronous standbys</a></li>
+                    <li><a href="#synchronous-replication-introduces-an-availability-dependency">Synchronous replication introduces an availability dependency</a></li>
+                    <li><a href="#geographic-synchronous-replication">Geographic synchronous replication</a></li>
+                    <li><a href="#creating-a-standby-why-a-base-backup-is-required">Creating a standby: why a base backup is required</a></li>
+                    <li><a href="#why-arbitrary-filesystem-copies-are-dangerous">Why arbitrary filesystem copies are dangerous</a></li>
+                    <li><a href="#pg_basebackup-r">pg_basebackup -R</a></li>
+                    <li><a href="#do-not-hard-code-example-passwords-into-production-configuration">Do not hard-code example passwords into production configuration</a></li>
+                    <li><a href="#a-clearer-primary-configuration">A clearer primary configuration</a></li>
+                    <li><a href="#wal_keep_size-is-not-the-same-thing-as-min_wal_size-or-max_wal_size">wal_keep_size is not the same thing as min_wal_size or max_wal_size</a>
+                        <ol>
+                            <li><a href="#wal_keep_size">wal_keep_size</a></li>
+                            <li><a href="#min_wal_size-max_wal_size">min_wal_size / max_wal_size</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#replication-slots">Replication slots</a></li>
+                    <li><a href="#the-replication-slot-disk-fill-problem">The replication-slot disk-fill problem</a></li>
+                    <li><a href="#max_slot_wal_keep_size">max_slot_wal_keep_size</a></li>
+                    <li><a href="#a-slot-does-not-mean-the-standby-has-replayed-everything">A slot does not mean "the standby has replayed everything"</a></li>
+                    <li><a href="#monitoring-on-the-primary">Monitoring on the primary</a></li>
+                    <li><a href="#monitoring-on-the-standby">Monitoring on the standby</a></li>
+                    <li><a href="#functional-replication-tests">Functional replication tests</a></li>
+                    <li><a href="#asynchronous-failover-and-data-loss">Asynchronous failover and data loss</a></li>
+                    <li><a href="#failover-has-several-steps">Failover has several steps</a></li>
+                    <li><a href="#promotion">Promotion</a></li>
+                    <li><a href="#split-brain">Split brain</a></li>
+                    <li><a href="#fencing">Fencing</a></li>
+                    <li><a href="#application-redirection">Application redirection</a></li>
+                    <li><a href="#planned-switchover-versus-unplanned-failover">Planned switchover versus unplanned failover</a>
+                        <ol>
+                            <li><a href="#switchover">Switchover</a></li>
+                            <li><a href="#failover">Failover</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#what-happens-to-the-old-primary">What happens to the old primary?</a></li>
+                    <li><a href="#pg_rewind">pg_rewind</a></li>
+                    <li><a href="#replication-timelines">Replication timelines</a></li>
+                    <li><a href="#cascading-replication">Cascading replication</a></li>
+                    <li><a href="#replication-is-not-backup">Replication is not backup</a></li>
+                    <li><a href="#wal-archiving-and-streaming-replication-solve-different-problems">WAL archiving and streaming replication solve different problems</a></li>
+                    <li><a href="#archive_mode-is-not-merely-a-replication-performance-tweak">archive_mode is not merely a replication performance tweak</a></li>
+                    <li><a href="#clock-synchronization">Clock synchronization</a></li>
+                    <li><a href="#avoid-generic-linux-tuning-prescriptions">Avoid generic Linux tuning prescriptions</a></li>
+                    <li><a href="#checkpoint_timeout-is-not-a-standby-catch-up-setting">checkpoint_timeout is not a standby catch-up setting</a></li>
+                    <li><a href="#backup_label-is-not-a-tuning-parameter">backup_label is not a tuning parameter</a></li>
+                    <li><a href="#corrected-postgresql-lab-topology">Corrected PostgreSQL lab topology</a></li>
+                    <li><a href="#step-1-create-a-replication-role">Step 1 — create a replication role</a></li>
+                    <li><a href="#step-2-permit-replication-connections">Step 2 — permit replication connections</a></li>
+                    <li><a href="#step-3-primary-replication-parameters">Step 3 — primary replication parameters</a></li>
+                    <li><a href="#step-4-initialize-each-standby">Step 4 — initialize each standby</a></li>
+                    <li><a href="#step-5-configure-slot-identity-if-used">Step 5 — configure slot identity if used</a></li>
+                    <li><a href="#step-6-start-the-standby">Step 6 — start the standby</a></li>
+                    <li><a href="#step-7-verify-the-pipeline-not-only-connectivity">Step 7 — verify the pipeline, not only connectivity</a></li>
+                    <li><a href="#configuring-synchronous-replication-correctly">Configuring synchronous replication correctly</a></li>
+                    <li><a href="#monitoring-table">Monitoring table</a></li>
+                    <li><a href="#failover-procedure-summary">Failover procedure summary</a></li>
+                    <li><a href="#what-postgresql-alone-does-and-does-not-provide">What PostgreSQL alone does and does not provide</a></li>
+                    <li><a href="#primary-standby-across-technologies">Primary–standby across technologies</a></li>
+                    <li><a href="#advantages-and-limitations">Advantages and limitations</a></li>
+                    <li><a href="#common-misconceptions">Common misconceptions</a></li>
+                    <li><a href="#final-mental-model">Final mental model</a>
+                        <ol>
+                            <li><a href="#where-does-commit-success-occur">Where does COMMIT SUCCESS occur?</a></li>
+                            <li><a href="#where-are-reads-served">Where are reads served?</a></li>
+                            <li><a href="#how-stale-may-standby-reads-be">How stale may standby reads be?</a></li>
+                            <li><a href="#what-happens-when-the-primary-disappears">What happens when the primary disappears?</a></li>
+                            <li><a href="#how-do-we-recover-historical-data">How do we recover historical data?</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Database Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Master Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous and Asynchronous Replication</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Replication: Maintaining Copies of Database Changes</a></li><li><a href="/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi-Primary Replication</a></li><li><a href="/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous and Asynchronous Replication</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -197,6 +277,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -211,7 +297,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -237,6 +322,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -259,6 +350,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -273,6 +370,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -287,6 +389,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -295,7 +430,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -314,236 +449,2053 @@
                         </svg>
                     </button></div>
             </div>
-            <h1>Master-Standby Replication</h1>
-            <p>Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one or more secondary servers called standbys. This setup enhances data availability, fault tolerance, and load balancing within a database system. Standby servers can handle read-only queries and, in case of a master server failure, can be promoted to become the new master, ensuring continuous operation.</p>
-            <h3 id="understanding-the-architecture">Understanding the Architecture</h3>
-            <p>To visualize how Master-Standby replication works, consider the following diagram:</p>
+            <h1>Primary–Standby Replication</h1>
+            <p>Primary–standby replication is a replication topology in which one database server acts as the authoritative writer and one or more standby servers follow the primary's changes.</p>
+            <p>Older material often calls this:</p>
             <div>
-                <pre><code class="language-shell">#
-               +---------------------+
-               |                     |
-               |      Clients        |
-               | (Write &amp; Read Ops)  |
-               |                     |
-               +----------+----------+
-                          |
-           +--------------+--------------+---------------------------------+
-           |                             |                                 |
- Write &amp; Read Operations           Read Operations                   Read Operations
-           |                             |                                 |
-           v                             v                                 v
-+----------+-----------+       +---------+----------+            +---------+----------+
-|                      |       |                    |            |                    |
-|    Master Server     |       |  Standby Server 1  |            |  Standby Server 2  |
-|                      |       |  (Read-Only)       |            |  (Read-Only)       |
-+----------+-----------+       +---------+----------+            +---------+----------+
-           |                             ʌ                                 ʌ
-           |                             |                                 |
-           |                         Replication                       Replication
-           |                             |                                 |
-           +-----------------------------+---------------------------------+</code></pre>
+                <pre><code class="language-text">master–standby
+master–replica
+master–slave</code></pre>
             </div>
-            <p>In this architecture, the master server handles all write operations, such as inserts, updates, and deletes. The standby servers continuously receive data changes from the master to stay synchronized and can serve read-only queries, offloading read traffic from the master. This arrangement not only improves performance but also provides a failover mechanism in case the master server becomes unavailable.</p>
-            <h3 id="the-purpose-of-master-standby-replication">The Purpose of Master-Standby Replication</h3>
-            <p>Master-Standby replication serves several essential purposes in database systems:</p>
-            <ol>
-                <li>By replicating data to standby servers, the system can prevent data loss and minimize downtime during failures. If the master server fails, a standby can be promoted to take over, ensuring uninterrupted service.</li>
-                <li>Offloading read-heavy operations to standby servers distributes the workload more evenly, enhancing performance and scalability. This allows the master server to focus on write operations without being overwhelmed.</li>
-                <li>Regular maintenance tasks, such as backups or software updates, can be performed on the master or standby servers without significant downtime. Standby servers can be updated one at a time, providing continuous service to users.</li>
-                <li>As demand on the database grows, additional standby servers can be added to handle increased read traffic. This horizontal scaling is a cost-effective way to enhance system capacity without overhauling the existing infrastructure.</li>
-            </ol>
-            <h3 id="advantages">Advantages</h3>
-            <p>Implementing Master-Standby replication offers several benefits:</p>
-            <ul>
-                <li>With standby servers acting as backups, the risk of data loss is significantly reduced. In the event of a failure, a standby can quickly take over as the master.</li>
-                <li>Distributing read queries to standby servers alleviates the load on the master server, resulting in faster response times for users.</li>
-                <li>The ability to promote a standby server to master simplifies the failover process, minimizing service interruptions and ensuring business continuity.</li>
-                <li>Continuous replication ensures that data remains consistent across all servers, maintaining data integrity throughout the system.</li>
-            </ul>
-            <h3 id="challenges">Challenges</h3>
-            <p>Despite its advantages, Master-Standby replication presents some challenges:</p>
-            <ul>
-                <li>Standby servers may not always be perfectly synchronized with the master, leading to potential stale reads. This <strong>lag</strong> can be problematic for applications requiring real-time data.</li>
-                <li>Promoting a standby to master requires careful <strong>coordination</strong> to prevent data inconsistencies. Automated failover mechanisms need to be thoroughly tested to ensure reliability.</li>
-                <li>Since only the master handles write operations, applications with heavy write loads may face scalability issues. The master server can become a <strong>bottleneck</strong> if not properly managed.</li>
-                <li>Setting up and managing replication involves intricate configurations and ongoing monitoring. Administrators need to be skilled in replication technologies to maintain the system effectively.</li>
-            </ul>
-            <h3 id="implementing-in-postgresql">Implementing in PostgreSQL</h3>
-            <p>PostgreSQL offers built-in support for streaming replication, making it a suitable choice for implementing Master-Standby replication. Below is a practical example of how to set up this replication using PostgreSQL.</p>
+            <p>Modern PostgreSQL documentation uses:</p>
             <div>
-                <pre><code class="language-text">Topology:
-                           ┌──────────────────────────┐
-                           │  ┌────────────────────┐  │
-                           │  │  Master / Primary  │  │
-                           │  │  Node-1 10.0.0.10  │  │
-                           │  └─────────┬──────────┘  │
-                           │            │             │
-                           │   (async or synchronous) │
-                           │            │             │
-   ┌───────────────────────▼────────────┴─────────────▼────────────────────┐
-   │                                                                       │
-   │  ┌────────────────────┐                       ┌────────────────────┐  │
-   │  │  Replica-1         │                       │  Replica-2         │  │
-   │  │  Node-2 10.0.0.11  │      Streaming        │  Node-3 10.0.0.12  │  │
-   │  │  (Hot-Standby)     │ &lt;--- Replication ---&gt; │  (Hot-Standby)     │  │
-   │  └────────────────────┘                       └────────────────────┘  │
-   └───────────────────────────────────────────────────────────────────────┘</code></pre>
+                <pre><code class="language-text">primary
+standby</code></pre>
             </div>
-            <blockquote>
-                <p><strong>Legend</strong> – We will call the nodes <strong>Node-1 (master)</strong>, <strong>Node-2 (replica-1)</strong> and <strong>Node-3 (replica-2)</strong> throughout.
-                    Keep the diagram handy: configuration snippets below reference the IPs exactly as shown.</p>
-            </blockquote>
-            <h4 id="prerequisites">Prerequisites</h4>
-            <ul>
-                <li><strong>Three PostgreSQL instances installed</strong> (same major version) on <em>10.0.0.10</em>, <em>10.0.0.11</em>, <em>10.0.0.12</em>.</li>
-                <li><strong>Network reachability</strong> – TCP 5432 open bidirectionally (replicas must also talk <em>back</em> to the master for <code>pg_basebackup</code>).</li>
-                <li><strong>Time synchronisation</strong> – enable <code>chrony</code>/<code>ntpd</code>; replication breaks if clocks drift.</li>
-                <li><strong>Adequate resources</strong> – WAL can spike; leave at least 30 % free disk on the master.</li>
-                <li><strong>Linux tuning (recommended)</strong> – increase <code>vm.swappiness = 1</code>, set <code>kernel.shmmax</code> ≥ shared_buffers, etc.</li>
-            </ul>
-            <h4 id="configuring-node-1-master">Configuring Node-1 (Master)</h4>
-            <p>Before setting up physical replication, you need to prepare the primary server (Node-1) by adjusting its configuration to enable write-ahead logging (WAL) streaming and accept connections from standby servers. This section walks you through the required changes to PostgreSQL's configuration files and the creation of a replication role.</p>
-            <p>I. Config file</p>
-            <p>As the master, Node-1 must generate and retain sufficient WAL segments for standby servers to consume. Update <code>postgresql.conf</code> with appropriate settings.</p>
+            <p>so those terms will be used here.</p>
+            <p>A simple topology is:</p>
             <div>
-                <pre><code class="language-conf"># Enable WAL suitable for physical replication
-wal_level               = replica          # 'logical' if you also need logical slots
-# Allow enough WAL sender processes for your standby servers
-max_wal_senders         = 10               # &gt;= number of stand-bys + maintenance head-room
-# Maintain replication slots to prevent WAL removal too early
-max_replication_slots   = 10               # same logic as above
-# Keep enough WAL files to let standbys catch up without recycling
-wal_keep_size           = 512MB            # prevents WAL recycling before stand-bys catch up
-# Listen only on the master’s address (or '*' to trust all)
-listen_addresses        = '10.0.0.10'      # or '*' if all IPs are trusted
-# Choose commit behavior: local yields speed; remote_apply ensures sync
-synchronous_commit      = local            # change to 'remote_apply' for synchronous sets</code></pre>
+                <pre><code class="language-text">                         Applications
+                              |
+                 +------------+------------+
+                 |                         |
+              writes                    some reads
+                 |                         |
+                 v                         v
+          +--------------+        +--------------+
+          |   Primary    |        |   Standby 1  |
+          | read/write   |-------&gt;|  read-only   |
+          +------+-------+   WAL  +--------------+
+                 |
+                 | WAL
+                 v
+          +--------------+
+          |   Standby 2  |
+          |  read-only   |
+          +--------------+</code></pre>
             </div>
-            <blockquote>
-                <p><strong>Tip</strong> – From v15 onward you can use <code>min_wal_size</code>/<code>max_wal_size</code> instead of a fixed <code>wal_keep_size</code> to auto-scale WAL retention.</p>
-            </blockquote>
-            <p>II. <code>pg_hba.conf</code></p>
-            <p>Standby servers must be allowed to connect for replication. Add entries to <code>pg_hba.conf</code> specifying the replication database, user, and host addresses.</p>
+            <p>The primary accepts changes.</p>
+            <p>The standbys receive and replay those changes.</p>
+            <p>Depending on the configuration, standbys can provide:</p>
             <div>
-                <pre><code class="language-conf"># TYPE  DATABASE        USER        ADDRESS            METHOD
-host    replication     replicator  10.0.0.11/32       md5
-host    replication     replicator  10.0.0.12/32       md5</code></pre>
+                <pre><code class="language-text">read scaling
+high-availability candidates
+disaster-recovery copies
+backup offloading</code></pre>
             </div>
-            <p>III. Create the replication role</p>
-            <p>A dedicated role with replication privileges is required for streaming WAL to standbys. Execute the following SQL on the master:</p>
+            <p>But simply having a standby does not automatically guarantee:</p>
             <div>
-                <pre><code class="language-sql">CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD 'S3cUr3P@ss!';</code></pre>
+                <pre><code class="language-text">zero data loss
+automatic failover
+fresh reads
+safe split-brain prevention
+historical recovery</code></pre>
             </div>
-            <p>IV. Reload / restart Node-1</p>
-            <p>After updating configuration files and creating the role, reload or restart PostgreSQL to apply changes.</p>
+            <p>Those are separate design decisions.</p>
+            <h2 id="what-problem-does-primary-standby-replication-solve">What problem does primary–standby replication solve?</h2>
+            <p>Consider a database running on one machine:</p>
             <div>
-                <pre><code class="language-bash">sudo systemctl restart postgresql</code></pre>
+                <pre><code class="language-text">Application
+     |
+     v
++-------------+
+| PostgreSQL  |
+| Primary     |
++-------------+</code></pre>
             </div>
-            <h4 id="configuring-node-2-and-node-3-replicas">Configuring Node-2 and Node-3 (Replicas)</h4>
-            <p>Once the master is prepared, each standby (Node-2 and Node-3) needs to be bootstrapped from a base backup and configured to stream WAL. You will perform the same steps on both replicas, adjusting only the connection details as needed.</p>
-            <p>I. Stop PostgreSQL</p>
-            <p>Ensure PostgreSQL is not running on the replica before taking the base backup or restoring data.</p>
+            <p>If the machine fails completely:</p>
             <div>
-                <pre><code class="language-bash">sudo systemctl stop postgresql</code></pre>
+                <pre><code class="language-text">Application
+     |
+     X
++-------------+
+| failed      |
++-------------+</code></pre>
             </div>
-            <p>II. Take a base-backup from the master</p>
-            <p>Use <code>pg_basebackup</code> to clone the primary’s data directory, stream WAL, and automatically write recovery settings.</p>
+            <p>the service cannot use the database until that server is repaired or restored elsewhere.</p>
+            <p>Now add a standby:</p>
             <div>
-                <pre><code class="language-bash">sudo -u postgres pg_basebackup \
-  -h 10.0.0.10 \
-  -D /var/lib/pgsql/15/data \
-  -U replicator \
-  -W -P --wal-method=stream --write-recovery-conf</code></pre>
+                <pre><code class="language-text">               WAL
+Primary -----------------&gt; Standby</code></pre>
             </div>
-            <p><em>The <code>--write-recovery-conf</code> switch auto-creates <code>standby.signal</code> and fills in <code>primary_conninfo</code>.</em></p>
-            <p>III. (If you skipped <code>--write-recovery-conf</code>) edit <code>postgresql.conf</code></p>
-            <p>Manually enable hot standby mode and configure connection to the master, specifying the replication slot unique to each standby.</p>
+            <p>The standby continuously follows changes.</p>
+            <p>If the primary fails, the standby may already contain nearly all—or, depending on the durability configuration, all—of the required database state.</p>
+            <p>That can significantly reduce recovery time.</p>
+            <h2 id="replication-and-failover-are-not-the-same-thing">Replication and failover are not the same thing</h2>
+            <p>Replication means:</p>
             <div>
-                <pre><code class="language-conf">hot_standby          = on
-primary_conninfo     = 'host=10.0.0.10 port=5432 user=replicator password=S3cUr3P@ss!'
-primary_slot_name    = 'node2_slot'     # unique per standby (see slots below)</code></pre>
+                <pre><code class="language-text">another node is receiving database changes</code></pre>
             </div>
-            <p>If needed, create the standby signal file to trigger recovery mode (PostgreSQL v12+):</p>
+            <p>Failover means:</p>
             <div>
-                <pre><code class="language-bash">touch /var/lib/pgsql/15/data/standby.signal</code></pre>
+                <pre><code class="language-text">another node becomes the authoritative writer</code></pre>
             </div>
-            <p>IV. Start the replica</p>
-            <p>With configuration in place, start PostgreSQL on the standby to begin streaming WAL from the master.</p>
+            <p>These are separate mechanisms.</p>
+            <p>You can have perfectly functioning replication but no automatic failover.</p>
+            <p>For example:</p>
             <div>
-                <pre><code class="language-bash">sudo systemctl start postgresql</code></pre>
+                <pre><code class="language-text">Primary ------------&gt; Standby
+   X</code></pre>
             </div>
-            <h4 id="verifying-replication">Verifying Replication</h4>
-            <p>After configuring both master and standbys, you should verify that WAL streaming is active and data changes propagate as expected. This section covers querying replication status and performing a simple functional test.</p>
-            <p>I. On <strong>Node-1</strong></p>
-            <p>Check the replication status view on the master to confirm standbys are connected and streaming.</p>
+            <p>If the primary fails, somebody still has to decide:</p>
             <div>
-                <pre><code class="language-sql">SELECT client_addr, state, sync_state
-FROM   pg_stat_replication;</code></pre>
-            </div>
-            <p>You should see rows for <strong>10.0.0.11</strong> and <strong>10.0.0.12</strong> with <code>state = streaming</code>. If you configured synchronous replication (<code>synchronous_standby_names</code>, <code>synchronous_commit = remote_apply</code>) the <code>sync_state</code> column will be <code>sync</code> for the chosen stand-bys.</p>
-            <p>II. Functional test</p>
-            <p>Perform a simple create-and-read test to confirm that changes on the master appear on the replica almost immediately.</p>
-            <div>
-                <pre><code class="language-sql">-- Master (10.0.0.10)
-CREATE TABLE replication_test (id SERIAL PRIMARY KEY, data TEXT);
-INSERT INTO replication_test (data) VALUES ('Hello replicas');
+                <pre><code class="language-text">Is the primary really dead?
 
--- Replica (10.0.0.11 or .12)
-SELECT * FROM replication_test;  -- should return 1 row almost instantly</code></pre>
+Is the standby sufficiently current?
+
+May we safely promote it?
+
+How will applications find it?
+
+How do we stop the old primary from coming back
+and accepting writes?</code></pre>
             </div>
-            <h4 id="performing-a-fail-over">Performing a Fail-over</h4>
-            <p>In a production environment, you need a plan for promoting a standby to master when the primary fails. This section outlines a manual fail-over process, though automation tools can streamline detection and promotion.</p>
-            <p>I. <strong>Detect failure</strong> of Node-1 (often automated with Patroni, pg_auto_failover, etc.).</p>
-            <p>II. <strong>Promote</strong> Node-2 (example)</p>
+            <p>PostgreSQL provides replication and promotion primitives, but PostgreSQL itself does not supply the complete external failure-detection and automatic-failover system.</p>
+            <h2 id="follow-one-postgresql-transaction">Follow one PostgreSQL transaction</h2>
+            <p>Suppose the application executes:</p>
             <div>
-                <pre><code class="language-bash">sudo -u postgres pg_ctl promote -D /var/lib/pgsql/15/data</code></pre>
+                <pre><code class="language-sql">BEGIN;
+
+INSERT INTO orders(order_id, customer_id, amount)
+VALUES (104, 27, 89.00);
+
+COMMIT;</code></pre>
             </div>
-            <p>or</p>
+            <p>On the primary, PostgreSQL does not replicate that SQL string to the physical standby.</p>
+            <p>Instead, the primary produces Write-Ahead Log (WAL) describing the low-level database changes needed for recovery.</p>
+            <p>Conceptually:</p>
             <div>
-                <pre><code class="language-bash">touch /var/lib/pgsql/15/data/promote.signal</code></pre>
+                <pre><code class="language-text">SQL transaction
+      |
+      v
+PostgreSQL modifies database state
+      |
+      v
+generate WAL records
+      |
+      v
+WAL becomes durable on primary
+      |
+      v
+stream WAL to standby</code></pre>
             </div>
-            <p>III. <strong>Redirect applications</strong> to the new master (10.0.0.11).</p>
-            <p>IV. <strong>Re-configure the old master</strong> (once repaired) as a replica: wipe its data dir, repeat the “Replica” steps, giving it a new slot (<code>node1_as_replica_slot</code>).</p>
-            <h4 id="optional-replication-slots-highly-recommended">Optional: Replication Slots (Highly Recommended)</h4>
-            <p>Replication slots ensure that WAL segments needed by a standby are retained on the master until they have been safely replayed. This prevents standbys from falling too far behind and losing data.</p>
-            <p>On <strong>Node-1</strong>:</p>
+            <p>On the standby:</p>
             <div>
-                <pre><code class="language-sql">SELECT pg_create_physical_replication_slot('node2_slot');
-SELECT pg_create_physical_replication_slot('node3_slot');</code></pre>
+                <pre><code class="language-text">receive WAL
+     |
+     v
+write WAL
+     |
+     v
+flush WAL
+     |
+     v
+replay WAL
+     |
+     v
+standby database reflects transaction</code></pre>
             </div>
-            <p>Then, on each replica’s <code>postgresql.conf</code>, match the slot:</p>
+            <p>This pipeline is the key to understanding PostgreSQL physical replication.</p>
+            <h2 id="postgresql-physical-replication-is-wal-replication">PostgreSQL physical replication is WAL replication</h2>
+            <p>PostgreSQL physical streaming replication works by transmitting WAL records from the primary to the standby.</p>
+            <p>The basic processes are conceptually:</p>
             <div>
-                <pre><code class="language-conf">primary_slot_name = 'node2_slot'   # or node3_slot accordingly</code></pre>
+                <pre><code class="language-text">PRIMARY
+
+transactions
+    |
+    v
+   WAL
+    |
+    v
+walsender
+    |
+    | TCP replication connection
+    v
+=============================
+    |
+    v
+walreceiver
+    |
+    v
+STANDBY WAL
+    |
+    v
+recovery / replay
+    |
+    v
+standby data files</code></pre>
             </div>
-            <p>Slots guarantee that WAL remains available until every replica has replayed it—preventing the dreaded “requested WAL segment has already been removed”.</p>
-            <h4 id="extra-hardening-performance-tweaks">Extra Hardening &amp; Performance Tweaks</h4>
-            <p>Beyond basic replication, additional configuration can improve resilience, disaster recovery capabilities, and performance. Consider these settings as part of a hardened, high-availability setup:</p>
+            <p>The standby reconstructs database changes by replaying WAL.</p>
+            <p>This is why physical replication is tightly connected to PostgreSQL's storage and recovery implementation rather than simply replaying SQL statements.</p>
+            <p>PostgreSQL describes streaming replication as sending WAL incrementally from the primary to the standby.</p>
+            <h2 id="receive-write-flush-and-replay-are-different-events">Receive, write, flush, and replay are different events</h2>
+            <p>A crucial mental model is:</p>
+            <div>
+                <pre><code class="language-text">PRIMARY                         STANDBY
+
+generate WAL
+    |
+    +---------- send ----------&gt;
+                              receive
+                                 |
+                                 v
+                               write
+                                 |
+                                 v
+                               flush
+                                 |
+                                 v
+                               replay
+                                 |
+                                 v
+                         visible database state</code></pre>
+            </div>
+            <p>These steps mean different things.</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Setting</th>
-                        <th>Why it matters (refer to ASCII diagram for scope)</th>
+                        <th>Stage</th>
+                        <th>Meaning</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><code>checkpoint_timeout = 15min</code></td>
-                        <td>Longer intervals reduce I/O on Node-1; ensure replicas can catch up.</td>
+                        <td>Sent</td>
+                        <td>Primary transmitted the WAL</td>
                     </tr>
                     <tr>
-                        <td><code>archive_mode = on</code> + <code>archive_command</code></td>
-                        <td>Off-site WAL shipping for disaster recovery beyond Node-2 &amp; Node-3.</td>
+                        <td>Written</td>
+                        <td>Standby wrote WAL to its local filesystem</td>
                     </tr>
                     <tr>
-                        <td><code>hot_standby_feedback = on</code></td>
-                        <td>Stops long-running queries on replicas from causing bloat on master.</td>
+                        <td>Flushed</td>
+                        <td>Standby reports WAL durably flushed</td>
                     </tr>
                     <tr>
-                        <td><code>backup_label</code> &amp; <code>recovery_target</code></td>
-                        <td>For point-in-time restores (PITR) if required.</td>
+                        <td>Replayed</td>
+                        <td>Standby applied the WAL to its database state</td>
                     </tr>
                 </tbody>
             </table>
+            <p>PostgreSQL exposes these distinctions through replication positions such as <code>sent_lsn</code>, <code>write_lsn</code>, <code>flush_lsn</code>, and <code>replay_lsn</code>.</p>
+            <h2 id="lsn-postgresql-s-progress-coordinate">LSN: PostgreSQL's progress coordinate</h2>
+            <p>An LSN, or Log Sequence Number, identifies a position in PostgreSQL's WAL stream.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">WAL:
+
+... ---- A/B100 ---- A/B200 ---- A/B300 ---- A/B400 ...</code></pre>
+            </div>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary current WAL:      A/B400
+
+Standby written:          A/B380
+Standby flushed:          A/B370
+Standby replayed:         A/B350</code></pre>
+            </div>
+            <p>Then the standby has:</p>
+            <div>
+                <pre><code class="language-text">received more WAL than it has replayed</code></pre>
+            </div>
+            <p>A replica can therefore be durable relatively far forward while its query-visible database state remains further behind.</p>
+            <p>That distinction becomes very important for synchronous replication.</p>
+            <h2 id="asynchronous-streaming-replication">Asynchronous streaming replication</h2>
+            <p>PostgreSQL streaming replication is asynchronous unless synchronous replication is explicitly configured.</p>
+            <p>A simplified commit timeline is:</p>
+            <div>
+                <pre><code class="language-text">Client                 Primary                Standby
+  |                       |                      |
+  |---- transaction -----&gt;|                      |
+  |                       |                      |
+  |                       | local commit         |
+  |                       |                      |
+  |&lt;------ SUCCESS -------|                      |
+  |                       |                      |
+  |                       |------ WAL ----------&gt;|
+  |                       |                      |
+  |                       |                 receive
+  |                       |                 replay</code></pre>
+            </div>
+            <p>The important ordering is:</p>
+            <div>
+                <pre><code class="language-text">client receives SUCCESS
+
+before
+
+standby is necessarily caught up</code></pre>
+            </div>
+            <p>This gives asynchronous replication its principal advantages:</p>
+            <div>
+                <pre><code class="language-text">lower commit latency
+less dependence on standby health</code></pre>
+            </div>
+            <p>but creates two consequences:</p>
+            <div>
+                <pre><code class="language-text">stale reads
+
+possible loss of recently acknowledged writes
+after certain primary failures</code></pre>
+            </div>
+            <p>PostgreSQL explicitly documents that asynchronous log shipping creates a window in which transactions committed on the primary may not yet exist on the standby.</p>
+            <h2 id="concrete-stale-read-example">Concrete stale-read example</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+orders 1 ... 104
+
+Standby:
+orders 1 ... 103</code></pre>
+            </div>
+            <p>The application creates order <code>104</code> on the primary:</p>
+            <div>
+                <pre><code class="language-text">POST /orders
+
+→ primary
+
+SUCCESS</code></pre>
+            </div>
+            <p>Immediately afterward the frontend asks:</p>
+            <div>
+                <pre><code class="language-text">GET /orders/104</code></pre>
+            </div>
+            <p>but the load balancer routes the read to a standby.</p>
+            <p>The standby has not yet replayed the relevant WAL.</p>
+            <p>It returns:</p>
+            <div>
+                <pre><code class="language-text">not found</code></pre>
+            </div>
+            <p>The application may appear broken even though replication is functioning exactly as configured.</p>
+            <p>This is replication lag.</p>
+            <h2 id="read-your-writes-consistency">Read-your-writes consistency</h2>
+            <p>A user often expects:</p>
+            <div>
+                <pre><code class="language-text">I just created the order.
+
+Therefore I should immediately be able to read it.</code></pre>
+            </div>
+            <p>Asynchronous replica reads do not automatically guarantee that.</p>
+            <p>Common application designs include:</p>
+            <h3 id="read-from-the-primary-after-a-write">Read from the primary after a write</h3>
+            <div>
+                <pre><code class="language-text">write → primary
+confirmation read → primary
+later ordinary reads → replica</code></pre>
+            </div>
+            <h3 id="return-the-created-object-from-the-write-request">Return the created object from the write request</h3>
+            <p>Instead of:</p>
+            <div>
+                <pre><code class="language-text">POST
+then
+GET</code></pre>
+            </div>
+            <p>the write response itself contains the committed result.</p>
+            <h3 id="wait-until-a-standby-reaches-a-known-wal-position">Wait until a standby reaches a known WAL position</h3>
+            <p>The application or infrastructure can require a replica to catch up before serving a consistency-sensitive read.</p>
+            <p>Which design is appropriate depends on the business semantics.</p>
+            <h2 id="hot-standby">Hot standby</h2>
+            <p>A PostgreSQL standby used only for failover does not necessarily have to serve ordinary application queries.</p>
+            <p>A hot standby is a standby that accepts read-only queries while recovery/replay continues.</p>
+            <p>For example, after replaying these rows, the standby's <code>orders</code> table contains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>27</td>
+                        <td>89.00</td>
+                    </tr>
+                    <tr>
+                        <td>105</td>
+                        <td>28</td>
+                        <td>35.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This query can be executed on a hot standby:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM orders
+WHERE customer_id = 27;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>104</td>
+                        <td>27</td>
+                        <td>89.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The server still cannot accept ordinary application writes while it remains a physical standby.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+read + write
+
+Hot standby:
+read only</code></pre>
+            </div>
+            <p>until promotion.</p>
+            <p>PostgreSQL distinguishes warm standbys from hot standbys specifically on whether read-only client queries can be served.</p>
+            <h2 id="read-scaling">Read scaling</h2>
+            <p>Suppose the workload is:</p>
+            <div>
+                <pre><code class="language-text">10,000 writes/sec
+100,000 reads/sec</code></pre>
+            </div>
+            <p>A topology could be:</p>
+            <div>
+                <pre><code class="language-text">                     Primary
+                    writes
+                   /   |   \
+                  /    |    \
+                 v     v     v
+             Standby Standby Standby
+               reads   reads   reads</code></pre>
+            </div>
+            <p>This can distribute some read load.</p>
+            <p>But there are limits.</p>
+            <p>Adding more standbys does not automatically increase write capacity because writes still flow through the primary.</p>
+            <p>Primary–standby replication is therefore often good for:</p>
+            <div>
+                <pre><code class="language-text">read scaling</code></pre>
+            </div>
+            <p>but not equivalent to:</p>
+            <div>
+                <pre><code class="language-text">write sharding</code></pre>
+            </div>
+            <h2 id="replica-queries-can-compete-with-wal-replay">Replica queries can compete with WAL replay</h2>
+            <p>A hot standby has two workloads:</p>
+            <div>
+                <pre><code class="language-text">application queries
+
+and
+
+WAL replay</code></pre>
+            </div>
+            <p>Both use:</p>
+            <div>
+                <pre><code class="language-text">CPU
+memory
+disk I/O
+cache</code></pre>
+            </div>
+            <p>A very expensive reporting query can therefore compete with replication.</p>
+            <p>If replay slows down:</p>
+            <div>
+                <pre><code class="language-text">replay_lsn falls further behind</code></pre>
+            </div>
+            <p>and stale-read lag grows.</p>
+            <p>A read replica is not unlimited free compute.</p>
+            <h2 id="recovery-conflicts-on-a-hot-standby">Recovery conflicts on a hot standby</h2>
+            <p>There is another complication.</p>
+            <p>Suppose the primary runs:</p>
+            <div>
+                <pre><code class="language-text">VACUUM</code></pre>
+            </div>
+            <p>and removes row versions that are no longer required on the primary.</p>
+            <p>Meanwhile, a long-running query on the standby still wants a snapshot involving those versions.</p>
+            <p>The standby must reconcile:</p>
+            <div>
+                <pre><code class="language-text">continue replaying primary WAL</code></pre>
+            </div>
+            <p>with:</p>
+            <div>
+                <pre><code class="language-text">allow this old standby query to keep running</code></pre>
+            </div>
+            <p>PostgreSQL can eventually cancel standby queries when necessary to allow recovery to continue.</p>
+            <p>This is why long-running analytical workloads require deliberate standby configuration rather than assuming replicas behave like independent databases.</p>
+            <h2 id="hot_standby_feedback"><code>hot_standby_feedback</code></h2>
+            <p>One option is:</p>
+            <div>
+                <pre><code class="language-conf">hot_standby_feedback = on</code></pre>
+            </div>
+            <p>The standby sends information upstream about snapshots that its queries still need.</p>
+            <p>That can reduce query cancellations caused by cleanup on the primary.</p>
+            <p>But there is a cost.</p>
+            <p>The primary may have to retain dead row versions for longer:</p>
+            <div>
+                <pre><code class="language-text">standby needs old row versions
+        |
+feedback to primary
+        |
+VACUUM cannot remove them yet
+        |
+possible primary table bloat</code></pre>
+            </div>
+            <p>PostgreSQL explicitly warns that <code>hot_standby_feedback</code> can reduce cleanup-conflict cancellations but can cause bloat on the primary.</p>
+            <p>So it should not be summarized as:</p>
+            <div>
+                <pre><code class="language-text">"turn this on to stop replica queries causing bloat"</code></pre>
+            </div>
+            <p>The trade-off is essentially the reverse.</p>
+            <h2 id="synchronous-replication-changes-the-commit-point">Synchronous replication changes the commit point</h2>
+            <p>Suppose losing an acknowledged order is unacceptable.</p>
+            <p>We may require that a standby confirm the transaction before the primary returns:</p>
+            <div>
+                <pre><code class="language-text">SUCCESS</code></pre>
+            </div>
+            <p>Now:</p>
+            <div>
+                <pre><code class="language-text">Client             Primary               Standby
+   |                  |                     |
+   |---- write ------&gt;|                     |
+   |                  |                     |
+   |                  |----- WAL ----------&gt;|
+   |                  |                     |
+   |                  |&lt;---- ACK -----------|
+   |                  |                     |
+   |&lt;---- SUCCESS ----|                     |</code></pre>
+            </div>
+            <p>This is synchronous replication.</p>
+            <p>The application now pays additional commit latency in exchange for a stronger cross-node guarantee.</p>
+            <h2 id="postgresql-synchronous-replication-requires-two-concepts">PostgreSQL synchronous replication requires two concepts</h2>
+            <p>A common configuration error is to change only:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_commit = remote_apply</code></pre>
+            </div>
+            <p>and assume a standby is now synchronous.</p>
+            <p>That is incomplete.</p>
+            <p>PostgreSQL must also know which standby or standbys count as synchronous through:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_standby_names</code></pre>
+            </div>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_standby_names = 'standby1'</code></pre>
+            </div>
+            <p>with:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_commit = on</code></pre>
+            </div>
+            <p>causes transactions to wait for the selected synchronous standby's durable WAL acknowledgement.</p>
+            <p>PostgreSQL's documentation explicitly states that synchronous replication requires a non-empty <code>synchronous_standby_names</code>; <code>synchronous_commit</code> then determines the acknowledgement point.</p>
+            <h2 id="synchronous_commit-levels"><code>synchronous_commit</code> levels</h2>
+            <p>For a configured synchronous standby, the important levels include:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Primary waits for</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>remote_write</code></td>
+                        <td>Standby writes WAL to its operating system</td>
+                    </tr>
+                    <tr>
+                        <td><code>on</code></td>
+                        <td>Standby flushes WAL durably</td>
+                    </tr>
+                    <tr>
+                        <td><code>remote_apply</code></td>
+                        <td>Standby replays the transaction</td>
+                    </tr>
+                    <tr>
+                        <td><code>local</code></td>
+                        <td>Only local primary WAL flush; does not wait for synchronous standby</td>
+                    </tr>
+                    <tr>
+                        <td><code>off</code></td>
+                        <td>Even local commit acknowledgement can precede WAL flush</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The most important distinction is:</p>
+            <div>
+                <pre><code class="language-text">on</code></pre>
+            </div>
+            <p>versus:</p>
+            <div>
+                <pre><code class="language-text">remote_apply</code></pre>
+            </div>
+            <p>With <code>on</code>:</p>
+            <div>
+                <pre><code class="language-text">standby has transaction durably in WAL</code></pre>
+            </div>
+            <p>but a read on the standby may still not see it yet.</p>
+            <p>With <code>remote_apply</code>:</p>
+            <div>
+                <pre><code class="language-text">standby has replayed the transaction</code></pre>
+            </div>
+            <p>so it has become visible to queries there.</p>
+            <p>PostgreSQL documents this distinction explicitly.</p>
+            <h2 id="durability-and-read-visibility-are-different">Durability and read visibility are different</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">flush_lsn  = 0/5000
+replay_lsn = 0/4800</code></pre>
+            </div>
+            <p>The standby has safely persisted WAL through:</p>
+            <div>
+                <pre><code class="language-text">0/5000</code></pre>
+            </div>
+            <p>but queries currently reflect replay only through:</p>
+            <div>
+                <pre><code class="language-text">0/4800</code></pre>
+            </div>
+            <p>A transaction at:</p>
+            <div>
+                <pre><code class="language-text">0/4900</code></pre>
+            </div>
+            <p>may therefore already be protected against certain failures while still being invisible to standby readers.</p>
+            <p>This is why:</p>
+            <div>
+                <pre><code class="language-text">synchronous</code></pre>
+            </div>
+            <p>does not automatically mean:</p>
+            <div>
+                <pre><code class="language-text">all replica reads are current</code></pre>
+            </div>
+            <p>unless the chosen acknowledgement policy specifically waits for apply/replay.</p>
+            <h2 id="remote_apply-and-immediate-standby-reads"><code>remote_apply</code> and immediate standby reads</h2>
+            <p>Consider:</p>
+            <div>
+                <pre><code class="language-text">COMMIT order 104</code></pre>
+            </div>
+            <p>with:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_commit = remote_apply</code></pre>
+            </div>
+            <p>and a suitable synchronous standby configured.</p>
+            <p>The primary waits until the synchronous standby reports that the commit record has been replayed.</p>
+            <p>Now, after the commit returns:</p>
+            <div>
+                <pre><code class="language-text">query synchronous standby
+→ order 104 can be visible</code></pre>
+            </div>
+            <p>PostgreSQL describes <code>remote_apply</code> as waiting for replay specifically so committed changes are visible to standby queries.</p>
+            <p>The cost is higher transaction latency.</p>
+            <h2 id="multiple-synchronous-standbys">Multiple synchronous standbys</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary
+
+Standby A
+Standby B
+Standby C</code></pre>
+            </div>
+            <p>PostgreSQL can use priority-based synchronization.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_standby_names = 'FIRST 2 (a, b, c)'</code></pre>
+            </div>
+            <p>meaning:</p>
+            <div>
+                <pre><code class="language-text">wait for two highest-priority available synchronous candidates</code></pre>
+            </div>
+            <p>Or quorum-style synchronization:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_standby_names = 'ANY 2 (a, b, c)'</code></pre>
+            </div>
+            <p>meaning:</p>
+            <div>
+                <pre><code class="language-text">wait for any two of those standbys</code></pre>
+            </div>
+            <p>PostgreSQL supports both <code>FIRST</code> and <code>ANY</code> selection methods.</p>
+            <h2 id="synchronous-replication-introduces-an-availability-dependency">Synchronous replication introduces an availability dependency</h2>
+            <p>Suppose commits require one synchronous standby.</p>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-text">Primary ----X---- Synchronous standby</code></pre>
+            </div>
+            <p>If the standby becomes unavailable, transactions requiring its acknowledgement may stop completing until the synchronous configuration changes or another qualifying standby takes its role.</p>
+            <p>So synchronous replication trades:</p>
+            <div>
+                <pre><code class="language-text">better durability</code></pre>
+            </div>
+            <p>for more:</p>
+            <div>
+                <pre><code class="language-text">coordination
+latency
+availability dependency</code></pre>
+            </div>
+            <p>This is not a defect.</p>
+            <p>It is the distributed-systems trade-off being explicitly chosen.</p>
+            <h2 id="geographic-synchronous-replication">Geographic synchronous replication</h2>
+            <p>Suppose the primary is in:</p>
+            <div>
+                <pre><code class="language-text">Frankfurt</code></pre>
+            </div>
+            <p>and the required synchronous standby is in:</p>
+            <div>
+                <pre><code class="language-text">Sydney</code></pre>
+            </div>
+            <p>A transaction now places long-distance network communication on the commit path.</p>
+            <p>Even if everything is healthy:</p>
+            <div>
+                <pre><code class="language-text">Frankfurt
+   |
+   | WAL
+   v
+Sydney
+   |
+   | acknowledgement
+   v
+Frankfurt</code></pre>
+            </div>
+            <p>the speed of the network contributes directly to commit latency.</p>
+            <p>This is why many architectures use:</p>
+            <div>
+                <pre><code class="language-text">nearby synchronous standby
++
+remote asynchronous disaster-recovery standby</code></pre>
+            </div>
+            <p>rather than making every distant copy synchronous.</p>
+            <h2 id="creating-a-standby-why-a-base-backup-is-required">Creating a standby: why a base backup is required</h2>
+            <p>A standby needs a consistent starting database state.</p>
+            <p>Suppose the primary already contains:</p>
+            <div>
+                <pre><code class="language-text">500 GB</code></pre>
+            </div>
+            <p>of data.</p>
+            <p>The standby cannot simply begin receiving the next WAL record from an empty directory.</p>
+            <p>It first needs:</p>
+            <div>
+                <pre><code class="language-text">consistent database copy
++
+correct point in WAL history</code></pre>
+            </div>
+            <p>A PostgreSQL base backup provides that starting point.</p>
+            <p><code>pg_basebackup</code> is specifically designed to produce a base backup usable for streaming-replication standbys.</p>
+            <h2 id="why-arbitrary-filesystem-copies-are-dangerous">Why arbitrary filesystem copies are dangerous</h2>
+            <p>Suppose a PostgreSQL cluster is running while someone copies:</p>
+            <div>
+                <pre><code class="language-text">relation file A at 12:00:00
+
+relation file B at 12:00:10
+
+control information at 12:00:20</code></pre>
+            </div>
+            <p>Transactions can occur between those times.</p>
+            <p>The copied files may therefore not correspond to one recoverable database state unless the correct PostgreSQL backup protocol is being followed.</p>
+            <p>Do not bootstrap a physical standby using an arbitrary live filesystem copy.</p>
+            <p>Use:</p>
+            <div>
+                <pre><code class="language-text">pg_basebackup</code></pre>
+            </div>
+            <p>or another supported PostgreSQL backup mechanism.</p>
+            <h2 id="pg_basebackup-r"><code>pg_basebackup -R</code></h2>
+            <p>A convenient initialization command looks conceptually like:</p>
+            <div>
+                <pre><code class="language-bash">pg_basebackup \
+  --host=primary.example.internal \
+  --username=replicator \
+  --pgdata="$PGDATA" \
+  --wal-method=stream \
+  --write-recovery-conf \
+  --progress</code></pre>
+            </div>
+            <p><code>--write-recovery-conf</code>, or:</p>
+            <div>
+                <pre><code class="language-text">-R</code></pre>
+            </div>
+            <p>creates:</p>
+            <div>
+                <pre><code class="language-text">standby.signal</code></pre>
+            </div>
+            <p>and writes the required connection settings into:</p>
+            <div>
+                <pre><code class="language-text">postgresql.auto.conf</code></pre>
+            </div>
+            <p>for the resulting standby.</p>
+            <p>This is preferable to treating <code>standby. signal</code> and <code>primary_conninfo</code> as unrelated manual steps unless manual control is actually required.</p>
+            <h2 id="do-not-hard-code-example-passwords-into-production-configuration">Do not hard-code example passwords into production configuration</h2>
+            <p>The source example embeds a replication password directly into:</p>
+            <div>
+                <pre><code class="language-text">primary_conninfo</code></pre>
+            </div>
+            <p>and uses a literal password in the notes.</p>
+            <p>That may be acceptable for a throwaway lab, but it is poor production documentation.</p>
+            <p>Prefer an appropriate secret-management mechanism, such as:</p>
+            <div>
+                <pre><code class="language-text">a protected PostgreSQL password file
+secret injection
+OS credential management
+platform secret manager</code></pre>
+            </div>
+            <p>and restrict permissions appropriately.</p>
+            <p>For authentication, modern PostgreSQL supports:</p>
+            <div>
+                <pre><code class="language-text">scram-sha-256</code></pre>
+            </div>
+            <p>in <code>pg_hba. conf</code>. Current PostgreSQL documentation distinguishes SCRAM from the older <code>md5</code> authentication method.</p>
+            <h2 id="a-clearer-primary-configuration">A clearer primary configuration</h2>
+            <p>A minimal conceptual primary configuration might include:</p>
+            <div>
+                <pre><code class="language-conf">wal_level = replica
+
+max_wal_senders = 10
+max_replication_slots = 10
+
+listen_addresses = '...'</code></pre>
+            </div>
+            <p>with replication authentication in:</p>
+            <div>
+                <pre><code class="language-text">pg_hba.conf</code></pre>
+            </div>
+            <p>for example conceptually:</p>
+            <div>
+                <pre><code class="language-conf">hostssl replication replicator &lt;standby-network&gt; scram-sha-256</code></pre>
+            </div>
+            <p>The actual:</p>
+            <div>
+                <pre><code class="language-text">network
+TLS policy
+certificate policy
+addresses
+authentication</code></pre>
+            </div>
+            <p>must match the deployment.</p>
+            <p>Do not copy example CIDRs and credentials blindly.</p>
+            <h2 id="wal_keep_size-is-not-the-same-thing-as-min_wal_size-or-max_wal_size"><code>wal_keep_size</code> is not the same thing as <code>min_wal_size</code> or <code>max_wal_size</code></h2>
+            <p>The source suggests that newer PostgreSQL versions allow:</p>
+            <div>
+                <pre><code class="language-text">min_wal_size / max_wal_size</code></pre>
+            </div>
+            <p>instead of:</p>
+            <div>
+                <pre><code class="language-text">wal_keep_size</code></pre>
+            </div>
+            <p>That is incorrect.</p>
+            <p>They control different things.</p>
+            <h3 id="wal_keep_size"><code>wal_keep_size</code></h3>
+            <p>Keeps a minimum recent amount of WAL available for standbys.</p>
+            <h3 id="min_wal_size-max_wal_size"><code>min_wal_size</code> / <code>max_wal_size</code></h3>
+            <p>Primarily participate in checkpoint/WAL-recycling behavior.</p>
+            <p>PostgreSQL explicitly documents <code>wal_keep_size</code> as independent of <code>max_wal_size</code>.</p>
+            <p>So they should not be presented as substitute parameters.</p>
+            <h2 id="replication-slots">Replication slots</h2>
+            <p>A physical replication slot tells PostgreSQL that a consumer may still require older WAL.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Current primary LSN
+            |
+            v
+--------------------------------------&gt;
+
+             ^
+             |
+        standby still
+        needs WAL from here
+
+slot.restart_lsn</code></pre>
+            </div>
+            <p>PostgreSQL therefore avoids automatically removing WAL that may still be required by that slot, subject to configured retention limits.</p>
+            <p>A slot is very useful for disconnected or slow standbys.</p>
+            <p>But it introduces a major operational risk.</p>
+            <h2 id="the-replication-slot-disk-fill-problem">The replication-slot disk-fill problem</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Primary generates:
+50 GB WAL/hour</code></pre>
+            </div>
+            <p>Standby goes offline.</p>
+            <p>Its physical slot remains.</p>
+            <p>After:</p>
+            <div>
+                <pre><code class="language-text">10 hours</code></pre>
+            </div>
+            <p>the slot might require hundreds of gigabytes of old WAL.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">standby stopped consuming
+        |
+slot cannot advance
+        |
+old WAL retained
+        |
+pg_wal grows
+        |
+primary disk fills</code></pre>
+            </div>
+            <p>That can become a primary outage.</p>
+            <p>PostgreSQL explicitly warns that a slow or failed replication-slot consumer can cause WAL accumulation.</p>
+            <h2 id="max_slot_wal_keep_size"><code>max_slot_wal_keep_size</code></h2>
+            <p>PostgreSQL provides:</p>
+            <div>
+                <pre><code class="language-conf">max_slot_wal_keep_size</code></pre>
+            </div>
+            <p>to place a limit on how far behind a replication slot may force WAL retention.</p>
+            <p>Without a limit, a slot can potentially retain very large amounts of WAL.</p>
+            <p>With a finite limit, the trade-off changes:</p>
+            <div>
+                <pre><code class="language-text">protect primary disk</code></pre>
+            </div>
+            <p>but a sufficiently stale standby may lose the WAL it needs and require rebuilding.</p>
+            <p>PostgreSQL documents the default as unlimited retention and exposes slot WAL status through <code>pg_replication_slots</code>.</p>
+            <h2 id="a-slot-does-not-mean-the-standby-has-replayed-everything">A slot does not mean "the standby has replayed everything"</h2>
+            <p>This distinction matters.</p>
+            <p>A physical replication slot primarily protects WAL that the consumer may still require.</p>
+            <p>Meanwhile, PostgreSQL separately tracks:</p>
+            <div>
+                <pre><code class="language-text">write position
+flush position
+replay position</code></pre>
+            </div>
+            <p>through streaming status updates.</p>
+            <p>So do not interpret:</p>
+            <div>
+                <pre><code class="language-text">slot advanced</code></pre>
+            </div>
+            <p>as:</p>
+            <div>
+                <pre><code class="language-text">every query on the standby sees all those changes.</code></pre>
+            </div>
+            <p>Receive/durability progress and replay/visibility progress are different things.</p>
+            <h2 id="monitoring-on-the-primary">Monitoring on the primary</h2>
+            <p>A useful starting query is:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+    application_name,
+    client_addr,
+    state,
+    sync_state,
+    sent_lsn,
+    write_lsn,
+    flush_lsn,
+    replay_lsn,
+    write_lag,
+    flush_lag,
+    replay_lag
+FROM pg_stat_replication;</code></pre>
+            </div>
+            <p>For one streaming standby, an example result is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>application_name</th>
+                        <th>client_addr</th>
+                        <th>state</th>
+                        <th>sync_state</th>
+                        <th>sent_lsn</th>
+                        <th>write_lsn</th>
+                        <th>flush_lsn</th>
+                        <th>replay_lsn</th>
+                        <th>write_lag</th>
+                        <th>flush_lag</th>
+                        <th>replay_lag</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>reporting_standby</td>
+                        <td>192.0.2.20</td>
+                        <td>streaming</td>
+                        <td>async</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/4FFFE00</td>
+                        <td>00:00:00.050</td>
+                        <td>00:00:00.050</td>
+                        <td>00:00:00.250</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This gives a much richer picture than checking only:</p>
+            <div>
+                <pre><code class="language-text">state = streaming</code></pre>
+            </div>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">sent_lsn   far ahead of write_lsn</code></pre>
+            </div>
+            <p>suggests one category of delay.</p>
+            <p>Whereas:</p>
+            <div>
+                <pre><code class="language-text">flush_lsn close to primary
+replay_lsn much further behind</code></pre>
+            </div>
+            <p>suggests replay/application lag.</p>
+            <p>PostgreSQL exposes separate write, flush, and replay positions and lag metrics specifically because those stages are different.</p>
+            <h2 id="monitoring-on-the-standby">Monitoring on the standby</h2>
+            <p>Useful functions include positions such as:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+    pg_last_wal_receive_lsn(),
+    pg_last_wal_replay_lsn();</code></pre>
+            </div>
+            <p>An example result is:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>pg_last_wal_receive_lsn</th>
+                        <th>pg_last_wal_replay_lsn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0/5000100</td>
+                        <td>0/4FFFE00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">received LSN
+    |
+    | gap = WAL waiting to be replayed
+    v
+replay LSN</code></pre>
+            </div>
+            <p>If that gap grows continuously, the standby may be unable to replay WAL as fast as the primary produces it.</p>
+            <p>Monitoring should focus on trends rather than merely whether the replication process exists.</p>
+            <h2 id="functional-replication-tests">Functional replication tests</h2>
+            <p>A simple test is useful:</p>
+            <p>On the primary:</p>
+            <div>
+                <pre><code class="language-sql">CREATE TABLE replication_test (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    data text NOT NULL
+);
+
+INSERT INTO replication_test(data)
+VALUES ('hello standby');</code></pre>
+            </div>
+            <p>Then on the standby:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM replication_test;</code></pre>
+            </div>
+            <p>Once the insert has replayed, the standby table and query result are:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>hello standby</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>hello standby</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>But in an asynchronous topology, documentation should not promise:</p>
+            <div>
+                <pre><code class="language-text">"almost instantly"</code></pre>
+            </div>
+            <p>as a correctness guarantee.</p>
+            <p>It may normally happen quickly, but lag depends on:</p>
+            <div>
+                <pre><code class="language-text">network
+WAL generation
+standby storage
+CPU
+replay workload
+query conflicts</code></pre>
+            </div>
+            <h2 id="asynchronous-failover-and-data-loss">Asynchronous failover and data loss</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">T1 commits on primary.
+
+Primary tells application:
+SUCCESS.
+
+T1 has not yet reached standby.
+
+Primary suffers unrecoverable failure.
+
+Standby promoted.</code></pre>
+            </div>
+            <p>The new primary may not contain T1.</p>
+            <p>This is not database corruption.</p>
+            <p>It is the durability model that asynchronous replication permits.</p>
+            <p>The amount of acknowledged data that can be lost in such a failure relates to the system's:</p>
+            <div>
+                <pre><code class="language-text">RPO — Recovery Point Objective</code></pre>
+            </div>
+            <p>If the business requirement is:</p>
+            <div>
+                <pre><code class="language-text">RPO = 0</code></pre>
+            </div>
+            <p>the replication and failover design must explicitly support that requirement.</p>
+            <h2 id="failover-has-several-steps">Failover has several steps</h2>
+            <p>Safe failover is more than:</p>
+            <div>
+                <pre><code class="language-bash">pg_ctl promote</code></pre>
+            </div>
+            <p>A complete procedure includes something like:</p>
+            <div>
+                <pre><code class="language-text">1. Detect that the old primary is unavailable.
+
+2. Decide that failover is appropriate.
+
+3. Fence the old primary.
+
+4. Choose the best standby.
+
+5. Promote it.
+
+6. Redirect application connections.
+
+7. Confirm service health.
+
+8. Rebuild redundancy.
+
+9. Rejoin or rebuild the old primary.</code></pre>
+            </div>
+            <p>Each step solves a different problem.</p>
+            <h2 id="promotion">Promotion</h2>
+            <p>Current PostgreSQL supports promotion with:</p>
+            <div>
+                <pre><code class="language-bash">pg_ctl promote</code></pre>
+            </div>
+            <p>or SQL:</p>
+            <div>
+                <pre><code class="language-sql">SELECT pg_promote();</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>pg_promote</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>true</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Promotion ends standby recovery and turns the server into a normal read/write primary.</p>
+            <p>Do not base current operational documentation on manually creating an undocumented:</p>
+            <div>
+                <pre><code class="language-text">promote.signal</code></pre>
+            </div>
+            <p>file.</p>
+            <p>Use the supported promotion interfaces.</p>
+            <h2 id="split-brain">Split brain</h2>
+            <p>The most dangerous failover failure is:</p>
+            <div>
+                <pre><code class="language-text">Old primary                     New primary
+still accepting writes          promoted standby</code></pre>
+            </div>
+            <p>Applications may send:</p>
+            <div>
+                <pre><code class="language-text">write X → old primary
+
+write Y → new primary</code></pre>
+            </div>
+            <p>Now there are two divergent histories.</p>
+            <p>This is split brain.</p>
+            <p>PostgreSQL's failover documentation explicitly warns that after promotion there must be a mechanism ensuring the old primary learns it is no longer primary; otherwise both systems can believe they own the primary role, leading to data loss.</p>
+            <h2 id="fencing">Fencing</h2>
+            <p>Safe HA requires making sure the losing node can no longer process authoritative writes.</p>
+            <p>This is often called:</p>
+            <div>
+                <pre><code class="language-text">fencing</code></pre>
+            </div>
+            <p>or, in older cluster terminology:</p>
+            <div>
+                <pre><code class="language-text">STONITH</code></pre>
+            </div>
+            <p>Possible mechanisms include:</p>
+            <div>
+                <pre><code class="language-text">power fencing
+cloud-instance fencing
+network isolation
+storage fencing
+cluster-manager leases</code></pre>
+            </div>
+            <p>The exact mechanism depends on infrastructure.</p>
+            <p>The essential property is:</p>
+            <blockquote>
+                <p>Before the new writer is trusted, the old writer must no longer be capable of creating a competing authoritative history.</p>
+            </blockquote>
+            <h2 id="application-redirection">Application redirection</h2>
+            <p>Promotion does not automatically teach every application:</p>
+            <div>
+                <pre><code class="language-text">the writer moved from Node 1 to Node 2</code></pre>
+            </div>
+            <p>The architecture needs a routing mechanism such as:</p>
+            <div>
+                <pre><code class="language-text">proxy
+virtual IP
+service discovery
+DNS
+HA endpoint
+connection-pool integration</code></pre>
+            </div>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Before:
+
+db-primary.internal → Node 1
+
+After:
+
+db-primary.internal → Node 2</code></pre>
+            </div>
+            <p>This routing layer is part of the HA system even though it is not PostgreSQL replication itself.</p>
+            <h2 id="planned-switchover-versus-unplanned-failover">Planned switchover versus unplanned failover</h2>
+            <p>These terms are useful to separate.</p>
+            <h3 id="switchover">Switchover</h3>
+            <p>Planned role change:</p>
+            <div>
+                <pre><code class="language-text">old primary healthy
+standby caught up
+traffic controlled
+roles exchanged deliberately</code></pre>
+            </div>
+            <p>This can often be done with minimal uncertainty.</p>
+            <h3 id="failover">Failover</h3>
+            <p>Triggered by an unexpected primary failure:</p>
+            <div>
+                <pre><code class="language-text">primary unreachable
+its exact final state may be uncertain</code></pre>
+            </div>
+            <p>Failover requires much stronger failure-detection and fencing logic.</p>
+            <p>A tested switchover procedure does not automatically prove that unexpected failover is safe.</p>
+            <h2 id="what-happens-to-the-old-primary">What happens to the old primary?</h2>
+            <p>Suppose:</p>
+            <div>
+                <pre><code class="language-text">Node 1 = old primary
+Node 2 = promoted new primary</code></pre>
+            </div>
+            <p>After promotion, Node 2 begins creating WAL on a new timeline.</p>
+            <p>Node 1's previous history and Node 2's new history have diverged.</p>
+            <p>The old primary cannot simply restart and resume behaving as primary.</p>
+            <p>It must be converted into a standby following Node 2.</p>
+            <h2 id="pg_rewind"><code>pg_rewind</code></h2>
+            <p>A full new base backup is one option.</p>
+            <p>But PostgreSQL also provides:</p>
+            <div>
+                <pre><code class="language-text">pg_rewind</code></pre>
+            </div>
+            <p>for suitable failover situations.</p>
+            <p><code>pg_rewind</code> compares the diverged cluster histories and copies the changes needed to make the old primary usable as a follower of the new primary.</p>
+            <p>PostgreSQL explicitly describes bringing an old primary back after failover as a typical <code>pg_rewind</code> use case.</p>
+            <p>So this source recommendation:</p>
+            <div>
+                <pre><code class="language-text">wipe old primary and always take a complete new base backup</code></pre>
+            </div>
+            <p>is unnecessarily absolute.</p>
+            <p>Sometimes a new base backup is necessary.</p>
+            <p>Sometimes <code>pg_rewind</code> is substantially faster.</p>
+            <h2 id="replication-timelines">Replication timelines</h2>
+            <p>Promotion creates a new PostgreSQL timeline.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Timeline 1:
+
+-----------------------------X
+                              \
+                               \
+Timeline 2:                     +-----------------&gt;
+                                 new primary</code></pre>
+            </div>
+            <p>The timeline records that the database history forked.</p>
+            <p>This is essential because after failover there may be WAL from:</p>
+            <div>
+                <pre><code class="language-text">old primary history</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-text">new primary history</code></pre>
+            </div>
+            <p>and PostgreSQL must distinguish them.</p>
+            <p>For HA standbys, PostgreSQL recommends following the latest recovery timeline so downstream standbys can follow a promoted server.</p>
+            <h2 id="cascading-replication">Cascading replication</h2>
+            <p>Standbys do not always have to connect directly to the primary.</p>
+            <p>You can have:</p>
+            <div>
+                <pre><code class="language-text">Primary
+   |
+   v
+Standby A
+   |
+   +------&gt; Standby B
+   |
+   +------&gt; Standby C</code></pre>
+            </div>
+            <p>This is cascading replication.</p>
+            <p>Potential benefit:</p>
+            <div>
+                <pre><code class="language-text">reduce primary network fan-out</code></pre>
+            </div>
+            <p>Potential cost:</p>
+            <div>
+                <pre><code class="language-text">B and C depend on A</code></pre>
+            </div>
+            <p>and gain an additional replication hop.</p>
+            <p>Also note that PostgreSQL's synchronous-standby selection on a primary concerns directly connected standbys rather than arbitrary downstream cascading standbys.</p>
+            <h2 id="replication-is-not-backup">Replication is not backup</h2>
+            <p>Suppose the application accidentally executes:</p>
+            <div>
+                <pre><code class="language-sql">DELETE FROM orders;</code></pre>
+            </div>
+            <p>The primary generates WAL describing the deletions.</p>
+            <p>The standbys faithfully replay that WAL.</p>
+            <p>Soon:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+orders gone
+
+Standby 1:
+orders gone
+
+Standby 2:
+orders gone</code></pre>
+            </div>
+            <p>Replication worked correctly.</p>
+            <p>It did not protect the historical data.</p>
+            <p>You still need:</p>
+            <div>
+                <pre><code class="language-text">base backups
+WAL archiving
+point-in-time recovery
+restore testing</code></pre>
+            </div>
+            <p>for historical recovery.</p>
+            <h2 id="wal-archiving-and-streaming-replication-solve-different-problems">WAL archiving and streaming replication solve different problems</h2>
+            <p>Streaming replication sends WAL to currently connected standbys.</p>
+            <p>WAL archiving retains WAL in an archive for recovery purposes.</p>
+            <p>A robust system can use both:</p>
+            <div>
+                <pre><code class="language-text">Primary
+   |
+   +------ streaming ------&gt; HA standby
+   |
+   +------ WAL archive ----&gt; durable archive storage</code></pre>
+            </div>
+            <p>The standby supports:</p>
+            <div>
+                <pre><code class="language-text">fast failover</code></pre>
+            </div>
+            <p>The archive supports:</p>
+            <div>
+                <pre><code class="language-text">point-in-time recovery
+recovery from older backup
+additional disaster-recovery workflows</code></pre>
+            </div>
+            <p>These mechanisms complement rather than replace each other.</p>
+            <h2 id="archive_mode-is-not-merely-a-replication-performance-tweak"><code>archive_mode</code> is not merely a replication performance tweak</h2>
+            <p>Settings such as:</p>
+            <div>
+                <pre><code class="language-conf">archive_mode = on</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-conf">archive_command = ...</code></pre>
+            </div>
+            <p>belong to a deliberate continuous-archiving/PITR design.</p>
+            <p>They should not be presented simply as:</p>
+            <div>
+                <pre><code class="language-text">extra hardening for replicas</code></pre>
+            </div>
+            <p>The archive must be:</p>
+            <div>
+                <pre><code class="language-text">durable
+monitored
+restorable
+capacity-managed</code></pre>
+            </div>
+            <p>and its retention must align with base-backup strategy.</p>
+            <p>PostgreSQL recommends an archive accessible independently of the primary when using WAL archives for standby/recovery purposes.</p>
+            <h2 id="clock-synchronization">Clock synchronization</h2>
+            <p>Accurate clocks are strongly recommended in distributed infrastructure for:</p>
+            <div>
+                <pre><code class="language-text">logs
+metrics
+certificate validity
+monitoring
+incident reconstruction
+time-based features</code></pre>
+            </div>
+            <p>But this source statement:</p>
+            <div>
+                <pre><code class="language-text">"replication breaks if clocks drift"</code></pre>
+            </div>
+            <p>is too strong.</p>
+            <p>Basic WAL streaming is based on WAL positions, not on synchronized wall clocks.</p>
+            <p>Some time-sensitive PostgreSQL features do depend on clocks.</p>
+            <p>For example, <code>recovery_min_apply_delay</code> compares primary commit timestamps with standby time, and PostgreSQL notes that unsynchronized clocks can affect that delay calculation.</p>
+            <p>So the accurate guidance is:</p>
+            <blockquote>
+                <p>Synchronize clocks operationally, but do not teach clock synchronization as a fundamental prerequisite for basic physical streaming replication.</p>
+            </blockquote>
+            <h2 id="avoid-generic-linux-tuning-prescriptions">Avoid generic Linux tuning prescriptions</h2>
+            <p>Advice such as:</p>
+            <div>
+                <pre><code class="language-text">vm.swappiness = 1
+
+kernel.shmmax &gt;= shared_buffers</code></pre>
+            </div>
+            <p>should not be presented as universal prerequisites for PostgreSQL replication.</p>
+            <p>Kernel and memory tuning depends on:</p>
+            <div>
+                <pre><code class="language-text">Linux distribution
+PostgreSQL version
+memory size
+workload
+storage
+containerization
+huge pages
+deployment platform</code></pre>
+            </div>
+            <p>Replication works because the PostgreSQL replication configuration is correct—not because a generic sysctl recipe was copied.</p>
+            <p>Tune only from measured workload requirements and current platform documentation.</p>
+            <h2 id="checkpoint_timeout-is-not-a-standby-catch-up-setting"><code>checkpoint_timeout</code> is not a standby catch-up setting</h2>
+            <p>The source recommends:</p>
+            <div>
+                <pre><code class="language-conf">checkpoint_timeout = 15min</code></pre>
+            </div>
+            <p>with an explanation implying this helps replicas catch up.</p>
+            <p>That is misleading.</p>
+            <p><code>checkpoint_timeout</code> controls checkpoint timing.</p>
+            <p>Checkpoint configuration affects:</p>
+            <div>
+                <pre><code class="language-text">WAL volume
+I/O behavior
+crash-recovery work
+checkpoint frequency</code></pre>
+            </div>
+            <p>It is not a direct:</p>
+            <div>
+                <pre><code class="language-text">"make replica catch up"</code></pre>
+            </div>
+            <p>parameter.</p>
+            <p>Replica catch-up depends on:</p>
+            <div>
+                <pre><code class="language-text">WAL generation
+network throughput
+standby WAL write/flush throughput
+replay speed
+standby workload</code></pre>
+            </div>
+            <p>Do not tune checkpoint behavior primarily from a replication slogan.</p>
+            <h2 id="backup_label-is-not-a-tuning-parameter"><code>backup_label</code> is not a tuning parameter</h2>
+            <p>Likewise:</p>
+            <div>
+                <pre><code class="language-text">backup_label</code></pre>
+            </div>
+            <p>should not appear in a table of configuration settings beside:</p>
+            <div>
+                <pre><code class="language-text">checkpoint_timeout
+archive_mode
+hot_standby_feedback</code></pre>
+            </div>
+            <p><code>backup_label</code> is part of PostgreSQL backup/recovery machinery, not a setting you normally "enable" for replication hardening.</p>
+            <p>Point-in-time recovery uses:</p>
+            <div>
+                <pre><code class="language-text">base backup
+WAL archive
+recovery target configuration</code></pre>
+            </div>
+            <p>as a complete recovery design.</p>
+            <h2 id="corrected-postgresql-lab-topology">Corrected PostgreSQL lab topology</h2>
+            <p>For a teaching environment:</p>
+            <div>
+                <pre><code class="language-text">Primary:
+db1.example.internal
+
+Standby 1:
+db2.example.internal
+
+Standby 2:
+db3.example.internal</code></pre>
+            </div>
+            <p>Avoid hard-coding production documentation around:</p>
+            <div>
+                <pre><code class="language-text">10.0.0.10
+10.0.0.11
+10.0.0.12</code></pre>
+            </div>
+            <p>unless those addresses actually belong to the lab.</p>
+            <p>The logical topology is what matters:</p>
+            <div>
+                <pre><code class="language-text">                     db1
+                  PRIMARY
+                  /      \
+                 /        \
+              WAL          WAL
+               v            v
+             db2            db3
+          HOT STANDBY    HOT STANDBY</code></pre>
+            </div>
+            <h2 id="step-1-create-a-replication-role">Step 1 — create a replication role</h2>
+            <p>On the primary:</p>
+            <div>
+                <pre><code class="language-sql">CREATE ROLE replicator
+WITH LOGIN REPLICATION
+PASSWORD '&lt;managed-secret&gt;';</code></pre>
+            </div>
+            <p>For a real deployment, store and deliver the secret securely rather than publishing a reusable password in documentation.</p>
+            <h2 id="step-2-permit-replication-connections">Step 2 — permit replication connections</h2>
+            <p>Example conceptually:</p>
+            <div>
+                <pre><code class="language-conf"># pg_hba.conf
+
+hostssl replication replicator &lt;standby-1-address&gt;/32 scram-sha-256
+hostssl replication replicator &lt;standby-2-address&gt;/32 scram-sha-256</code></pre>
+            </div>
+            <p>The exact authentication policy should follow the environment's security model.</p>
+            <p>After changing <code>pg_hba. conf</code>, reload PostgreSQL as appropriate.</p>
+            <h2 id="step-3-primary-replication-parameters">Step 3 — primary replication parameters</h2>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-conf">wal_level = replica
+
+max_wal_senders = 10
+
+max_replication_slots = 10</code></pre>
+            </div>
+            <p>If physical slots will be used, create one per standby:</p>
+            <div>
+                <pre><code class="language-sql">SELECT pg_create_physical_replication_slot('standby1');
+SELECT pg_create_physical_replication_slot('standby2');</code></pre>
+            </div>
+            <p>Example results (the returned LSN values depend on the cluster):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>slot_name</th>
+                        <th>lsn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>standby1</td>
+                        <td>0/3000000</td>
+                    </tr>
+                    <tr>
+                        <td>standby2</td>
+                        <td>0/3000000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Then monitor them.</p>
+            <p>A slot is not a "set it and forget it" feature.</p>
+            <h2 id="step-4-initialize-each-standby">Step 4 — initialize each standby</h2>
+            <p>Stop PostgreSQL on the target standby and ensure its target data directory is suitable for replacement.</p>
+            <p>Then run <code>pg_basebackup</code>, for example:</p>
+            <div>
+                <pre><code class="language-bash">pg_basebackup \
+  --host=db1.example.internal \
+  --username=replicator \
+  --pgdata="$PGDATA" \
+  --wal-method=stream \
+  --write-recovery-conf \
+  --progress</code></pre>
+            </div>
+            <p>If you want <code>pg_basebackup</code> itself to use a named slot, configure the relevant slot option as appropriate for the deployment.</p>
+            <p><code>-R</code>/<code>--write-recovery-conf</code> creates <code>standby. signal</code> and writes connection settings into <code>postgresql. auto. conf</code>.</p>
+            <h2 id="step-5-configure-slot-identity-if-used">Step 5 — configure slot identity if used</h2>
+            <p>For Standby 1:</p>
+            <div>
+                <pre><code class="language-conf">primary_slot_name = 'standby1'</code></pre>
+            </div>
+            <p>For Standby 2:</p>
+            <div>
+                <pre><code class="language-conf">primary_slot_name = 'standby2'</code></pre>
+            </div>
+            <p>Each independent physical standby should normally have its own slot if slots are being used.</p>
+            <p>Otherwise multiple consumers would not independently preserve their own required WAL positions.</p>
+            <h2 id="step-6-start-the-standby">Step 6 — start the standby</h2>
+            <p>Start PostgreSQL.</p>
+            <p>The standby:</p>
+            <div>
+                <pre><code class="language-text">recognizes standby.signal
+
+connects using primary_conninfo
+
+starts WAL recovery
+
+starts streaming when possible</code></pre>
+            </div>
+            <p>The primary should then show a corresponding connection in:</p>
+            <div>
+                <pre><code class="language-sql">SELECT application_name, state, sync_state
+FROM pg_stat_replication;</code></pre>
+            </div>
+            <p>Example result after the standby connects:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>application_name</th>
+                        <th>state</th>
+                        <th>sync_state</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>standby1</td>
+                        <td>streaming</td>
+                        <td>async</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="step-7-verify-the-pipeline-not-only-connectivity">Step 7 — verify the pipeline, not only connectivity</h2>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+    application_name,
+    client_addr,
+    state,
+    sync_state,
+    sent_lsn,
+    write_lsn,
+    flush_lsn,
+    replay_lsn
+FROM pg_stat_replication;</code></pre>
+            </div>
+            <p>Example result (position values are illustrative):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>application_name</th>
+                        <th>client_addr</th>
+                        <th>state</th>
+                        <th>sync_state</th>
+                        <th>sent_lsn</th>
+                        <th>write_lsn</th>
+                        <th>flush_lsn</th>
+                        <th>replay_lsn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>standby1</td>
+                        <td>192.0.2.11</td>
+                        <td>streaming</td>
+                        <td>async</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/5000100</td>
+                        <td>0/4FFFE00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>You want to understand:</p>
+            <div>
+                <pre><code class="language-text">Is WAL being sent?
+
+Is the standby writing it?
+
+Is it flushing it?
+
+Is it replaying it?</code></pre>
+            </div>
+            <p>A connection marked:</p>
+            <div>
+                <pre><code class="language-text">streaming</code></pre>
+            </div>
+            <p>is good, but it is only one part of replication health.</p>
+            <h2 id="configuring-synchronous-replication-correctly">Configuring synchronous replication correctly</h2>
+            <p>Suppose <code>standby1</code> uses:</p>
+            <div>
+                <pre><code class="language-text">application_name=standby1</code></pre>
+            </div>
+            <p>in its connection information.</p>
+            <p>The primary could use:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_standby_names = 'FIRST 1 (standby1, standby2)'</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_commit = on</code></pre>
+            </div>
+            <p>Now commits requiring the default synchronous behavior wait for durable acknowledgement from the chosen synchronous standby.</p>
+            <p>If the application specifically requires standby read visibility before commit returns:</p>
+            <div>
+                <pre><code class="language-conf">synchronous_commit = remote_apply</code></pre>
+            </div>
+            <p>may be appropriate.</p>
+            <p>The important point is that:</p>
+            <div>
+                <pre><code class="language-text">synchronous_standby_names</code></pre>
+            </div>
+            <p>selects the participating standby set, while:</p>
+            <div>
+                <pre><code class="language-text">synchronous_commit</code></pre>
+            </div>
+            <p>controls the wait level.</p>
+            <h2 id="monitoring-table">Monitoring table</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>PostgreSQL signal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Is standby connected?</td>
+                        <td><code>pg_stat_replication. state</code></td>
+                    </tr>
+                    <tr>
+                        <td>Is it synchronous?</td>
+                        <td><code>sync_state</code></td>
+                    </tr>
+                    <tr>
+                        <td>How far has primary sent?</td>
+                        <td><code>sent_lsn</code></td>
+                    </tr>
+                    <tr>
+                        <td>How far has standby written?</td>
+                        <td><code>write_lsn</code></td>
+                    </tr>
+                    <tr>
+                        <td>How far has standby flushed?</td>
+                        <td><code>flush_lsn</code></td>
+                    </tr>
+                    <tr>
+                        <td>How far has standby applied?</td>
+                        <td><code>replay_lsn</code></td>
+                    </tr>
+                    <tr>
+                        <td>How much WAL does a slot retain?</td>
+                        <td><code>pg_replication_slots. restart_lsn</code>, <code>wal_status</code>, <code>safe_wal_size</code></td>
+                    </tr>
+                    <tr>
+                        <td>Are standby queries being canceled?</td>
+                        <td><code>pg_stat_database_conflicts</code> on standby</td>
+                    </tr>
+                    <tr>
+                        <td>Is receiver active?</td>
+                        <td><code>pg_stat_wal_receiver</code> on standby</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This is far more useful operationally than a single:</p>
+            <div>
+                <pre><code class="language-text">replication = yes/no</code></pre>
+            </div>
+            <p>indicator.</p>
+            <h2 id="failover-procedure-summary">Failover procedure summary</h2>
+            <p>A manual emergency sequence is conceptually:</p>
+            <div>
+                <pre><code class="language-text">1. Confirm old primary is not allowed to keep serving writes.
+
+2. Choose the intended standby.
+
+3. Check its replication/recovery state.
+
+4. Promote:
+      pg_ctl promote
+   or:
+      SELECT pg_promote();
+
+5. Confirm it accepts writes.
+
+6. Redirect applications.
+
+7. Re-establish remaining standbys.
+
+8. Rewind or rebuild the old primary.
+
+9. Restore HA redundancy.</code></pre>
+            </div>
+            <p>The exact automation belongs to an HA manager rather than ad hoc shell commands.</p>
+            <h2 id="what-postgresql-alone-does-and-does-not-provide">What PostgreSQL alone does and does not provide</h2>
+            <p>PostgreSQL provides:</p>
+            <div>
+                <pre><code class="language-text">WAL generation
+streaming replication
+hot standby
+replication slots
+synchronous replication
+promotion
+timelines
+pg_rewind
+monitoring views</code></pre>
+            </div>
+            <p>PostgreSQL by itself does not provide the complete external system for:</p>
+            <div>
+                <pre><code class="language-text">failure detection
+quorum-based primary ownership
+fencing
+virtual-IP movement
+application endpoint failover
+cluster orchestration</code></pre>
+            </div>
+            <p>PostgreSQL's own failover documentation explicitly says external system software is required for primary failure detection and notification.</p>
+            <p>Tools and platforms can provide that orchestration layer.</p>
+            <h2 id="primary-standby-across-technologies">Primary–standby across technologies</h2>
+            <p>The same architecture appears under different names.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technology</th>
+                        <th>Writer role</th>
+                        <th>Follower role</th>
+                        <th>Change mechanism</th>
+                        <th>Stronger acknowledgement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL physical replication</td>
+                        <td>Primary</td>
+                        <td>Standby</td>
+                        <td>WAL streaming/replay</td>
+                        <td>Synchronous standby</td>
+                    </tr>
+                    <tr>
+                        <td>MySQL</td>
+                        <td>Source/primary</td>
+                        <td>Replica</td>
+                        <td>Binary log / relay log</td>
+                        <td>Semisynchronous replication</td>
+                    </tr>
+                    <tr>
+                        <td>SQL Server Availability Groups</td>
+                        <td>Primary replica</td>
+                        <td>Secondary replica</td>
+                        <td>Transaction-log transport/redo</td>
+                        <td>Synchronous commit</td>
+                    </tr>
+                    <tr>
+                        <td>MongoDB replica set</td>
+                        <td>Primary</td>
+                        <td>Secondary</td>
+                        <td>Oplog replication</td>
+                        <td>Configurable write concern</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The concepts recur:</p>
+            <div>
+                <pre><code class="language-text">one current writer
+
+replicated change stream
+
+followers apply it
+
+optional stronger acknowledgement
+
+promotion/election after failure</code></pre>
+            </div>
+            <p>but the exact correctness and failover semantics differ by engine.</p>
+            <h2 id="advantages-and-limitations">Advantages and limitations</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benefit</th>
+                        <th>Important qualification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>High availability</td>
+                        <td>Requires safe failover orchestration and fencing</td>
+                    </tr>
+                    <tr>
+                        <td>Lower RTO</td>
+                        <td>Only if standby is healthy and sufficiently caught up</td>
+                    </tr>
+                    <tr>
+                        <td>Read scaling</td>
+                        <td>Reads may be stale and can compete with replay</td>
+                    </tr>
+                    <tr>
+                        <td>Better durability</td>
+                        <td>Depends on asynchronous vs synchronous acknowledgement</td>
+                    </tr>
+                    <tr>
+                        <td>Maintenance flexibility</td>
+                        <td>Depends on topology and failover procedure</td>
+                    </tr>
+                    <tr>
+                        <td>Geographic copy</td>
+                        <td>Network latency and replication lag matter</td>
+                    </tr>
+                    <tr>
+                        <td>Simple write ownership</td>
+                        <td>Primary can become a write bottleneck</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The source correctly identifies read offloading, failover, and write-primary bottlenecks as central characteristics of the topology.</p>
+            <h2 id="common-misconceptions">Common misconceptions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Correct interpretation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"We have a standby, therefore no data can be lost. "</td>
+                        <td>Async replication can leave an acknowledged-write loss window</td>
+                    </tr>
+                    <tr>
+                        <td>"Synchronous means the standby query sees the write. "</td>
+                        <td>Only if acknowledgement waits through replay, such as <code>remote_apply</code></td>
+                    </tr>
+                    <tr>
+                        <td>"A replication slot means the standby is current. "</td>
+                        <td>It manages WAL retention; replay position is separate</td>
+                    </tr>
+                    <tr>
+                        <td>"<code>wal_keep_size</code> is replaced by <code>max_wal_size</code>. "</td>
+                        <td>They control different things</td>
+                    </tr>
+                    <tr>
+                        <td>"Clock drift breaks basic streaming replication. "</td>
+                        <td>WAL positions drive basic streaming; clocks matter for specific time-based behavior and operations</td>
+                    </tr>
+                    <tr>
+                        <td>"<code>hot_standby_feedback</code> prevents primary bloat. "</td>
+                        <td>It can prevent standby cleanup conflicts by allowing more primary bloat</td>
+                    </tr>
+                    <tr>
+                        <td>"Promotion solves failover. "</td>
+                        <td>Promotion is only one step; fencing and routing are also required</td>
+                    </tr>
+                    <tr>
+                        <td>"Old primary must always be wiped. "</td>
+                        <td>A new base backup may be needed, but <code>pg_rewind</code> can often rejoin a diverged former primary</td>
+                    </tr>
+                    <tr>
+                        <td>"Replication is backup. "</td>
+                        <td>Logical mistakes replicate too</td>
+                    </tr>
+                    <tr>
+                        <td>"More standbys increase write throughput. "</td>
+                        <td>They mainly add redundancy/read capacity in a single-primary design</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="final-mental-model">Final mental model</h2>
+            <p>Do not memorize primary–standby replication as:</p>
+            <div>
+                <pre><code class="language-text">Primary copies database to standby.</code></pre>
+            </div>
+            <p>Use this model:</p>
+            <div>
+                <pre><code class="language-text">APPLICATION WRITE
+       |
+       v
+     PRIMARY
+       |
+       v
+generate WAL
+       |
+       v
+local durability
+       |
+       +-----------------------------+
+       |                             |
+       | streaming                   |
+       v                             |
+    STANDBY                          |
+       |                             |
+     receive                         |
+       |                             |
+      write                          |
+       |                             |
+      flush                          |
+       |                             |
+     replay                          |
+       |                             |
+       v                             |
+read-visible state                   |
+                                     |
+          &lt;--- commit policy decides
+               where SUCCESS occurs</code></pre>
+            </div>
+            <p>Then ask five questions.</p>
+            <h3 id="where-does-commit-success-occur">Where does <code>COMMIT SUCCESS</code> occur?</h3>
+            <div>
+                <pre><code class="language-text">after primary only?
+
+after standby write?
+
+after standby flush?
+
+after standby replay?</code></pre>
+            </div>
+            <h3 id="where-are-reads-served">Where are reads served?</h3>
+            <div>
+                <pre><code class="language-text">primary?
+
+standby?
+
+both?</code></pre>
+            </div>
+            <h3 id="how-stale-may-standby-reads-be">How stale may standby reads be?</h3>
+            <div>
+                <pre><code class="language-text">milliseconds?
+
+seconds?
+
+not stale at all?</code></pre>
+            </div>
+            <h3 id="what-happens-when-the-primary-disappears">What happens when the primary disappears?</h3>
+            <div>
+                <pre><code class="language-text">who detects it?
+
+who chooses the new primary?
+
+who fences the old one?
+
+who redirects clients?</code></pre>
+            </div>
+            <h3 id="how-do-we-recover-historical-data">How do we recover historical data?</h3>
+            <div>
+                <pre><code class="language-text">standby?
+No.
+
+backup + WAL archive + PITR.</code></pre>
+            </div>
+            <p>If those questions have clear answers, the replication architecture is understandable.</p>
+            <p>If the only documentation says:</p>
+            <div>
+                <pre><code class="language-text">"we have two replicas"</code></pre>
+            </div>
+            <p>you still know very little about its actual availability and durability guarantees.</p>
+            <h2 id="references">References</h2>
+            <p>The source notes provide the original primary/standby architecture, PostgreSQL streaming-replication example, base-backup setup, replication-status check, manual promotion, replication-slot discussion, and HA tuning suggestions.</p>
+            <p>Current PostgreSQL high-availability documentation describes physical WAL streaming, hot standbys, synchronous replication, cascading replication, standby setup, and the distinction between synchronous write/flush/apply acknowledgement.</p>
+            <p>Current <code>pg_basebackup</code> documentation describes base backups for standby initialization and <code>-R</code>/<code>--write-recovery-conf</code>, which creates <code>standby. signal</code> and writes connection information to <code>postgresql. auto. conf</code>.</p>
+            <p>Current PostgreSQL monitoring documentation distinguishes <code>sent_lsn</code>, <code>write_lsn</code>, <code>flush_lsn</code>, and <code>replay_lsn</code>, allowing receive/durability lag to be distinguished from replay lag.</p>
+            <p>PostgreSQL's replication-slot documentation describes <code>restart_lsn</code> as the oldest WAL still potentially required by the consumer and documents the risk/limits associated with retained WAL.</p>
+            <p>PostgreSQL's failover and <code>pg_rewind</code> documentation describes the need to prevent the old primary from continuing as a writer and explains how a diverged former primary can often be rewound and reused as a standby after failover.</p>
         </article-section>
     </div>
     </main>
