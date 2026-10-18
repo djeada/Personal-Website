@@ -232,3 +232,29 @@ test("circular standing wave: total E ∥ H (not ⟂) although the forward wave 
         }
     }
 });
+
+test("partial standing wave: total u peaks at 2(1 + |r|²)ū0, above both the u_E and S_z peaks (plot range)", () => {
+    // At an envelope maximum Ẽ ∝ 1 + |r| and η1H̃ ∝ 1 − |r| are in phase, so u = u_E + u_H peaks there.
+    // The page sizes its energy axes from this total; with u_E and S_z alone the u curve was clipped for 0.21 ≲ |r| ≲ 0.51 (n2 ≈ 1.5–3 from air).
+    for (const n2 of [1.5, 2.5, 4]) {
+        const cfg = em.setup({ lambda0: 633e-9, n1: 1, n2, E0: 10, boundary: "dielectric" });
+        const r = Math.abs(cfg.r.re);
+        const zMax = -cfg.lambda1 / 4; // r < 0: E envelope maximum a quarter wave from the interface
+        const s = em.sampleT(cfg, zMax, Array.from({ length: 401 }, (_, i) => i * cfg.period / 400));
+        const u = Array.from(s.uE, (v, i) => v + s.uH[i]);
+        close(Math.max(...u) / cfg.u0, 2 * (1 + r * r), 1e-4);
+        close(Math.max(...s.uE) / cfg.u0, (1 + r) ** 2, 1e-4);
+        close(Math.max(...s.Sz) / cfg.I0, 2 * (1 - r * r), 1e-4);
+        assert.ok(Math.max(...u) >= Math.max(...s.uE));
+        // n2 = 2.5 (|r| = 0.43): u reaches 2.37 ū0 but 1.1 × max(u_E, S_z) peaks is only 2.25
+        if (n2 === 2.5) assert.ok(Math.max(...u) / cfg.u0 > 1.1 * Math.max(Math.max(...s.uE) / cfg.u0, Math.max(...s.Sz) / cfg.I0));
+    }
+});
+
+test("PEC standing wave: ⟨u_H⟩ at an H node is round-off, not a value to divide by", () => {
+    // The ⟨u_E⟩/⟨u_H⟩ readout snaps values below 1e-9 ū0 to zero and prints ∞ (H node).
+    const cfg = em.setup({ lambda0: 633e-9, n1: 1, E0: 100, boundary: "pec" });
+    const a = em.timeAverage(cfg, -cfg.lambda1 / 4);
+    assert.ok(a.uH < 1e-20 * cfg.u0 && a.uH >= 0);
+    close(a.uE, 2 * cfg.u0, 1e-12); // E antinode: |2E0|²ε/4 = 2ū0
+});

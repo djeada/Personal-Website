@@ -102,6 +102,21 @@ test("exactVsParaxial: Δz/ρ² tends to a constant for a real lens; Δslope →
     assert.ok(rows.every((row) => Number.isFinite(row.delta)));
 });
 
+test("exactVsParaxial: error order is ρ² for an axial crossing and ρ³ for an output slope", () => {
+    const finite = go.exactVsParaxial(go.buildSystem(go.PRESETS.thick.elements), { atInfinity: true, angle: 0 }, [0.1, 0.05, 0.02]);
+    assert.equal(finite.order, 2);
+    // image at infinity: a real objective with an ideal eyepiece; the slope error grows as ρ³, so error/ρ² → 0
+    const objective = { type: "lens", z: 0, R1: 103.4 * mm, R2: -103.4 * mm, t: 6 * mm, material: "BK7", semi: 20 * mm };
+    const zEye = go.cardinalPoints(go.buildSystem([objective])).zFp + 25 * mm;
+    const tele = go.buildSystem([objective, { type: "thin", z: zEye, f: 25 * mm, semi: 10 * mm }]);
+    const r = go.exactVsParaxial(tele, { atInfinity: true, angle: 0 }, [0.1, 0.05, 0.02]);
+    assert.equal(r.order, 3);
+    const k3 = r.rows.map((row) => row.delta / row.rho ** 3);
+    close(k3[2], k3[1], Math.abs(k3[2]) * 0.01, "Δslope/ρ³ constant");
+    const k2 = r.rows.map((row) => row.delta / row.rho ** 2);
+    close(k2[2] / k2[0], 0.2, 0.01, "Δslope/ρ² shrinks in proportion to ρ");
+});
+
 test("single spherical surface: exact axial crossing matches the sine-rule result", () => {
     const n = 1.5, R = 20 * mm;
     const sys = go.buildSystem([{ type: "surface", z: 0, R, material: n, semi: 30 * mm }]);

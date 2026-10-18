@@ -171,3 +171,85 @@ test('geometric optics keeps readouts and matrix correct when the focus goes thr
   expect(errors).toEqual([]);
   await context.close();
 });
+
+test('geometric optics keeps sequential order with mirrors, refuses virtual detector planes and normalises slope errors by ρ³', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'geometric_optics', VIEWPORTS[2]);
+  // adding a mirror puts it behind the detector, which moves to the returning path
+  await page.click('[data-add="mirror"]');
+  const order = await page.locator('#elSelect option').allTextContents();
+  expect(order[order.length - 1]).toMatch(/^#3 Detector at z 150 mm$/);
+  expect(order[2]).toMatch(/Mirror R −100 at z 190 mm/);
+  // the magnifier image is virtual: the detector must not be moved onto it
+  await page.click('[data-preset="magnifier"]');
+  await page.click('#btnDetImage');
+  await expect(page.locator('#warnBox')).toContainText('virtual');
+  expect(await page.locator('#elSelect option').allTextContents()).toContain('#3 Detector at z 40 mm');
+  // afocal telescope: slope errors are third order and the ideal lenses show exact zeros, not round-off
+  await page.click('[data-preset="kepler"]');
+  await expect(page.locator('#convRatioHead')).toHaveText('Error / ρ³');
+  expect(await page.locator('#convTable tbody td:nth-child(3)').allTextContents()).toEqual(Array(6).fill('0 µrad'));
+  await page.click('[data-preset="thick"]');
+  await expect(page.locator('#convRatioHead')).toHaveText('Error / ρ²');
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test('em waves reports standing-wave nodes cleanly and repairs invalid select values from the URL', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'em_waves', VIEWPORTS[2]);
+  // H node of the PEC standing wave (z = −λ₁/4): ⟨u_H⟩ is round-off, so the ratio is ∞, not ~10³²
+  await page.goto('/tools/em_waves/?bnd=pec&zp=-0.25&tph=0.1', { waitUntil: 'load' });
+  await expect(page.locator('#rRatio')).toContainText('∞ (H node)');
+  await expect(page.locator('#rRatio')).not.toContainText('e+');
+  await page.goto('/tools/em_waves/?bnd=pec&zp=-0.5&tph=0.1', { waitUntil: 'load' });
+  await expect(page.locator('#rRatio')).toContainText('= 0 (E node)');
+  await page.goto('/tools/em_waves/?bnd=pec&zp=0.3', { waitUntil: 'load' });
+  await expect(page.locator('#rRatio')).toHaveText('— (inside conductor)');
+  await page.goto('/tools/em_waves/?pol=bogus&bnd=x&tph=0.2', { waitUntil: 'load' });
+  await expect(page.locator('#polSelect')).toHaveValue('linear');
+  await expect(page.locator('#bndSelect')).toHaveValue('none');
+  await expect(page.locator('#tphSlider')).toHaveValue('0.2');
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test('fresnel presets show the values their notes promise, the plot drag sets θ₁ and reset restores defaults', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'fresnel', VIEWPORTS[2]);
+  const preset = async (name) => { await page.click(`[data-preset="${name}"]`); await expect(page.locator(`[data-preset="${name}"]`)).toHaveAttribute('aria-pressed', 'true'); };
+  await preset('normal');
+  await expect(page.locator('#stat-R')).toHaveText('0.040');
+  await expect(page.locator('#ampTs')).toHaveText('0.800 ∠ 0.0°');
+  await preset('brewster');
+  await expect(page.locator('#ampRp')).toHaveText('0.000');
+  await expect(page.locator('#rsValue')).toHaveText('14.8%');
+  await expect(page.locator('#brewsterIndicator')).toHaveClass(/active/);
+  // the phase of a vanishing r_p is reported as undefined, not as ±180°
+  await expect(page.locator('#phaseCanvas-summary')).toContainText('arg rp = undefined');
+  await preset('tir');
+  await expect(page.locator('#ampRs')).toHaveText('1.000 ∠ -95.7°');
+  await expect(page.locator('#ampRp')).toHaveText('1.000 ∠ -136.2°');
+  await expect(page.locator('#factDecay')).toContainText('121.5 nm');
+  await expect(page.locator('#canvas')).toHaveAttribute('data-tir', 'true');
+  await preset('metal');
+  await expect(page.locator('#stat-R')).toHaveText('0.927');
+  await expect(page.locator('#factDecay')).toContainText('32.6 nm');
+  await expect(page.locator('#stat-brewster')).toHaveText('70.63°');
+  await preset('atr');
+  await expect(page.locator('#rsValue')).toHaveText('94.4%');
+  await expect(page.locator('#rpValue')).toHaveText('90.9%');
+
+  const plot = page.locator('#plotCanvas');
+  await plot.scrollIntoViewIfNeeded();
+  const box = await plot.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width + 40, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.locator('#thetaSlider')).toHaveValue('89.9');
+  await expect(page.locator('[data-preset="atr"]')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.click('#resetBtn');
+  await expect(page.locator('#thetaSlider')).toHaveValue('45');
+  await expect(page.locator('#stat-R')).toHaveText('0.050');
+  expect(errors).toEqual([]);
+  await context.close();
+});

@@ -261,3 +261,45 @@ test("transmitted intensity profile: |t|² in a lossless propagating medium, e�
     close(2 * acc / N, m.transmittedIntensity(tir, "p", 0), 1e-9); // ⟨|Re E|²⟩ = |E|²/2
     assert.throws(() => m.solve(1, { re: 1.5, im: -0.1 }, 0), RangeError);
 });
+
+test("numbers quoted by the page (preset notes, exercises, worked example) match the model", () => {
+    const D = Math.PI / 180;
+    const fix = (v, d) => +v.toFixed(d);
+    // Brewster preset: θB = 56.31°, Rs = 0.148, Rp = 0
+    const b = m.solve(1, 1.5, 56.31 * D);
+    assert.equal(fix(b.Rs, 3), 0.148);
+    assert.ok(b.Rp < 1e-7);
+    // Critical preset sits 0.0003° below θc: still propagating, θ2 ≈ 89.8°; 0.1° above it is TIR
+    const c = m.solve(1.5, 1, 41.81 * D, 633e-9);
+    assert.equal(c.tir, false);
+    assert.equal(fix(c.theta2 / D, 1), 89.8);
+    assert.equal(m.solve(1.5, 1, 41.91 * D).tir, true);
+    // Glass→air TIR preset and worked example (633 nm, 60°)
+    const t = m.solve(1.5, 1, 60 * D, 633e-9);
+    assert.equal(fix(t.phaseRs / D, 1), -95.7);
+    assert.equal(fix(t.phaseRp / D, 1), -136.2);
+    assert.equal(fix(t.fieldDecayLength * 1e9, 1), 121.5);
+    assert.equal(fix(t.intensityDecayLength * 1e9, 1), 60.8);
+    assert.equal(fix(m.complex.abs(t.ts), 2), 1.34);
+    // Exercise 3: d/λ0 at θc + 0.1°, + 1°, + 10°
+    const thc = m.criticalAngle(1.5, 1);
+    assert.deepEqual([0.1, 1, 10].map((x) => fix(m.solve(1.5, 1, thc + x * D, 1).fieldDecayLength, 2)), [2.55, 0.80, 0.25]);
+    assert.equal(fix((m.solve(1, 1.5, 89.9 * D).Rs + m.solve(1, 1.5, 89.9 * D).Rp) / 2, 2), 0.99);
+    // Metal preset / Exercise 4: R = 0.927, d = 32.6 nm, pseudo-Brewster 70.6° with Rp ≈ 0.87
+    const au = { re: 0.2, im: 3.09 };
+    const g = m.solve(1, au, 0, 633e-9);
+    assert.equal(fix(g.Rs, 3), 0.927);
+    assert.equal(fix(g.fieldDecayLength * 1e9, 1), 32.6);
+    const pb = m.pseudoBrewster(1, au);
+    assert.equal(fix(pb / D, 1), 70.6);
+    assert.equal(fix(m.solve(1, au, pb).Rp, 2), 0.87);
+    // ATR preset: Rs = 0.944, Rp = 0.909
+    const a = m.solve(1.5, { re: 1, im: 0.02 }, 60 * D);
+    assert.equal(fix(a.Rs, 3), 0.944);
+    assert.equal(fix(a.Rp, 3), 0.909);
+    // Exercise 2 (air → water): θB = 53.06°, θ2 = 36.94°, Rs ≈ 0.077
+    const w = m.solve(1, 1.33, m.brewsterAngle(1, 1.33));
+    assert.equal(fix(w.theta1 / D, 2), 53.06);
+    assert.equal(fix(w.theta2 / D, 2), 36.94);
+    assert.equal(fix(w.Rs, 3), 0.077);
+});

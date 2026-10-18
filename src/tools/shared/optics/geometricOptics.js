@@ -946,6 +946,8 @@
         return {
             imageAtInfinity: im.atInfinity,
             pupilRadius: ap.r,
+            // third-order spherical: the axial-crossing error grows as ρ², the output-slope error as ρ³
+            order: im.atInfinity ? 3 : 2,
             rows: rhos.map((rho) => {
                 const ya = rho * ap.r;
                 const ray = objectRay(sys, axial, 0, ya, ap.z, z0);

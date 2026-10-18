@@ -60,6 +60,7 @@
     let drag = null;
     let rafPending = false;
     let labelBounds = null;
+    let placedLabels = null;
 
 
     const fmt = (v, d = 4) => {
@@ -68,7 +69,7 @@
         if (!Number.isFinite(v)) return "—";
         if (Math.abs(v) < 1e-12) return "0";
         const s = Number(v.toPrecision(d)).toString();
-        return s.replace("-", "−");
+        return s.replace(/-/g, "−");
     };
     const fsmall = (v, unitScale, unit) => (Number.isFinite(v) && v * unitScale < 1e-3 ? "< 0.001 " + unit : fmt(v * unitScale, 3) + " " + unit);
     const fmm = (m, d = 4) => (Number.isFinite(m) ? fmt(m / MM, d) + " mm" : fmt(m));
@@ -82,6 +83,14 @@
     };
     const nmColor = (lam, a = 1) => UI.wavelengthToCSS(lam / NM, a);
     const hasMirror = () => els.some((e) => e.type === "mirror");
+    // Sequential tracing needs every other item (incoming or returning) to stay in front of the mirror.
+    function clampZ(el, z) {
+        const mirror = els.find((x) => x.type === "mirror");
+        if (!mirror) return z;
+        if (el !== mirror) return Math.min(z, mirror.z - 0.5 - (el.t || 0));
+        const lim = Math.max(...els.filter((x) => x !== mirror).map((x) => x.z + (x.t || 0)), -Infinity);
+        return Number.isFinite(lim) ? Math.max(z, lim + 0.5) : z;
+    }
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     function ordered() {
@@ -500,7 +509,9 @@
                 min: view.zMin,
                 max: view.zMax,
                 label: "z",
-                unit: "mm"
+                unit: "mm",
+                // at least five ticks: the default leaves only two on a phone
+                ticks: UI.niceTicks(view.zMin, view.zMax, Math.max(5, Math.round((w - 66) / 84)))
             },
             y: {
                 min: -view.yMax,
@@ -515,6 +526,27 @@
         const P = map.plot;
         labelBounds = P;
         const st = r.st;
+        const items = [];
+        if (!r.empty) {
+            if (st.showExact) r.lams.forEach((l) => items.push([nmColor(l), "exact " + fmt(l / NM, 4) + " nm", []]));
+            if (st.showExact && r.fans.some((f) => f.rays.some((t) => t.status === "tir"))) items.push([COL.tir, "TIR (reflected)", []]);
+            if (st.showParax) items.push([COL.paraxial, "paraxial", [6, 4]]);
+            if (st.showConstr && !r.cp.afocal) items.push([COL.construct, "construction", [2, 3]]);
+        }
+        const showLegend = w >= 520 && items.length > 0;
+        // labels are placed around each other and around the legend so none hides another
+        placedLabels = [];
+        if (showLegend) {
+            ctx.save();
+            ctx.font = "12px " + TH.font;
+            placedLabels.push({
+                x: P.x + 6,
+                y: P.y + 6,
+                w: Math.max(...items.map((i) => ctx.measureText(i[1]).width)) + 36,
+                h: items.length * 17 + 6
+            });
+            ctx.restore();
+        }
         ctx.save();
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
@@ -698,6 +730,7 @@
             drawObject(ctx, map, r);
             ctx.restore();
             labelBounds = null;
+            placedLabels = null;
             message(ctx, P, "Add a lens, surface or mirror to form an image.");
             return;
         }
@@ -719,6 +752,7 @@
             ].forEach(([n, z], i) => {
                 const p = map.toPx(z / MM, planeY),
                     q = map.toPx(z / MM, -planeY);
+                if (offViewLabel(ctx, map, z / MM, n, q.y + 14, COL.cardinal)) return;
                 ctx.strokeStyle = COL.cardinal;
                 ctx.globalAlpha = 0.6;
                 ctx.setLineDash([4, 5]);
@@ -751,12 +785,9 @@
         drawImage(ctx, map, r);
         ctx.restore();
 
-        const items = [];
-        if (st.showExact) r.lams.forEach((l) => items.push([nmColor(l), "exact " + fmt(l / NM, 4) + " nm", []]));
-        if (st.showParax) items.push([COL.paraxial, "paraxial", [6, 4]]);
-        if (st.showConstr && !r.cp.afocal) items.push([COL.construct, "construction", [2, 3]]);
         labelBounds = null;
-        if (w >= 520) legend(ctx, P, items);
+        placedLabels = null;
+        if (showLegend) legend(ctx, P, items);
     }
 
     function label(ctx, text, x, y, color, align = "center") {
@@ -772,6 +803,19 @@
         const shift = Math.min(0, hi - (lx + w)) + Math.max(0, lo - lx);
         lx += shift;
         x += shift;
+        if (placedLabels) {
+            // a 2 px overlap of the padded boxes is allowed so labels can stack 14 px apart
+            const free = (yy) => !placedLabels.some((b) => lx - 3 < b.x + b.w && b.x < lx + w + 3 && yy - 10 < b.y + b.h && b.y + 2 < yy + 4);
+            const inside = (yy) => !labelBounds || (yy - 12 >= labelBounds.y && yy + 4 <= labelBounds.y + labelBounds.h);
+            const dy = [0, -16, 16, -32, 32, -48, 48].find((d) => inside(y + d) && free(y + d));
+            if (dy != null) y += dy;
+            placedLabels.push({
+                x: lx - 3,
+                y: y - 12,
+                w: w + 6,
+                h: 16
+            });
+        }
         ctx.fillStyle = "rgba(7, 7, 13, 0.72)";
         ctx.fillRect(lx - 3, y - 12, w + 6, 16);
         ctx.fillStyle = color;
@@ -832,6 +876,16 @@
         ctx.restore();
     }
 
+    // A cardinal point or pupil outside the view gets an arrow label at the edge, not a label clamped onto the border.
+    function offViewLabel(ctx, map, z, text, y, color) {
+        if (z >= view.zMin && z <= view.zMax) return false;
+        const P = map.plot,
+            left = z < view.zMin;
+        const yy = Math.min(P.y + P.h - 6, Math.max(P.y + 16, y));
+        label(ctx, (left ? "← " : "") + text + " at z = " + fmt(z, 4) + " mm" + (left ? "" : " →"), left ? P.x + 4 : P.x + P.w - 4, yy, color, left ? "left" : "right");
+        return true;
+    }
+
     function markStop(ctx, map, s, tag) {
         const z = s.z / MM;
         const semi = Number.isFinite(s.semi) ? s.semi / MM : view.yMax * 0.85;
@@ -841,6 +895,7 @@
 
     function pupilMark(ctx, map, z, r, tag) {
         if (!Number.isFinite(z) || !Number.isFinite(r)) return;
+        if (offViewLabel(ctx, map, z, tag, map.yToPx(r) + 4, COL.pupil)) return;
         const top = map.toPx(z, r),
             bot = map.toPx(z, -r);
         ctx.save();
@@ -864,6 +919,7 @@
 
     function axisMark(ctx, map, z, text, kind) {
         const p = map.toPx(z, 0);
+        if (offViewLabel(ctx, map, z, text, p.y + (kind === "tri" ? 20 : -9), COL.cardinal)) return;
         ctx.save();
         ctx.fillStyle = COL.cardinal;
         ctx.beginPath();
@@ -1122,6 +1178,27 @@
         return map;
     }
 
+    // Fraction axis (pupil height or field) with headroom above 1 so the legend never covers the curves.
+    function fractionAxis(h, rows, label) {
+        const head = rows ? (rows * 18 + 14) / Math.max(120, h - 52) : 0;
+        return {
+            min: 0,
+            max: 1.02 + head,
+            label,
+            ticks: [0, 0.2, 0.4, 0.6, 0.8, 1]
+        };
+    }
+
+    // Data range with a minimum half-width, so an aberration-free system gets a readable ±0.01 mm axis.
+    function spanAxis(lo, hi, minHalf, pad) {
+        const mid = (lo + hi) / 2,
+            half = Math.max((hi - lo) / 2, minHalf) * (1 + pad);
+        return {
+            min: mid - half,
+            max: mid + half
+        };
+    }
+
     const lamLabel = (l) => (Math.abs(l - GO.LINES.F) < 1e-12 ? "F 486 nm" : Math.abs(l - GO.LINES.d) < 1e-12 ? "d 588 nm" : Math.abs(l - GO.LINES.C) < 1e-12 ? "C 656 nm" : fmt(l / NM, 4) + " nm");
 
     function drawSpot(ctx, w, h) {
@@ -1257,7 +1334,6 @@
                 hi = Math.max(hi, v / MM);
             }
         }));
-        const span = Math.max(hi - lo, 0.02);
         const series = r.lsa.curves.map((c, i) => ({
             xs: c.dz.map((v) => v / MM),
             ys: c.rho,
@@ -1265,21 +1341,26 @@
             dash: TH.dashes[i],
             label: lamLabel(c.lambda)
         }));
+        // legend-only entry for the dashed Δz = 0 marker (a marker label would hide under the legend)
+        series.push({
+            xs: [],
+            ys: [],
+            color: TH.textMuted,
+            dash: [5, 4],
+            width: 1.25,
+            label: "paraxial focus"
+        });
         UI.plot(ctx, {
             x: 0,
             y: 0,
             w,
             h
         }, {
-            x: Object.assign({
-                min: lo - 0.08 * span,
-                max: hi + 0.08 * span
-            }, xA),
-            y: yA,
+            x: Object.assign(spanAxis(lo, hi, 0.01, 0.08), xA),
+            y: fractionAxis(h, series.length, yA.label),
             series,
             markers: [{
                 x: 0,
-                label: "paraxial",
                 color: TH.textMuted
             }],
             legend: true,
@@ -1331,18 +1412,14 @@
                 hi = Math.max(hi, v);
             }
         });
-        const span = Math.max(hi - lo, 0.02);
         UI.plot(ctx, {
             x: 0,
             y: 0,
             w,
             h
         }, {
-            x: Object.assign({
-                min: lo - 0.1 * span,
-                max: hi + 0.1 * span
-            }, xA),
-            y: yA,
+            x: Object.assign(spanAxis(lo, hi, 0.01, 0.1), xA),
+            y: fractionAxis(h, 2, yA.label),
             series: [{
                 xs: T,
                 ys: f,
@@ -1409,7 +1486,7 @@
                 min: -m,
                 max: m
             }, xA),
-            y: yA,
+            y: fractionAxis(h, 1, yA.label),
             series: [{
                 xs,
                 ys,
@@ -1480,6 +1557,13 @@
         const warn = [];
         if (r.empty) {
             ["statEfl", "statSi", "statM", "statNA", "statRms"].forEach((id) => setText(id, "—"));
+            // clear the result cards and tables too, so no value from the previous system lingers
+            document.querySelectorAll("#readouts dd").forEach((dd) => setText(dd.id, "—"));
+            setText("rMagLabel", "Magnification");
+            setText("statMLabel", "Magnification");
+            $("convTable").querySelector("tbody").innerHTML = "";
+            $("surfTable").querySelector("tbody").innerHTML = "";
+            $("fourierLink").classList.remove("is-diffraction-limited");
             setText("warnBox", "The system has no lens, surface or mirror.");
             $("warnBox").hidden = false;
             return;
@@ -1580,13 +1664,16 @@
         wb.hidden = !warn.length;
 
         const convRows = r.conv.rows;
-        const slope = r.conv.imageAtInfinity;
+        const slope = r.conv.imageAtInfinity,
+            order = r.conv.order;
         setText("convDeltaHead", slope ? "Exact − paraxial output slope" : "Exact − paraxial axial crossing");
+        setText("convRatioHead", "Error / ρ" + (order === 3 ? "³" : "²"));
         const tb = $("convTable").querySelector("tbody");
         tb.innerHTML = convRows.map((row) => {
-            const d = row.delta;
+            // below 10 fm (or 10 frad) the difference is floating-point round-off, not aberration
+            const d = Math.abs(row.delta) < 1e-14 ? 0 : row.delta;
             const dTxt = !Number.isFinite(d) ? row.status : slope ? fmt(d * 1e6, 4) + " µrad" : fmt(d / 1e-6, 4) + " µm";
-            const kTxt = !Number.isFinite(d) ? "—" : slope ? fmt(d / row.rho ** 2 * 1e6, 4) + " µrad" : fmt(d / row.rho ** 2 / 1e-6, 4) + " µm";
+            const kTxt = !Number.isFinite(d) ? "—" : slope ? fmt(d / row.rho ** order * 1e6, 4) + " µrad" : fmt(d / row.rho ** order / 1e-6, 4) + " µm";
             return "<tr><td>" + row.rho + "</td><td>" + fmm(row.height, 4) + "</td><td>" + dTxt + "</td><td>" + kTxt + "</td></tr>";
         }).join("");
 
@@ -1732,7 +1819,9 @@
                     if (key === "t") val = Math.max(0.1, v);
                     if (key === "semi") val = Math.max(0, v);
                     if (key === "f" && v === 0) val = 1e9;
+                    if (key === "z") val = clampZ(e, val);
                     e[key] = val;
+                    if (val !== v) input.value = String(val);
                 } else if (input.value === "custom") {
                     const cur = Number(e.material);
                     e.material = String(Number.isFinite(cur) && cur >= 1 ? cur : 1.6);
@@ -1800,7 +1889,11 @@
         const mirror = els.find((e) => e.type === "mirror");
         let z;
         if (mirror && type !== "mirror") z = mirror.z - 40;
-        else if (type === "detector") {
+        else if (type === "mirror") {
+            // Behind everything already on the bench, including the detector, which then moves to the returning path.
+            const zs = list.map((e) => e.z + (e.t || 0));
+            z = zs.length ? Math.max(...zs) + 40 : 100;
+        } else if (type === "detector") {
             const r = result;
             z = r && r.im && !r.im.atInfinity && Number.isFinite(r.im.zImage) ? Math.round(r.im.zImage / MM * 10) / 10 : (list.length ? list[list.length - 1].z + 50 : 100);
         } else {
@@ -1843,6 +1936,9 @@
             e.after = hasMirror();
         }
         els.push(e);
+        if (type === "mirror") els.forEach((x) => {
+            if (x.type === "detector") x.after = true;
+        });
         selected = e.id;
         rebuildEditor();
         commitChange(true);
@@ -2055,14 +2151,7 @@
         } else {
             const el = els.find((x) => x.id === drag.id);
             if (el) {
-                let z = Math.round((drag.zStart + dz) * 2) / 2;
-                const mirror = els.find((x) => x.type === "mirror");
-                if (mirror && el !== mirror) z = Math.min(z, mirror.z - 0.5);
-                if (mirror && el === mirror) {
-                    const lim = Math.max(...els.filter((x) => x !== mirror).map((x) => x.z + (x.t || 0)), -Infinity);
-                    if (Number.isFinite(lim)) z = Math.max(z, lim + 0.5);
-                }
-                el.z = z;
+                el.z = clampZ(el, Math.round((drag.zStart + dz) * 2) / 2);
             }
         }
         schedule();
@@ -2088,7 +2177,7 @@
                 sl.value = String(clamp(Number(sl.value) - s, Number(sl.min), Number(sl.max)));
             } else {
                 const el = els.find((x) => x.id === selected);
-                if (el) el.z = Math.round((el.z + s) * 10) / 10;
+                if (el) el.z = clampZ(el, Math.round((el.z + s) * 10) / 10);
             }
         } else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && selected === "obj" && !$("objInf").checked) {
             const sl = $("objH");
@@ -2142,9 +2231,9 @@
     }
     $("btnDetImage").addEventListener("click", () => {
         const r = result;
-        if (r && r.im && !r.im.atInfinity) detectorTo(r.im.zImage);
+        if (r && r.im && !r.im.atInfinity && !r.im.virtual) detectorTo(r.im.zImage);
         else {
-            $("warnBox").textContent = "The image is at infinity, so there is no plane to move the detector to.";
+            $("warnBox").textContent = r && r.im && r.im.virtual ? "The image is virtual: no light reaches that plane, so a detector there records nothing." : "The image is at infinity, so there is no plane to move the detector to.";
             $("warnBox").hidden = false;
         }
     });
