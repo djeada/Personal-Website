@@ -247,8 +247,8 @@
             fMax = Math.max(fMax, a.Eamp, cfg.m1.eta * a.Hamp);
         }
 
-        // The time plot also draws the total u: in a partial standing wave E and H are in phase at
-        // the envelope maxima, so u/ū₀ reaches 2(1 + |r|²) and can exceed both the u_E and S_z peaks.
+
+
         let uMax = 0,
             uTotMax = 0,
             sMax = 0,
@@ -1075,8 +1075,8 @@
     }
 
 
-    // sig() only sees fields in V/m (E₀ ≥ 1 V/m) or ratios normalised to E₀², ū₀ or I₀, so anything below 10⁻⁹ is
-    // round-off at a standing-wave node (sin kz ≈ 10⁻¹⁶), not a value worth printing as "9.91e-15".
+
+
     const sig = (v, d = 3) => (Math.abs(v) < 1e-9 ? "0" : Number(v.toPrecision(d)).toString());
     const snap = (v, scale) => (Math.abs(v) < 1e-9 * scale ? 0 : v);
     const sci = (v) => (v === 0 ? "0" : v.toExponential(1).replace(/e([+-])(\d+)/, (m, s, e) => "×10" + (s === "-" ? "⁻" : "") + e.split("").map((c) => "⁰¹²³⁴⁵⁶⁷⁸⁹" [c]).join("")));
@@ -1132,7 +1132,7 @@
             (Number.isFinite(ang) ? `; ∠(E, H) = ${ang.toFixed(1)}°` : "");
         $("rProbe").textContent = `${fmt(snap(f.uE, cfg.u0), "J/m³")}, ${fmt(snap(f.uH, cfg.u0), "J/m³")}, ${fmt(snap(f.S[2], cfg.I0), "W/m²")}`;
         const av = em.timeAverage(cfg, zProbe());
-        // At an exact E or H node of a standing wave one average is round-off (~10⁻³⁰ ū₀), not a number to divide by.
+
         const avE = snap(av.uE, cfg.u0),
             avH = snap(av.uH, cfg.u0);
         $("rRatio").textContent = f.region === 0 ? "— (inside conductor)" :
@@ -1253,7 +1253,7 @@
 
     render(false);
     url.ready.then((restored) => {
-        // A hand-edited link such as ?pol=foo leaves the <select> blank; fall back to the defaults instead.
+
         const s = ctl.get(),
             fix = {};
         if (!["linear", "rcp", "lcp", "elliptical"].includes(s.pol)) fix.pol = DEFAULTS.pol;

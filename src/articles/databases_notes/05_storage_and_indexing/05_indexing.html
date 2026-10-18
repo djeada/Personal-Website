@@ -22,8 +22,8 @@
             });
         })();
     </script>
-    <title>Understanding Indexing in Databases | Adam Djellouli</title>
-    <meta content="Indexes serve as a roadmap for the database engine, allowing it to find data swiftly based on the values of one or more columns." name="description" />
+    <title>Database Indexing | Adam Djellouli</title>
+    <meta content="An index is an additional access path to data." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -39,7 +39,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Understanding Indexing in Databases",
+            "headline": "Database Indexing",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -49,20 +49,18 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing",
-            "description": "Indexes serve as a roadmap for the database engine, allowing it to find data swiftly based on the values of one or more columns.",
-            "dateModified": "2025-01-21",
-            "image": "https://adamdjellouli.com/resources/article-images/b56c37ef-6654-4cf5-801c-0d8617a2f471-85cb8fe945.webp",
+            "description": "An index is an additional access path to data.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
-    <meta content="Understanding Indexing in Databases" property="og:title" />
+    <meta content="Database Indexing" property="og:title" />
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Indexes serve as a roadmap for the database engine, allowing it to find data swiftly based on the values of one or more columns." property="og:description" />
-    <meta content="https://adamdjellouli.com/resources/article-images/b56c37ef-6654-4cf5-801c-0d8617a2f471-85cb8fe945.webp" property="og:image" />
-    <meta content="2025-01-21" property="article:modified_time" />
-    <meta content="summary_large_image" name="twitter:card" />
+    <meta content="An index is an additional access path to data." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
 </head>
 
 <body>
@@ -108,7 +106,7 @@
         </ul>
     </nav>
     <main class="site-main" id="main-content" tabindex="-1">
-<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Storage And Indexing</li><li><span aria-current="page">Understanding Indexing in Databases</span></li></ol></div>
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Storage And Indexing</li><li><span aria-current="page">Database Indexing</span></li></ol></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
     <div id="article-wrapper">
@@ -116,61 +114,26 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#types-of-indexes">Types of Indexes</a>
+                    <li><a href="#how-a-b-tree-lookup-works">How a B-tree lookup works</a></li>
+                    <li><a href="#index-types-and-access-methods">Index types and access methods</a></li>
+                    <li><a href="#clustered-storage-and-secondary-indexes">Clustered storage and secondary indexes</a></li>
+                    <li><a href="#designing-a-composite-index">Designing a composite index</a>
                         <ol>
-                            <li><a href="#clustered-indexes">Clustered Indexes</a></li>
-                            <li><a href="#non-clustered-indexes">Non-Clustered Indexes</a></li>
-                            <li><a href="#other-types-of-indexes">Other Types of Indexes</a></li>
-                            <li><a href="#when-to-use-which-index">When to Use Which Index</a></li>
+                            <li><a href="#covering-a-query">Covering a query</a></li>
+                            <li><a href="#indexing-a-subset">Indexing a subset</a></li>
+                            <li><a href="#indexing-an-expression">Indexing an expression</a></li>
                         </ol>
                     </li>
-                    <li><a href="#visualizing-index-concepts">Visualizing Index Concepts</a>
-                        <ol>
-                            <li><a href="#b-tree-index-structure">B-Tree Index Structure</a></li>
-                            <li><a href="#hash-index-structure">Hash Index Structure</a></li>
-                            <li><a href="#gist-generalized-search-tree-index-structure">GiST (Generalized Search Tree) Index Structure</a></li>
-                            <li><a href="#gin-generalized-inverted-index-structure">GIN (Generalized Inverted Index) Structure</a></li>
-                            <li><a href="#r-tree-index-structure">R-Tree Index Structure</a></li>
-                            <li><a href="#full-text-index-structure">Full-Text Index Structure</a></li>
-                            <li><a href="#bitmap-join-index">Bitmap Join Index</a></li>
-                            <li><a href="#spatial-indexes">Spatial Indexes</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#comparative-summary-of-index-structures">Comparative Summary of Index Structures</a></li>
-                    <li><a href="#managing-indexes">Managing Indexes</a>
-                        <ol>
-                            <li><a href="#index-creation">Index Creation</a></li>
-                            <li><a href="#index-usage">Index Usage</a></li>
-                            <li><a href="#monitoring-indexes">Monitoring Indexes</a></li>
-                            <li><a href="#index-maintenance">Index Maintenance</a></li>
-                            <li><a href="#dropping-indexes">Dropping Indexes</a></li>
-                            <li><a href="#database-specific-considerations">Database-Specific Considerations</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#key-vs-non-key-column-indexing">Key vs. Non-Key Column Indexing</a>
-                        <ol>
-                            <li><a href="#key-column-indexing">Key Column Indexing</a></li>
-                            <li><a href="#non-key-column-indexing">Non-Key Column Indexing</a></li>
-                            <li><a href="#avoid-indexing-low-cardinality-columns">Avoid Indexing Low-Cardinality Columns</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#index-scan-vs-index-only-scan">Index Scan vs. Index-Only Scan</a>
-                        <ol>
-                            <li><a href="#index-scan">Index Scan</a></li>
-                            <li><a href="#index-only-scan">Index-Only Scan</a></li>
-                            <li><a href="#benefits-of-index-only-scan">Benefits of Index-Only Scan</a></li>
-                            <li><a href="#trade-offs-of-index-only-scan">Trade-offs of Index-Only Scan</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#practical-example">Practical Example</a></li>
-                    <li><a href="#benefits-of-indexing">Benefits of Indexing</a></li>
-                    <li><a href="#drawbacks-of-indexing">Drawbacks of Indexing</a></li>
-                    <li><a href="#best-practices-for-indexing">Best Practices for Indexing</a></li>
+                    <li><a href="#keys-uniqueness-and-foreign-keys">Keys, uniqueness, and foreign keys</a></li>
+                    <li><a href="#verify-the-benefit">Verify the benefit</a></li>
+                    <li><a href="#monitoring-and-maintenance">Monitoring and maintenance</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Understanding Database Pages</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Keys and Secondary Keys</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row-based and Column-based Databases</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages: The Chunks Behind a Table</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">B-Tree Index Internals and Page Splits</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Keys, Alternate Keys, and Secondary Indexes</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -234,6 +197,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -248,7 +217,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -274,6 +242,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -296,6 +270,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -310,6 +290,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -324,6 +309,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -332,7 +350,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: January 21, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -351,1245 +369,305 @@
                         </svg>
                     </button></div>
             </div>
-            <h1>Understanding Indexing in Databases</h1>
-            <p>Indexes serve as a roadmap for the database engine, allowing it to find data swiftly based on the values of one or more columns. They are important for speeding up query execution, enforcing unique constraints on columns, and enabling quick information retrieval. Different types of indexes are available, such as B-tree indexes, bitmap indexes, and hash indexes, each suited to specific data types and query patterns. The choice of index depends on the nature of the data, the type of queries executed, and the database management system (DBMS) in use.</p>
-            <p>After reading this material, you should be able to answer the following questions:</p>
+            <h1>Database Indexing</h1>
+            <p>An index is an additional access path to data. It can reduce the rows and pages examined by a query, but it also consumes storage and must be maintained when indexed data changes. Start with the queries you need to support, then verify the resulting plans.</p>
+            <p>This page is the <strong>indexing overview</strong>. The focused notes that follow go deeper into:</p>
             <ul>
-                <li>What are indexes, and why are they important?</li>
-                <li>What types of indexes exist, and how do they vary across different databases like MySQL, SQLite, and PostgreSQL?</li>
-                <li>How can you create, remove, and check existing indexes in a database?</li>
-                <li>When is it beneficial to use indexes?</li>
-                <li>In what scenarios should indexes be AVOIDED?</li>
+                <li><a href="06_btree_internals_and_page_splits.html">B-tree internals and page splits</a>,</li>
+                <li><a href="07_composite_indexes_and_column_order.html">composite index column order</a>,</li>
+                <li><a href="08_covering_partial_and_expression_indexes.html">covering, partial, and expression indexes</a>,</li>
+                <li><a href="09_clustered_indexes_heap_tables_and_row_locality.html">clustered indexes, heaps, and row locality</a>,</li>
+                <li><a href="10_specialized_index_structures.html">specialized index structures</a>,</li>
+                <li><a href="11_index_maintenance_bloat_and_online_operations.html">maintenance, bloat, and online index operations</a>.</li>
             </ul>
-            <h3 id="types-of-indexes">Types of Indexes</h3>
-            <p>Indexes are essential in databases to enhance query performance and data retrieval speed. There are several types of indexes, each designed for specific use cases and database systems. Below are detailed explanations of commonly used index types and their applications across various database platforms.</p>
-            <h4 id="clustered-indexes">Clustered Indexes</h4>
-            <p>A <strong>clustered index</strong> determines the physical order of data in a table. Essentially, the table's rows are stored on disk in the same sequence as the index. </p>
-            <p><strong>Advantages</strong>:</p>
-            <ul>
-                <li>Faster data retrieval when accessing ranges of values or performing queries with filters that align with the index order (e.g., <code>BETWEEN</code>, <code>ORDER BY</code>).</li>
-                <li>Ideal for columns frequently used in queries with range-based conditions, such as dates or sequential IDs.</li>
-            </ul>
-            <p><strong>Limitations</strong>:</p>
-            <ul>
-                <li>A table can only have one clustered index because the physical arrangement of rows cannot be altered in more than one way.</li>
-                <li>Updating or inserting new rows may involve rearranging the physical data on disk, which can incur performance overhead for frequently changing tables.</li>
-            </ul>
-            <p><strong>Example</strong>: In SQL Server, when a primary key is defined, a clustered index is created by default. Similarly, in MySQL's InnoDB engine, the primary key is stored as a clustered index.</p>
-            <h4 id="non-clustered-indexes">Non-Clustered Indexes</h4>
-            <p>A <strong>non-clustered index</strong> creates a separate structure that contains the indexed columns and pointers (row locators) to the actual data rows. Unlike clustered indexes, they do not alter the physical order of the data on disk.</p>
-            <p><strong>Advantages</strong>:</p>
-            <ul>
-                <li>A table can have multiple non-clustered indexes, allowing for optimized queries on various columns.</li>
-                <li>Suitable for queries involving filtering, searching, or sorting based on columns that are not part of the clustered index.</li>
-                <li>Offers flexibility in querying multiple fields.</li>
-            </ul>
-            <p><strong>Limitations</strong>:</p>
-            <ul>
-                <li>Accessing the actual data requires an extra step (lookup), as the non-clustered index points to the data rows rather than storing them in order.</li>
-                <li>Can increase storage requirements since the indexes are maintained as separate structures.</li>
-            </ul>
-            <p><strong>Example</strong>: In databases like PostgreSQL and SQL Server, you can create multiple non-clustered indexes to improve performance on frequently queried columns.</p>
-            <h4 id="other-types-of-indexes">Other Types of Indexes</h4>
-            <p>I. <strong>Unique Index</strong>:</p>
-            <ul>
-                <li>Ensures that all values in the indexed column are unique.</li>
-                <li>Automatically created when defining a unique constraint on a column.</li>
-                <li>Useful for fields like email addresses, usernames, or other identifiers.</li>
-            </ul>
-            <p>II. <strong>Bitmap Index</strong>:</p>
-            <ul>
-                <li>Stores indexes as bitmaps and is highly efficient for low-cardinality columns (columns with a limited number of unique values).</li>
-                <li>Commonly used in data warehousing and analytical queries.</li>
-            </ul>
-            <p>III. <strong>Full-Text Index</strong>:</p>
-            <ul>
-                <li>Designed for efficient text searching and supports queries like <code>CONTAINS</code> or <code>MATCH</code>.</li>
-                <li>Useful for columns containing large text fields such as descriptions or comments.</li>
-            </ul>
-            <p>IV. <strong>Spatial Index</strong>:</p>
-            <ul>
-                <li>Specialized index for spatial data types like geometries and geographical coordinates.</li>
-                <li>Common in geographic information systems (GIS) or applications requiring location-based searches.</li>
-            </ul>
-            <p>V. <strong>XML and JSON Indexes</strong>:</p>
-            <ul>
-                <li>Supported by some databases for efficient querying of XML and JSON data.</li>
-                <li>Useful when storing semi-structured data in relational databases.</li>
-            </ul>
-            <p>VI. <strong>Clustered vs. Non-Clustered Index Comparison</strong>:</p>
-            <ul>
-                <li>Clustered indexes store rows in physical order, while non-clustered indexes maintain a separate structure.</li>
-                <li>Clustered indexes are faster for range queries; non-clustered indexes are better for specific lookups.</li>
-            </ul>
-            <h4 id="when-to-use-which-index">When to Use Which Index</h4>
-            <p>Choosing the right type of index depends on the database workload and query patterns:</p>
+            <p>The performance chapter then shows how to validate these structures with <a href="../08_database_performance/07_execution_plans_statistics_and_cardinality.html">execution plans and cardinality estimates</a>.</p>
+            <h2 id="how-a-b-tree-lookup-works">How a B-tree lookup works</h2>
+            <p>A B-tree-family index stores ordered keys in a balanced structure. Internal pages direct a search toward leaf pages; leaf entries identify rows or contain the rows themselves, depending on the engine.</p>
+            <div>
+                <pre><code class="language-text">Root page --&gt; Internal page --&gt; Leaf entries --&gt; Rows, if needed</code></pre>
+            </div>
+            <p>An equality lookup can navigate to the matching keys. A range lookup finds its starting point and then scans the relevant entries. Retrieving many rows still costs work: logarithmic navigation does not make the whole result free.</p>
+            <p>Without <code>ORDER BY</code>, SQL does not guarantee output order even when the plan uses an ordered index.</p>
+            <h2 id="index-types-and-access-methods">Index types and access methods</h2>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Index Type</strong></th>
-                        <th><strong>Physical Data Order</strong></th>
-                        <th><strong>Number of Indexes Allowed</strong></th>
-                        <th><strong>Best for Queries</strong></th>
-                        <th><strong>Limitations</strong></th>
+                        <th>Type</th>
+                        <th>Useful operations</th>
+                        <th>Important limits</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Clustered Index</strong></td>
-                        <td>Matches the physical order of the table.</td>
-                        <td>1 per table</td>
-                        <td>Range-based queries (e.g., <code>BETWEEN</code>, <code>ORDER BY</code>), primary key lookups.</td>
-                        <td>Only one per table; updating data can be slow if frequent reordering is needed.</td>
+                        <td>B-tree family</td>
+                        <td>Equality, ranges, ordered traversal</td>
+                        <td>Matching many rows can make a scan cheaper.</td>
                     </tr>
                     <tr>
-                        <td><strong>Non-Clustered Index</strong></td>
-                        <td>Does not alter physical data order.</td>
-                        <td>Multiple per table</td>
-                        <td>Filtering with <code>WHERE</code>, <code>JOIN</code>, <code>GROUP BY</code>; specific column lookups.</td>
-                        <td>Slower for range queries; requires additional storage and lookup steps.</td>
+                        <td>Hash</td>
+                        <td>Equality</td>
+                        <td>Does not support ordered range traversal; availability depends on the engine.</td>
                     </tr>
                     <tr>
-                        <td><strong>Unique Index</strong></td>
-                        <td>Can enforce unique constraints.</td>
-                        <td>Multiple per table</td>
-                        <td>Columns requiring uniqueness (e.g., email, username).</td>
-                        <td>Cannot handle duplicate values; limited to specific use cases.</td>
+                        <td>Bitmap</td>
+                        <td>Combining categorical predicates in analytical workloads</td>
+                        <td>Persistent bitmap indexes can create write contention; support is engine-specific.</td>
                     </tr>
                     <tr>
-                        <td><strong>Bitmap Index</strong></td>
-                        <td>Does not alter physical data order.</td>
-                        <td>Multiple per table</td>
-                        <td>Low-cardinality columns (e.g., gender, status) in analytics workloads.</td>
-                        <td>Not suitable for high-cardinality columns; updates can be resource-intensive.</td>
+                        <td>Inverted / full-text</td>
+                        <td>Search terms, documents, and some containment queries</td>
+                        <td>Tokenization and supported operators determine matching behavior.</td>
                     </tr>
                     <tr>
-                        <td><strong>Full-Text Index</strong></td>
-                        <td>Does not alter physical data order.</td>
-                        <td>Depends on database system</td>
-                        <td>Text search queries (<code>CONTAINS</code>, <code>MATCH</code>) in large text fields.</td>
-                        <td>Limited to text-based columns; not ideal for frequent updates.</td>
+                        <td>Spatial</td>
+                        <td>Geometric predicates</td>
+                        <td>Often requires an exact predicate check after candidate lookup.</td>
                     </tr>
                     <tr>
-                        <td><strong>Spatial Index</strong></td>
-                        <td>Does not alter physical data order.</td>
-                        <td>Multiple per table</td>
-                        <td>Geographical or spatial queries (e.g., location-based filtering).</td>
-                        <td>Specialized to spatial data types; less useful for general-purpose queries.</td>
+                        <td>BRIN (PostgreSQL)</td>
+                        <td>Pruning block ranges when values correlate with storage order</td>
+                        <td>Lossy summaries; generally less useful when values are scattered.</td>
                     </tr>
                     <tr>
-                        <td><strong>XML/JSON Index</strong></td>
-                        <td>Does not alter physical data order.</td>
-                        <td>Multiple per table</td>
-                        <td>Queries on semi-structured data in XML or JSON format.</td>
-                        <td>Specific to XML/JSON; performance depends on the database's native support for these formats.</td>
+                        <td>Columnstore</td>
+                        <td>Scans, compression, analytical aggregation</td>
+                        <td>Different trade-offs from a rowstore lookup index.</td>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="visualizing-index-concepts">Visualizing Index Concepts</h3>
-            <p>Visual representations of index structures, such as B-trees, provide valuable insights into how data is organized and accessed efficiently. This section delves deeper into the B-tree index structure, elucidating its components, operational mechanics, and advantages in database management.</p>
-            <h4 id="b-tree-index-structure">B-Tree Index Structure</h4>
-            <p>A fundamental and widely used index type is the <strong>B-tree (Balanced Tree)</strong>, which organizes data in a hierarchical, balanced tree structure. This design facilitates rapid data retrieval, insertion, and deletion operations, making it highly effective for databases that handle large volumes of data with frequent read and write operations.</p>
-            <div>
-                <pre><code class="language-shell"># B-Tree Structure:
-          [M]
-         /   \
-     [G]       [T]
-    /  \       /  \
-[A-F][H-L] [N-S][U-Z]</code></pre>
-            </div>
+            <p>PostgreSQL bitmap scans combine index results at execution time; they are not the same as Oracle persistent bitmap indexes. PostgreSQL GIN, GiST, and SP-GiST support different operator classes, rather than being interchangeable general-purpose indexes.</p>
+            <h2 id="clustered-storage-and-secondary-indexes">Clustered storage and secondary indexes</h2>
+            <p>A rowstore clustered index stores table rows in its leaf pages, logically organized by the index key. It does not guarantee that pages occupy consecutive disk sectors.</p>
             <ul>
-                <li>Internal nodes serve as <strong>navigational guides</strong> within the tree by containing keys that define the range of values stored in their child nodes.</li>
-                <li>Leaf nodes reside at the bottom of the tree and hold the actual keys and pointers to the data rows in the table.</li>
-                <li>Separator keys are located within internal nodes and determine the boundaries for the child nodes.</li>
-                <li>For example, <code>[M]</code> in the root node separates the ranges <code>[A-F]</code> and <code>[G-T]</code>.</li>
-                <li>Data keys are found in leaf nodes and correspond directly to the indexed column values in the table.</li>
-                <li>Child pointers are contained in internal nodes and enable traversal through the tree.</li>
-                <li>Data pointers are held by leaf nodes and reference the actual data rows in the table, allowing quick access to desired records.</li>
-                <li>The B-tree maintains a <strong>balanced structure</strong> by keeping all leaf nodes at the same depth.</li>
-                <li>This uniformity guarantees that the number of operations required to traverse from the root to any leaf node remains consistent.</li>
-                <li>Typically, this results in logarithmic time complexity for search operations.</li>
-                <li>Fan-out refers to the number of child pointers per node.</li>
-                <li>A higher fan-out reduces the tree's height, minimizing the number of disk I/O operations needed to traverse the tree.</li>
-                <li>This characteristic enhances the efficiency of the B-tree, especially in systems where disk access speed is a limiting factor.</li>
+                <li><strong>InnoDB:</strong> the primary key normally supplies the clustered key. Secondary entries carry that key to locate the row.</li>
+                <li><strong>SQL Server:</strong> a table can have one clustered rowstore index or be a heap. A primary-key constraint can use a clustered or nonclustered index.</li>
+                <li><strong>PostgreSQL:</strong> ordinary tables are heaps with separate indexes. <code>CLUSTER</code> rewrites a table in an index's order once; later writes do not automatically preserve that order.</li>
             </ul>
-            <p><strong>Operational Mechanics:</strong></p>
-            <ul>
-                <li>To locate a specific value, the database engine starts at the root node and navigates through the internal nodes by comparing the search key with the separator <strong>keys</strong> until it reaches the appropriate leaf node.</li>
-                <li>Due to the balanced and hierarchical nature of the B-tree, the search operation requires a minimal number of comparisons and disk <strong>accesses</strong>, typically proportional to the logarithm of the number of entries.</li>
-                <li>When a new key is inserted, it is placed in the correct leaf node based on its <strong>value</strong>.</li>
-                <li>If the leaf node is full, it splits into two nodes, and the middle key is promoted to the parent node to maintain <strong>balance</strong>.</li>
-                <li>To delete a key, the database engine locates it in the appropriate leaf node and removes its <strong>entry</strong>.</li>
-                <li>If the removal causes the node to fall below the minimum number of keys, it may borrow a key from a sibling node or merge with a sibling to maintain the tree's <strong>stability</strong>.</li>
-            </ul>
-            <p><strong>Advantages of B-Tree Indexes:</strong></p>
-            <ul>
-                <li>B-trees provide quick <strong>search capabilities</strong> with a time complexity of O(log n), making them suitable for large datasets where fast retrieval is essential.</li>
-                <li>The B-tree can efficiently handle <strong>dynamic data</strong> by allowing frequent insertions and deletions without significant performance degradation, thanks to its balanced nature.</li>
-                <li>By maximizing the number of keys per node (high <strong>fan-out</strong>), B-trees reduce the height of the tree, thereby minimizing the number of disk accesses required for search operations.</li>
-                <li>B-trees support efficient <strong>range queries</strong>, enabling quick retrieval of a sequence of records that fall within a specified range.</li>
-                <li>Since B-trees maintain their keys in a sorted <strong>order</strong>, they inherently support ordered traversals, which is beneficial for operations that require sorted data.</li>
-            </ul>
-            <h4 id="hash-index-structure">Hash Index Structure</h4>
-            <p><strong>Hash Indexes</strong> use a hash table where keys are hashed to determine their storage location. They are optimized for exact-match queries.</p>
-            <div>
-                <pre><code class="language-shell"># Hash Index Structure:
-Hash Function: h(key) = hash_value
-
-Key 'A' → h(A) → Bucket 1
-Key 'B' → h(B) → Bucket 2
-Key 'C' → h(C) → Bucket 3
-...</code></pre>
-            </div>
-            <ul>
-                <li>A hash function converts the key into a <strong>hash value</strong> that determines the bucket where the data is stored.</li>
-                <li>Buckets are containers that store <strong>data pointers</strong> corresponding to hash values.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation applies the hash function to the search key to <strong>locate</strong> the appropriate bucket.</li>
-                <li>Insertion hashes the key and places the data pointer in the corresponding <strong>bucket</strong>.</li>
-                <li>Deletion hashes the key to find the bucket and removes the data <strong>pointer</strong>.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>Search operations have an O(1) average time complexity, enabling <strong>fast</strong> exact-match lookups.</li>
-                <li>The structure is <strong>simple</strong>, making it easier to implement and manage compared to tree-based indexes.</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>The method is limited to exact matches and is <strong>ineffective</strong> for range queries or pattern matching.</li>
-                <li>There is a potential for collisions, as multiple keys may hash to the same bucket, requiring <strong>collision</strong> resolution strategies.</li>
-            </ul>
-            <p><strong>Bitmap Indexes</strong> use bitmaps (arrays of bits) to represent the presence or absence of a value in a dataset. They are highly efficient for columns with low cardinality.</p>
-            <div>
-                <pre><code class="language-shell"># Bitmap Index Structure for Gender Column:
-Value 'M': 101010
-Value 'F': 010101</code></pre>
-            </div>
-            <ul>
-                <li>Each distinct value in the indexed column has a corresponding <strong>bitmap</strong>.</li>
-                <li>Each <strong>bit</strong> represents a row in the table, indicating whether the row contains the specific value.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation combines bitmaps using <strong>logical</strong> operations to fulfill query conditions.</li>
-                <li>Insertion updates the relevant <strong>bitmaps</strong> to reflect the new data.</li>
-                <li>Deletion clears the bits corresponding to the <strong>deleted</strong> data.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>Bitmap indexes provide <strong>compact</strong> storage for columns with a limited number of distinct values.</li>
-                <li>Logical operations on bitmaps enable <strong>highly</strong> efficient performance for complex queries involving multiple conditions.</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>They are not suitable for columns with <strong>many</strong> unique values as bitmap size grows proportionally.</li>
-                <li>Frequent updates can incur <strong>costly</strong> maintenance overhead due to the need to modify multiple bitmaps.</li>
-            </ul>
-            <h4 id="gist-generalized-search-tree-index-structure">GiST (Generalized Search Tree) Index Structure</h4>
-            <p><strong>GiST (Generalized Search Tree)</strong> indexes are flexible, supporting a variety of data types and query operations. They extend the B-Tree structure to accommodate complex data types.</p>
-            <div>
-                <pre><code class="language-shell"># GiST Index Structure for Geospatial Data:
-          [BBox1]
-         /       \
-    [BBox2]      [BBox3]
-    /    \        /    \
-[A-F] [G-L]  [M-S]  [T-Z]</code></pre>
-            </div>
-            <ul>
-                <li><strong>Bounding Boxes (BBox)</strong> represent the spatial extent of the data within each node.</li>
-                <li><strong>Flexible Operators</strong> support a wide range of operations beyond simple comparisons, such as spatial containment.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation utilizes bounding boxes to quickly <strong>eliminate</strong> non-relevant branches.</li>
-                <li>During insertion, the algorithm adjusts bounding boxes to accommodate new entries while maintaining <strong>balance</strong>.</li>
-                <li>Deletion operations update bounding boxes and reorganize the <strong>tree</strong> as necessary.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>The structure offers <strong>versatility</strong>, supporting various data types including geometric, textual, and multimedia data.</li>
-                <li>It is <strong>optimized</strong> for range searches, nearest-neighbor searches, and spatial queries, enabling efficient performance for complex queries.</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>The implementation is more <strong>complex</strong> to implement and maintain compared to standard B-Trees.</li>
-                <li>There may be a <strong>performance</strong> overhead due to the additional processing required for maintaining bounding boxes.</li>
-            </ul>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Geospatial databases for indexing locations and spatial data.</li>
-                <li>Full-text search engines requiring support for complex query operators.</li>
-            </ul>
-            <h4 id="gin-generalized-inverted-index-structure">GIN (Generalized Inverted Index) Structure</h4>
-            <p><strong>GIN (Generalized Inverted Index)</strong> is optimized for indexing composite values, such as arrays and full-text search data. It efficiently handles multiple keys per row.</p>
-            <div>
-                <pre><code class="language-shell"># GIN Index Structure for Tags Column:
-Tags: ['SQL', 'Database']
-Tags: ['Index', 'Performance']
-Tags: ['SQL', 'Optimization']</code></pre>
-            </div>
-            <ul>
-                <li><strong>Inverted Index</strong> maps each key to the list of rows containing that key.</li>
-                <li><strong>Multi-Key Support</strong> handles multiple values within a single row, such as array elements or tokens from text.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation retrieves rows containing the specified keys by accessing the inverted <strong>lists</strong>.</li>
-                <li>Insertion adds new keys to the inverted index and updates the corresponding <strong>lists</strong>.</li>
-                <li>Deletion removes keys from the inverted index and updates the <strong>lists</strong> accordingly.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>The method is <strong>efficient</strong> for multi-value columns, making it ideal for columns that store multiple values per row, such as tags or arrays.</li>
-                <li>It enables <strong>fast</strong> full-text search by indexing individual tokens, enhancing performance for text search operations.</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>There is a <strong>storage</strong> overhead as maintaining extensive inverted lists can consume significant space.</li>
-                <li>The process introduces <strong>update</strong> complexity since managing multiple keys per row can complicate insertions and deletions.</li>
-            </ul>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Full-text search implementations.</li>
-                <li>Indexing array or JSON columns containing multiple elements.</li>
-            </ul>
-            <h4 id="r-tree-index-structure">R-Tree Index Structure</h4>
-            <p><strong>R-Tree (Rectangle Tree)</strong> indexes are designed for spatial access methods, efficiently handling multi-dimensional data such as geographical coordinates.</p>
-            <div>
-                <pre><code class="language-shell"># R-Tree Structure for Spatial Data:
-          [Rect1]
-         /       \
-    [Rect2]      [Rect3]
-    /    \        /    \
-[ShapeA] [ShapeB] [ShapeC] [ShapeD]</code></pre>
-            </div>
-            <ul>
-                <li>Bounding rectangles are used in each node to <strong>encompass</strong> a spatial area that bounds all its child nodes.</li>
-                <li>The hierarchical organization is similar to B-Trees but <strong>extended</strong> to handle multi-dimensional spaces.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation traverses nodes whose bounding rectangles <strong>intersect</strong> with the query area.</li>
-                <li>Insertion involves finding the appropriate leaf node by minimizing the <strong>area</strong> enlargement required.</li>
-                <li>Deletion removes entries and adjusts bounding rectangles to <strong>maintain</strong> balance.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>The structure is optimized for <strong>spatial</strong> queries, efficiently handling range searches, nearest-neighbor searches, and spatial joins.</li>
-                <li>It handles multi-dimensional <strong>data</strong>, making it suited for applications involving geographical information systems (GIS).</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>The implementation is more <strong>complex</strong> compared to linear index structures like B-Trees.</li>
-                <li>Bounding rectangles can <strong>overlap</strong>, leading to increased search paths.</li>
-            </ul>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Geospatial databases for indexing map data.</li>
-                <li>Applications requiring efficient spatial querying, such as location-based services.</li>
-            </ul>
-            <h4 id="full-text-index-structure">Full-Text Index Structure</h4>
-            <p><strong>Full-Text Indexes</strong> are specialized indexes designed to facilitate efficient searching of text data, supporting complex query patterns like phrase searches and relevance ranking.</p>
-            <div>
-                <pre><code class="language-shell"># Full-Text Index Structure for Articles:
-Term 'SQL' → [Article1, Article3]
-Term 'Database' → [Article1, Article2]
-Term 'Optimization' → [Article3]
-...</code></pre>
-            </div>
-            <ul>
-                <li>Tokenization breaks down text into individual <strong>tokens</strong>.</li>
-                <li>The inverted index maps each term to the list of <strong>documents</strong> containing that term.</li>
-                <li>Relevance scoring assigns scores to documents based on term frequency and other <strong>factors</strong>.</li>
-            </ul>
-            <p><strong>Operational Mechanics</strong></p>
-            <ul>
-                <li>The search operation retrieves documents containing specific <strong>terms</strong> and ranks them based on relevance.</li>
-                <li>Insertion involves tokenizing new text and updating the inverted <strong>index</strong> with new terms.</li>
-                <li>Deletion removes terms from the inverted index when documents are <strong>deleted</strong> or updated.</li>
-            </ul>
-            <p><strong>Advantages</strong></p>
-            <ul>
-                <li>The system supports <strong>advanced</strong> text searching, including phrase searches, boolean operators, and proximity queries.</li>
-                <li>It provides <strong>ranked</strong> results based on how well they match the search criteria.</li>
-                <li>It is optimized for handling extensive and <strong>complex</strong> textual data, making it efficient for large text data.</li>
-            </ul>
-            <p><strong>Disadvantages</strong></p>
-            <ul>
-                <li>The system requires additional <strong>storage</strong> for maintaining the inverted index and relevance scores.</li>
-                <li>Maintaining the index can be <strong>resource-intensive</strong>, especially with frequent text updates.</li>
-            </ul>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Search engines and applications requiring robust text search capabilities.</li>
-                <li>Content management systems with extensive textual content.</li>
-            </ul>
-            <h4 id="bitmap-join-index">Bitmap Join Index</h4>
-            <p><strong>Bitmap Join Indexes</strong> combine the functionalities of bitmap indexes with join operations, optimizing queries that involve joining multiple tables based on low-cardinality columns.</p>
-            <div>
-                <pre><code class="language-shell"># Bitmap Join Index Structure:
-Table A: [ID, Category]
-Table B: [ID, Description]
-
-Bitmap for Category 'Electronics' in Table A:
-1 → 1
-2 → 0
-3 → 1
-...</code></pre>
-            </div>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Data warehousing scenarios where complex joins on categorical data are common.</li>
-                <li>Optimizing star schema queries involving dimension tables with low-cardinality attributes.</li>
-            </ul>
-            <h4 id="spatial-indexes">Spatial Indexes</h4>
-            <p><strong>Spatial Indexes</strong> are tailored for indexing spatial data types, enabling efficient querying of geographical and geometric information.</p>
-            <div>
-                <pre><code class="language-shell"># Spatial Index Structure for Locations:
-          [MBR1]
-         /      \
-    [MBR2]        [MBR3]
-    /    \          /    \
-[LocA] [LocB]    [LocC] [LocD]</code></pre>
-            </div>
-            <ul>
-                <li>Minimum Bounding Rectangle (MBR) is the smallest rectangle that completely <strong>contains</strong> a spatial object.</li>
-                <li>Hierarchical organization is similar to R-Trees, using MBRs to <strong>organize</strong> spatial data.</li>
-                <li>Each node in the tree structure contains one or more MBRs that cover its child nodes.</li>
-                <li>Leaf nodes store the actual spatial objects along with their corresponding MBRs.</li>
-                <li>Non-leaf nodes store MBRs that represent the spatial extent of their child nodes, facilitating efficient <strong>navigation</strong>.</li>
-            </ul>
-            <p><strong>Use Cases:</strong></p>
-            <ul>
-                <li>Geographical Information Systems (GIS) for mapping and spatial analysis.</li>
-                <li>Applications requiring efficient querying of spatial relationships, such as proximity searches.</li>
-            </ul>
-            <h3 id="comparative-summary-of-index-structures">Comparative Summary of Index Structures</h3>
-            <p>To provide a clear overview of the various index types and their characteristics, the following table summarizes the key features, advantages, and suitable use cases for each index structure.</p>
+            <p>Both clustered and secondary B-tree indexes can support range searches. A secondary lookup needs extra table access only when the query cannot be answered from the index and the engine's visibility rules require it.</p>
+            <h2 id="designing-a-composite-index">Designing a composite index</h2>
+            <p>Assume PostgreSQL and this access pattern:</p>
+            <p>Input (<code>orders</code>):</p>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Index Type</strong></th>
-                        <th><strong>Structure</strong></th>
-                        <th><strong>Key Features</strong></th>
-                        <th><strong>Advantages</strong></th>
-                        <th><strong>Disadvantages</strong></th>
-                        <th><strong>Use Cases</strong></th>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>order_date</th>
+                        <th>total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>B-Tree</strong></td>
-                        <td>Balanced Tree</td>
-                        <td>Hierarchical, sorted keys, supports range queries</td>
-                        <td>Versatile, efficient for a wide range of queries</td>
-                        <td>Not optimized for exact-match only</td>
-                        <td>Primary keys, general-purpose indexing</td>
+                        <td>301</td>
+                        <td>42</td>
+                        <td>2024-12-31</td>
+                        <td>1000</td>
                     </tr>
                     <tr>
-                        <td><strong>Hash</strong></td>
-                        <td>Hash Table</td>
-                        <td>Exact-match lookups, hash function mapping keys to buckets</td>
-                        <td>Extremely fast for exact matches</td>
-                        <td>Ineffective for range queries, potential collisions</td>
-                        <td>Unique identifier lookups</td>
+                        <td>302</td>
+                        <td>42</td>
+                        <td>2025-01-10</td>
+                        <td>4500</td>
                     </tr>
                     <tr>
-                        <td><strong>Bitmap</strong></td>
-                        <td>Bitmaps per Value</td>
-                        <td>Low cardinality, uses bits to represent presence</td>
-                        <td>Efficient for categorical data, fast for multi-condition queries</td>
-                        <td>Not suitable for high cardinality, storage overhead</td>
-                        <td>Data warehousing, analytical queries</td>
+                        <td>303</td>
+                        <td>42</td>
+                        <td>2025-12-01</td>
+                        <td>6200</td>
                     </tr>
                     <tr>
-                        <td><strong>GiST</strong></td>
-                        <td>Generalized Search Tree</td>
-                        <td>Supports various data types, bounding boxes</td>
-                        <td>Highly flexible, efficient for complex and multi-dimensional queries</td>
-                        <td>More complex to implement and maintain</td>
-                        <td>Geospatial data, full-text search</td>
-                    </tr>
-                    <tr>
-                        <td><strong>GIN</strong></td>
-                        <td>Inverted Index</td>
-                        <td>Multi-key support, handles composite values</td>
-                        <td>Excellent for multi-value columns and full-text search</td>
-                        <td>High storage requirements, complex updates</td>
-                        <td>Full-text search, array indexing</td>
-                    </tr>
-                    <tr>
-                        <td><strong>R-Tree</strong></td>
-                        <td>Rectangle Tree</td>
-                        <td>Optimized for spatial data, bounding rectangles</td>
-                        <td>Efficient for spatial queries, handles multi-dimensional data</td>
-                        <td>Overlapping bounding boxes can increase search paths</td>
-                        <td>GIS, location-based services</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Full-Text</strong></td>
-                        <td>Inverted Index</td>
-                        <td>Tokenization, supports phrase and relevance-based searches</td>
-                        <td>Advanced text search capabilities, relevance ranking</td>
-                        <td>High storage and maintenance overhead</td>
-                        <td>Search engines, content management systems</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Bitmap Join</strong></td>
-                        <td>Bitmap with Joins</td>
-                        <td>Combines bitmap indexing with join operations</td>
-                        <td>Optimizes complex joins on categorical data</td>
-                        <td>Limited to specific scenarios, maintenance complexity</td>
-                        <td>Data warehousing, star schema queries</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Spatial</strong></td>
-                        <td>Spatial Hierarchical</td>
-                        <td>Minimum Bounding Rectangles, optimized for geographical data</td>
-                        <td>Efficient spatial querying, supports proximity and containment queries</td>
-                        <td>Specialized for spatial data, not suitable for general use</td>
-                        <td>GIS, mapping applications</td>
+                        <td>304</td>
+                        <td>8</td>
+                        <td>2025-06-01</td>
+                        <td>800</td>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="managing-indexes">Managing Indexes</h3>
-            <p>Managing indexes is a critical aspect of database optimization and performance tuning. This section delves into the comprehensive range of actions involved in handling indexes, including their creation, usage, monitoring, and removal. Additionally, it highlights how these operations may vary across different database systems and outlines key considerations to ensure effective index management.</p>
-            <p>Effective index management encompasses several activities:</p>
-            <ol>
-                <li><strong>Creation</strong> involves designing and implementing indexes to optimize database query performance for specific workloads and query patterns.</li>
-                <li><strong>Usage</strong> focuses on leveraging existing indexes to improve the speed and efficiency of data retrieval operations during query execution.</li>
-                <li><strong>Monitoring</strong> includes tracking the performance and health of indexes to ensure they remain effective, typically by using database tools or analyzing query execution plans.</li>
-                <li><strong>Maintenance</strong> refers to actions like rebuilding or reorganizing indexes to address issues such as fragmentation, which can degrade performance over time.</li>
-                <li><strong>Dropping</strong> is the process of removing indexes that are unnecessary or detrimental, either due to lack of use or negative impact on system performance, such as added maintenance overhead.</li>
-            </ol>
-            <h4 id="index-creation">Index Creation</h4>
-            <p>Indexes can be created using SQL commands, specifying the type of index and the columns to include. The choice of index type and the columns selected play a pivotal role in query optimization. Properly designed indexes can drastically reduce query execution time, while poorly designed ones can have the opposite effect.</p>
-            <h5>Creating a Clustered Index</h5>
-            <p>A clustered index determines the physical order of data in a table. Since data rows are stored in the order of the clustered index, there can only be one clustered index per table. This type of index is typically applied to primary key columns to ensure data is stored in a logical and efficient manner.</p>
             <div>
-                <pre><code class="language-sql">CREATE CLUSTERED INDEX index_name ON table_name(column_name);</code></pre>
+                <pre><code class="language-sql">SELECT order_id, order_date, total
+FROM orders
+WHERE customer_id = 42
+  AND order_date &gt;= DATE '2025-01-01'
+  AND order_date &lt; DATE '2026-01-01'
+ORDER BY order_date;</code></pre>
             </div>
-            <ul>
-                <li><strong>Uniqueness:</strong> Choose a column with unique values to prevent fragmentation.</li>
-                <li><strong>Primary Key:</strong> Typically applied to primary key columns to ensure data integrity and efficient access.</li>
-                <li><strong>Storage Impact:</strong> Since it defines the table's storage structure, selecting the right column is crucial for overall performance.</li>
-            </ul>
-            <p><strong>Example:</strong></p>
-            <p>To create a clustered index on the <code>EmployeeID</code> column of the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">CREATE CLUSTERED INDEX idx_employee_id ON employees(EmployeeID);</code></pre>
-            </div>
-            <ul>
-                <li><strong><code>CREATE CLUSTERED INDEX idx_employee_id</code></strong>: Initiates the creation of a clustered index named <code>idx_employee_id</code>.</li>
-                <li><strong><code>ON employees(EmployeeID)</code></strong>: Specifies that the index is to be created on the <code>EmployeeID</code> column of the <code>employees</code> table.</li>
-            </ul>
-            <h5>Creating a Non-Clustered Index</h5>
-            <p>A non-clustered index does not alter the physical order of the data. Instead, it creates a separate structure that references the data rows, allowing multiple non-clustered indexes per table. This flexibility enables optimized access paths for various query patterns.</p>
-            <div>
-                <pre><code class="language-sql">CREATE NONCLUSTERED INDEX index_name ON table_name(column_name);</code></pre>
-            </div>
-            <ul>
-                <li><strong>Search Optimization:</strong> Ideal for columns frequently used in search conditions or join operations.</li>
-                <li><strong>Composite Queries:</strong> Can include multiple columns to support more complex queries involving multiple filters or sorts.</li>
-                <li><strong>Storage:</strong> Requires additional storage space as it maintains a separate structure from the data rows.</li>
-            </ul>
-            <p><strong>Example:</strong></p>
-            <p>To create a non-clustered index on the <code>Department</code> column of the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">CREATE NONCLUSTERED INDEX idx_department ON employees(Department);</code></pre>
-            </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>CREATE NONCLUSTERED INDEX idx_department</code></strong>: Initiates the creation of a non-clustered index named <code>idx_department</code>.</li>
-                <li><strong><code>ON employees(Department)</code></strong>: Specifies that the index is to be created on the <code>Department</code> column of the <code>employees</code> table.</li>
-            </ul>
-            <h5>Creating Composite Indexes</h5>
-            <p>Composite indexes involve multiple columns and are beneficial for queries that filter or sort based on multiple fields. They allow the database engine to efficiently handle complex query conditions by leveraging the combined index.</p>
-            <div>
-                <pre><code class="language-sql">CREATE NONCLUSTERED INDEX index_name ON table_name(column1, column2);</code></pre>
-            </div>
-            <ul>
-                <li><strong>Column Order:</strong> The order of columns matters; prioritize columns used in <code>WHERE</code> clauses first.</li>
-                <li><strong>Query Coverage:</strong> Helps in covering more complex queries efficiently by providing multiple access paths within a single index.</li>
-                <li><strong>Selective Columns:</strong> Choose columns with high selectivity to maximize index effectiveness.</li>
-            </ul>
-            <p><strong>Example:</strong></p>
-            <p>To create a composite index on <code>LastName</code> and <code>FirstName</code>:</p>
-            <div>
-                <pre><code class="language-sql">CREATE NONCLUSTERED INDEX idx_name ON employees(LastName, FirstName);</code></pre>
-            </div>
-            <ul>
-                <li><strong><code>CREATE NONCLUSTERED INDEX idx_name</code></strong>: Initiates the creation of a non-clustered index named <code>idx_name</code>.</li>
-                <li><strong><code>ON employees(LastName, FirstName)</code></strong>: Specifies that the index is to be created on both the <code>LastName</code> and <code>FirstName</code> columns of the <code>employees</code> table.</li>
-            </ul>
-            <h5>Database-Specific Index Creation</h5>
-            <p>Different database systems may have unique syntax or additional index types. Understanding these differences is crucial for effective index management. Below is a comparison of index creation across popular databases:</p>
+            <p>Result:</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Feature</th>
-                        <th><strong>MySQL</strong></th>
-                        <th><strong>PostgreSQL</strong></th>
-                        <th><strong>Oracle</strong></th>
-                        <th><strong>SQL Server</strong></th>
+                        <th>order_id</th>
+                        <th>order_date</th>
+                        <th>total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Basic Syntax</strong></td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name USING btree(column_name);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE NONCLUSTERED INDEX index_name ON table_name(column_name);</code></td>
+                        <td>302</td>
+                        <td>2025-01-10</td>
+                        <td>4500</td>
                     </tr>
                     <tr>
-                        <td><strong>Clustered Index</strong></td>
-                        <td>Supported via InnoDB's primary key.</td>
-                        <td>Not directly supported; similar behavior through table organization.</td>
-                        <td>Supported using Index-Organized Tables (IOT).</td>
-                        <td><code>CREATE CLUSTERED INDEX index_name ON table_name(column_name);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Index Types</strong></td>
-                        <td>B-tree, Hash, Full-text, Spatial</td>
-                        <td>B-tree, Hash, GiST, SP-GiST, GIN, BRIN</td>
-                        <td>B-tree, Bitmap, Function-based, Reverse key</td>
-                        <td>Clustered, Non-Clustered, Unique, Filtered, Columnstore, XML</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Advanced Options</strong></td>
-                        <td>Partial indexes via generated columns, Spatial indexes for geospatial data.</td>
-                        <td>Partial indexes, Expression indexes, Multi-column indexes.</td>
-                        <td>Function-based indexes, Bitmap indexes for data warehousing scenarios.</td>
-                        <td>Included columns (<code>INCLUDE</code>), Online index operations, Index compression, Filtered indexes.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Unique Index</strong></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE NONCLUSTERED INDEX index_name ON table_name(column_name);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Example</strong></td>
-                        <td><code>CREATE INDEX idx_department ON employees(Department);</code></td>
-                        <td><code>CREATE INDEX idx_department ON employees USING btree(Department);</code></td>
-                        <td><code>CREATE INDEX idx_department ON employees(Department);</code></td>
-                        <td><code>CREATE NONCLUSTERED INDEX idx_department ON employees(Department) INCLUDE (AnotherColumn);</code></td>
+                        <td>303</td>
+                        <td>2025-12-01</td>
+                        <td>6200</td>
                     </tr>
                 </tbody>
             </table>
-            <h4 id="index-usage">Index Usage</h4>
-            <p>Indexes enhance query performance by allowing the database engine to locate and access data more efficiently. Proper usage involves:</p>
-            <ul>
-                <li><strong>Optimizing SELECT Statements:</strong> Ensuring that queries utilize indexes to minimize full table scans.</li>
-            </ul>
+            <p>A useful candidate is:</p>
             <div>
-                <pre><code class="language-sql">  SELECT FirstName, LastName FROM employees WHERE Department = 'Sales';
-  </code></pre>
+                <pre><code class="language-sql">CREATE INDEX idx_orders_customer_date
+ON orders (customer_id, order_date);</code></pre>
             </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>SELECT FirstName, LastName</code></strong>: Retrieves only the necessary columns, reducing data load.</li>
-                <li><strong><code>FROM employees</code></strong>: Specifies the table to query.</li>
-                <li><strong><code>WHERE Department = 'Sales'</code></strong>: Filters records where the <code>Department</code> is 'Sales'.</li>
-            </ul>
-            <p>With an index on <code>Department</code>, the database can quickly locate relevant rows without scanning the entire table, significantly improving query performance.</p>
-            <ul>
-                <li><strong>Supporting JOIN Operations:</strong> Indexes on foreign keys improve the performance of join operations between tables.</li>
-            </ul>
+            <p>The equality predicate selects one customer; within that customer, the date keys support a range and ordering. An index on <code>(order_date, customer_id)</code> is a different access path and may be less effective for this query. Leading-column rules are useful guidance, but engines can have skip-scan and other optimizations: inspect the actual plan.</p>
+            <h3 id="covering-a-query">Covering a query</h3>
+            <p>In PostgreSQL, payload columns can be included:</p>
             <div>
-                <pre><code class="language-sql">  SELECT e.FirstName, d.DepartmentName
-  FROM employees e
-  JOIN departments d ON e.DepartmentID = d.DepartmentID;
-  </code></pre>
+                <pre><code class="language-sql">CREATE INDEX idx_orders_customer_date_cover
+ON orders (customer_id, order_date) INCLUDE (order_id, total);</code></pre>
             </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>JOIN departments d ON e.DepartmentID = d.DepartmentID</code></strong>: Joins the <code>employees</code> table with the <code>departments</code> table based on the <code>DepartmentID</code> foreign key.</li>
-            </ul>
-            <p>Indexes on <code>employees.DepartmentID</code> and <code>departments.DepartmentID</code> expedite the join process by allowing rapid matching of related records.</p>
-            <ul>
-                <li><strong>Facilitating ORDER BY and GROUP BY:</strong> Indexes can speed up sorting and grouping operations by providing a pre-sorted data structure.</li>
-            </ul>
+            <p>Choose this <strong>instead of</strong> the previous index unless both have a demonstrated purpose. Coverage is a property of a particular query, not an index label that applies to all queries. PostgreSQL index-only scans also depend on visibility information; including every selected column does not guarantee zero heap fetches.</p>
+            <h3 id="indexing-a-subset">Indexing a subset</h3>
+            <p>For queries that repeatedly select open orders:</p>
             <div>
-                <pre><code class="language-sql">  SELECT Department, COUNT(*) FROM employees GROUP BY Department;
-  </code></pre>
+                <pre><code class="language-sql">CREATE INDEX idx_orders_open_customer
+ON orders (customer_id)
+WHERE status = 'open';</code></pre>
             </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>GROUP BY Department</code></strong>: Aggregates data based on the <code>Department</code> column.</li>
-            </ul>
-            <p>An index on <code>Department</code> allows the database to quickly group records, enhancing the efficiency of the aggregation.</p>
-            <p><strong>Additional Usage Scenarios:</strong></p>
-            <ul>
-                <li><strong>Covering Indexes:</strong> When an index includes all the columns referenced in a query, the database can fulfill the query entirely from the index without accessing the table data, further speeding up performance.</li>
-            </ul>
+            <p>PostgreSQL calls this a partial index; SQL Server has filtered indexes. The optimizer must be able to establish that a query's predicate satisfies the index condition. Parameterized predicates can affect that proof.</p>
+            <h3 id="indexing-an-expression">Indexing an expression</h3>
             <div>
-                <pre><code class="language-sql">  CREATE NONCLUSTERED INDEX idx_covering ON employees(Department) INCLUDE (FirstName, LastName);
-  
-  SELECT FirstName, LastName FROM employees WHERE Department = 'Sales';
-  </code></pre>
+                <pre><code class="language-sql">CREATE INDEX idx_users_lower_email ON users (lower(email));
+SELECT user_id FROM users WHERE lower(email) = 'alice@example.com';</code></pre>
             </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li>
-                    <p>The <code>INCLUDE</code> clause adds <code>FirstName</code> and <code>LastName</code> to the index, making it a covering index for the specified query.</p>
-                </li>
-                <li>
-                    <p><strong>Filtered Indexes:</strong> These are non-clustered indexes that include a <code>WHERE</code> clause to index a subset of data, optimizing specific query patterns.</p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  CREATE NONCLUSTERED INDEX idx_active_employees ON employees(EmployeeStatus) WHERE EmployeeStatus = 'Active';
-  </code></pre>
-            </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>WHERE EmployeeStatus = 'Active'</code></strong>: The index only includes employees with an active status, making it highly efficient for queries targeting active employees.</li>
-            </ul>
-            <h4 id="monitoring-indexes">Monitoring Indexes</h4>
-            <p>Regular monitoring ensures that indexes remain effective and do not degrade performance over time. Key monitoring activities include:</p>
-            <h5>Index Fragmentation</h5>
-            <p>Fragmentation occurs when the physical order of pages within an index becomes disorganized, leading to inefficient data access. High fragmentation can slow down query performance and increase I/O operations.</p>
-            <ul>
-                <li>
-                    <p><strong>Detection:</strong></p>
-                </li>
-                <li>
-                    <p><strong>SQL Server:</strong></p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">    SELECT
-      OBJECT_NAME(ps.object_id) AS TableName,
-      i.name AS IndexName,
-      ps.avg_fragmentation_in_percent
-    FROM
-      sys.dm_db_index_physical_stats(DB_ID(), 'table_name', NULL, NULL, 'LIMITED') ps
-      INNER JOIN sys.indexes i ON ps.object_id = i.object_id AND ps.index_id = i.index_id
-    WHERE
-      i.type_desc IN ('CLUSTERED', 'NONCLUSTERED');
-    </code></pre>
-            </div>
-            <pre><code class="language-none">**Explanation:**
-
-- **`sys.dm_db_index_physical_stats`**: Provides physical statistics about indexes, including fragmentation levels.
-- **`avg_fragmentation_in_percent`**: Indicates the percentage of fragmentation; values above 30% typically warrant maintenance.
-</code></pre>
-            <ul>
-                <li>
-                    <p><strong>PostgreSQL:</strong></p>
-                    <p>Use the <code>pgstattuple</code> extension to analyze index bloat.</p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">    SELECT
-      indexrelid::regclass AS index_name,
-      pg_stat_user_indexes.idx_scan,
-      pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-    FROM
-      pg_stat_user_indexes
-    WHERE
-      schemaname = 'public';
-    </code></pre>
-            </div>
-            <pre><code class="language-none">**Explanation:**
-
-- **`pg_stat_user_indexes`**: Provides statistics about index usage.
-- **`pg_relation_size`**: Returns the size of the index, helping identify potential bloat.
-</code></pre>
-            <ul>
-                <li>
-                    <p><strong>Mitigation:</strong></p>
-                </li>
-                <li>
-                    <p><strong>Rebuilding Indexes:</strong></p>
-                    <p>Rebuilding indexes reorganizes the data and removes fragmentation, leading to improved performance.</p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">    ALTER INDEX index_name ON table_name REBUILD;
-    </code></pre>
-            </div>
-            <pre><code class="language-none">**Explanation:**
-
-- **`ALTER INDEX idx_department ON employees REBUILD;`**: Reconstructs the `idx_department` index on the `employees` table, eliminating fragmentation.
-</code></pre>
-            <ul>
-                <li>
-                    <p><strong>Reorganizing Indexes:</strong></p>
-                    <p>Reorganizing indexes is a lighter operation compared to rebuilding, suitable for minor fragmentation.</p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">    ALTER INDEX index_name ON table_name REORGANIZE;
-    </code></pre>
-            </div>
-            <pre><code class="language-none">**Explanation:**
-
-- **`ALTER INDEX idx_department ON employees REORGANIZE;`**: Defragments the `idx_department` index without fully rebuilding it, which is faster and less resource-intensive.
-</code></pre>
-            <h5>Index Usage Statistics</h5>
-            <p>Understanding how often indexes are used helps identify unused or rarely used indexes that may be candidates for removal, thereby reducing maintenance overhead and storage costs.</p>
-            <ul>
-                <li><strong>SQL Server:</strong></li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  SELECT
-    OBJECT_NAME(s.[object_id]) AS TableName,
-    i.name AS IndexName,
-    s.user_seeks,
-    s.user_scans,
-    s.user_lookups,
-    s.user_updates
-  FROM
-    sys.dm_db_index_usage_stats s
-    INNER JOIN sys.indexes i ON i.object_id = s.object_id AND i.index_id = s.index_id
-  WHERE
-    OBJECTPROPERTY(s.object_id, 'IsUserTable') = 1
-    AND s.database_id = DB_ID();
-  </code></pre>
-            </div>
-            <ul>
-                <li><strong><code>user_seeks</code>, <code>user_scans</code>, <code>user_lookups</code></strong>: Indicate how frequently the index is used for reading operations.</li>
-                <li><strong><code>user_updates</code></strong>: Shows how often the index is modified due to data changes.</li>
-                <li><strong>High Read Activity:</strong> High <code>user_seeks</code> and <code>user_scans</code> suggest the index is actively used and beneficial.</li>
-                <li>
-                    <p><strong>High Write Activity:</strong> High <code>user_updates</code> may indicate maintenance overhead; balance the benefits against the costs.</p>
-                </li>
-                <li>
-                    <p><strong>PostgreSQL:</strong></p>
-                </li>
-            </ul>
-            <p>Query <code>pg_stat_user_indexes</code> and <code>pg_index</code> for usage patterns.</p>
-            <div>
-                <pre><code class="language-sql">  SELECT
-    relname AS table_name,
-    indexrelname AS index_name,
-    idx_scan,
-    idx_tup_read,
-    idx_tup_fetch
-  FROM
-    pg_stat_user_indexes
-  WHERE
-    schemaname = 'public';
-  </code></pre>
-            </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong><code>idx_scan</code></strong>: Number of index scans initiated on the index.</li>
-                <li><strong><code>idx_tup_read</code></strong>: Number of tuples read from the index.</li>
-                <li><strong><code>idx_tup_fetch</code></strong>: Number of tuples fetched using the index.</li>
-            </ul>
-            <p><strong>Interpretation:</strong>
-                - <strong>Active Indexes:</strong> High <code>idx_scan</code> and <code>idx_tup_fetch</code> values indicate active usage.
-                - <strong>Unused Indexes:</strong> Low or zero values suggest the index may be redundant.</p>
-            <p><strong>Action Steps:</strong></p>
-            <ul>
-                <li><strong>Identify Unused Indexes:</strong> Look for indexes with minimal or no usage metrics.</li>
-                <li><strong>Evaluate Necessity:</strong> Determine if the index serves any specific purpose not captured by usage statistics.</li>
-                <li><strong>Plan for Removal:</strong> Consider dropping unused indexes to optimize storage and reduce maintenance efforts.</li>
-            </ul>
-            <h5>Index Bloat</h5>
-            <p>Excessive unused space within indexes, known as index bloat, can lead to increased storage costs and reduced performance. Regularly identifying and addressing index bloat is essential for maintaining efficient database operations.</p>
-            <ul>
-                <li>
-                    <p><strong>Detection:</strong></p>
-                </li>
-                <li>
-                    <p><strong>PostgreSQL:</strong></p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">    SELECT
-      relname AS index_name,
-      pg_size_pretty(pg_relation_size(indexrelid)) AS size
-    FROM
-      pg_stat_user_indexes
-      JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
-    WHERE
-      pg_stat_user_indexes.idx_scan = 0;
-    </code></pre>
-            </div>
-            <pre><code class="language-none">**Explanation:**
-
-- **`pg_relation_size(indexrelid)`**: Retrieves the size of the index.
-- **`idx_scan = 0`**: Filters for indexes that have never been scanned, indicating potential bloat.
-</code></pre>
-            <ul>
-                <li><strong>Mitigation:</strong></li>
-            </ul>
-            <p>Regularly rebuild or drop and recreate bloated indexes to reclaim space and improve performance.</p>
-            <div>
-                <pre><code class="language-sql">  ALTER INDEX index_name ON table_name REBUILD;
-  </code></pre>
-            </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong>Rebuilding:</strong> Reconstructs the index, eliminating unused space and optimizing storage.</li>
-            </ul>
-            <p>Alternatively, if the index is deemed unnecessary:</p>
-            <div>
-                <pre><code class="language-sql">  DROP INDEX table_name.index_name;
-  </code></pre>
-            </div>
-            <p><strong>Explanation:</strong></p>
-            <ul>
-                <li><strong>Dropping:</strong> Removes the index entirely, freeing up storage and reducing maintenance overhead.</li>
-            </ul>
-            <h4 id="index-maintenance">Index Maintenance</h4>
-            <p>Maintaining indexes involves regular tasks to ensure they remain efficient and do not negatively impact database performance. Proper maintenance helps in preventing fragmentation, optimizing storage, and ensuring indexes continue to serve their intended purpose.</p>
-            <h5>Rebuilding Indexes</h5>
-            <p>Rebuilding indexes reorganizes the data and removes fragmentation, leading to improved performance. This process recreates the index from scratch, ensuring that data pages are contiguous and optimally ordered.</p>
-            <div>
-                <pre><code class="language-sql">ALTER INDEX index_name ON table_name REBUILD;</code></pre>
-            </div>
-            <p><strong>Example:</strong></p>
-            <p>To rebuild the <code>idx_department</code> index on the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">ALTER INDEX idx_department ON employees REBUILD;</code></pre>
-            </div>
-            <ul>
-                <li><strong><code>ALTER INDEX idx_department</code></strong>: Specifies the index to be altered.</li>
-                <li><strong><code>ON employees</code></strong>: Indicates the table on which the index exists.</li>
-                <li><strong><code>REBUILD</code></strong>: Triggers the index rebuild operation, which:</li>
-                <li>Drops and recreates the index.</li>
-                <li>Eliminates fragmentation.</li>
-                <li>Updates index statistics.</li>
-            </ul>
-            <p><strong>Benefits:</strong></p>
-            <ul>
-                <li><strong>Performance Improvement:</strong> Reduces I/O operations by organizing data efficiently.</li>
-                <li><strong>Space Optimization:</strong> Reclaims unused space within the index structure.</li>
-                <li><strong>Statistics Update:</strong> Refreshes index statistics, aiding the query optimizer in making informed decisions.</li>
-            </ul>
-            <p><strong>Considerations:</strong></p>
-            <ul>
-                <li><strong>Resource Intensive:</strong> Rebuilding can be resource-heavy; plan during maintenance windows.</li>
-                <li><strong>Locking Behavior:</strong> Depending on the database system, rebuilding may lock the table or allow concurrent operations.</li>
-            </ul>
-            <p><strong>Automated Maintenance:</strong></p>
-            <ul>
-                <li><strong>Scheduling:</strong> Use cron jobs, SQL Server Maintenance Plans, or database-specific schedulers to automate index rebuilds.</li>
-                <li><strong>Threshold-Based:</strong> Trigger rebuilds based on fragmentation thresholds (e.g., &gt;30%).</li>
-            </ul>
-            <h5>Reorganizing Indexes</h5>
-            <p>Reorganizing indexes is a lighter operation compared to rebuilding and is suitable for addressing minor fragmentation. This process defragments the index pages without fully rebuilding the index structure.</p>
-            <div>
-                <pre><code class="language-sql">ALTER INDEX index_name ON table_name REORGANIZE;</code></pre>
-            </div>
-            <p><strong>Example:</strong></p>
-            <p>To reorganize the <code>idx_department</code> index on the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">ALTER INDEX idx_department ON employees REORGANIZE;</code></pre>
-            </div>
-            <p><strong>Detailed Explanation:</strong>
-                - <strong><code>ALTER INDEX idx_department</code></strong>: Specifies the index to be altered.
-                - <strong><code>ON employees</code></strong>: Indicates the table on which the index exists.
-                - <strong><code>REORGANIZE</code></strong>: Initiates the reorganize operation, which:
-                - Defragments the index pages.
-                - Compactly orders the index without a full rebuild.
-                - Minimizes locking and resource usage.</p>
-            <p><strong>Benefits:</strong>
-                - <strong>Low Impact:</strong> Less resource-intensive and allows more concurrent operations compared to rebuilding.
-                - <strong>Continuous Availability:</strong> Often performed online without significant downtime.
-                - <strong>Incremental:</strong> Suitable for addressing fragmentation gradually.</p>
-            <p><strong>When to Use:</strong>
-                - <strong>Low to Moderate Fragmentation:</strong> Ideal when fragmentation levels are between 10% and 30%.
-                - <strong>Frequent Updates:</strong> Helps maintain index health without the overhead of full rebuilds.</p>
-            <h5>Updating Statistics</h5>
-            <p>Accurate statistics help the query optimizer make informed decisions about index usage. Statistics provide information about data distribution within indexed columns, enabling the optimizer to choose the most efficient query execution plans.</p>
-            <div>
-                <pre><code class="language-sql">UPDATE STATISTICS table_name index_name;</code></pre>
-            </div>
-            <p><strong>Example:</strong></p>
-            <p>To update statistics for the <code>idx_department</code> index on the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">UPDATE STATISTICS employees idx_department;</code></pre>
-            </div>
-            <p><strong>Detailed Explanation:</strong>
-                - <strong><code>UPDATE STATISTICS employees idx_department;</code></strong>: Refreshes the statistics for the specified index, ensuring the optimizer has the latest data distribution information.</p>
-            <p><strong>Benefits:</strong>
-                - <strong>Optimized Query Plans:</strong> Ensures the query optimizer can generate efficient execution plans based on current data distributions.
-                - <strong>Performance Stability:</strong> Prevents performance degradation due to outdated or inaccurate statistics.</p>
-            <h4 id="dropping-indexes">Dropping Indexes</h4>
-            <p>If an index is no longer needed or is adversely affecting performance, it can be removed to reclaim resources and streamline operations. Dropping unnecessary indexes reduces storage overhead and minimizes maintenance tasks, particularly for write-heavy tables.</p>
-            <div>
-                <pre><code class="language-sql">DROP INDEX table_name.index_name;</code></pre>
-            </div>
-            <p><strong>Example:</strong></p>
-            <p>To drop the <code>idx_department</code> index from the <code>employees</code> table:</p>
-            <div>
-                <pre><code class="language-sql">DROP INDEX employees.idx_department;</code></pre>
-            </div>
-            <p><strong>Detailed Explanation:</strong>
-                - <strong><code>DROP INDEX employees.idx_department;</code></strong>: Removes the <code>idx_department</code> index from the <code>employees</code> table.</p>
-            <p><strong>Considerations:</strong>
-                - <strong>Impact Analysis:</strong>
-                - <strong>Query Dependencies:</strong> Assess which queries rely on the index to prevent unintended performance degradation.
-                - <strong>Application Dependencies:</strong> Ensure that no application components (e.g., ORM mappings, stored procedures) depend on the index.</p>
-            <ul>
-                <li><strong>Dependencies:</strong></li>
-                <li><strong>Views and Materialized Views:</strong> Verify that views referencing the index are updated accordingly.</li>
-                <li>
-                    <p><strong>Stored Procedures:</strong> Check if stored procedures optimize queries based on the index.</p>
-                </li>
-                <li>
-                    <p><strong>Performance Testing:</strong></p>
-                </li>
-                <li><strong>Staging Environment:</strong> Test the impact of dropping the index in a non-production environment to observe performance changes.</li>
-                <li><strong>Monitoring Post-Drop:</strong> After dropping the index, monitor query performance to ensure that the change does not negatively affect critical operations.</li>
-            </ul>
-            <p><strong>Example Scenario:</strong></p>
-            <p>Suppose the <code>idx_department</code> index on the <code>employees</code> table is rarely used and has a high maintenance overhead due to frequent updates. After conducting an impact analysis and confirming that no critical queries depend on it, you decide to drop the index:</p>
-            <div>
-                <pre><code class="language-sql">DROP INDEX employees.idx_department;</code></pre>
-            </div>
-            <p><strong>Post-Drop Actions:</strong>
-                - <strong>Monitor Queries:</strong> Ensure that queries previously relying on <code>idx_department</code> still perform adequately, potentially adjusting query structures or adding alternative indexes if necessary.
-                - <strong>Update Documentation:</strong> Remove references to the dropped index from database documentation and maintenance plans.</p>
-            <h4 id="database-specific-considerations">Database-Specific Considerations</h4>
-            <p>Different database systems offer various index types and management features. Understanding these differences is crucial for effective index management. The following table summarizes key index features across popular databases:</p>
+            <p>Input (<code>users</code>):</p>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>Feature</strong></th>
-                        <th><strong>MySQL</strong></th>
-                        <th><strong>PostgreSQL</strong></th>
-                        <th><strong>Oracle</strong></th>
-                        <th><strong>SQL Server</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Basic Index Creation</strong></td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name USING btree(column_name);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE NONCLUSTERED INDEX index_name ON table_name(column_name);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Clustered Index</strong></td>
-                        <td>Supported via InnoDB's primary key.</td>
-                        <td>Not directly supported; similar behavior through table organization.</td>
-                        <td>Supported using Index-Organized Tables (IOT).</td>
-                        <td><code>CREATE CLUSTERED INDEX index_name ON table_name(column_name);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Index Types</strong></td>
-                        <td>B-tree, Hash, Full-text, Spatial</td>
-                        <td>B-tree, Hash, GiST, SP-GiST, GIN, BRIN</td>
-                        <td>B-tree, Bitmap, Function-based, Reverse key</td>
-                        <td>Clustered, Non-Clustered, Unique, Filtered, Columnstore, XML</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Advanced Features</strong></td>
-                        <td>Partial indexes via generated columns, Spatial indexes for geospatial data.</td>
-                        <td>Partial indexes, Expression indexes, Multi-column indexes.</td>
-                        <td>Function-based indexes, Bitmap indexes for data warehousing scenarios.</td>
-                        <td>Included columns (<code>INCLUDE</code>), Online index operations, Index compression, Filtered indexes.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Unique Index</strong></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE UNIQUE NONCLUSTERED INDEX index_name ON table_name(column_name);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Full-Text Index</strong></td>
-                        <td><code>CREATE FULLTEXT INDEX index_name ON table_name(column_name);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name USING gin(to_tsvector('english', column_name));</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name) INDEXTYPE IS CTXSYS.CONTEXT;</code></td>
-                        <td><code>CREATE FULLTEXT INDEX ON table_name(column_name) KEY INDEX pk_index;</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Spatial Index</strong></td>
-                        <td><code>CREATE SPATIAL INDEX index_name ON table_name(geometry_column);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name USING gist(geometry_column);</code></td>
-                        <td><code>CREATE INDEX index_name ON table_name(geometry_column) INDEXTYPE IS MDSYS.SPATIAL_INDEX;</code></td>
-                        <td><code>CREATE SPATIAL INDEX index_name ON table_name(geometry_column) USING GEOMETRY_AUTO_GRID;</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Index Compression</strong></td>
-                        <td>Not natively supported; relies on storage engine capabilities.</td>
-                        <td>Not natively supported; relies on table-level compression settings.</td>
-                        <td>Supports compressed indexes to reduce storage footprint.</td>
-                        <td><code>CREATE INDEX index_name ON table_name(column_name) WITH (DATA_COMPRESSION = PAGE);</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Maintenance Tools</strong></td>
-                        <td>MySQL Workbench provides graphical tools for index management.</td>
-                        <td>pgAdmin offers tools for index management; extensions like <code>pg_repack</code> assist in maintenance.</td>
-                        <td>Oracle Enterprise Manager offers robust index management capabilities.</td>
-                        <td>SQL Server Management Studio (SSMS) provides comprehensive graphical tools for index management, monitoring, and maintenance.</td>
-                    </tr>
-                </tbody>
-            </table>
-            <h3 id="key-vs-non-key-column-indexing">Key vs. Non-Key Column Indexing</h3>
-            <p>Application of indexes differs depending on whether they are applied to <strong>key columns</strong> or <strong>non-key columns</strong>. Understanding when and how to use these types of indexing is important for efficient database design.</p>
-            <h4 id="key-column-indexing">Key Column Indexing</h4>
-            <p>Key column indexing involves creating indexes on columns used as primary keys or unique constraints.</p>
-            <ul>
-                <li>Key column indexing allows queries to quickly locate rows using unique identifiers, improving efficiency.</li>
-                <li>Indexes on primary or unique key columns are typically maintained automatically by most database systems.</li>
-                <li>This indexing approach is particularly useful for tables frequently involved in joins, where the primary key ensures precise row matching.</li>
-                <li>Using key column indexes helps in operations that filter (<code>WHERE</code>), sort (<code>ORDER BY</code>), or retrieve specific rows using a key.</li>
-            </ul>
-            <h4 id="non-key-column-indexing">Non-Key Column Indexing</h4>
-            <p>Non-key column indexing focuses on indexing columns that are not unique but are used frequently in query filtering, sorting, or grouping.</p>
-            <ul>
-                <li>Non-key column indexes are useful in queries involving filtering (<code>WHERE</code>), grouping (<code>GROUP BY</code>), or ordering (<code>ORDER BY</code>) for non-unique columns.</li>
-                <li>Indexing multiple non-key columns in a table can optimize query patterns that do not involve primary keys.</li>
-                <li>Columns with low cardinality (e.g., columns with values like <code>True</code>/<code>False</code>) can be inefficient for indexing due to the high likelihood of scanning many rows, even with an index.</li>
-                <li>Maintenance of non-key column indexes can add overhead, especially for tables that are updated frequently, and should be considered when designing the schema.</li>
-                <li>These indexes are commonly used to support queries filtering on attributes like status or category (e.g., <code>WHERE category = 'Electronics'</code>).</li>
-            </ul>
-            <h4 id="avoid-indexing-low-cardinality-columns">Avoid Indexing Low-Cardinality Columns</h4>
-            <p>Be cautious when indexing columns with <strong>low cardinality</strong> (e.g., boolean fields, columns with only a few distinct values like "Yes/No" or "Active/Inactive"):</p>
-            <ul>
-                <li>The index adds storage and maintenance overhead without significant performance improvement.</li>
-                <li>Query optimizers may still need to scan large portions of the table, as the index doesn't effectively narrow down results.</li>
-                <li>For low-cardinality columns, consider combining them with higher-cardinality columns in composite indexes.</li>
-                <li>Rely on table partitioning or alternative query optimizations for frequently filtered low-cardinality data.</li>
-            </ul>
-            <h3 id="index-scan-vs-index-only-scan">Index Scan vs. Index-Only Scan</h3>
-            <p>Understanding how indexes are utilized during query execution can help optimize performance.</p>
-            <h4 id="index-scan">Index Scan</h4>
-            <ul>
-                <li>An index scan occurs when the database utilizes the index to identify data row locations but still requires access to the actual table to fetch full data rows. </li>
-                <li>This process is helpful in reducing the search space compared to a full table scan, but it involves extra disk I/O for retrieving the table data. </li>
-                <li>Index scans are typically employed when the query requires data not fully contained within the index or when the index is not highly selective. </li>
-                <li>While faster than a full table scan, index scans may still be less efficient if the index or query design is suboptimal. </li>
-            </ul>
-            <h4 id="index-only-scan">Index-Only Scan</h4>
-            <ul>
-                <li>An index-only scan happens when the database can satisfy the entire query using only the data stored within the index, avoiding the table entirely. </li>
-                <li>This approach improves performance by eliminating the need for additional disk I/O to access table data. </li>
-                <li>Index-only scans are effective when queries target columns that are fully indexed and contain all required information. </li>
-                <li>Maintenance of index statistics is necessary to make sure accurate query optimization and enable efficient index-only scans. </li>
-                <li>The efficiency of an index-only scan depends on the completeness of the index and the design of the queries accessing it. </li>
-            </ul>
-            <h4 id="benefits-of-index-only-scan">Benefits of Index-Only Scan</h4>
-            <ul>
-                <li>Performance improvement occurs because it minimizes disk I/O by eliminating the need to fetch data from the main table. </li>
-                <li>This method is particularly effective for queries that frequently access the same columns included in the index. </li>
-                <li>Queries benefit from faster execution times when the required data is entirely contained in the index. </li>
-                <li>It reduces the overall load on the database by limiting table access, enhancing efficiency for repetitive operations. </li>
-            </ul>
-            <h4 id="trade-offs-of-index-only-scan">Trade-offs of Index-Only Scan</h4>
-            <ul>
-                <li>Covering indexes, which store all queried columns, tend to consume more disk space, increasing storage requirements. </li>
-                <li>Maintenance overhead increases with larger indexes, as more columns require updates during write operations like inserts and updates. </li>
-                <li>Designing effective index-only scans requires careful consideration of query patterns and column selection. </li>
-                <li>Over-indexing to achieve index-only scans may introduce performance issues during data modification processes.</li>
-            </ul>
-            <h3 id="practical-example">Practical Example</h3>
-            <p>Consider an <code>employees</code> table:</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>EmployeeID</th>
-                        <th>FirstName</th>
-                        <th>LastName</th>
-                        <th>Department</th>
+                        <th>user_id</th>
+                        <th>email</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>1</td>
-                        <td>John</td>
-                        <td>Doe</td>
-                        <td>HR</td>
+                        <td>Alice@Example.com</td>
                     </tr>
                     <tr>
                         <td>2</td>
-                        <td>Jane</td>
-                        <td>Smith</td>
-                        <td>IT</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Michael</td>
-                        <td>Brown</td>
-                        <td>Finance</td>
-                    </tr>
-                    <tr>
-                        <td>4</td>
-                        <td>Emily</td>
-                        <td>White</td>
-                        <td>IT</td>
-                    </tr>
-                    <tr>
-                        <td>5</td>
-                        <td>Robert</td>
-                        <td>Green</td>
-                        <td>HR</td>
+                        <td>bob@example.com</td>
                     </tr>
                 </tbody>
             </table>
-            <p>Imagine you need to filter employees by their <code>Department</code>. Without optimization, every query would require scanning the entire table, which becomes inefficient as the number of rows increases. To address this, we can create a <strong>non-clustered index</strong> on the <code>Department</code> column:</p>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>user_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>An expression index can support a matching expression. Requirements such as function immutability and collation semantics depend on the engine.</p>
+            <h2 id="keys-uniqueness-and-foreign-keys">Keys, uniqueness, and foreign keys</h2>
+            <p>A <code>UNIQUE</code> constraint states a data rule; a unique index is an enforcement and access mechanism. Nullable uniqueness rules differ between engines. A primary key is not synonymous with a clustered index.</p>
+            <p>A foreign-key constraint does not universally create an index on its referencing columns. Such an index may be valuable for joins and parent-row updates or deletions. Check the engine and workload rather than assuming it exists.</p>
+            <h2 id="verify-the-benefit">Verify the benefit</h2>
+            <p>For PostgreSQL:</p>
             <div>
-                <pre><code class="language-sql">CREATE NONCLUSTERED INDEX idx_department ON employees(Department);</code></pre>
+                <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, order_date, total
+FROM orders
+WHERE customer_id = 42;</code></pre>
             </div>
-            <p>This index works by creating an additional data structure that maps each department to its corresponding rows. Here's an example representation of how the index organizes the data:</p>
+            <p>The query's data rows for the sample <code>orders</code> table are:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>order_date</th>
+                        <th>total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>301</td>
+                        <td>2024-12-31</td>
+                        <td>1000</td>
+                    </tr>
+                    <tr>
+                        <td>302</td>
+                        <td>2025-01-10</td>
+                        <td>4500</td>
+                    </tr>
+                    <tr>
+                        <td>303</td>
+                        <td>2025-12-01</td>
+                        <td>6200</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>ANALYZE</code> executes the statement and returns a plan with measurements; those plan rows vary with the database and runtime. Look at actual rows, estimates, buffers, and total time. A sequential scan is not inherently a problem: on a small table, or when much of a table qualifies, it can be the best plan.</p>
+            <p>Refresh planner statistics when needed. Compare representative parameter values and consider the write cost before retaining an index.</p>
+            <h2 id="monitoring-and-maintenance">Monitoring and maintenance</h2>
+            <p>PostgreSQL usage and size:</p>
             <div>
-                <pre><code class="language-shell">Department Index:
-+------------+------------------+
-| Department | Row Pointer      |
-+------------+------------------+
-| Finance    | Points to Row 3  |
-| HR         | Points to Row 1  |
-| HR         | Points to Row 5  |
-| IT         | Points to Row 2  |
-| IT         | Points to Row 4  |
-+------------+------------------+</code></pre>
+                <pre><code class="language-sql">SELECT relname AS table_name,
+       indexrelname AS index_name,
+       idx_scan,
+       pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+ORDER BY pg_relation_size(indexrelid) DESC;</code></pre>
             </div>
-            <p>Before creating the index:</p>
+            <p>Illustrative result (values depend on activity since the statistics were reset):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>table_name</th>
+                        <th>index_name</th>
+                        <th>idx_scan</th>
+                        <th>index_size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>orders</td>
+                        <td>idx_orders_customer_date</td>
+                        <td>1250</td>
+                        <td>64 kB</td>
+                    </tr>
+                    <tr>
+                        <td>users</td>
+                        <td>users_pkey</td>
+                        <td>980</td>
+                        <td>32 kB</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Size and a zero scan count do not prove bloat or redundancy. Statistics have an observation period and can reset; an index may enforce a constraint or support infrequent critical work. Measure unused space with suitable engine-specific diagnostics.</p>
+            <p>Maintenance syntax is not portable:</p>
+            <div>
+                <pre><code class="language-sql">-- PostgreSQL: requires a supported version and cannot run in a transaction block.
+REINDEX INDEX CONCURRENTLY idx_orders_customer_date;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">-- SQL Server
+ALTER INDEX idx_orders_customer_date ON dbo.orders REBUILD;
+-- A different, incremental maintenance operation:
+ALTER INDEX idx_orders_customer_date ON dbo.orders REORGANIZE;</code></pre>
+            </div>
+            <p>Measure whether maintenance improves the workload. Rebuilds consume I/O, CPU, log space, and temporary capacity; online options have engine and edition restrictions. A fixed fragmentation percentage alone is insufficient justification.</p>
+            <h2 id="related-notes">Related notes</h2>
             <ul>
-                <li>Queries filtering by <code>Department</code> had to scan the entire table.</li>
-                <li>This resulted in high Disk IO and CPU utilization due to the number of rows processed.</li>
-            </ul>
-            <p>After creating the index:</p>
-            <ul>
-                <li>The database quickly locates relevant rows by leveraging the index.</li>
-                <li>Disk IO and CPU utilization dropped significantly, as shown in the plot below.</li>
-            </ul>
-            <p>The graph below illustrates the resource consumption before and after applying the fix:</p>
-            <p><img alt="Resource Usage Impact" decoding="async" height="766" loading="lazy" src="../../../resources/article-images/b56c37ef-6654-4cf5-801c-0d8617a2f471-85cb8fe945.webp" width="960" /></p>
-            <ol>
-                <li><strong>High Disk IO and CPU utilization</strong> are seen in the first part of the graph, representing inefficient queries before the index was applied.</li>
-                <li><strong>The green vertical line</strong> marks the point where the index was introduced.</li>
-                <li><strong>Low Disk IO and CPU utilization</strong> follow, demonstrating the effectiveness of the index in reducing resource usage.</li>
-            </ol>
-            <h3 id="benefits-of-indexing">Benefits of Indexing</h3>
-            <ul>
-                <li>Indexes speed up data retrieval by reducing the volume of data scanned during query execution. </li>
-                <li>Database queries perform better when optimized with indexes, resulting in faster response times. </li>
-                <li>Reduced data processing leads to more efficient utilization of CPU and memory resources. </li>
-                <li>Complicated queries involving sorting, filtering, or joining are handled more effectively when indexes are in place. </li>
-                <li>Indexes enable databases to handle larger datasets without significant performance degradation. </li>
-            </ul>
-            <h3 id="drawbacks-of-indexing">Drawbacks of Indexing</h3>
-            <ul>
-                <li>Additional storage space is consumed by index structures, which can grow over time. </li>
-                <li>Write operations, such as inserts, updates, and deletes, may slow down as indexes need to be updated. </li>
-                <li>Indexes require regular maintenance to make sure continued efficiency and prevent fragmentation. </li>
-                <li>Poorly chosen or excessive indexes can introduce performance bottlenecks instead of benefits. </li>
-                <li>Complicated index structures may complicate database design and increase management requirements. </li>
-            </ul>
-            <h3 id="best-practices-for-indexing">Best Practices for Indexing</h3>
-            <ul>
-                <li>Indexes are most effective on columns frequently used in WHERE clauses, JOIN conditions, or ORDER BY operations. </li>
-                <li>Columns with a high degree of uniqueness yield better index performance compared to those with low cardinality. </li>
-                <li>Volatile columns, which are updated frequently, should generally not be indexed to avoid overhead. </li>
-                <li>Choosing index types, such as clustered, non-clustered, or composite, should align with query patterns and database design. </li>
-                <li>Limiting the total number of indexes avoids excessive write operation delays and reduces storage needs. </li>
-                <li>Reviewing index effectiveness periodically ensures that outdated or unnecessary indexes are removed or restructured. </li>
-                <li>Proper indexing strategies should consider workload balance between read and write operations to maintain overall efficiency.</li>
+                <li><a href="01_how_tables_and_indexes_are_stored_on_disk.html">Storage on disk</a></li>
+                <li><a href="03_primary_key_vs_secondary_key.html">Primary keys and secondary indexes</a></li>
+                <li><a href="../08_database_performance/02_indexing_strategies.html">Index access methods</a></li>
+                <li><a href="https://github.com/djeada/Databases-Notes/blob/main/projectes/indexes_in_microsoft_sql_server.md">SQL Server indexing walkthrough</a></li>
+                <li><a href="https://www.postgresql.org/docs/current/indexes.html">PostgreSQL indexes</a></li>
             </ul>
         </article-section>
     </div>

@@ -2,17 +2,53 @@
     "use strict";
 
     const SHAPES = {
-        rod: { name: "Thin rod", dimensions: ["length"], kind: "line" },
-        disk: { name: "Solid disk", dimensions: ["radius"], kind: "area" },
-        annulus: { name: "Adjustable ring", dimensions: ["radius", "hollow"], kind: "area" },
-        hoop: { name: "Thin hoop", dimensions: ["radius"], kind: "line" },
-        plate: { name: "Rectangular plate", dimensions: ["length", "width"], kind: "area" },
-        cylinder: { name: "Solid cylinder", dimensions: ["radius", "height"], kind: "volume" },
-        sphere: { name: "Solid sphere", dimensions: ["radius"], kind: "volume" }
+        rod: {
+            name: "Thin rod",
+            dimensions: ["length"],
+            kind: "line"
+        },
+        disk: {
+            name: "Solid disk",
+            dimensions: ["radius"],
+            kind: "area"
+        },
+        annulus: {
+            name: "Adjustable ring",
+            dimensions: ["radius", "hollow"],
+            kind: "area"
+        },
+        hoop: {
+            name: "Thin hoop",
+            dimensions: ["radius"],
+            kind: "line"
+        },
+        plate: {
+            name: "Rectangular plate",
+            dimensions: ["length", "width"],
+            kind: "area"
+        },
+        cylinder: {
+            name: "Solid cylinder",
+            dimensions: ["radius", "height"],
+            kind: "volume"
+        },
+        sphere: {
+            name: "Solid sphere",
+            dimensions: ["radius"],
+            kind: "volume"
+        }
     };
     const DEFAULTS = Object.freeze({
-        shape: "disk", mass: 2, radius: 1, length: 2, width: 1, height: 2,
-        tilt: 0, offset: 0, hollow: 0.5, resolution: 8
+        shape: "disk",
+        mass: 2,
+        radius: 1,
+        length: 2,
+        width: 1,
+        height: 2,
+        tilt: 0,
+        offset: 0,
+        hollow: 0.5,
+        resolution: 8
     });
 
     function bounded(value, fallback, min, max) {
@@ -34,69 +70,157 @@
         };
     }
 
-    // Body coordinates: rod along x, plate/disk/hoop in xy, cylinder along z.
-    // n = (sin(beta), 0, cos(beta)); u is a perpendicular unit vector.
-    // Moving the axis by d*u makes |d| the true perpendicular offset.
+
+
+
     function axis(config) {
         const beta = config.tilt * Math.PI / 180;
         const sin = config.tilt === 0 ? 0 : Math.sin(beta);
         const cos = config.tilt === 90 ? 0 : Math.cos(beta);
-        return { n: [sin, 0, cos], u: [cos, 0, -sin], point: [config.offset * cos, 0, -config.offset * sin] };
+        return {
+            n: [sin, 0, cos],
+            u: [cos, 0, -sin],
+            point: [config.offset * cos, 0, -config.offset * sin]
+        };
     }
 
     function distanceSquared(point, config) {
-        const { u } = axis(config);
+        const {
+            u
+        } = axis(config);
         return (point.x * u[0] + point.z * u[2] - config.offset) ** 2 + point.y ** 2;
     }
 
     function principalMoments(config) {
-        const { mass: m, radius: r, length: l, width: w, height: h } = config;
+        const {
+            mass: m,
+            radius: r,
+            length: l,
+            width: w,
+            height: h
+        } = config;
         switch (config.shape) {
-            case "rod": return { x: 0, y: m * l * l / 12, z: m * l * l / 12 };
-            case "disk": return { x: m * r * r / 4, y: m * r * r / 4, z: m * r * r / 2 };
+            case "rod":
+                return {
+                    x: 0, y: m * l * l / 12, z: m * l * l / 12
+                };
+            case "disk":
+                return {
+                    x: m * r * r / 4, y: m * r * r / 4, z: m * r * r / 2
+                };
             case "annulus": {
                 const z = m * r * r * (1 + config.hollow ** 2) / 2;
-                return { x: z / 2, y: z / 2, z };
+                return {
+                    x: z / 2,
+                    y: z / 2,
+                    z
+                };
             }
-            case "hoop": return { x: m * r * r / 2, y: m * r * r / 2, z: m * r * r };
-            case "plate": return { x: m * w * w / 12, y: m * l * l / 12, z: m * (l * l + w * w) / 12 };
-            case "cylinder": return { x: m * (3 * r * r + h * h) / 12, y: m * (3 * r * r + h * h) / 12, z: m * r * r / 2 };
-            case "sphere": return { x: 2 * m * r * r / 5, y: 2 * m * r * r / 5, z: 2 * m * r * r / 5 };
+            case "hoop":
+                return {
+                    x: m * r * r / 2, y: m * r * r / 2, z: m * r * r
+                };
+            case "plate":
+                return {
+                    x: m * w * w / 12, y: m * l * l / 12, z: m * (l * l + w * w) / 12
+                };
+            case "cylinder":
+                return {
+                    x: m * (3 * r * r + h * h) / 12, y: m * (3 * r * r + h * h) / 12, z: m * r * r / 2
+                };
+            case "sphere":
+                return {
+                    x: 2 * m * r * r / 5, y: 2 * m * r * r / 5, z: 2 * m * r * r / 5
+                };
         }
     }
 
     function analytic(config) {
         const p = principalMoments(config);
-        const { n } = axis(config);
+        const {
+            n
+        } = axis(config);
         const centered = p.x * n[0] ** 2 + p.z * n[2] ** 2;
         const shift = config.mass * config.offset ** 2;
-        return { centered, shift, total: centered + shift, principal: p };
+        return {
+            centered,
+            shift,
+            total: centered + shift,
+            principal: p
+        };
     }
 
     function density(config) {
-        const { mass: m, radius: r, length: l, width: w, height: h } = config;
+        const {
+            mass: m,
+            radius: r,
+            length: l,
+            width: w,
+            height: h
+        } = config;
         switch (config.shape) {
-            case "rod": return { symbol: "λ", value: m / l, unit: "kg/m" };
-            case "hoop": return { symbol: "λ", value: m / (2 * Math.PI * r), unit: "kg/m" };
-            case "disk": return { symbol: "σ", value: m / (Math.PI * r * r), unit: "kg/m²" };
-            case "annulus": return config.hollow === 1
-                ? { symbol: "λ", value: m / (2 * Math.PI * r), unit: "kg/m" }
-                : { symbol: "σ", value: m / (Math.PI * r * r * (1 - config.hollow ** 2)), unit: "kg/m²" };
-            case "plate": return { symbol: "σ", value: m / (l * w), unit: "kg/m²" };
-            case "cylinder": return { symbol: "ρ", value: m / (Math.PI * r * r * h), unit: "kg/m³" };
-            case "sphere": return { symbol: "ρ", value: 3 * m / (4 * Math.PI * r ** 3), unit: "kg/m³" };
+            case "rod":
+                return {
+                    symbol: "λ", value: m / l, unit: "kg/m"
+                };
+            case "hoop":
+                return {
+                    symbol: "λ", value: m / (2 * Math.PI * r), unit: "kg/m"
+                };
+            case "disk":
+                return {
+                    symbol: "σ", value: m / (Math.PI * r * r), unit: "kg/m²"
+                };
+            case "annulus":
+                return config.hollow === 1 ? {
+                    symbol: "λ",
+                    value: m / (2 * Math.PI * r),
+                    unit: "kg/m"
+                } : {
+                    symbol: "σ",
+                    value: m / (Math.PI * r * r * (1 - config.hollow ** 2)),
+                    unit: "kg/m²"
+                };
+            case "plate":
+                return {
+                    symbol: "σ", value: m / (l * w), unit: "kg/m²"
+                };
+            case "cylinder":
+                return {
+                    symbol: "ρ", value: m / (Math.PI * r * r * h), unit: "kg/m³"
+                };
+            case "sphere":
+                return {
+                    symbol: "ρ", value: 3 * m / (4 * Math.PI * r ** 3), unit: "kg/m³"
+                };
         }
     }
 
     function sample(config) {
-        const { shape, mass, radius, length, width, height, resolution: n } = config;
+        const {
+            shape,
+            mass,
+            radius,
+            length,
+            width,
+            height,
+            resolution: n
+        } = config;
         const points = [];
-        // idx records where a piece sits in the nested sum, outermost first:
-        // slice → ring → piece around the ring, strip → piece, and so on.
-        const add = (x, y, z, weight, idx) => points.push({ x, y, z, weight, idx, order: points.length });
+
+
+        const add = (x, y, z, weight, idx) => points.push({
+            x,
+            y,
+            z,
+            weight,
+            idx,
+            order: points.length
+        });
         const circularSlice = (z, r, sliceWeight, radialCount, inner = 0, outer = []) => {
             for (let i = 0; i < radialCount; i++) {
-                const a = inner + (r - inner) * i / radialCount, b = inner + (r - inner) * (i + 1) / radialCount;
+                const a = inner + (r - inner) * i / radialCount,
+                    b = inner + (r - inner) * (i + 1) / radialCount;
                 const midpoint = (a + b) / 2;
                 const weight = sliceWeight * (b * b - a * a) / (r * r - inner * inner) / (2 * n);
                 for (let j = 0; j < 2 * n; j++) {
@@ -115,8 +239,12 @@
                     add(radius * Math.cos(phi), radius * Math.sin(phi), 0, 1 / (2 * n), [i]);
                 }
                 break;
-            case "disk": circularSlice(0, radius, 1, n); break;
-            case "annulus": circularSlice(0, radius, 1, n, radius * config.hollow); break;
+            case "disk":
+                circularSlice(0, radius, 1, n);
+                break;
+            case "annulus":
+                circularSlice(0, radius, 1, n, radius * config.hollow);
+                break;
             case "plate":
                 for (let i = 0; i < n; i++) {
                     for (let j = 0; j < n; j++) add(length * ((i + 0.5) / n - 0.5), width * ((j + 0.5) / n - 0.5), 0, 1 / (n * n), [i, j]);
@@ -126,8 +254,8 @@
                 for (let i = 0; i < n / 2; i++) circularSlice(height * ((i + 0.5) / (n / 2) - 0.5), radius, 1 / (n / 2), n, 0, [i]);
                 break;
             case "sphere":
-                // Midpoint slices of a solid sphere, not points on a spherical shell.
-                // Slice areas supply volume weights; normalize to preserve total mass.
+
+
                 for (let i = 0; i < n; i++) {
                     const z = radius * (2 * (i + 0.5) / n - 1);
                     const r = Math.sqrt(radius * radius - z * z);
@@ -145,44 +273,104 @@
         return points.sort((a, b) => a.r2 - b.r2);
     }
 
-    // r⊥ is a convex function, so its maximum over a convex body lies on the body's extreme points.
+
     function extremePoints(config) {
-        const { radius: r, length: l, width: w, height: h } = config;
-        const ring = (radius, z, right = [1, 0, 0]) => Array.from({ length: 72 }, (_, i) => {
-            const c = Math.cos(i * Math.PI / 36), s = Math.sin(i * Math.PI / 36);
-            return { x: radius * (c * right[0]), y: radius * s, z: z + radius * c * right[2] };
+        const {
+            radius: r,
+            length: l,
+            width: w,
+            height: h
+        } = config;
+        const ring = (radius, z, right = [1, 0, 0]) => Array.from({
+            length: 72
+        }, (_, i) => {
+            const c = Math.cos(i * Math.PI / 36),
+                s = Math.sin(i * Math.PI / 36);
+            return {
+                x: radius * (c * right[0]),
+                y: radius * s,
+                z: z + radius * c * right[2]
+            };
         });
         switch (config.shape) {
-            case "rod": return [{ x: -l / 2, y: 0, z: 0 }, { x: l / 2, y: 0, z: 0 }];
-            case "plate": return [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(([i, j]) => ({ x: i * l / 2, y: j * w / 2, z: 0 }));
-            case "cylinder": return [...ring(r, h / 2), ...ring(r, -h / 2)];
+            case "rod":
+                return [{
+                    x: -l / 2,
+                    y: 0,
+                    z: 0
+                }, {
+                    x: l / 2,
+                    y: 0,
+                    z: 0
+                }];
+            case "plate":
+                return [
+                    [-1, 1],
+                    [1, 1],
+                    [1, -1],
+                    [-1, -1]
+                ].map(([i, j]) => ({
+                    x: i * l / 2,
+                    y: j * w / 2,
+                    z: 0
+                }));
+            case "cylinder":
+                return [...ring(r, h / 2), ...ring(r, -h / 2)];
             case "sphere": {
-                const { u } = axis(config);
+                const {
+                    u
+                } = axis(config);
                 return ring(r, 0, [-u[0], 0, -u[2]]);
             }
-            default: return ring(r, 0);
+            default:
+                return ring(r, 0);
         }
     }
 
     function farthestPoint(config) {
-        let best = null, distance = -1;
+        let best = null,
+            distance = -1;
         for (const p of extremePoints(config)) {
             const r2 = distanceSquared(p, config);
-            if (r2 > distance + 1e-9) { best = p; distance = r2; }
+            if (r2 > distance + 1e-9) {
+                best = p;
+                distance = r2;
+            }
         }
-        return { ...best, r: Math.sqrt(distance) };
+        return {
+            ...best,
+            r: Math.sqrt(distance)
+        };
     }
 
-    // The band chart describes the physical body, so it uses a fine partition
-    // independent of the dots on screen. Coarse dots alias into empty bands.
-    const FINE = { line: 80, area: 40, volume: 20 };
+
+
+    const FINE = {
+        line: 80,
+        area: 40,
+        volume: 20
+    };
+
     function distribution(config, count = 10) {
-        // A sphere looks the same from every direction. Measuring it about a
-        // transverse axis avoids lining the axis up with its sampling slices.
-        const view = config.shape === "sphere" ? { ...config, tilt: 90 } : config;
-        const points = sample({ ...view, resolution: FINE[SHAPES[config.shape].kind] });
+
+
+        const view = config.shape === "sphere" ? {
+            ...config,
+            tilt: 90
+        } : config;
+        const points = sample({
+            ...view,
+            resolution: FINE[SHAPES[config.shape].kind]
+        });
         const max = farthestPoint(config).r;
-        const bins = Array.from({ length: count }, (_, i) => ({ from: max * i / count, to: max * (i + 1) / count, mass: 0, inertia: 0 }));
+        const bins = Array.from({
+            length: count
+        }, (_, i) => ({
+            from: max * i / count,
+            to: max * (i + 1) / count,
+            mass: 0,
+            inertia: 0
+        }));
         for (const p of points) {
             const bin = bins[Math.min(count - 1, max > 0 ? Math.floor(count * Math.sqrt(p.r2) / max) : 0)];
             bin.mass += p.dm;
@@ -199,28 +387,65 @@
         for (const p of points) cumulative.push(cumulative[cumulative.length - 1] + p.contribution);
         const numerical = cumulative[cumulative.length - 1];
         const bins = distribution(config);
-        // The same pieces in the order the nested sum visits them.
+
         const build = [...points].sort((a, b) => a.order - b.order);
-        return { config, exact, points, build, cumulative, numerical, bins, density: density(config) };
+        return {
+            config,
+            exact,
+            points,
+            build,
+            cumulative,
+            numerical,
+            bins,
+            density: density(config)
+        };
     }
 
     function motion(inertia, torque, time) {
         if (!Number.isFinite(inertia) || inertia <= 1e-12) return null;
         const alpha = torque / inertia;
-        return { alpha, omega: alpha * time, angle: 0.5 * alpha * time * time, energy: 0.5 * inertia * (alpha * time) ** 2 };
+        return {
+            alpha,
+            omega: alpha * time,
+            angle: 0.5 * alpha * time * time,
+            energy: 0.5 * inertia * (alpha * time) ** 2
+        };
     }
 
     function rotate(point, config, angle) {
-        const { n, point: a } = axis(config);
+        const {
+            n,
+            point: a
+        } = axis(config);
         const v = [point.x - a[0], point.y - a[1], point.z - a[2]];
         const dot = v[0] * n[0] + v[2] * n[2];
         const cross = [-n[2] * v[1], n[2] * v[0] - n[0] * v[2], n[0] * v[1]];
-        const c = Math.cos(angle), s = Math.sin(angle);
+        const c = Math.cos(angle),
+            s = Math.sin(angle);
         const rotated = v.map((value, i) => a[i] + value * c + cross[i] * s + n[i] * dot * (1 - c));
-        return { x: rotated[0], y: rotated[1], z: rotated[2] };
+        return {
+            x: rotated[0],
+            y: rotated[1],
+            z: rotated[2]
+        };
     }
 
-    const api = { SHAPES, DEFAULTS, normalize, axis, distanceSquared, principalMoments, analytic, density, sample, farthestPoint, distribution, evaluate, motion, rotate };
+    const api = {
+        SHAPES,
+        DEFAULTS,
+        normalize,
+        axis,
+        distanceSquared,
+        principalMoments,
+        analytic,
+        density,
+        sample,
+        farthestPoint,
+        distribution,
+        evaluate,
+        motion,
+        rotate
+    };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     root.InertiaModel = api;
 })(typeof window !== "undefined" ? window : globalThis);

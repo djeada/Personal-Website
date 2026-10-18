@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/disk_io_analysis",
             "description": "Disk I/O analysis is the process of observing how data is read from and written to storage devices.",
-            "dateModified": "2026-06-01",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Disk I/O analysis is the process of observing how data is read from and written to storage devices." property="og:description" />
-    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -171,7 +171,7 @@
                             <li><a href="#reduce-background-impact-with-ionice">Reduce Background Impact with ionice</a></li>
                         </ol>
                     </li>
-                    <li><a href="#scenario-6-simulate-slow-disk-with-i-o-throttling-using-ionice">Scenario 6: Simulate Slow Disk with I/O Throttling Using ionice</a>
+                    <li><a href="#scenario-6-compare-i-o-priorities-using-ionice">Scenario 6: Compare I/O Priorities Using ionice</a>
                         <ol>
                             <li><a href="#run-a-low-priority-job">Run a Low-Priority Job</a></li>
                             <li><a href="#run-a-normal-job-at-the-same-time">Run a Normal Job at the Same Time</a></li>
@@ -297,7 +297,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -952,7 +952,7 @@ average wait time is high</code></pre>
                 <pre><code class="language-bash">mkdir -p ~/fio-test
 
 fio --name=seq-write-test \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=write \
     --bs=1M \
@@ -1016,7 +1016,7 @@ TID  PRIO USER DISK READ DISK WRITE IO&gt; COMMAND
                 <pre><code class="language-bash">mkdir -p ~/fio-test
 
 fio --name=prepare-file \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=write \
     --bs=1M \
@@ -1027,7 +1027,7 @@ fio --name=prepare-file \
             <p>Run:</p>
             <div>
                 <pre><code class="language-bash">fio --name=random-read-test \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --filename=randomfile \
     --size=2G \
     --rw=randread \
@@ -1094,7 +1094,7 @@ sda           5800.00    0.00 23200.0    0.00   22.80   31.50  99.60</code></pre
             <h4 id="simulate-the-bottleneck-2">Simulate the Bottleneck</h4>
             <div>
                 <pre><code class="language-bash">fio --name=random-write-test \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=randwrite \
     --bs=4k \
@@ -1162,7 +1162,7 @@ sda           5800.00    0.00 23200.0    0.00   22.80   31.50  99.60</code></pre
             <p>Use a random read/write workload:</p>
             <div>
                 <pre><code class="language-bash">fio --name=high-iowait-test \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=randrw \
     --rwmixread=50 \
@@ -1226,7 +1226,7 @@ sda           3200.00 3100.00 12800.0 12400.0   55.30   45.00 100.00</code></pre
             <p>Terminal 1:</p>
             <div>
                 <pre><code class="language-bash">fio --name=background-writer \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=4G \
     --rw=write \
     --bs=1M \
@@ -1261,7 +1261,7 @@ sda           3200.00 3100.00 12800.0 12400.0   55.30   45.00 100.00</code></pre
             <p>Stop the fio job, then rerun it with idle I/O priority:</p>
             <div>
                 <pre><code class="language-bash">ionice -c3 fio --name=background-writer \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=4G \
     --rw=write \
     --bs=1M \
@@ -1275,13 +1275,14 @@ sda           3200.00 3100.00 12800.0 12400.0   55.30   45.00 100.00</code></pre
                 <li>The background job should only receive disk time when other processes are not using the disk.</li>
                 <li>This can reduce the impact on interactive or foreground workloads.</li>
             </ul>
-            <h3 id="scenario-6-simulate-slow-disk-with-i-o-throttling-using-ionice">Scenario 6: Simulate Slow Disk with I/O Throttling Using <code>ionice</code></h3>
+            <h3 id="scenario-6-compare-i-o-priorities-using-ionice">Scenario 6: Compare I/O Priorities Using <code>ionice</code></h3>
             <p>This scenario does not make the disk physically slower. Instead, it changes how aggressively a process competes for disk access.</p>
             <p>Show how I/O priority affects competing disk workloads.</p>
+            <p><code>ionice</code> sets scheduling priority, not a fixed IOPS or bandwidth limit. Its effect depends on the active I/O scheduler, kernel, device, and type of I/O; an idle-class job may still use the full device when there is no contention. Inspect <code>/sys/block/&lt;device&gt;/queue/scheduler</code> and do not infer a failed command just because throughput is unchanged. For an explicit rate ceiling, use a supported control such as cgroup v2 <code>io.max</code> or fio's rate options in a lab.</p>
             <h4 id="run-a-low-priority-job">Run a Low-Priority Job</h4>
             <div>
                 <pre><code class="language-bash">ionice -c3 fio --name=idle-writer \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=write \
     --bs=1M \
@@ -1293,7 +1294,7 @@ sda           3200.00 3100.00 12800.0 12400.0   55.30   45.00 100.00</code></pre
             <p>In another terminal:</p>
             <div>
                 <pre><code class="language-bash">fio --name=normal-reader \
-    --directory=~/fio-test \
+    --directory="$HOME/fio-test" \
     --size=2G \
     --rw=read \
     --bs=1M \

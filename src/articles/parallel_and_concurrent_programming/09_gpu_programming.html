@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming",
             "description": "GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel.",
-            "dateModified": "2026-09-12",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -209,6 +209,7 @@ messageStyle: "none"
                         </ol>
                     </li>
                     <li><a href="#shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</a></li>
+                    <li><a href="#occupancy-utilization-and-performance">Occupancy, Utilization, and Performance</a></li>
                     <li><a href="#common-cuda-concepts">Common CUDA Concepts</a></li>
                     <li><a href="#performance-checklist">Performance Checklist</a></li>
                     <li><a href="#common-mistakes">Common Mistakes</a></li>
@@ -231,7 +232,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -808,6 +809,8 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
                 <li>Threads in the same block can synchronize with <code>__syncthreads()</code>.</li>
                 <li>Blocks are normally scheduled independently, so a conventional kernel should not rely on execution order or direct synchronization between blocks.</li>
             </ul>
+            <p>A block barrier has block scope. In a conventional kernel, <code>__syncthreads()</code> cannot make another block finish first. If one phase needs results from every block, a separate kernel in the same stream is a common way to order the next phase after the first completes.</p>
+            <p>All participating threads must reach a block barrier consistently. In a reduction, threads whose input index is out of bounds can contribute zero and still take part in the barrier; placing the barrier only inside <code>if (i &lt; n)</code> can leave threads following different synchronization paths. See <a href="https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/intro-to-cuda-cpp.html">CUDA block synchronization</a>.</p>
             <h4 id="thread">Thread</h4>
             <p>A thread is the basic programming unit. Each thread has:</p>
             <ul>
@@ -963,6 +966,10 @@ blockSum&lt;&lt;&lt;grid, block, sharedBytes&gt;&gt;&gt;(d_in, d_partial, n);</c
                 <li>It uses dynamically sized shared memory so the buffer matches the block size.</li>
             </ul>
             <p>The halving reduction shown here assumes a power-of-two block size, such as the <code>256</code> threads used in the launch example.</p>
+            <h3 id="occupancy-utilization-and-performance">Occupancy, Utilization, and Performance</h3>
+            <p><strong>Occupancy</strong> is the number of resident warps on an SM relative to its supported maximum. Registers, shared memory, block size, and hardware limits determine how much work can reside there at once.</p>
+            <p>Resident warps are not necessarily executing useful instructions every cycle. <strong>Utilization</strong> describes how actively resources are used, while achieved throughput measures useful work per unit of time. Raising occupancy may help hide latency, but can also require reducing per-thread resources or data reuse. A lower-occupancy kernel can be faster. Compare measured runtime and memory traffic rather than optimizing occupancy alone. See <a href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy">CUDA occupancy guidance</a>.</p>
+            <p>A launch with 1,024 blocks of 256 threads creates 262,144 logical threads. Blocks run as resources become available; that launch does not require all 262,144 threads to be resident simultaneously.</p>
             <h3 id="common-cuda-concepts">Common CUDA Concepts</h3>
             <table>
                 <thead>

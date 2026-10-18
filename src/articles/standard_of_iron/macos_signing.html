@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/macos_signing",
             "description": "macOS packaging is implemented in .github/workflows/build-macos.yml.",
-            "dateModified": "2026-09-13",
+            "dateModified": "2026-09-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/macos_signing" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="macOS packaging is implemented in .github/workflows/build-macos.yml." property="og:description" />
-    <meta content="2026-09-13" property="article:modified_time" />
+    <meta content="2026-09-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -109,39 +109,21 @@
 <div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/standard_of_iron.html">Standard Of Iron</a></li><li><span aria-current="page">macOS Code Signing and Notarization</span></li></ol></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-jax: ["input/TeX", "output/HTML-CSS"],
-extensions: ["tex2jax.js"],
-"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
-TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
-messageStyle: "none"
-});
-</script>
-    <script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
     <div id="article-wrapper">
         <aside id="article-sidebar">
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#packaging-order">Packaging order</a></li>
-                    <li><a href="#ad-hoc-signing">Ad-hoc signing</a></li>
-                    <li><a href="#optional-developer-id-signing">Optional Developer ID signing</a>
-                        <ol>
-                            <li><a href="#signing-credentials">Signing credentials</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#optional-notarization">Optional notarization</a></li>
-                    <li><a href="#current-dmg-ordering-constraint">Current DMG ordering constraint</a></li>
-                    <li><a href="#encoding-the-certificate">Encoding the certificate</a></li>
+                    <li><a href="#entitlements">Entitlements</a></li>
+                    <li><a href="#credentials">Credentials</a></li>
+                    <li><a href="#bundle-identity">Bundle identity</a></li>
                     <li><a href="#verification-commands">Verification commands</a></li>
                     <li><a href="#temporary-credential-handling">Temporary credential handling</a></li>
-                    <li><a href="#when-this-workflow-runs">When this workflow runs</a></li>
                     <li><a href="#source-of-truth">Source of truth</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/standard_of_iron/iron_sepulcher.html">The Iron Sepulcher</a></li><li><a href="/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li><li><a href="/articles/standard_of_iron/horse_model_architecture.html">Authored Horse and Elephant Pipeline</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/standard_of_iron/iron_sepulcher.html">The Iron Sepulcher</a></li><li><a href="/articles/standard_of_iron/map_generator.html">Map generator</a></li><li><a href="/articles/standard_of_iron/horse_model_architecture.html">Authored Horse and Elephant Pipeline</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/accessibility.html">Accessibility</a></li>
@@ -151,14 +133,18 @@ messageStyle: "none"
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/architecture.html">Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_licenses.html">Audio Licenses</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_system.html">Audio System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/baked_meshes.html">Baked Meshes</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/battlefield_capture.html">Battlefield Capture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/camera_controls.html">Camera Controls</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_map_film.html">Campaign Map Film</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/campaign_missions.html">Campaign Missions</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ci_policy.html">Ci Policy</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/cursed_gold_vein.html">Cursed Gold Vein</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/difficulty.html">Difficulty</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/documentary.html">Documentary</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/drama.html">Drama</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/economy_guidance.html">Economy Guidance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/food_and_farms.html">Food and Farms</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/formation_architecture.html">Formation Architecture</a></li>
@@ -167,16 +153,21 @@ messageStyle: "none"
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/horse_model_architecture.html">Horse Model Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/iron_sepulcher.html">Iron Sepulcher</a></li>
                     <li><a aria-current="page" href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_generator.html">Map Generator</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement.html">Map Object Placement</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/minimap.html">Minimap</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_startup.html">Mission Startup</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/performance.html">Performance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/promo_capture.html">Promo Capture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rafts.html">Rafts</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rockfall.html">Rockfall</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability.html">Rpg Playability</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/skirmish_bases.html">Skirmish Bases</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/trailer.html">Trailer</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/typography.html">Typography</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ui_design_system.html">Ui Design System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/unit_balance.html">Unit Balance</a></li>
@@ -191,7 +182,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -211,48 +202,73 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>macOS Code Signing and Notarization</h1>
-            <p>macOS packaging is implemented in <code>.github/workflows/build-macos.yml</code>. The workflow is reusable and is called by both the weekly packaging job and the release workflow.</p>
-            <p>The packaging path uses two different kinds of signing:</p>
-            <ol>
-                <li>an <strong>ad-hoc signature</strong> that is always applied after <code>macdeployqt</code> and asset copying so the modified application bundle can run on macOS; and</li>
-                <li>an optional <strong>Developer ID</strong> signing and notarization script when release credentials are available.</li>
-            </ol>
-            <p>These are separate stages with different purposes.</p>
+            <p>macOS packaging is implemented in <code>.github/workflows/build-macos.yml</code>. The
+                workflow is reusable: the weekly packaging job and the release workflow both
+                call it. Developer ID signing and notarization are done by
+                <code>scripts/sign-and-notarize-macos.sh</code>, which has two modes, <code>app</code> and <code>dmg</code>.
+            </p>
             <h2 id="packaging-order">Packaging order</h2>
-            <p>The current workflow performs the relevant steps in this order:</p>
             <ol>
-                <li>build <code>standard_of_iron.app</code>;</li>
-                <li>run <code>macdeployqt</code>;</li>
-                <li>copy assets and licences into the bundle;</li>
-                <li>ad-hoc sign the complete bundle with <code>codesign --sign -</code>;</li>
-                <li>run packaged renderer and OpenGL self-tests;</li>
-                <li>create the DMG with <code>hdiutil create</code>;</li>
-                <li>run <code>scripts/sign-and-notarize-macos.sh</code> with the app path and the already-created DMG;</li>
-                <li>verify the DMG and write its SHA-256 checksum.</li>
+                <li>Build <code>standard_of_iron.app</code>. With <code>debug-symbols</code>, extract the dSYM and
+                    strip the binary's debug map.</li>
+                <li>Run <code>macdeployqt</code>.</li>
+                <li>Copy assets and licences into the bundle.</li>
+                <li>Ad-hoc sign the complete bundle (<code>codesign --force --deep --sign -</code>).</li>
+                <li>Run the packaged release self-test and the OpenGL 3.3 fallback self-test.</li>
+                <li><strong><code>sign-and-notarize-macos.sh app</code></strong>:<ol>
+                        <li>Developer-ID-sign the nested code, then the executable and the bundle,
+                            with the hardened runtime and the entitlements.</li>
+                        <li>Notarize a ZIP of that exact bundle.</li>
+                        <li>Staple the ticket to the bundle.</li>
+                        <li>Verify with <code>codesign</code>, <code>stapler</code> and <code>spctl</code>.</li>
+                    </ol>
+                </li>
+                <li>Verify the final bundle: <code>codesign --verify --deep --strict</code>, a renderer
+                    self-test, and <code>--print-data-paths</code>.</li>
+                <li>Create the DMG from that bundle with <code>hdiutil create</code>.</li>
+                <li><strong><code>sign-and-notarize-macos.sh dmg</code></strong>: sign, notarize and staple the DMG,
+                    then run <code>spctl</code> on it.</li>
+                <li>Pack the bundle as <code>…-macos-&lt;arch&gt;.app.tar.gz</code>. This is the Steam depot
+                    payload.</li>
+                <li>Mount the DMG, and require its app to match the build-directory bundle file
+                    for file, including symlinks and modes. When signed, run <code>stapler</code> and
+                    <code>spctl</code> on the mounted copy.
+                </li>
+                <li>Stage and verify the Steam depot from the tarball, then run <code>hdiutil verify</code>
+                    and write the checksums.</li>
             </ol>
-            <p>The ad-hoc signature is therefore part of every package produced by <code>build-macos.yml</code>, regardless of whether Developer ID credentials are configured.</p>
-            <h2 id="ad-hoc-signing">Ad-hoc signing</h2>
-            <p>After deployment and asset copying, the workflow runs:</p>
-            <div>
-                <pre><code class="language-sh">codesign --force --deep --sign - "${APP_DIR}/${APP_NAME}.app"
-codesign --verify --deep --strict --verbose=2 "${APP_DIR}/${APP_NAME}.app"</code></pre>
-            </div>
-            <p>This reseals the bundle after <code>macdeployqt</code> and the asset-copy steps have changed its contents. The packaged self-tests run against that ad-hoc-signed bundle.</p>
-            <p>An ad-hoc signature is not a Developer ID signature and does not provide notarization or a verified external publisher identity.</p>
-            <h2 id="optional-developer-id-signing">Optional Developer ID signing</h2>
-            <p>The workflow calls:</p>
-            <div>
-                <pre><code class="language-sh">./scripts/sign-and-notarize-macos.sh \
-  "${APP_DIR}/${APP_NAME}.app" \
-  "${DMG_NAME}"</code></pre>
-            </div>
-            <p>The script exits successfully without Developer ID signing when either of these values is missing:</p>
-            <ul>
-                <li><code>MACOS_CERTIFICATE</code>; or</li>
-                <li><code>MACOS_CERTIFICATE_PASSWORD</code>.</li>
-            </ul>
-            <p>If they are present, the script decodes the <code>.p12</code>, imports it into a temporary keychain, locates a <strong>Developer ID Application</strong> identity, signs nested frameworks and plugins, signs the main executable, signs the <code>.app</code> bundle, and verifies the resulting application signature.</p>
-            <h3 id="signing-credentials">Signing credentials</h3>
+            <p>Steps 6 and 9 run only when every credential is present. Without them, the
+                ad-hoc bundle from step 4 is packaged, unless <code>require-signing</code> is set; then
+                step 6 fails the build.</p>
+            <p>The DMG therefore always contains the final app. It used to be created before
+                Developer ID signing, and the ticket was stapled to that earlier image, so the
+                signed app never reached the DMG. <code>ReleaseContract.MacDmgIsBuiltFromTheNotarizedApp</code>
+                keeps the order.</p>
+            <h2 id="entitlements">Entitlements</h2>
+            <p><code>dist/macos/standard_of_iron.entitlements</code> is applied to the main executable
+                and the bundle, and to nothing else:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Entitlement</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>com.apple.security.cs.disable-library-validation</code></td>
+                        <td>lets the hardened runtime load the Steam overlay dylib, which Valve signs</td>
+                    </tr>
+                    <tr>
+                        <td><code>com.apple.security.cs.allow-dyld-environment-variables</code></td>
+                        <td>Steam injects the overlay through <code>DYLD_INSERT_LIBRARIES</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>com.apple.security.app-sandbox</code> is deliberately absent, because Steam cannot
+                launch or overlay a sandboxed app. The script fails if the signed app is
+                missing either entitlement or has the sandbox one.</p>
+            <h2 id="credentials">Credentials</h2>
             <table>
                 <thead>
                     <tr>
@@ -263,82 +279,70 @@ codesign --verify --deep --strict --verbose=2 "${APP_DIR}/${APP_NAME}.app"</code
                 <tbody>
                     <tr>
                         <td><code>MACOS_CERTIFICATE</code></td>
-                        <td>Base64-encoded <code>.p12</code> containing the Developer ID certificate and private key</td>
+                        <td>base64 <code>.p12</code> containing the Developer ID Application certificate and private key</td>
                     </tr>
                     <tr>
                         <td><code>MACOS_CERTIFICATE_PASSWORD</code></td>
-                        <td>Password for the <code>.p12</code> export</td>
+                        <td>password for the <code>.p12</code> export</td>
                     </tr>
                     <tr>
                         <td><code>MACOS_KEYCHAIN_PASSWORD</code></td>
-                        <td>Password for the temporary CI keychain; the script generates one with <code>uuidgen</code> when this value is empty</td>
+                        <td>password for the temporary CI keychain; the script generates one with <code>uuidgen</code> when empty</td>
+                    </tr>
+                    <tr>
+                        <td><code>APPLE_ID</code></td>
+                        <td>Apple ID used for notarization</td>
+                    </tr>
+                    <tr>
+                        <td><code>APPLE_ID_PASSWORD</code></td>
+                        <td>app-specific password for that Apple ID</td>
+                    </tr>
+                    <tr>
+                        <td><code>APPLE_TEAM_ID</code></td>
+                        <td>10-character team ID</td>
                     </tr>
                 </tbody>
             </table>
-            <p>Only the certificate and certificate password determine whether Developer ID signing runs.</p>
-            <h2 id="optional-notarization">Optional notarization</h2>
-            <p>Notarization requires all three of these values:</p>
+            <p>Signing is all or nothing. If any of the five required values is missing, the
+                script signs nothing. A signed but unnotarized app is still blocked by
+                Gatekeeper, and looks more finished than it is.</p>
+            <p>With <code>SOI_REQUIRE_SIGNING=true</code>, a missing credential is an error. The release
+                workflow passes this from the repository variable of the same name. Steam
+                uploads always demand a Developer-ID-signed, notarized bundle
+                (<code>steam-upload.yml</code>, <code>verify-macos</code>).</p>
+            <p>Encode the certificate on macOS with <code>base64 -i certificate.p12 | pbcopy</code>, or on
+                GNU/Linux with <code>base64 -w 0 certificate.p12</code>.</p>
+            <h2 id="bundle-identity">Bundle identity</h2>
+            <p><code>CMakeLists.txt</code> sets the Info.plist values that Qt's template would otherwise
+                fill with placeholders:</p>
             <ul>
-                <li><code>APPLE_ID</code>;</li>
-                <li><code>APPLE_ID_PASSWORD</code>; and</li>
-                <li><code>APPLE_TEAM_ID</code>.</li>
+                <li><code>CFBundleIdentifier</code>: <code>io.github.djeada.standardofiron</code></li>
+                <li><code>CFBundleName</code>: <code>Standard of Iron</code></li>
+                <li>the version strings: <code>PROJECT_VERSION</code></li>
             </ul>
-            <p>When any of them is absent, <code>sign-and-notarize-macos.sh</code> still performs Developer ID signing if the certificate credentials are present, but sets <code>SKIP_NOTARIZATION=true</code> and skips the notary submission.</p>
-            <p>When all notarization credentials are present, the script:</p>
-            <ol>
-                <li>creates a ZIP of the signed <code>.app</code> with <code>ditto</code>;</li>
-                <li>submits the ZIP through <code>xcrun notarytool submit --wait</code>;</li>
-                <li>fails if Apple does not return <code>status: Accepted</code>;</li>
-                <li>retrieves the notary log on failure when it can recover a submission ID;</li>
-                <li>runs <code>xcrun stapler staple</code> on the DMG path; and</li>
-                <li>validates the stapled target with <code>xcrun stapler validate</code>.</li>
-            </ol>
-            <h2 id="current-dmg-ordering-constraint">Current DMG ordering constraint</h2>
-            <p><code>build-macos.yml</code> creates the DMG <strong>before</strong> <code>sign-and-notarize-macos.sh</code> performs Developer ID signing on the <code>.app</code> in the build directory.</p>
-            <p>A DMG created by <code>hdiutil create -srcfolder</code> contains the state of the source bundle at DMG creation time. Later changes to <code>build/bin/standard_of_iron.app</code> do not rewrite the copy already stored in the DMG.</p>
-            <p>The repository therefore establishes these facts:</p>
-            <ul>
-                <li>the app used for packaged self-tests is ad-hoc signed;</li>
-                <li>the build-directory app can receive a Developer ID signature after the DMG exists; and</li>
-                <li>the script attempts to staple and validate the existing DMG after notarizing a ZIP of the subsequently signed app.</li>
-            </ul>
-            <p>The workflow does <strong>not</strong> currently establish that the Developer-ID-signed copy of the app is the copy contained in the already-created DMG. Documentation and release checks should not claim that property unless the packaging order or verification path is changed to prove it.</p>
-            <h2 id="encoding-the-certificate">Encoding the certificate</h2>
-            <p>On macOS:</p>
-            <div>
-                <pre><code class="language-sh">base64 -i /path/to/certificate.p12 | pbcopy</code></pre>
-            </div>
-            <p>On GNU/Linux:</p>
-            <div>
-                <pre><code class="language-sh">base64 -w 0 /path/to/certificate.p12</code></pre>
-            </div>
-            <p>Store the result as <code>MACOS_CERTIFICATE</code> and the export password as <code>MACOS_CERTIFICATE_PASSWORD</code>.</p>
+            <p>Notarization, Gatekeeper and Steam key on the identifier, so never change it.
+                The save directory does not follow <code>CFBundleName</code>, because
+                <code>App::Core::apply_application_identity</code> pins the name <code>QStandardPaths</code> uses.
+            </p>
             <h2 id="verification-commands">Verification commands</h2>
-            <p>For an app bundle:</p>
             <div>
-                <pre><code class="language-sh">codesign --verify --deep --strict --verbose=2 standard_of_iron.app</code></pre>
+                <pre><code class="language-sh">codesign --verify --deep --strict --verbose=2 standard_of_iron.app
+codesign --display --entitlements - standard_of_iron.app
+xcrun stapler validate standard_of_iron.app
+spctl --assess --type execute --verbose standard_of_iron.app
+spctl --assess --type open --context context:primary-signature --verbose standard_of_iron-&lt;version&gt;-macos-&lt;arch&gt;.dmg</code></pre>
             </div>
-            <p>For Gatekeeper assessment:</p>
-            <div>
-                <pre><code class="language-sh">spctl --assess --type execute --verbose standard_of_iron.app</code></pre>
-            </div>
-            <p>For a stapled target:</p>
-            <div>
-                <pre><code class="language-sh">xcrun stapler validate standard_of_iron-macos.dmg</code></pre>
-            </div>
-            <p>The CI workflow also runs <code>hdiutil verify</code> on the DMG and writes a SHA-256 checksum after the optional signing/notarization step.</p>
             <h2 id="temporary-credential-handling">Temporary credential handling</h2>
-            <p><code>sign-and-notarize-macos.sh</code> writes the decoded certificate to <code>$RUNNER_TEMP/certificate.p12</code> and imports it into a temporary keychain. The certificate file is removed after application signing, and the temporary keychain is deleted at the end of the successful path or explicitly on notarization failure.</p>
-            <p>The <code>.p12</code>, its password, Apple authentication values, and private key material are release credentials and must not be committed or printed in logs.</p>
-            <h2 id="when-this-workflow-runs">When this workflow runs</h2>
-            <p><code>.github/workflows/build-macos.yml</code> is called by:</p>
-            <ul>
-                <li><code>.github/workflows/weekly.yml</code> for weekly package validation; and</li>
-                <li><code>.github/workflows/release.yml</code> for release candidates.</li>
-            </ul>
-            <p>Both callers use <code>secrets: inherit</code>, so either path can exercise the optional Developer ID and notarization stages when repository credentials are configured.</p>
+            <p>The script decodes the certificate into <code>$RUNNER_TEMP</code> and imports it into a
+                temporary keychain. It deletes the file right after the import. An <code>EXIT</code> trap
+                removes the keychain and restores the keychain search list on every path,
+                including failures. The <code>.p12</code>, its password and the Apple credentials must
+                never be committed or printed.</p>
             <h2 id="source-of-truth">Source of truth</h2>
-            <p>The package order is defined by <code>.github/workflows/build-macos.yml</code>. Developer ID signing and notarization behavior is defined by <code>scripts/sign-and-notarize-macos.sh</code>.</p>
+            <p><code>.github/workflows/build-macos.yml</code> defines the package order.
+                <code>scripts/sign-and-notarize-macos.sh</code> defines the signing and notarization
+                behaviour.
+            </p>
         </article-section>
     </div>
     </main>

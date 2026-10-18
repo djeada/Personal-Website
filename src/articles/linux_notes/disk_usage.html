@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/disk_usage",
             "description": "Managing and monitoring disk usage is necessary for server maintenance, allowing administrators to identify disk space shortages caused by large log\u2026",
-            "dateModified": "2026-03-21",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/disk_usage" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Managing and monitoring disk usage is necessary for server maintenance, allowing administrators to identify disk space shortages caused by large log…" property="og:description" />
-    <meta content="2026-03-21" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -200,7 +200,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: March 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -269,7 +269,7 @@
             <div>
                 <pre><code class="language-bash">du -x / | sort -nr | head -10</code></pre>
             </div>
-            <p>An example output might look like this:</p>
+            <p>Illustrative directory rows are shown below; the full output also includes the total for <code>/</code> itself. Parent and child directory totals overlap, so do not add these rows together:</p>
             <div>
                 <pre><code class="language-shell">10485760    /usr
 5120000     /var
@@ -289,25 +289,25 @@
                 <li><code>head -10</code> limits the output to the top 10 largest directories.</li>
             </ul>
             <p>This command sequence helps you quickly identify the directories consuming the most space on your system.</p>
-            <p>To further improve the speed of the <code>du</code> command, especially when dealing with many subdirectories, you can use <code>xargs -P</code> to parallelize the processing. This approach takes advantage of multiple CPU cores, allowing <code>du</code> to run on multiple directories simultaneously. Additionally, combining it with <code>awk</code> can help format the output more cleanly.</p>
+            <p>You can also try <code>xargs -P</code> to scan independent directories in parallel. This can help some workloads, but storage contention can make it slower; multiple CPU cores alone do not guarantee a faster disk scan. The example below skips <code>/</code> itself to avoid scanning the same tree both as a whole and through each child, and it uses NUL-separated input to preserve spaces in directory names.</p>
             <p>Here’s an enhanced example that finds the top 10 largest directories and uses <code>xargs</code> to speed up the process:</p>
             <div>
-                <pre><code class="language-bash">find / -maxdepth 1 -type d | xargs -I{} -P 4 du -sh {} 2&gt;/dev/null | sort -hr | head -10 | awk '{printf "%-10s %s\n", $1, $2}'</code></pre>
+                <pre><code class="language-bash">find / -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -r -n 1 -P 4 du -sxh -- 2&gt;/dev/null | sort -hr | head -10 | awk '{size=$1; sub(/^[^[:space:]]+[[:space:]]+/, ""); printf "%-10s %s\n", size, $0}'</code></pre>
             </div>
             <p>Explanation:</p>
-            <p>I. <code>find / -maxdepth 1 -type d</code>: This command finds all directories at the root level (<code>/</code>), limiting the search to the top-level directories only (<code>-maxdepth 1</code>).</p>
-            <p>II. <code>xargs -I{} -P 4 du -sh {} 2&gt;/dev/null</code>: </p>
+            <p>I. <code>find / -mindepth 1 -maxdepth 1 -type d -print0</code> finds immediate child directories and separates their paths with NUL bytes. <code>-mindepth 1</code> excludes <code>/</code> itself.</p>
+            <p>II. <code>xargs -0 -r -n 1 -P 4 du -sxh -- 2&gt;/dev/null</code>:</p>
             <ul>
                 <li><code>xargs</code> takes the output of <code>find</code> and passes each directory to the <code>du</code> command.</li>
-                <li><code>-I{}</code> is used to specify the replacement string <code>{}</code> for the directory name.</li>
+                <li><code>-0</code> reads NUL-separated paths, <code>-r</code> skips execution on empty input, and <code>-n 1</code> passes one directory per invocation.</li>
                 <li><code>-P 4</code> specifies that up to 4 <code>du</code> processes can run in parallel, leveraging multiple cores for faster execution.</li>
-                <li><code>du -sh {}</code> calculates the size of each directory in a human-readable format.</li>
+                <li><code>du -sxh --</code> summarizes each directory in human-readable units and stays on that directory's filesystem. Separate mounted filesystems can still be scanned when they are explicit starting directories.</li>
                 <li><code>2&gt;/dev/null</code> suppresses any error messages, such as permission denied errors.</li>
             </ul>
             <p>III. <code>sort -hr</code>: Sorts the output in human-readable format and in reverse order, so the largest directories come first.</p>
             <p>IV. <code>head -10</code>: Limits the output to the top 10 largest directories.</p>
-            <p>V. <code>awk '{printf "%-10s %s\n", $1, $2}'</code>: Formats the output, ensuring the size and directory name align neatly. The <code>%-10s</code> ensures the size column has a fixed width, making the output more readable.</p>
-            <p>By using <code>xargs -P</code>, you can significantly reduce the time it takes to compute the disk usage of directories, especially on systems with many directories and multiple CPU cores. This method effectively utilizes system resources to perform the operation more efficiently.</p>
+            <p>V. <code>awk</code> keeps the size in <code>size</code>, removes the leading size field from the line, and prints the remaining path. This preserves spaces within names, unlike printing only <code>$2</code>. The final report is for human reading and assumes names contain no embedded newlines; use an end-to-end NUL-aware pipeline for machine processing of arbitrary filenames.</p>
+            <p>Compare elapsed time with the serial scan before choosing a parallelism level. Independent <code>du</code> invocations can count shared hard links in more than one directory, so this report is not an accounting total. Suppressed permission errors also mean a scan may be incomplete; rerun without <code>2&gt;/dev/null</code> to diagnose missing entries.</p>
             <h3 id="the-ncdu-command">The <code>ncdu</code> Command</h3>
             <p>For a more visual and interactive representation of disk usage, you can use <code>ncdu</code> (NCurses Disk Usage). <code>ncdu</code> is a ncurses-based tool that provides a user-friendly interface to quickly assess which directories are consuming the most disk space. If it is not already installed, you can install it via your package manager, such as <code>apt</code> for Debian-based systems or <code>yum</code> for Red Hat-based systems.</p>
             <p>Running the command <code>ncdu -x /</code> will start the program at the root directory (<code>/</code>) and present an interactive interface. Here, you can navigate through directories using arrow keys and view their sizes, making it easier to identify space hogs.</p>

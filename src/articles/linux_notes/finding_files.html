@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/finding_files",
             "description": "The find, locate, and which commands are commonly used for file search operations.",
-            "dateModified": "2025-01-02",
+            "dateModified": "2026-10-18",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/finding_files" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="The find, locate, and which commands are commonly used for file search operations." property="og:description" />
-    <meta content="2025-01-02" property="article:modified_time" />
+    <meta content="2026-10-18" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -204,7 +204,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: January 02, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -303,19 +303,21 @@
             <h4 id="finding-files-modified-more-recently-than-another-file">Finding Files Modified More Recently Than Another File</h4>
             <p>To find files modified more recently than <code>file2</code>:</p>
             <div>
-                <pre><code class="language-bash">find -anewer file2</code></pre>
+                <pre><code class="language-bash">find . -type f -newer file2</code></pre>
             </div>
             <p>This finds files updated after <code>file2</code>, such as:</p>
             <div>
                 <pre><code class="language-shell">file3
 file4</code></pre>
             </div>
+            <p><code>-newer file2</code> compares modification times. The related <code>-anewer file2</code> compares each candidate's <strong>access time</strong> with <code>file2</code>'s modification time; it does not mean "modified more recently." An explicit <code>.</code> makes the starting directory clear.</p>
             <h4 id="finding-and-deleting-files-modified-more-recently-than-another-file">Finding and Deleting Files Modified More Recently Than Another File</h4>
             <p>To find files newer than <code>file2</code> and delete them:</p>
             <div>
-                <pre><code class="language-bash">find -anewer file2 -exec rm -v {} \;</code></pre>
+                <pre><code class="language-bash">find . -type f -newer file2 -exec rm -v -- {} \;</code></pre>
             </div>
             <p>This will delete files, such as <code>file3</code> and <code>file4</code>, and print each deleted file's name due to the <code>-v</code> (verbose) option.</p>
+            <p>First run <code>find . -type f -newer file2 -print</code> to review the matches in a practice directory. Keep the same tests when adding the deletion action. <code>--</code> prevents <code>rm</code> from interpreting a filename as an option.</p>
             <h4 id="other-examples-of-find-usage">Other Examples of <code>find</code> Usage</h4>
             <p>To find all files larger than 10MB and display them using the <code>ls</code> command:</p>
             <div>
@@ -327,7 +329,7 @@ file4</code></pre>
             </div>
             <p>To find all files larger than 2000 blocks (approximately 1MB) and ask the user for permission to remove them:</p>
             <div>
-                <pre><code class="language-bash">find $HOME -type f -size +2000 -exec ls -s {} \; -ok rm -f {} \;</code></pre>
+                <pre><code class="language-bash">find "$HOME" -type f -size +2000 -exec ls -s -- {} \; -ok rm -f -- {} \;</code></pre>
             </div>
             <p>🔴 <strong>Caution</strong>: The <code>find</code> command can be very powerful, but it also poses a risk of unintentional file deletion or modification, especially when combined with <code>-exec</code> or <code>-delete</code>. Always double-check your commands and use <code>-ok</code> instead of <code>-exec</code> when performing critical operations.</p>
             <h3 id="locate">Locate</h3>
@@ -428,6 +430,7 @@ file4</code></pre>
             <h4 id="important-note">Important Note</h4>
             <p>The <code>locate</code> command is faster than <code>find</code> but might not always show the most up-to-date information. If the file or directory was recently created or deleted, the database might not reflect the change. The database of filenames is typically stored at <code>/var/lib/mlocate/mlocate.db</code>. To update the database manually, use the <code>updatedb</code> command (requires root privileges).</p>
             <h3 id="which">Which</h3>
+            <p>For shell command resolution, also use <code>command -v name</code> or, in Bash, <code>type -a name</code>. These show builtins, aliases, and functions as well as executables; external <code>which</code> implementations differ in how they handle shell definitions.</p>
             <p>The <code>which</code> command in Unix/Linux is used to locate the executable file associated with a given command. It searches for the executable in directories specified by the <code>PATH</code> environment variable.</p>
             <p>The general syntax of the <code>which</code> command is as follows:</p>
             <div>
@@ -477,6 +480,7 @@ file4</code></pre>
             <p>This indicates that there are multiple <code>python</code> executables located at <code>/usr/bin/python</code> and <code>/usr/local/bin/python</code>.</p>
             <h4 id="note">Note</h4>
             <p>The <code>which</code> command only searches for executables in directories specified in the <code>PATH</code> variable. If an executable is located elsewhere, <code>which</code> will not be able to find it. This limitation means that if a binary is not in a directory included in <code>PATH</code>, <code>which</code> will not display it, even if it exists on the system.</p>
+            <p>References: <a href="https://man7.org/linux/man-pages/man1/find.1.html">find timestamp predicates</a> and <a href="https://manpages.debian.org/unstable/findutils/find.1.en.html#OPERATORS">find operators and precedence</a>.</p>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Use the <code>which</code> command to find the location of executable files for tools like <code>cat</code>, <code>ls</code>, <code>reboot</code>, and <code>chmod</code>.</li>

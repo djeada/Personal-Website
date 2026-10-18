@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Isolation in Database Transactions | Adam Djellouli</title>
-    <meta content="Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others." name="description" />
+    <meta content="Isolation defines how concurrent transactions interact." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation",
-            "description": "Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others.",
-            "dateModified": "2025-01-21",
+            "description": "Isolation defines how concurrent transactions interact.",
+            "dateModified": "2026-09-30",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others." property="og:description" />
-    <meta content="2025-01-21" property="article:modified_time" />
+    <meta content="Isolation defines how concurrent transactions interact." property="og:description" />
+    <meta content="2026-09-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,45 +114,25 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#the-importance-of-isolation">The Importance of Isolation</a>
-                        <ol>
-                            <li><a href="#managing-concurrency">Managing Concurrency</a></li>
-                            <li><a href="#preserving-data-integrity">Preserving Data Integrity</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#real-world-examples">Real-World Examples</a>
-                        <ol>
-                            <li><a href="#preventing-dirty-reads">Preventing Dirty Reads</a></li>
-                            <li><a href="#avoiding-non-repeatable-reads">Avoiding Non-Repeatable Reads</a></li>
-                            <li><a href="#preventing-lost-updates">Preventing Lost Updates</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#transaction-isolation-levels">Transaction Isolation Levels</a></li>
-                    <li><a href="#overview-of-isolation-levels">Overview of Isolation Levels</a>
-                        <ol>
-                            <li><a href="#read-uncommitted">Read Uncommitted</a></li>
-                            <li><a href="#read-committed">Read Committed</a></li>
-                            <li><a href="#repeatable-read">Repeatable Read</a></li>
-                            <li><a href="#serializable">Serializable</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#concurrency-control-mechanisms">Concurrency Control Mechanisms</a>
-                        <ol>
-                            <li><a href="#locking-mechanisms">Locking Mechanisms</a></li>
-                            <li><a href="#optimistic-concurrency-control">Optimistic Concurrency Control</a></li>
-                            <li><a href="#multi-version-concurrency-control-mvcc">Multi-Version Concurrency Control (MVCC)</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#visualizing-isolation-in-action">Visualizing Isolation in Action</a>
-                        <ol>
-                            <li><a href="#implementing-isolation-in-sql-transactions">Implementing Isolation in SQL Transactions</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#picture-two-checkouts-running-together">Picture two checkouts running together</a></li>
+                    <li><a href="#recognizing-anomalies">Recognizing anomalies</a></li>
+                    <li><a href="#isolation-levels">Isolation levels</a></li>
+                    <li><a href="#how-engines-enforce-isolation">How engines enforce isolation</a></li>
+                    <li><a href="#example-reserve-the-last-unit-safely">Example: reserve the last unit safely</a></li>
+                    <li><a href="#choosing-and-validating-isolation">Choosing and validating isolation</a></li>
+                    <li><a href="#reproduce-a-changed-read-with-two-postgresql-sessions">Reproduce a changed read with two PostgreSQL sessions</a></li>
+                    <li><a href="#a-phantom-concerns-a-matching-set">A phantom concerns a matching set</a></li>
+                    <li><a href="#watch-a-stale-calculation-lose-a-decrement">Watch a stale calculation lose a decrement</a></li>
+                    <li><a href="#write-skew-changes-different-rows-and-breaks-one-shared-rule">Write skew changes different rows and breaks one shared rule</a></li>
+                    <li><a href="#protect-the-shared-decision-not-just-each-doctor-s-row">Protect the shared decision, not just each doctor's row</a></li>
+                    <li><a href="#sqlite-has-its-own-concurrency-model">SQLite has its own concurrency model</a></li>
+                    <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency in Database Transactions</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability in Database Transactions</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity in Database Transactions</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency: Preserve the Rules That Make Data Valid</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity: Commit the Whole Operation or None of It</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -216,6 +196,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -230,7 +216,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -256,6 +241,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -278,6 +269,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -292,6 +289,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -306,6 +308,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -314,7 +349,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: January 21, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -334,226 +369,253 @@
                     </button></div>
             </div>
             <h1>Isolation in Database Transactions</h1>
-            <p>Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others. When multiple transactions occur simultaneously, isolation guarantees that the operations within one transaction are not visible to other transactions until they are completed and committed. This means that the intermediate states of a transaction are hidden from others, maintaining data integrity and consistency throughout the process.</p>
-            <p>Think of isolation as separate workspaces for each transaction. Imagine several chefs in a kitchen, each preparing their own dish without disturbing or altering the ingredients of others. Only when a chef finishes and serves the dish do others see the final result.</p>
-            <div>
-                <pre><code class="language-shell">+----------------------+      +----------------------+
-|    Transaction A     |      |    Transaction B     |
-| - Processes Data     |      | - Processes Data     |
-| - No Interference    |      | - No Interference    |
-+----------------------+      +----------------------+</code></pre>
-            </div>
-            <p>After reading the material, you should be able to answer the following questions:</p>
-            <ol>
-                <li>What is isolation in database transactions, and how does it ensure that concurrent transactions do not interfere with each other?</li>
-                <li>Why is isolation important for managing concurrency and preserving data integrity in a multi-user environment?</li>
-                <li>What are the different transaction isolation levels, and how do they balance data consistency and system performance?</li>
-                <li>How do concurrency control mechanisms like locking, optimistic concurrency control, and multi-version concurrency control (MVCC) maintain isolation in database transactions?</li>
-                <li>How can isolation be implemented and managed in SQL transactions to prevent issues such as dirty reads, non-repeatable reads, and lost updates?</li>
-            </ol>
-            <h3 id="the-importance-of-isolation">The Importance of Isolation</h3>
-            <p>Isolation plays a critical role in ensuring that concurrent transactions do not lead to data anomalies or inconsistencies. By isolating transactions, the database system prevents issues like dirty reads, non-repeatable reads, and phantom reads, which can compromise data integrity.</p>
-            <h4 id="managing-concurrency">Managing Concurrency</h4>
-            <p>In a multi-user environment, numerous transactions might be happening at the same time. Isolation ensures that these concurrent transactions do not interfere with each other, allowing each to proceed as if it were the only one interacting with the database.</p>
-            <h4 id="preserving-data-integrity">Preserving Data Integrity</h4>
-            <p>By keeping transactions isolated until they are completed, the database maintains accurate and consistent data. This prevents unintended side effects that could occur if transactions were allowed to see uncommitted changes from others.</p>
-            <h3 id="real-world-examples">Real-World Examples</h3>
-            <p>To better understand how isolation works, let's look at some practical scenarios where isolation is essential.</p>
-            <h4 id="preventing-dirty-reads">Preventing Dirty Reads</h4>
-            <p>Consider a banking system where Transaction T1 is transferring money from Account X to Account Y. This involves debiting Account X and crediting Account Y.</p>
-            <p><strong>Transaction T1</strong>:</p>
-            <ol>
-                <li>Debit $500 from Account X.</li>
-                <li>Credit $500 to Account Y.</li>
-                <li>Commit the transaction.</li>
-            </ol>
-            <p>Simultaneously, Transaction T2 wants to read the balance of Account Y.</p>
-            <ul>
-                <li><strong>Without Isolation</strong>, if T2 reads the balance of Account Y after T1 has credited it but before T1 commits, T2 observes an uncommitted balance. If T1 subsequently rolls back, the data read by T2 becomes invalid, resulting in a dirty read.</li>
-                <li><strong>With Isolation</strong>, T2 is restricted from accessing the changes made by T1 until T1 commits its transaction, ensuring that T2 always reads accurate and committed data.</li>
-            </ul>
-            <h4 id="avoiding-non-repeatable-reads">Avoiding Non-Repeatable Reads</h4>
-            <p>Imagine an inventory system where Transaction T1 reads the stock level of a product twice during its operation.</p>
-            <p><strong>Transaction T1</strong>:</p>
-            <ol>
-                <li>Read stock level of Product A (e.g., 100 units).</li>
-                <li>Perform some calculations.</li>
-                <li>Read stock level of Product A again.</li>
-            </ol>
-            <p>At the same time, Transaction T2 sells some units of Product A and updates the stock level.</p>
-            <ul>
-                <li>When T1 operates <strong>without isolation</strong>, its second read might show a different stock level (e.g., 90 units), indicating that another transaction modified the data during T1's operation.</li>
-                <li>With <strong>isolation</strong>, T1 reads the same stock level in both instances, even if other transactions are occurring, maintaining consistent data within the transaction.</li>
-            </ul>
-            <h4 id="preventing-lost-updates">Preventing Lost Updates</h4>
-            <p>In an online booking system, two users attempt to reserve the last available seat.</p>
-            <p><strong>Transaction T1</strong>:</p>
-            <ol>
-                <li>Check seat availability.</li>
-                <li>Reserve the seat.</li>
-                <li>Commit the transaction.</li>
-            </ol>
-            <p><strong>Transaction T2</strong>:</p>
-            <ol>
-                <li>Check seat availability.</li>
-                <li>Attempt to reserve the seat.</li>
-                <li>Commit the transaction.</li>
-            </ol>
-            <p>What happens?</p>
-            <ul>
-                <li><strong>Without isolation</strong>, both T1 and T2 might simultaneously perceive the same seat as available and attempt to reserve it, leading to overbooking.</li>
-                <li><strong>With isolation</strong>, once T1 reserves the seat, T2 is blocked from reserving it until T1 either commits or rolls back, ensuring no conflicts or duplicate reservations occur.</li>
-            </ul>
-            <h3 id="transaction-isolation-levels">Transaction Isolation Levels</h3>
-            <p>Databases provide different isolation levels to balance between data integrity and system performance. Higher isolation levels offer more data consistency but can reduce concurrency and increase resource usage.</p>
-            <h3 id="overview-of-isolation-levels">Overview of Isolation Levels</h3>
+            <p>Isolation defines how concurrent transactions interact. The strongest common level, Serializable, makes their committed outcome equivalent to some serial execution. Lower levels permit certain anomalies to reduce coordination costs; simply wrapping statements in <code>BEGIN</code> and <code>COMMIT</code> does not make all races safe.</p>
+            <h2 id="picture-two-checkouts-running-together">Picture two checkouts running together</h2>
+            <p><strong>Concurrent</strong> transactions overlap in time. Suppose the bookstore has one copy left. Alice and Bob each read that value before either finishes buying. Their earlier reads do not reserve the book. The system needs a write that checks and reserves stock together, or another coordination mechanism that preserves the rule.</p>
+            <p>An <strong>anomaly</strong> is an interaction that breaks the workflow's expected behavior. A <strong>snapshot</strong> is the set of row versions a read is allowed to see. Depending on the engine and isolation level, a new statement can get a new snapshot or reuse one established for the transaction. Reading a snapshot is not the same thing as locking every row against changes.</p>
+            <p>Read <a href="01_transactions_intro.html">Transactions</a> first. The table below names common anomalies; the isolation levels then describe protections against them.</p>
+            <h2 id="recognizing-anomalies">Recognizing anomalies</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Isolation Level</th>
-                        <th>Description</th>
-                        <th>Pros</th>
-                        <th>Cons</th>
+                        <th>Anomaly</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Dirty read</td>
+                        <td>Read a new balance before the writer commits; the writer later rolls back.</td>
+                    </tr>
+                    <tr>
+                        <td>Non-repeatable read</td>
+                        <td>Read a balance twice and see a concurrent committed update on the second read.</td>
+                    </tr>
+                    <tr>
+                        <td>Phantom read</td>
+                        <td>Repeat a query for open orders and see a changed matching set after another transaction commits.</td>
+                    </tr>
+                    <tr>
+                        <td>Lost update</td>
+                        <td>Two clients read 10, each writes 11, and one increment is lost.</td>
+                    </tr>
+                    <tr>
+                        <td>Write skew</td>
+                        <td>Two doctors each see another doctor on call, update different rows, and both go off call.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>An anomaly is a property of the whole read-and-write workflow. An individual <code>UPDATE</code> taking a row lock does not protect a decision made by an earlier unprotected read.</p>
+            <h2 id="isolation-levels">Isolation levels</h2>
+            <p>The SQL standard specifies minimum protections. Actual engines can be stronger.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Required protection</th>
+                        <th>Remaining concerns</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Read Uncommitted</td>
-                        <td>Transactions can read uncommitted changes made by others (dirty reads).</td>
-                        <td>Highest concurrency, minimal locking.</td>
-                        <td>Risk of dirty reads, data inconsistencies.</td>
+                        <td>Does not require protection from dirty reads.</td>
+                        <td>Dirty reads and other anomalies; some engines implement it as Read Committed.</td>
                     </tr>
                     <tr>
                         <td>Read Committed</td>
-                        <td>Transactions only see committed changes.</td>
-                        <td>Prevents dirty reads, good performance.</td>
-                        <td>May experience non-repeatable reads.</td>
+                        <td>Prevents dirty reads.</td>
+                        <td>Separate statements can see different committed states.</td>
                     </tr>
                     <tr>
                         <td>Repeatable Read</td>
-                        <td>Ensures that if data is read twice, it remains the same during the transaction.</td>
-                        <td>Prevents non-repeatable reads.</td>
-                        <td>Possible phantom reads, reduced concurrency.</td>
+                        <td>Also prevents non-repeatable reads.</td>
+                        <td>The standard permits phantoms and serialization anomalies; implementations differ.</td>
                     </tr>
                     <tr>
                         <td>Serializable</td>
-                        <td>Transactions are completely isolated from each other.</td>
-                        <td>Highest data integrity.</td>
-                        <td>Lowest concurrency, highest resource usage.</td>
+                        <td>Committed transactions must be equivalent to a serial order.</td>
+                        <td>Blocking or transaction aborts can require retries.</td>
                     </tr>
                 </tbody>
             </table>
-            <h4 id="read-uncommitted">Read Uncommitted</h4>
-            <p>At this level, a transaction may read data that has been modified but not yet committed by other transactions. This can lead to dirty reads, where a transaction reads uncommitted changes that might be rolled back.</p>
-            <h4 id="read-committed">Read Committed</h4>
-            <p>Transactions only see data that has been committed. This prevents dirty reads but allows non-repeatable reads, where data read twice might change if another transaction modifies it between reads.</p>
-            <h4 id="repeatable-read">Repeatable Read</h4>
-            <p>This level ensures that if a transaction reads data multiple times, it sees the same data each time. It prevents non-repeatable reads but may still allow phantom reads, where new rows added by other transactions are visible.</p>
-            <h4 id="serializable">Serializable</h4>
-            <p>The strictest isolation level, where transactions are completely isolated. It prevents dirty reads, non-repeatable reads, and phantom reads by locking the data range involved, but it can significantly reduce concurrency.</p>
-            <h3 id="concurrency-control-mechanisms">Concurrency Control Mechanisms</h3>
-            <p>To enforce isolation, databases use various concurrency control techniques that manage how transactions interact with shared data.</p>
-            <h4 id="locking-mechanisms">Locking Mechanisms</h4>
-            <p>Locking is a primary method where transactions acquire locks on data before accessing it.</p>
-            <ul>
-                <li><strong>Shared Locks</strong> permit multiple transactions to read a data item simultaneously but block any transaction from modifying it.</li>
-                <li><strong>Exclusive Locks</strong> grant a single transaction the right to modify a data item, while preventing all other transactions from reading or writing to it.</li>
-            </ul>
-            <p>Locks can be applied at different granularities:</p>
-            <ul>
-                <li><strong>Row-Level Locking</strong> restricts access to specific rows within a table, enabling higher concurrency by allowing other transactions to work on different rows, though it incurs greater overhead.</li>
-                <li><strong>Table-Level Locking</strong> restricts access to the entire table, simplifying lock management and reducing overhead but significantly limiting concurrency.</li>
-            </ul>
-            <p>By controlling access through locks, the database ensures that transactions do not interfere with each other's operations.</p>
-            <h4 id="optimistic-concurrency-control">Optimistic Concurrency Control</h4>
-            <p>Optimistic concurrency control assumes that transaction conflicts are rare and allows transactions to proceed without locking resources.</p>
-            <p><strong>Process</strong>:</p>
-            <ol>
-                <li>Transactions execute without acquiring locks.</li>
-                <li>Before committing, the system checks for conflicts.</li>
-                <li>If a conflict is detected, the transaction is rolled back.</li>
-            </ol>
-            <p>This approach reduces the overhead of locking but requires a mechanism to detect and resolve conflicts during the commit phase.</p>
-            <h4 id="multi-version-concurrency-control-mvcc">Multi-Version Concurrency Control (MVCC)</h4>
-            <p>MVCC allows multiple versions of data to exist simultaneously, enabling transactions to access data without waiting for locks.</p>
-            <p><strong>Benefits</strong>:</p>
-            <ul>
-                <li>Readers don't block writers and vice versa.</li>
-                <li>Transactions see a consistent snapshot of the database.</li>
-                <li>Improves performance in read-heavy workloads.</li>
-            </ul>
-            <p>Databases like PostgreSQL and Oracle use MVCC to enhance concurrency while maintaining isolation.</p>
-            <h3 id="visualizing-isolation-in-action">Visualizing Isolation in Action</h3>
-            <p>Understanding how isolation works can be aided by visual diagrams.</p>
+            <p>PostgreSQL Repeatable Read uses a transaction snapshot and prevents phantoms, but can permit write skew. InnoDB ordinary Repeatable Read reads also use a stable snapshot; locking reads and writes have additional rules. SQL Server Repeatable Read uses locks on existing read rows and can permit phantoms. See <a href="../07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable and Repeatable Read</a> for the detailed comparison.</p>
+            <h2 id="how-engines-enforce-isolation">How engines enforce isolation</h2>
+            <p><strong>Locking</strong> coordinates conflicting accesses. Shared and exclusive locks have compatibility rules; range locks can protect predicates against inserts. Locks can cause waits and deadlocks.</p>
+            <p><strong>MVCC</strong> keeps row versions so an ordinary read can use a committed snapshot while a writer changes the current version. The snapshot can be per statement or per transaction. Readers and writers can still conflict through explicit locks, schema changes, or competing updates. MVCC alone does not establish serializability.</p>
+            <p><strong>Optimistic checks</strong> detect conflicting changes using versions or dependency validation. An application can condition an update on a previously read version and check the affected-row count. The update still uses the engine's normal write coordination; “optimistic” does not mean that no locks exist anywhere.</p>
+            <h2 id="example-reserve-the-last-unit-safely">Example: reserve the last unit safely</h2>
+            <p>This PostgreSQL conditional update performs the test and decrement in one statement:</p>
             <div>
-                <pre><code class="language-shell">[Transaction T1]                 [Transaction T2]
-    |                                  |
-[Begin Transaction]              [Begin Transaction]
-    |                                  |
-[Update Data Item X]                   |
-    |                            [Read Data Item X]
-    |                                  |
-[Commit Transaction]                   |
-                                       |
-                                 [Read Data Item X]
-                                       |
-                                 [Commit Transaction]</code></pre>
-            </div>
-            <p>In this scenario:</p>
-            <ul>
-                <li><strong>Without isolation</strong>, T2 could read uncommitted changes made by T1, potentially resulting in inconsistent or incorrect data being used.</li>
-                <li><strong>With isolation</strong>, T2 is prevented from accessing T1's changes until T1 commits, thereby maintaining data integrity and consistency.</li>
-            </ul>
-            <h4 id="implementing-isolation-in-sql-transactions">Implementing Isolation in SQL Transactions</h4>
-            <p>SQL databases implement isolation to ensure that concurrent transactions execute in a controlled and consistent manner. Isolation levels dictate how transactions interact with each other, specifically in terms of visibility and accessibility of data being read or modified. These settings are crucial in preventing common concurrency issues such as dirty reads, non-repeatable reads, and phantom reads.</p>
-            <p>When configuring isolation, you can choose between different levels such as <code>READ UNCOMMITTED</code>, <code>READ COMMITTED</code>, <code>REPEATABLE READ</code>, and <code>SERIALIZABLE</code>. Each level represents a trade-off between data consistency and system performance. For example, <code>SERIALIZABLE</code> offers the highest level of isolation but at the cost of increased resource contention, while <code>READ UNCOMMITTED</code> allows maximum concurrency with the risk of reading uncommitted or intermediate data.</p>
-            <h5>Setting the Isolation Level</h5>
-            <p>Isolation levels can be applied either for a single session or an individual transaction. By setting an isolation level, you define the boundaries for interaction between concurrent transactions. In the example below, the <code>SERIALIZABLE</code> isolation level ensures that the transaction operates in complete isolation, treating it as if it were the only transaction running.</p>
-            <div>
-                <pre><code class="language-sql">-- Setting the isolation level to Serializable
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-
-BEGIN TRANSACTION;
-
--- Transaction operations here
-
+                <pre><code class="language-sql">BEGIN;
+UPDATE inventory
+SET stock = stock - 1
+WHERE product_id = 101 AND stock &gt; 0
+RETURNING product_id, stock;
+-- Application: create the reservation only if exactly one row was returned.
+-- If no row was returned, report unavailable; do not create a reservation.
 COMMIT;</code></pre>
             </div>
-            <p>This configuration guarantees that no other transactions can read or write data that is being processed until the current transaction completes. It is ideal for scenarios that require the strictest consistency guarantees, such as financial calculations.</p>
-            <h5>Example: Preventing Dirty Reads</h5>
-            <p>Dirty reads occur when a transaction reads uncommitted changes made by another transaction. The following example demonstrates how the <code>READ COMMITTED</code> isolation level prevents this issue. Transaction <code>T2</code> cannot access the intermediate state of data modified by <code>T1</code> until <code>T1</code> commits.</p>
+            <p>Place the reservation insert in the same transaction as the successful decrement. Add <code>CHECK (stock &gt;= 0)</code> and use an idempotency key if the request can be retried. For individually assigned seats, a unique constraint on the relevant flight and seat provides an additional rule.</p>
+            <p>This is safer than reading stock, calculating a value in application code, and later writing that stale value. At stronger isolation levels, conflicts can abort the transaction; retry the complete operation when appropriate.</p>
+            <h2 id="choosing-and-validating-isolation">Choosing and validating isolation</h2>
+            <p>Choose a level against the invariants the workflow must preserve. Test concurrent operations with separate sessions, rather than assuming a successful single-session run proves correctness. Track blocking, deadlocks, serialization failures, and end-to-end latency.</p>
+            <p>For PostgreSQL:</p>
             <div>
-                <pre><code class="language-sql">-- Transaction T1
-BEGIN TRANSACTION;
-
-UPDATE accounts
-SET balance = balance - 500
-WHERE account_id = 1;
-
--- Transaction T2
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-BEGIN TRANSACTION;
-
-SELECT balance
-FROM accounts
-WHERE account_id = 1;
-
-COMMIT;
-
--- T2 will not see the uncommitted change from T1 due to the Read Committed isolation level.
-
--- T1 commits the transaction
+                <pre><code class="language-sql">BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+-- Read rule-related data and perform related writes.
 COMMIT;</code></pre>
             </div>
-            <p>In this case, <code>T2</code>'s query only retrieves committed data, ensuring data integrity and avoiding inconsistencies caused by partially completed operations in <code>T1</code>.</p>
-            <h5>Using Locking Hints</h5>
-            <p>Some database systems allow you to use explicit locking hints to manage transaction concurrency. Locking hints provide fine-grained control over how rows are locked during query execution. For example, the <code>WITH (UPDLOCK)</code> hint requests an update lock on the specified row, ensuring that other transactions cannot modify the row until the lock is released.</p>
+            <p>Other engines use different transaction-start and isolation-setting syntax. Use the dialect's documented order of operations.</p>
+            <h2 id="reproduce-a-changed-read-with-two-postgresql-sessions">Reproduce a changed read with two PostgreSQL sessions</h2>
+            <p>Use two terminals connected to the <strong>same PostgreSQL database</strong>. Run setup once, outside the scheduled transactions:</p>
             <div>
-                <pre><code class="language-sql">SELECT *
-FROM accounts WITH (UPDLOCK)
-WHERE account_id = 1;</code></pre>
+                <pre><code class="language-sql">-- PostgreSQL; setup once
+CREATE TABLE isolation_inventory (
+    product_id INTEGER PRIMARY KEY,
+    stock INTEGER NOT NULL CHECK (stock &gt;= 0)
+);
+INSERT INTO isolation_inventory VALUES (10, 5);</code></pre>
             </div>
-            <p>By applying an update lock, the query prevents write conflicts and enforces orderly access to the data, reducing the risk of race conditions. This approach is particularly useful in high-concurrency environments where multiple transactions may attempt to update the same rows simultaneously.</p>
+            <p>Run these steps in the listed order, alternating terminals. Each table cell is one command sequence for the named session:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Session A</th>
+                        <th>Session B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><code>BEGIN ISOLATION LEVEL READ COMMITTED;</code></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><code>SELECT stock FROM isolation_inventory WHERE product_id = 10;</code> → 5</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td></td>
+                        <td><code>BEGIN; UPDATE isolation_inventory SET stock = 4 WHERE product_id = 10; COMMIT;</code></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><code>SELECT stock FROM isolation_inventory WHERE product_id = 10;</code> → 4</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><code>COMMIT;</code></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The second read sees B's committed update. This is a non-repeatable read, permitted at Read Committed. If A reads while B's update is still uncommitted, A's ordinary select sees the older committed version instead; PostgreSQL does not expose a dirty read.</p>
+            <p>Reset stock to 5 in a session with no active transaction. Repeat the schedule with A starting <code>BEGIN ISOLATION LEVEL REPEATABLE READ;</code>. Its reads return 5 and 5 even though B commits 4. After A commits, a fresh query sees 4. A's old snapshot does not roll back B or prevent B from changing that row.</p>
+            <h2 id="a-phantom-concerns-a-matching-set">A phantom concerns a matching set</h2>
+            <p>Use another independent PostgreSQL setup:</p>
+            <div>
+                <pre><code class="language-sql">-- PostgreSQL; setup once
+CREATE TABLE isolation_open_orders (
+    order_id INTEGER PRIMARY KEY,
+    status TEXT NOT NULL
+);
+INSERT INTO isolation_open_orders VALUES (101, 'open');</code></pre>
+            </div>
+            <p>At Read Committed, A begins and queries <code>SELECT order_id FROM isolation_open_orders WHERE status = 'open' ORDER BY order_id;</code>, obtaining 101. B inserts <code>(102, 'open')</code> and commits. A repeats the same query and obtains 101 and 102. The changed matching set is a phantom.</p>
+            <p>In PostgreSQL Repeatable Read, A's stable snapshot prevents this particular phantom. The SQL standard's minimum Repeatable Read definition is weaker, so this observation must not be generalized to every database's implementation. SQL Server Repeatable Read and Serializable differ in their protection of ranges where new rows could appear.</p>
+            <h2 id="watch-a-stale-calculation-lose-a-decrement">Watch a stale calculation lose a decrement</h2>
+            <p>Reset <code>isolation_inventory.stock</code> to 5. At Read Committed, both clients can read 5 and independently calculate 4. A writes the literal value 4 and commits; B subsequently writes its already calculated literal value 4 and commits. The final stock is 4 even though the clients intended two sales. The writes can be individually locked while the overall workflow still loses one change.</p>
+            <p>For this single-row rule, keep arithmetic and availability inside the write:</p>
+            <div>
+                <pre><code class="language-sql">-- PostgreSQL; each checkout uses its own connection
+BEGIN;
+UPDATE isolation_inventory
+SET stock = stock - 1
+WHERE product_id = 10 AND stock &gt; 0
+RETURNING stock;
+-- Application checks that one row was returned before inserting its order.
+COMMIT;</code></pre>
+            </div>
+            <p>At PostgreSQL Read Committed, a competing updater waits when necessary and rechecks the condition on the updated row. Two successful decrements from 5 produce 3, rather than both storing a stale 4. From stock 1, one checkout can obtain the unit and the other gets no qualifying row after the first commits. At stronger isolation levels, the competing operation can instead fail and need a complete retry.</p>
+            <p>The statement protects this stock rule. It does not reserve a credit-card charge or validate a separate predicate over several products. Use a rule-specific test rather than assuming one conditional update proves the whole checkout correct.</p>
+            <h2 id="write-skew-changes-different-rows-and-breaks-one-shared-rule">Write skew changes different rows and breaks one shared rule</h2>
+            <p>Two doctors provide a useful cross-row example. The invariant is “at least one doctor remains on call.” Run this PostgreSQL setup once:</p>
+            <div>
+                <pre><code class="language-sql">-- PostgreSQL
+CREATE TABLE isolation_on_call (
+    doctor_id INTEGER PRIMARY KEY,
+    on_call BOOLEAN NOT NULL
+);
+INSERT INTO isolation_on_call VALUES (1, TRUE), (2, TRUE);</code></pre>
+            </div>
+            <p>At Repeatable Read, follow this schedule:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Session A</th>
+                        <th>Session B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><code>BEGIN ISOLATION LEVEL REPEATABLE READ;</code></td>
+                        <td><code>BEGIN ISOLATION LEVEL REPEATABLE READ;</code></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><code>SELECT COUNT(*) FROM isolation_on_call WHERE on_call;</code> → 2</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td></td>
+                        <td><code>SELECT COUNT(*) FROM isolation_on_call WHERE on_call;</code> → 2</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><code>UPDATE isolation_on_call SET on_call = FALSE WHERE doctor_id = 1;</code></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td></td>
+                        <td><code>UPDATE isolation_on_call SET on_call = FALSE WHERE doctor_id = 2;</code></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><code>COMMIT;</code></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td></td>
+                        <td><code>COMMIT;</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Both transactions saw another doctor available. They updated different rows, so neither needed to overwrite the other's row. Both can commit, leaving zero doctors on call. Stable reads have preserved each transaction's snapshot while allowing a combined result that no correct serial execution of this rule would produce.</p>
+            <p>To repeat at Serializable, first reset both rows to true outside any active transaction. Use the same schedule with both transactions started at Serializable. PostgreSQL detects the dangerous dependency pattern and aborts a transaction; failure may be reported during a write or commit. Roll back a failed transaction before reusing its connection. Do not depend on a particular session always being the victim.</p>
+            <p>Retry the entire failed operation. On a fresh state after the other transaction commits, the count is one, so the doctor's application must refuse to go off call. Serializable does not rewrite incorrect application logic: if the application ignores that count, a serial execution can still violate the rule.</p>
+            <h2 id="protect-the-shared-decision-not-just-each-doctor-s-row">Protect the shared decision, not just each doctor's row</h2>
+            <p>Another design locks one shared coordination row for the duty roster before reading and changing its doctors. All writers must acquire that same lock, then validate the invariant under the appropriate snapshot rules. Locking only the current doctor's row would not coordinate decisions made about the other doctor.</p>
+            <p>Serializable avoids making the application manually identify every such dependency, but introduces retry requirements and can add overhead. A uniqueness constraint is often simpler for “one booking per seat,” while a conditional update fits “reserve one unit from this row.” Choose the narrow mechanism that actually expresses and protects the workflow's invariant.</p>
+            <h2 id="sqlite-has-its-own-concurrency-model">SQLite has its own concurrency model</h2>
+            <p>SQLite normally isolates separate connections and serializes writes. WAL mode permits readers to retain a snapshot while another connection writes. A reader trying to upgrade an obsolete WAL snapshot into a writer can get <code>SQLITE_BUSY_SNAPSHOT</code>; it should finish the old transaction and retry against current state. A busy timeout helps some lock waits, but does not make an obsolete snapshot valid.</p>
+            <p>Shared-cache connections with <code>read_uncommitted</code> enabled are a special case; do not use that exception to describe ordinary SQLite reads. PostgreSQL, InnoDB, and SQL Server have different snapshot and locking rules. Record the engine, level, session schedule, and final invariant when testing concurrency.</p>
+            <p>References: <a href="https://www.postgresql.org/docs/current/transaction-iso.html">PostgreSQL transaction isolation</a>, <a href="https://www.postgresql.org/docs/current/explicit-locking.html">PostgreSQL explicit locking</a>, and <a href="https://www.sqlite.org/isolation.html">SQLite isolation</a>.</p>
+            <h2 id="references">References</h2>
+            <ul>
+                <li><a href="https://www.postgresql.org/docs/current/transaction-iso.html">PostgreSQL transaction isolation</a></li>
+                <li><a href="../07_concurrency_control/04_double_booking_problem.html">Double booking</a></li>
+                <li><a href="../07_concurrency_control/03_two_phase_locking.html">Two-phase locking</a></li>
+            </ul>
         </article-section>
     </div>
     </main>

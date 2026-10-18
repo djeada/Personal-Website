@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Composite Indexes and Column Order | Adam Djellouli</title>
+    <meta content="A composite index contains more than one key column. Example." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Composite Indexes and Column Order",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order",
+            "description": "A composite index contains more than one key column. Example.",
+            "dateModified": "2026-10-02",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Composite Indexes and Column Order" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="A composite index contains more than one key column. Example." property="og:description" />
+    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Storage And Indexing</li><li><span aria-current="page">Composite Indexes and Column Order</span></li></ol></div>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#lexicographic-ordering">Lexicographic ordering</a></li>
+                    <li><a href="#leading-prefix">Leading prefix</a></li>
+                    <li><a href="#missing-the-leading-column">Missing the leading column</a></li>
+                    <li><a href="#equality-then-range">Equality then range</a></li>
+                    <li><a href="#equality-equality-range">Equality, equality, range</a></li>
+                    <li><a href="#most-selective-first-is-incomplete">"Most selective first" is incomplete</a></li>
+                    <li><a href="#order-by-after-equality">ORDER BY after equality</a></li>
+                    <li><a href="#mixed-sort-directions">Mixed sort directions</a></li>
+                    <li><a href="#range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</a></li>
+                    <li><a href="#one-index-cannot-optimize-every-query">One index cannot optimize every query</a></li>
+                    <li><a href="#composite-versus-separate-indexes">Composite versus separate indexes</a></li>
+                    <li><a href="#bitmap-combination">Bitmap combination</a></li>
+                    <li><a href="#key-columns-versus-payload-columns">Key columns versus payload columns</a></li>
+                    <li><a href="#unique-composite-index">Unique composite index</a></li>
+                    <li><a href="#tenant-first-indexes">Tenant-first indexes</a></li>
+                    <li><a href="#search-plus-sort">Search plus sort</a></li>
+                    <li><a href="#join-keys">Join keys</a></li>
+                    <li><a href="#low-cardinality-leading-column">Low-cardinality leading column</a></li>
+                    <li><a href="#parameter-skew">Parameter skew</a></li>
+                    <li><a href="#runnable-demonstration">Runnable demonstration</a></li>
+                    <li><a href="#design-workflow">Design workflow</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">B-Tree Index Internals and Page Splits</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering, Partial, and Expression Indexes</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Database Indexing</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Composite Indexes and Column Order</h1>
+            <p>A composite index contains more than one key column.</p>
+            <p>Example:</p>
+            <p>~~~sql
+                CREATE INDEX idx_orders_customer_status_date
+                ON orders(customer_id, status, order_date DESC);
+                ~~~</p>
+            <p>Column order is part of the data structure. The useful question is not merely which columns appear in WHERE, but which ordered access path the query needs.</p>
+            <h2 id="lexicographic-ordering">Lexicographic ordering</h2>
+            <p>A B-tree on:</p>
+            <p>~~~text
+                (customer_id, status, order_date)
+                ~~~</p>
+            <p>is ordered conceptually like words in a dictionary:</p>
+            <p>~~~text
+                customer first
+                then status within customer
+                then date within customer + status
+                ~~~</p>
+            <p>Example sequence:</p>
+            <p>~~~text
+                (41, closed, 2026-09-01)
+                (41, open, 2026-08-10)
+                (41, open, 2026-09-15)
+                (42, closed, 2026-09-01)
+                (42, open, 2026-08-20)
+                (42, open, 2026-10-01)
+                ~~~</p>
+            <p>That ordering determines which predicates can narrow the scan efficiently.</p>
+            <h2 id="leading-prefix">Leading prefix</h2>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE customer_id = 42
+                ~~~</p>
+            <p>can use the index because all rows for customer 42 are adjacent.</p>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE customer_id = 42
+                AND status = 'open'
+                ~~~</p>
+            <p>uses a longer leading prefix.</p>
+            <h2 id="missing-the-leading-column">Missing the leading column</h2>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE status = 'open'
+                ~~~</p>
+            <p>does not constrain customer_id.</p>
+            <p>Open rows are spread across every customer group.</p>
+            <p>Modern engines can sometimes use skip-scan, bitmap combinations, or the index for special reasons, but a conventional composite B-tree is not primarily ordered by status.</p>
+            <p>Do not assume every suffix predicate receives a direct seek.</p>
+            <h2 id="equality-then-range">Equality then range</h2>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE customer_id = 42
+                AND order_date &gt;= '2026-10-01'
+                ORDER BY order_date;
+                ~~~</p>
+            <p>Candidate:</p>
+            <p>~~~sql
+                CREATE INDEX idx_orders_customer_date
+                ON orders(customer_id, order_date);
+                ~~~</p>
+            <p>The engine can seek to customer 42 and then walk that customer's date range.</p>
+            <h2 id="equality-equality-range">Equality, equality, range</h2>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE tenant_id = ?
+                AND status = ?
+                AND created_at &gt;= ?
+                ORDER BY created_at;
+                ~~~</p>
+            <p>A natural candidate is:</p>
+            <p>~~~text
+                (tenant_id, status, created_at)
+                ~~~</p>
+            <p>The equality columns establish a prefix; created_at defines the range.</p>
+            <p>This is a useful heuristic, not a universal formula.</p>
+            <h2 id="most-selective-first-is-incomplete">"Most selective first" is incomplete</h2>
+            <p>A common rule says to put the most selective column first.</p>
+            <p>That ignores:</p>
+            <ul>
+                <li>required sort order,</li>
+                <li>tenant/locality boundaries,</li>
+                <li>range predicates,</li>
+                <li>join access,</li>
+                <li>other important queries.</li>
+            </ul>
+            <p>A tenant_id column can correctly lead an index even if it is less selective than another predicate because every query must remain inside one tenant.</p>
+            <h2 id="order-by-after-equality">ORDER BY after equality</h2>
+            <p>Index:</p>
+            <p>~~~sql
+                CREATE INDEX idx_orders_customer_date
+                ON orders(customer_id, order_date DESC);
+                ~~~</p>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE customer_id = 42
+                ORDER BY order_date DESC
+                LIMIT 20;
+                ~~~</p>
+            <p>Since customer_id is fixed, the remaining order already matches order_date DESC.</p>
+            <p>This can eliminate a large sort.</p>
+            <h2 id="mixed-sort-directions">Mixed sort directions</h2>
+            <p>Some engines support mixed index ordering.</p>
+            <p>PostgreSQL example:</p>
+            <p>~~~sql
+                CREATE INDEX idx_leaderboard
+                ON leaderboard(category ASC, score DESC);
+                ~~~</p>
+            <p>Useful query:</p>
+            <p>~~~sql
+                WHERE category = 'database'
+                ORDER BY score DESC;
+                ~~~</p>
+            <p>Check engine-specific capabilities and the actual plan.</p>
+            <h2 id="range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</h2>
+            <p>Index:</p>
+            <p>~~~text
+                (customer_id, order_date, status)
+                ~~~</p>
+            <p>Query:</p>
+            <p>~~~sql
+                WHERE customer_id = 42
+                AND order_date &gt;= '2026-01-01'
+                AND status = 'open'
+                ~~~</p>
+            <p>Once order_date becomes a range, status generally cannot narrow one contiguous B-tree region the same way another equality column could.</p>
+            <p>The engine can still filter status from candidate entries, but may inspect more rows.</p>
+            <p>A different candidate:</p>
+            <p>~~~text
+                (customer_id, status, order_date)
+                ~~~</p>
+            <p>may fit the workload better.</p>
+            <h2 id="one-index-cannot-optimize-every-query">One index cannot optimize every query</h2>
+            <p>Suppose two important queries are:</p>
+            <p>~~~sql
+                WHERE customer_id = ?
+                ORDER BY order_date DESC
+                ~~~</p>
+            <p>and:</p>
+            <p>~~~sql
+                WHERE status = 'open'
+                ORDER BY order_date DESC
+                ~~~</p>
+            <p>Natural candidates differ:</p>
+            <p>~~~text
+                (customer_id, order_date)
+                (status, order_date)
+                ~~~</p>
+            <p>Every additional index costs write/storage work.</p>
+            <p>Prioritize the important workload.</p>
+            <h2 id="composite-versus-separate-indexes">Composite versus separate indexes</h2>
+            <p>Compare:</p>
+            <p>~~~text
+                index A: customer_id
+                index B: status
+                ~~~</p>
+            <p>with:</p>
+            <p>~~~text
+                index C: (customer_id, status)
+                ~~~</p>
+            <p>Some engines can combine separate indexes.</p>
+            <p>A composite index often gives a more direct ordered path and can support ORDER BY.</p>
+            <p>Separate indexes can better support independent queries.</p>
+            <p>Use the actual query mix and execution plans.</p>
+            <h2 id="bitmap-combination">Bitmap combination</h2>
+            <p>PostgreSQL can combine multiple indexes through bitmap operations for some queries.</p>
+            <p>That can help a predicate such as:</p>
+            <p>~~~sql
+                WHERE customer_id = ?
+                AND status = ?
+                ~~~</p>
+            <p>Trade-offs:</p>
+            <ul>
+                <li>extra combination work,</li>
+                <li>ordering may be lost,</li>
+                <li>a sort can still be needed,</li>
+                <li>a dedicated composite index may be cheaper for a hot query.</li>
+            </ul>
+            <h2 id="key-columns-versus-payload-columns">Key columns versus payload columns</h2>
+            <p>Suppose the query filters/orders by:</p>
+            <p>~~~text
+                customer_id
+                order_date
+                ~~~</p>
+            <p>and returns:</p>
+            <p>~~~text
+                total_cents
+                status
+                ~~~</p>
+            <p>Do not automatically add every returned field as a search key.</p>
+            <p>In PostgreSQL, INCLUDE can store payload columns without making them part of the navigation key.</p>
+            <p>See the next note.</p>
+            <h2 id="unique-composite-index">Unique composite index</h2>
+            <p>~~~sql
+                CREATE UNIQUE INDEX ux_tenant_email
+                ON users(tenant_id, email);
+                ~~~</p>
+            <p>This means:</p>
+            <p>~~~text
+                email is unique within each tenant
+                ~~~</p>
+            <p>not globally.</p>
+            <p>The whole tuple defines uniqueness, while column order still affects access patterns.</p>
+            <h2 id="tenant-first-indexes">Tenant-first indexes</h2>
+            <p>For multi-tenant schemas:</p>
+            <p>~~~text
+                tenant_id
+                entity_id
+                created_at
+                ~~~</p>
+            <p>tenant-first ordering can improve:</p>
+            <ul>
+                <li>scoped access,</li>
+                <li>locality,</li>
+                <li>per-tenant ranges,</li>
+                <li>safer query patterns.</li>
+            </ul>
+            <p>This can matter more than global selectivity.</p>
+            <h2 id="search-plus-sort">Search plus sort</h2>
+            <p>Query:</p>
+            <p>~~~sql
+                SELECT id, title
+                FROM posts
+                WHERE author_id = ?
+                AND published = true
+                ORDER BY published_at DESC
+                LIMIT 50;
+                ~~~</p>
+            <p>Candidate:</p>
+            <p>~~~text
+                (author_id, published, published_at DESC)
+                ~~~</p>
+            <p>Reasoning:</p>
+            <ol>
+                <li>author equality,</li>
+                <li>published equality,</li>
+                <li>desired order.</li>
+            </ol>
+            <p>A partial index may remove published from the key entirely:</p>
+            <p>~~~sql
+                CREATE INDEX idx_published_posts_author_date
+                ON posts(author_id, published_at DESC)
+                WHERE published = true;
+                ~~~</p>
+            <h2 id="join-keys">Join keys</h2>
+            <p>Join:</p>
+            <p>~~~sql
+                ON order_items.order_id = orders.order_id
+                ~~~</p>
+            <p>An index beginning with order_items.order_id can make repeated join lookups cheaper.</p>
+            <p>Trailing columns can support additional filter/order requirements.</p>
+            <h2 id="low-cardinality-leading-column">Low-cardinality leading column</h2>
+            <p>Index:</p>
+            <p>~~~text
+                (is_deleted, customer_id)
+                ~~~</p>
+            <p>may be inefficient if is_deleted=false for almost all rows.</p>
+            <p>A partial index can be smaller:</p>
+            <p>~~~sql
+                CREATE INDEX idx_live_customers
+                ON customers(customer_id)
+                WHERE deleted_at IS NULL;
+                ~~~</p>
+            <h2 id="parameter-skew">Parameter skew</h2>
+            <p>One composite index can work very differently for:</p>
+            <ul>
+                <li>a tiny tenant,</li>
+                <li>the largest tenant,</li>
+                <li>a common status,</li>
+                <li>a rare status.</li>
+            </ul>
+            <p>Test representative and worst-case parameters.</p>
+            <h2 id="runnable-demonstration">Runnable demonstration</h2>
+            <p>This chapter adds:</p>
+            <p>~~~text
+                scripts/indexing/sqlite_composite_index_demo.py
+                ~~~</p>
+            <p>Run:</p>
+            <p>~~~bash
+                python scripts/indexing/sqlite_composite_index_demo.py
+                ~~~</p>
+            <p>The demo shows plans for:</p>
+            <ul>
+                <li>customer + status + date,</li>
+                <li>customer-only,</li>
+                <li>status-only,</li>
+            </ul>
+            <p>against one composite index.</p>
+            <p>The purpose is to make stored column order visible in the query plans.</p>
+            <h2 id="design-workflow">Design workflow</h2>
+            <ol>
+                <li>Write the exact WHERE predicates.</li>
+                <li>Mark equality predicates.</li>
+                <li>Mark range predicates.</li>
+                <li>Write required ORDER BY.</li>
+                <li>Identify join keys.</li>
+                <li>Identify tenant/locality boundaries.</li>
+                <li>Decide whether a partial predicate can shrink the index.</li>
+                <li>Separate search keys from returned payload.</li>
+                <li>Compare with existing indexes.</li>
+                <li>Validate on representative data.</li>
+                <li>Measure write/storage cost.</li>
+            </ol>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <ul>
+                <li>Putting every WHERE column into one index without considering order.</li>
+                <li>Treating "most selective first" as a universal law.</li>
+                <li>Assuming a suffix-only predicate gets an efficient direct seek.</li>
+                <li>Ignoring ORDER BY when choosing index order.</li>
+                <li>Creating a new composite index for every query variant.</li>
+            </ul>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="05_indexing.html">Database indexing</a></li>
+                <li><a href="06_btree_internals_and_page_splits.html">B-tree internals</a></li>
+                <li><a href="08_covering_partial_and_expression_indexes.html">Covering, partial, and expression indexes</a></li>
+                <li><a href="../08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution plans and cardinality</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

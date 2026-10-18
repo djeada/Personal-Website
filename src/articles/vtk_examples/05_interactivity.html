@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/05_interactivity",
             "description": "By combining low-level access to rendering primitives with high-level interactor and widget frameworks, VTK enables you to build applications where users\u2026",
-            "dateModified": "2026-01-01",
+            "dateModified": "2026-10-12",
             "image": "https://adamdjellouli.com/resources/article-images/51f7b6ed-9086-4fae-b976-8ac0dc139be2-698f3af98b.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="By combining low-level access to rendering primitives with high-level interactor and widget frameworks, VTK enables you to build applications where users…" property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/51f7b6ed-9086-4fae-b976-8ac0dc139be2-698f3af98b.webp" property="og:image" />
-    <meta content="2026-01-01" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -125,6 +125,11 @@
                             <li><a href="#keyboard-input-events">Keyboard Input Events</a></li>
                         </ol>
                     </li>
+                    <li><a href="#worked-example-cell-picking-with-interaction-preserved">Worked example: cell picking with interaction preserved</a>
+                        <ol>
+                            <li><a href="#picking-failure-checklist">Picking failure checklist</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </div>
             <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/vtk_examples/04_visualization_techniques.html">Advanced Visualization Techniques</a></li><li><a href="/articles/vtk_examples/06_animations.html">Animations and Time-Varying Data</a></li><li><a href="/articles/vtk_examples/03_input_and_output.html">Input and Output</a></li></ul></section>
@@ -144,7 +149,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: January 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -171,7 +176,7 @@
                 <li><strong>Do</strong> design interactions around questions users actually ask (“What is that?”, “What’s inside?”, “How does it change?”).</li>
                 <li><strong>Don’t</strong> add UI for everything. Too many controls can make a tool feel intimidating instead of empowering.</li>
             </ul>
-            <h3 id="picking-and-selection">Picking and Selection</h3>
+            <h2 id="picking-and-selection">Picking and Selection</h2>
             <p>Picking is the mechanism by which you map a screen-space event—such as a mouse click or drag—back to an element in your 3D scene, be it a point, cell, actor, or even a rendering layer. Selection builds upon picking by allowing you to extract or highlight subsets of data based on those picks or on more abstract criteria (e.g., cells whose scalar values fall within a given range). This dual capability gives users both precision ("Which vertex did I click?") and breadth ("Show me all cells above threshold X").</p>
             <p>This is one of the fastest ways to make a visualization feel “alive.” The moment a user clicks and the system answers back—by printing an ID, highlighting a region, or showing a tooltip—you’ve created trust: <em>the visuals are connected to real data, not just pretty geometry</em>. Picking and selection also set you up for workflows like “click to inspect,” “click to isolate,” and “click to measure,” which are staples in professional visualization tools.</p>
             <p>VTK provides multiple picker classes to suit different needs:</p>
@@ -185,7 +190,7 @@
                 <li><strong>Do</strong> pick the picker based on what you need (exact cell vs. approximate world coordinate).</li>
                 <li><strong>Don’t</strong> assume a single picker solves every interaction mode. Many apps combine pickers: one for precise hits, another for free-space placement.</li>
             </ul>
-            <p>For example, to pick and report the ID of a cell under the cursor:</p>
+            <p>For example, assuming <code>interactor</code> and <code>renderer</code> are already configured, this snippet reports the ID of the cell under the cursor (<code>-1</code> means no cell was picked):</p>
             <div>
                 <pre><code class="language-python">picker = vtk.vtkCellPicker()
 picker.SetTolerance(0.0005)  # Tighten or loosen as needed
@@ -195,13 +200,13 @@ picked_cell_id = picker.GetCellId()
 print(f"User picked cell ID: {picked_cell_id}")</code></pre>
             </div>
             <p><img alt="picker" decoding="async" height="358" loading="lazy" src="../../resources/article-images/51f7b6ed-9086-4fae-b976-8ac0dc139be2-698f3af98b.webp" width="540" /></p>
-            <p>After picking, you can feed the result into a pipeline filter like <code>vtkExtractSelection</code> to visually outline the selection, compute statistics on the chosen subset, or export it for further analysis. By tuning the picker tolerance and combining multiple pick events, you can implement lasso-style or multi-object selection strategies that feel intuitive to end users.</p>
+            <p>After picking, construct a VTK selection from the chosen IDs and pass it to <code>vtkExtractSelection</code> to obtain a subset for further analysis or export. By tuning the picker tolerance and combining multiple pick events, you can implement lasso-style or multi-object selection strategies that feel intuitive to end users.</p>
             <p>A useful way to keep selection “fun” instead of frustrating is to give clear feedback:</p>
             <ul>
                 <li><strong>Do</strong> highlight what was picked (outline, color change, glow, label).</li>
                 <li><strong>Don’t</strong> leave users guessing whether the click did anything—silent picks feel broken.</li>
             </ul>
-            <h3 id="cutting-planes">Cutting Planes</h3>
+            <h2 id="cutting-planes">Cutting Planes</h2>
             <p>Cutting planes allow users to slice through volumetric or surface datasets interactively, revealing internal features that would otherwise be occluded. By defining a geometric plane and intersecting it with your dataset, you can generate cross-sectional contours, expose hidden structures, and better understand spatial relationships. This technique is invaluable in fields like medical imaging (to inspect anatomical slices) and computational fluid dynamics (to examine interior flow patterns).</p>
             <p>The “why” is very human: <strong>people understand complex 3D structure better when they can “peel it open.”</strong> Rotating a volume helps, but slicing it gives you certainty—what’s inside, where boundaries really are, and how layers relate. Cutting planes also help users stay oriented because the slice itself becomes a landmark they can move deliberately.</p>
             <p>Classes in this workflow include:</p>
@@ -228,7 +233,7 @@ sliced_output = cutter.GetOutput()</code></pre>
                 <li><strong>Do</strong> decide whether you want a <em>thin cut</em> (<code>vtkCutter</code>) or a <em>kept/removed side</em> (<code>vtkClip*</code> family).</li>
                 <li><strong>Don’t</strong> update heavy cutting operations on every tiny mouse movement unless needed—sometimes you update continuously while dragging, and refine on release.</li>
             </ul>
-            <h3 id="3d-widgets">3D Widgets</h3>
+            <h2 id="3d-widgets">3D Widgets</h2>
             <p>VTK 3D widgets are self-contained interactive objects that encapsulate both representation (how they look) and behavior (how they respond to user actions). Unlike generic actors, widgets maintain their own event handling and state, making it straightforward to build UI controls directly into the 3D scene. Common use cases include manipulating clipping planes, adjusting lighting directions, or tuning scalar thresholds.</p>
             <p>Widgets are where your visualization starts feeling like a real application. Instead of asking users to type numbers or dig through menus, you give them direct manipulation: drag the plane, stretch the box, slide the value. That’s why widgets are often the quickest path to “wow, this is usable.”</p>
             <p>Popular widget classes include:</p>
@@ -258,7 +263,7 @@ sliderWidget.EnabledOn()</code></pre>
                 <li><strong>Do</strong> show the current value (e.g., slider value text) and make the range meaningful (units, min/max that match the data).</li>
                 <li><strong>Don’t</strong> make users “hunt” for the control—place widgets where the eye naturally goes and avoid blocking the data.</li>
             </ul>
-            <h3 id="event-handling-and-callbacks">Event Handling and Callbacks</h3>
+            <h2 id="event-handling-and-callbacks">Event Handling and Callbacks</h2>
             <p>At the core of VTK’s interactivity is its event-driven architecture, where user inputs and render events generate notifications that you can intercept with callbacks. This model decouples application logic from the rendering loop, so you can inject your own code—whether to modify the camera, update data, or trigger external processes—whenever a specific event occurs.</p>
             <p>The big advantage of event-driven design is that it scales with complexity. You can start with “print coordinates on click,” then evolve toward “pick a cell, extract it, update statistics panel, and highlight the selection”—all without turning your render loop into an unreadable monolith.</p>
             <p>Classes include:</p>
@@ -271,7 +276,7 @@ sliderWidget.EnabledOn()</code></pre>
                 <li><strong>Do</strong> keep callbacks small and predictable—compute what you need, update state, request a render.</li>
                 <li><strong>Don’t</strong> do heavy computation inside high-frequency events (like <code>MouseMoveEvent</code>) unless you throttle or optimize, or your UI will stutter.</li>
             </ul>
-            <h4 id="mouse-events">Mouse Events</h4>
+            <h3 id="mouse-events">Mouse Events</h3>
             <p>Mouse events are central to navigation and selection in 3D scenes. The interactor translates low-level OS events into high-level VTK events (e.g., <code>LeftButtonPressEvent</code>, <code>MouseMoveEvent</code>). By adding observers on these events, you can implement custom behaviors such as drag‐to‐rotate, point annotation, or dynamic slicing. Interactor styles like <code>vtkInteractorStyleTrackballCamera</code> provide built-in camera controls, but you can layer additional observers for tasks like picking or drawing overlays:</p>
             <div>
                 <pre><code class="language-python">def onMouseClick(obj, event):
@@ -289,7 +294,7 @@ interactor.SetInteractorStyle(style)</code></pre>
                 <li><strong>Do</strong> differentiate click vs drag (users hate accidental picks while rotating).</li>
                 <li><strong>Don’t</strong> bind expensive logic to <code>MouseMoveEvent</code> without guarding it (e.g., only act when a button is pressed, or sample every N milliseconds).</li>
             </ul>
-            <h4 id="keyboard-input-events">Keyboard Input Events</h4>
+            <h3 id="keyboard-input-events">Keyboard Input Events</h3>
             <p>Keyboard events let you offer shortcuts for common operations—toggling visibility, stepping through time series, adjusting scalar thresholds, or switching interaction modes. VTK generates <code>KeyPressEvent</code> and <code>KeyReleaseEvent</code>, reporting the symbolic name of the key pressed. You can bind callbacks to these events to streamline workflows:</p>
             <div>
                 <pre><code class="language-python">def onKeyPress(obj, event):
@@ -303,6 +308,46 @@ interactor.SetInteractorStyle(style)</code></pre>
 style.AddObserver("KeyPressEvent", onKeyPress)</code></pre>
             </div>
             <p>Because you can add multiple observers to the same event, you can maintain a clear separation of concerns: one callback for camera reset, another for data export, and yet another for UI state changes, all coexisting without interference.</p>
+            <h2 id="worked-example-cell-picking-with-interaction-preserved">Worked example: cell picking with interaction preserved</h2>
+            <p>Screen clicks arrive in <strong>display coordinates</strong>, while cells and points are referenced using mesh IDs and world coordinates. Picking bridges these coordinate systems. Picking an actor, a specific cell, or the nearest data point are different tasks.</p>
+            <p>This example needs a graphical display. Clicking the sphere prints the cell ID and pick position; the callback also forwards the event to the camera interaction style.</p>
+            <p>~~~python
+                import vtk</p>
+            <p>source = vtk.vtkSphereSource()
+                mapper = vtk.vtkPolyDataMapper()
+                mapper.SetInputConnection(source.GetOutputPort())
+                actor = vtk.vtkActor()
+                actor.SetMapper(mapper)</p>
+            <p>renderer = vtk.vtkRenderer()
+                renderer.AddActor(actor)
+                renderer.ResetCamera()
+                window = vtk.vtkRenderWindow()
+                window.AddRenderer(renderer)</p>
+            <p>interactor = vtk.vtkRenderWindowInteractor()
+                interactor.SetRenderWindow(window)
+                interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
+                picker = vtk.vtkCellPicker()
+                picker.SetTolerance(0.0005)</p>
+            <p>def on_click(obj, event):
+                x, y = obj.GetEventPosition()
+                if picker.Pick(x, y, 0, renderer) and picker.GetCellId() &gt;= 0:
+                print("Cell:", picker.GetCellId())
+                print("Position:", picker.GetPickPosition())
+                obj.GetInteractorStyle().OnLeftButtonDown()</p>
+            <p>interactor.AddObserver("LeftButtonPressEvent", on_click)
+                window.Render()
+                interactor.Initialize()
+                interactor.Start()
+                ~~~</p>
+            <h3 id="picking-failure-checklist">Picking failure checklist</h3>
+            <ul>
+                <li><strong>No hit:</strong> inspect <code>GetCellId()</code> for <code>-1</code>, renderer choice, actor visibility, picker tolerance, and current camera.</li>
+                <li><strong>Wrong location:</strong> distinguish screen coordinates returned by <code>GetEventPosition()</code> from world coordinates returned by <code>GetPickPosition()</code>.</li>
+                <li><strong>Picking succeeds but extraction fails:</strong> build a proper <code>vtkSelection</code> from point/cell IDs and apply <code>vtkExtractSelection</code> to the original dataset; a world coordinate is not itself a cell ID.</li>
+                <li><strong>Controls stop working:</strong> avoid swallowing the interactor-style event. Preserve camera navigation while layering picking behavior on top.</li>
+                <li><strong>No visual response:</strong> mark the selected item, provide a label or highlight, and expose a clear reset-selection action.</li>
+            </ul>
+            <p>For a lasso or multi-selection feature, collect selected IDs over multiple events, deduplicate them, and keep the selection independent from transient screen coordinates.</p>
         </article-section>
     </div>
     </main>

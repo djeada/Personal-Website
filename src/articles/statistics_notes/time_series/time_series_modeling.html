@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/time_series_modeling",
             "description": "Time-series modeling is an iterative process of specifying structure, estimating parameters, diagnosing what remains unexplained, and testing forecasts\u2026",
-            "dateModified": "2026-09-14",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/13-modeling-residual-diagnostics-5ce4d63dfc.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Time-series modeling is an iterative process of specifying structure, estimating parameters, diagnosing what remains unexplained, and testing forecasts…" property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/13-modeling-residual-diagnostics-5ce4d63dfc.webp" property="og:image" />
-    <meta content="2026-09-14" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -130,7 +130,7 @@ messageStyle: "none"
                         <ol>
                             <li><a href="#model-fitting">Model Fitting</a></li>
                             <li><a href="#worked-example-fitting-an-ar-2-model">Worked Example: Fitting an AR(2) Model</a></li>
-                            <li><a href="#why-the-previous-toy-dataset-was-problematic">Why the Previous Toy Dataset Was Problematic</a></li>
+                            <li><a href="#why-the-design-matrix-needs-variation">Why the Design Matrix Needs Variation</a></li>
                             <li><a href="#fitting-ma-and-arma-models">Fitting MA and ARMA Models</a></li>
                             <li><a href="#comparison-of-common-models">Comparison of Common Models</a></li>
                             <li><a href="#a-practical-identification-and-validation-workflow">A Practical Identification and Validation Workflow</a></li>
@@ -341,7 +341,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 14, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -440,16 +440,12 @@ messageStyle: "none"
                     </tr>
                     <tr>
                         <td>AR stationarity/causality</td>
-                        <td>$\phi(z)=0\Rightarrow</td>
-                        <td>z</td>
-                        <td>&gt;1$</td>
+                        <td>$\phi(z)=0\Rightarrow\lvert z\rvert&gt;1$</td>
                         <td>Standard backshift-root condition.</td>
                     </tr>
                     <tr>
                         <td>MA invertibility</td>
-                        <td>$\theta(z)=0\Rightarrow</td>
-                        <td>z</td>
-                        <td>&gt;1$</td>
+                        <td>$\theta(z)=0\Rightarrow\lvert z\rvert&gt;1$</td>
                         <td>Selects the stable innovation representation.</td>
                     </tr>
                     <tr>
@@ -459,9 +455,7 @@ messageStyle: "none"
                     </tr>
                     <tr>
                         <td>MAE / RMSE</td>
-                        <td>$\mathrm{MAE}=n^{-1}\sum</td>
-                        <td>e_i</td>
-                        <td>$, $\mathrm{RMSE}=\sqrt{n^{-1}\sum e_i^2}$</td>
+                        <td>$\mathrm{MAE}=n^{-1}\sum\lvert e_i\rvert$, $\mathrm{RMSE}=\sqrt{n^{-1}\sum e_i^2}$</td>
                         <td>Complement likelihood criteria with out-of-sample loss.</td>
                     </tr>
                 </tbody>
@@ -601,9 +595,9 @@ messageStyle: "none"
             <p>$$
                 \hat Y_t=0.328+0.080Y_{t-1}+1.195Y_{t-2}.
                 $$</p>
-            <p>This example demonstrates only the mechanics of regression-style AR estimation. The fitted coefficients are not the end of the analysis: check the implied stability, residual dependence, competing orders, and out-of-sample performance before using the model.</p>
-            <h3 id="why-the-previous-toy-dataset-was-problematic">Why the Previous Toy Dataset Was Problematic</h3>
-            <p>If observations increase by a constant amount, adjacent lag columns can become linearly dependent once an intercept is included. Then $\mathbf X^\top\mathbf X$ is singular, the inverse in the ordinary least-squares expression does not exist, and the coefficients are not uniquely identified.</p>
+            <p>Here $\hat\beta_1+\hat\beta_2\approx1.275&gt;1$ and both roots of $1-0.080z-1.195z^2$ have modulus below 1, so the fitted recursion is explosive: with only four equations and three parameters the fit is essentially interpolation. This example demonstrates only the mechanics of regression-style AR estimation. The fitted coefficients are not the end of the analysis: check the implied stability, residual dependence, competing orders, and out-of-sample performance before using the model.</p>
+            <h3 id="why-the-design-matrix-needs-variation">Why the Design Matrix Needs Variation</h3>
+            <p>If observations increase by a constant amount (for example $1,2,3,\ldots$), adjacent lag columns can become linearly dependent once an intercept is included. Then $\mathbf X^\top\mathbf X$ is singular, the inverse in the ordinary least-squares expression does not exist, and the coefficients are not uniquely identified.</p>
             <p>This is a general lesson rather than a quirk of one example: inspect the design matrix and data variation before presenting or interpreting an inverse-based estimate.</p>
             <h3 id="fitting-ma-and-arma-models">Fitting MA and ARMA Models</h3>
             <p>An MA(2) model is</p>

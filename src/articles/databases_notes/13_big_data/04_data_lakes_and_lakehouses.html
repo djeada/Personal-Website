@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Data Lakes and Lakehouses | Adam Djellouli</title>
+    <meta content="A data lake stores large analytical datasets as files, usually in object storage." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Data Lakes and Lakehouses",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses",
+            "description": "A data lake stores large analytical datasets as files, usually in object storage.",
+            "dateModified": "2026-10-04",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Data Lakes and Lakehouses" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="A data lake stores large analytical datasets as files, usually in object storage." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Big Data</li><li><span aria-current="page">Data Lakes and Lakehouses</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#from-files-to-managed-tables">From files to managed tables</a></li>
+                    <li><a href="#why-object-storage-is-used">Why object storage is used</a></li>
+                    <li><a href="#file-formats">File formats</a>
+                        <ol>
+                            <li><a href="#csv">CSV</a></li>
+                            <li><a href="#json">JSON</a></li>
+                            <li><a href="#parquet">Parquet</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#runnable-parquet-example">Runnable Parquet example</a></li>
+                    <li><a href="#partitioning">Partitioning</a></li>
+                    <li><a href="#the-small-file-problem">The small-file problem</a></li>
+                    <li><a href="#why-plain-parquet-is-not-enough">Why plain Parquet is not enough</a></li>
+                    <li><a href="#apache-iceberg">Apache Iceberg</a></li>
+                    <li><a href="#delta-lake">Delta Lake</a></li>
+                    <li><a href="#apache-hudi">Apache Hudi</a></li>
+                    <li><a href="#choosing-a-table-format">Choosing a table format</a></li>
+                    <li><a href="#catalogs">Catalogs</a></li>
+                    <li><a href="#schema-evolution">Schema evolution</a></li>
+                    <li><a href="#time-travel-and-snapshots">Time travel and snapshots</a></li>
+                    <li><a href="#lakehouse-architecture-in-practice">Lakehouse architecture in practice</a></li>
+                    <li><a href="#data-lake-versus-warehouse">Data lake versus warehouse</a></li>
+                    <li><a href="#when-a-lakehouse-is-justified">When a lakehouse is justified</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#treating-a-folder-as-a-database-table">Treating a folder as a database table</a></li>
+                            <li><a href="#partitioning-by-high-cardinality-values">Partitioning by high-cardinality values</a></li>
+                            <li><a href="#never-compacting">Never compacting</a></li>
+                            <li><a href="#keeping-snapshots-forever">Keeping snapshots forever</a></li>
+                            <li><a href="#mixing-writers-with-incompatible-assumptions">Mixing writers with incompatible assumptions</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/13_big_data/03_spark_sql.html">Spark SQL</a></li><li><a href="/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming, Kafka, and Change Data Capture</a></li><li><a href="/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and HDFS</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Data Lakes and Lakehouses</h1>
+            <p>A <strong>data lake</strong> stores large analytical datasets as files, usually in object storage. A <strong>lakehouse</strong> keeps that open-file storage model but adds table metadata so readers and writers can treat groups of files more like database tables.</p>
+            <p>The distinction matters because a directory full of Parquet files is useful, but it does not automatically provide safe concurrent updates, snapshots, schema evolution, or table-level transactions.</p>
+            <h2 id="from-files-to-managed-tables">From files to managed tables</h2>
+            <p>A plain data lake often looks like this:</p>
+            <div>
+                <pre><code class="language-text">applications / databases / logs
+              │
+              ▼
+      object storage
+   S3 / GCS / ADLS / MinIO
+              │
+      ┌───────┼────────┐
+      ▼       ▼        ▼
+   Parquet   JSON      CSV
+      │
+      ▼
+ Spark / Trino / DuckDB / Athena</code></pre>
+            </div>
+            <p>A lakehouse adds a table layer:</p>
+            <div>
+                <pre><code class="language-text">                  catalog
+                    │
+                    ▼
+            table metadata
+          Iceberg / Delta / Hudi
+                    │
+          ┌─────────┴─────────┐
+          ▼                   ▼
+     data files          delete/index/
+     usually Parquet     manifest metadata
+          │
+          ▼
+       object storage</code></pre>
+            </div>
+            <p>The files remain in object storage, but the table metadata defines which files belong to a consistent table snapshot.</p>
+            <h2 id="why-object-storage-is-used">Why object storage is used</h2>
+            <p>Cloud object stores such as Amazon S3, Google Cloud Storage, and Azure Data Lake Storage are common because they provide durable storage independently from compute.</p>
+            <p>That separation lets multiple engines operate over the same data:</p>
+            <div>
+                <pre><code class="language-text">                object storage
+                     │
+       ┌─────────────┼─────────────┐
+       ▼             ▼             ▼
+     Spark          Trino         DuckDB
+       │             │             │
+     ETL          ad-hoc SQL    local analysis</code></pre>
+            </div>
+            <p>Compute clusters can scale up, scale down, or disappear while the data remains.</p>
+            <h2 id="file-formats">File formats</h2>
+            <h3 id="csv">CSV</h3>
+            <p>CSV is convenient for interchange and debugging.</p>
+            <p>Advantages:
+                - human-readable,
+                - supported almost everywhere,
+                - easy to generate.</p>
+            <p>Limitations:
+                - no strong schema,
+                - poor compression compared with columnar formats,
+                - every query may need to parse text,
+                - reading one column still normally requires scanning complete rows.</p>
+            <h3 id="json">JSON</h3>
+            <p>JSON is useful for semi-structured records, APIs, and event payloads.</p>
+            <p>Limitations for analytics:
+                - verbose,
+                - repeated field names increase storage,
+                - nested structures can be expensive to scan,
+                - weak schema discipline can create inconsistent records.</p>
+            <h3 id="parquet">Parquet</h3>
+            <p>Parquet is the most common general-purpose analytical file format.</p>
+            <p>It is:
+                - columnar,
+                - typed,
+                - compressed,
+                - splittable for parallel reads,
+                - able to store statistics useful for pruning.</p>
+            <p>A table with these columns:</p>
+            <div>
+                <pre><code class="language-text">event_time | user_id | country | device | revenue</code></pre>
+            </div>
+            <p>may be queried only for <code>country</code> and <code>revenue</code>. A columnar reader can avoid loading the other columns.</p>
+            <h2 id="runnable-parquet-example">Runnable Parquet example</h2>
+            <p>The repository includes:</p>
+            <p><a href="https://github.com/djeada/Databases-Notes/blob/main/scripts/big_data/parquet_lake_demo.py"><code>scripts/big_data/parquet_lake_demo.py</code></a></p>
+            <p>Install the Big Data demo dependencies:</p>
+            <div>
+                <pre><code class="language-bash">cd scripts
+python -m pip install -r big_data/requirements.txt
+cd ..</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">python scripts/big_data/parquet_lake_demo.py</code></pre>
+            </div>
+            <p>The script:</p>
+            <ol>
+                <li>creates a small events table in DuckDB,</li>
+                <li>writes it as partitioned Parquet files,</li>
+                <li>queries only one partition,</li>
+                <li>runs an aggregation directly over the files,</li>
+                <li>prints the generated directory layout.</li>
+            </ol>
+            <p>Conceptually the dataset becomes:</p>
+            <div>
+                <pre><code class="language-text">lake/
+└── events/
+    ├── event_date=2026-09-29/
+    │   └── data_0.parquet
+    └── event_date=2026-09-30/
+        └── data_0.parquet</code></pre>
+            </div>
+            <p>A query can then read only the relevant date:</p>
+            <div>
+                <pre><code class="language-sql">SELECT event_type, COUNT(*) AS events
+FROM read_parquet(
+  'lake/events/event_date=2026-09-30/*.parquet'
+)
+GROUP BY event_type
+ORDER BY event_type;</code></pre>
+            </div>
+            <p>Example source rows for the <code>2026-09-30</code> partition:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>event_time</th>
+                        <th>user_id</th>
+                        <th>event_type</th>
+                        <th>revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2026-09-30 09:00:00</td>
+                        <td>205</td>
+                        <td>view</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>2026-09-30 09:02:00</td>
+                        <td>205</td>
+                        <td>purchase</td>
+                        <td>39.00</td>
+                    </tr>
+                    <tr>
+                        <td>2026-09-30 09:05:00</td>
+                        <td>101</td>
+                        <td>view</td>
+                        <td>0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>event_type</th>
+                        <th>events</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>purchase</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>view</td>
+                        <td>2</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>This local demo uses DuckDB, but the same storage ideas apply to Spark, Trino, Athena, BigQuery external tables, and other analytical engines.</p>
+            <h2 id="partitioning">Partitioning</h2>
+            <p>Partitioning places related files into groups based on one or more values.</p>
+            <p>Typical example:</p>
+            <div>
+                <pre><code class="language-text">events/
+├── event_date=2026-09-28/
+├── event_date=2026-09-29/
+└── event_date=2026-09-30/</code></pre>
+            </div>
+            <p>A date-filtered query can skip unrelated directories or files.</p>
+            <p>Good partition keys:
+                - appear frequently in filters,
+                - have a manageable number of values,
+                - distribute data reasonably.</p>
+            <p>Poor partition keys:
+                - user ID with millions of values,
+                - UUID,
+                - timestamp down to the second,
+                - fields rarely used for filtering.</p>
+            <p>Over-partitioning creates many tiny files and large metadata overhead.</p>
+            <h2 id="the-small-file-problem">The small-file problem</h2>
+            <p>A lake with millions of tiny files can perform badly even when the total data volume is moderate.</p>
+            <div>
+                <pre><code class="language-text">efficient:
+  100 files × 512 MB
+
+problematic:
+  5,000,000 files × 10 KB</code></pre>
+            </div>
+            <p>The engine must list, open, plan, and schedule work for each file.</p>
+            <p>Common remedies:
+                - periodic compaction,
+                - larger writer batch sizes,
+                - fewer output partitions,
+                - table-format maintenance procedures.</p>
+            <h2 id="why-plain-parquet-is-not-enough">Why plain Parquet is not enough</h2>
+            <p>Suppose two jobs update a table stored as loose Parquet files.</p>
+            <div>
+                <pre><code class="language-text">Job A reads files: A.parquet, B.parquet
+Job B reads files: A.parquet, B.parquet
+
+Job A writes C.parquet
+Job B writes D.parquet
+
+Which set now represents the table?</code></pre>
+            </div>
+            <p>The file format itself has no transaction coordinator.</p>
+            <p>A table format solves this by committing metadata that points to a consistent set of files.</p>
+            <h2 id="apache-iceberg">Apache Iceberg</h2>
+            <p>Apache Iceberg represents table state through metadata and snapshots. Changes create a new table state rather than relying on directory naming conventions alone.</p>
+            <p>Simplified structure:</p>
+            <div>
+                <pre><code class="language-text">table
+ │
+ ├── snapshot 101
+ │     ├── file A
+ │     └── file B
+ │
+ └── snapshot 102
+       ├── file A
+       ├── file C
+       └── file D</code></pre>
+            </div>
+            <p>Readers can use one consistent snapshot while a writer prepares the next one.</p>
+            <p>Iceberg is commonly chosen when teams want:
+                - open table metadata,
+                - multiple compatible compute engines,
+                - snapshot-based reads,
+                - schema evolution,
+                - partition evolution,
+                - time travel.</p>
+            <p>Apache Iceberg's specification explicitly tracks table state in metadata and supports schema and partition evolution without requiring readers to depend directly on physical partition directories.</p>
+            <h2 id="delta-lake">Delta Lake</h2>
+            <p>Delta Lake also adds a transaction log and table semantics over object-storage files.</p>
+            <p>It is widely associated with Spark and the Databricks ecosystem.</p>
+            <p>Teams commonly use it for:
+                - Spark-heavy data platforms,
+                - merge/upsert workloads,
+                - lakehouse pipelines,
+                - streaming plus batch processing over the same tables.</p>
+            <h2 id="apache-hudi">Apache Hudi</h2>
+            <p>Apache Hudi focuses strongly on incremental data processing and frequently changing datasets.</p>
+            <p>It is commonly considered for:
+                - CDC ingestion,
+                - upserts,
+                - incremental queries,
+                - large mutable analytical datasets.</p>
+            <h2 id="choosing-a-table-format">Choosing a table format</h2>
+            <p>The important questions are not only feature checkboxes.</p>
+            <p>Ask:</p>
+            <ol>
+                <li>Which compute engines must read and write the table?</li>
+                <li>Which catalog will store table identities?</li>
+                <li>Do you need frequent <code>MERGE</code> or upserts?</li>
+                <li>Do you need time travel?</li>
+                <li>How will compaction and metadata cleanup run?</li>
+                <li>What schema changes must be supported?</li>
+                <li>Can the team's cloud platform manage the operational pieces?</li>
+            </ol>
+            <p>A table format does not remove maintenance. Snapshot expiry, compaction, orphan-file cleanup, and catalog operations still matter.</p>
+            <h2 id="catalogs">Catalogs</h2>
+            <p>A catalog maps logical names to table metadata.</p>
+            <div>
+                <pre><code class="language-text">analytics.sales.events
+        │
+        ▼
+      catalog
+        │
+        ▼
+metadata location
+        │
+        ▼
+object storage files</code></pre>
+            </div>
+            <p>Common catalog choices include:
+                - AWS Glue Data Catalog,
+                - Hive Metastore,
+                - JDBC-backed catalogs,
+                - REST catalogs,
+                - platform-specific managed catalogs.</p>
+            <p>Without a shared catalog, different tools can disagree about where a table lives or which metadata is current.</p>
+            <h2 id="schema-evolution">Schema evolution</h2>
+            <p>Analytical schemas change.</p>
+            <p>Examples:
+                - add <code>campaign_id</code>,
+                - rename <code>customer</code> to <code>customer_id</code>,
+                - widen an integer type,
+                - add fields inside nested records.</p>
+            <p>A managed table format records schema identities so evolution is safer than rewriting file headers ad hoc.</p>
+            <p>Still, compatibility must be considered:</p>
+            <div>
+                <pre><code class="language-text">producer starts writing new field
+       │
+       ▼
+old consumers still running?
+       │
+       ├── yes -&gt; must tolerate new schema
+       └── no  -&gt; migration can be stricter</code></pre>
+            </div>
+            <h2 id="time-travel-and-snapshots">Time travel and snapshots</h2>
+            <p>Snapshot-based tables can preserve earlier table states.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">10:00 snapshot A
+10:15 snapshot B
+10:30 bad DELETE
+10:31 snapshot C</code></pre>
+            </div>
+            <p>A time-travel query can inspect snapshot B to understand or recover from the bad change.</p>
+            <p>Snapshots are not free backups. Retention policies may delete old data files, and disaster recovery still requires separate storage/account-level protection.</p>
+            <h2 id="lakehouse-architecture-in-practice">Lakehouse architecture in practice</h2>
+            <p>A common architecture is:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL / SaaS / logs
+          │
+          ▼
+ ingestion / CDC
+ Airbyte / Fivetran / Debezium
+          │
+          ▼
+ object storage
+ S3 / GCS / ADLS
+          │
+          ▼
+ Iceberg / Delta / Hudi tables
+          │
+    ┌─────┼────────────┐
+    ▼     ▼            ▼
+  Spark  Trino       warehouse
+    │     │            │
+    └─────┴──────┬─────┘
+                 ▼
+              BI / ML</code></pre>
+            </div>
+            <p>A smaller team may not need this. A managed warehouse can be much simpler when most workloads are SQL analytics.</p>
+            <h2 id="data-lake-versus-warehouse">Data lake versus warehouse</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Warehouse</th>
+                        <th>Lake / lakehouse</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Storage</td>
+                        <td>managed database storage</td>
+                        <td>object storage files</td>
+                    </tr>
+                    <tr>
+                        <td>Query interface</td>
+                        <td>usually SQL-first</td>
+                        <td>many engines</td>
+                    </tr>
+                    <tr>
+                        <td>Open formats</td>
+                        <td>varies by platform</td>
+                        <td>usually central</td>
+                    </tr>
+                    <tr>
+                        <td>Operations</td>
+                        <td>highly managed</td>
+                        <td>more components</td>
+                    </tr>
+                    <tr>
+                        <td>ML/file access</td>
+                        <td>sometimes indirect</td>
+                        <td>natural fit</td>
+                    </tr>
+                    <tr>
+                        <td>BI simplicity</td>
+                        <td>strong</td>
+                        <td>depends on engine/catalog</td>
+                    </tr>
+                    <tr>
+                        <td>Multi-engine access</td>
+                        <td>platform-dependent</td>
+                        <td>common design goal</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The architectures often coexist rather than replace one another.</p>
+            <h2 id="when-a-lakehouse-is-justified">When a lakehouse is justified</h2>
+            <p>A lakehouse becomes more attractive when:
+                - data volume is very large,
+                - object storage is already the system of record,
+                - many engines need shared access,
+                - the team wants open table formats,
+                - batch and streaming pipelines share datasets,
+                - compute/storage independence is important.</p>
+            <p>Avoid building one only because it is fashionable. For moderate SQL analytics, a managed warehouse is often easier to operate.</p>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="treating-a-folder-as-a-database-table">Treating a folder as a database table</h3>
+            <p>Files alone do not guarantee atomic table updates.</p>
+            <h3 id="partitioning-by-high-cardinality-values">Partitioning by high-cardinality values</h3>
+            <p>This produces a huge directory/file count.</p>
+            <h3 id="never-compacting">Never compacting</h3>
+            <p>Streaming or incremental writers often produce small files over time.</p>
+            <h3 id="keeping-snapshots-forever">Keeping snapshots forever</h3>
+            <p>Old metadata and files accumulate storage and planning cost.</p>
+            <h3 id="mixing-writers-with-incompatible-assumptions">Mixing writers with incompatible assumptions</h3>
+            <p>All writers must understand the same table format and catalog semantics.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="01_data_warehousing.html">Data warehousing</a></li>
+                <li><a href="02_hadoop_and_hdfs.html">Hadoop and HDFS</a></li>
+                <li><a href="03_spark_sql.html">Spark SQL</a></li>
+                <li><a href="05_streaming_kafka_and_cdc.html">Streaming, Kafka, and CDC</a></li>
+                <li><a href="06_data_pipelines_orchestration_and_quality.html">Pipelines, orchestration, and data quality</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Operating NoSQL Systems and Polyglot Persistence | Adam Djellouli</title>
+    <meta content="NoSQL systems are often introduced through data models, but production success depends just as much on operations." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Operating NoSQL Systems and Polyglot Persistence",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence",
+            "description": "NoSQL systems are often introduced through data models, but production success depends just as much on operations.",
+            "dateModified": "2026-10-01",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Operating NoSQL Systems and Polyglot Persistence" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="NoSQL systems are often introduced through data models, but production success depends just as much on operations." property="og:description" />
+    <meta content="2026-10-01" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>NoSQL Databases</li><li><span aria-current="page">Operating NoSQL Systems and Polyglot Persistence</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#one-application-can-use-several-data-stores">One application can use several data stores</a></li>
+                    <li><a href="#start-with-the-simplest-sufficient-architecture">Start with the simplest sufficient architecture</a></li>
+                    <li><a href="#define-the-source-of-truth">Define the source of truth</a></li>
+                    <li><a href="#derived-stores">Derived stores</a></li>
+                    <li><a href="#synchronization">Synchronization</a></li>
+                    <li><a href="#dual-write-problem">Dual-write problem</a></li>
+                    <li><a href="#eventual-projections">Eventual projections</a></li>
+                    <li><a href="#reconciliation">Reconciliation</a></li>
+                    <li><a href="#backups">Backups</a></li>
+                    <li><a href="#derived-store-backup-decision">Derived-store backup decision</a></li>
+                    <li><a href="#capacity-dimensions-differ-by-model">Capacity dimensions differ by model</a></li>
+                    <li><a href="#hotspot-testing">Hotspot testing</a></li>
+                    <li><a href="#schema-and-index-lifecycle">Schema and index lifecycle</a></li>
+                    <li><a href="#observability">Observability</a></li>
+                    <li><a href="#document-store-signals">Document-store signals</a></li>
+                    <li><a href="#key-value-signals">Key-value signals</a></li>
+                    <li><a href="#wide-column-signals">Wide-column signals</a></li>
+                    <li><a href="#graph-signals">Graph signals</a></li>
+                    <li><a href="#security">Security</a></li>
+                    <li><a href="#tenant-isolation">Tenant isolation</a></li>
+                    <li><a href="#data-retention">Data retention</a></li>
+                    <li><a href="#disaster-recovery">Disaster recovery</a></li>
+                    <li><a href="#failure-modes-to-test">Failure modes to test</a></li>
+                    <li><a href="#managed-service-versus-self-managed">Managed service versus self-managed</a></li>
+                    <li><a href="#cost-model">Cost model</a></li>
+                    <li><a href="#avoid-premature-polyglot-persistence">Avoid premature polyglot persistence</a></li>
+                    <li><a href="#migration-into-a-specialized-store">Migration into a specialized store</a></li>
+                    <li><a href="#migration-away-from-a-specialized-store">Migration away from a specialized store</a></li>
+                    <li><a href="#ownership">Ownership</a></li>
+                    <li><a href="#documentation">Documentation</a></li>
+                    <li><a href="#practical-technology-map">Practical technology map</a></li>
+                    <li><a href="#production-checklist">Production checklist</a></li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency, Replication, Transactions, and Conflict Handling</a></li><li><a href="/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling: Nodes, Relationships, Paths, and Traversal</a></li><li><a href="/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide-Column Modeling: Query-First Tables, Partitions, and Bucketing</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 01, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Operating NoSQL Systems and Polyglot Persistence</h1>
+            <p>NoSQL systems are often introduced through data models, but production success depends just as much on operations. A database choice adds responsibilities for deployment, backups, monitoring, security, capacity, failure recovery, schema evolution, and synchronization with other systems.</p>
+            <p>A specialized database should solve a measurable workload problem that justifies those costs.</p>
+            <h2 id="one-application-can-use-several-data-stores">One application can use several data stores</h2>
+            <p>A realistic architecture might use:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL
+  |-- transactional orders/customers
+  |
+  +--&gt; Redis
+  |      sessions/cache/rate limits
+  |
+  +--&gt; OpenSearch
+  |      product search
+  |
+  +--&gt; graph projection
+         recommendations/fraud</code></pre>
+            </div>
+            <p>This is often called <strong>polyglot persistence</strong>: choose different storage technologies for different access patterns.</p>
+            <p>It can be powerful, but every additional store creates another system whose correctness and lifecycle must be understood.</p>
+            <h2 id="start-with-the-simplest-sufficient-architecture">Start with the simplest sufficient architecture</h2>
+            <p>Before adding a second database, ask whether the current one can solve the workload with:</p>
+            <ul>
+                <li>a better index,</li>
+                <li>a materialized view,</li>
+                <li>built-in JSON/document features,</li>
+                <li>full-text search,</li>
+                <li>partitioning,</li>
+                <li>a cache,</li>
+                <li>read replicas.</li>
+            </ul>
+            <p>A specialized NoSQL system should be introduced because measured requirements justify it, not because the data is described as "modern" or "large."</p>
+            <h2 id="define-the-source-of-truth">Define the source of truth</h2>
+            <p>If the same fact appears in several systems, name the authoritative copy.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PostgreSQL products      -&gt; authoritative catalog
+Redis product cache      -&gt; rebuildable
+OpenSearch product index -&gt; rebuildable search projection
+warehouse product dim    -&gt; analytical history/projection</code></pre>
+            </div>
+            <p>Without this rule, conflict resolution becomes ambiguous.</p>
+            <h2 id="derived-stores">Derived stores</h2>
+            <p>A derived store should normally be rebuildable.</p>
+            <p>Ask:</p>
+            <ol>
+                <li>Can we recreate it from authoritative data?</li>
+                <li>How long does a rebuild take?</li>
+                <li>What happens while rebuilding?</li>
+                <li>Is replay idempotent?</li>
+                <li>How do we verify completeness?</li>
+            </ol>
+            <p>If nobody knows how to rebuild the search index or graph projection, it has quietly become a second source of truth.</p>
+            <h2 id="synchronization">Synchronization</h2>
+            <p>Common synchronization methods include:</p>
+            <ul>
+                <li>application dual writes,</li>
+                <li>change-data capture,</li>
+                <li>event streams,</li>
+                <li>scheduled batch jobs,</li>
+                <li>database-native connectors.</li>
+            </ul>
+            <p>Each has failure modes.</p>
+            <h2 id="dual-write-problem">Dual-write problem</h2>
+            <p>Bad sequence:</p>
+            <div>
+                <pre><code class="language-text">write PostgreSQL succeeds
+write search index fails</code></pre>
+            </div>
+            <p>Now the systems disagree.</p>
+            <p>Reversing the order merely reverses the failure case.</p>
+            <p>Use patterns such as:</p>
+            <ul>
+                <li>transactional outbox,</li>
+                <li>CDC,</li>
+                <li>replayable event log,</li>
+                <li>reconciliation job.</li>
+            </ul>
+            <h2 id="eventual-projections">Eventual projections</h2>
+            <p>Derived systems often lag behind the source:</p>
+            <div>
+                <pre><code class="language-text">source commit
+    |
+    v
+CDC/event
+    |
+    v
+projection update</code></pre>
+            </div>
+            <p>Document the expected lag.</p>
+            <p>Examples:</p>
+            <div>
+                <pre><code class="language-text">search: under 30 seconds
+recommendations: under 10 minutes
+fraud block list: under 2 seconds</code></pre>
+            </div>
+            <p>A vague statement such as "eventually consistent" is not an operational target.</p>
+            <h2 id="reconciliation">Reconciliation</h2>
+            <p>Even with a good event pipeline, periodically compare source and projection.</p>
+            <p>Checks can include:</p>
+            <ul>
+                <li>row/document counts,</li>
+                <li>sampled checksums,</li>
+                <li>missing IDs,</li>
+                <li>lag watermark,</li>
+                <li>last processed offset.</li>
+            </ul>
+            <p>Reconciliation catches silent divergence.</p>
+            <h2 id="backups">Backups</h2>
+            <p>Every authoritative NoSQL store needs a tested recovery strategy.</p>
+            <p>Questions:</p>
+            <ul>
+                <li>what is the RPO?</li>
+                <li>what is the RTO?</li>
+                <li>are backups application-consistent?</li>
+                <li>are backups encrypted?</li>
+                <li>can a backup be restored into a clean environment?</li>
+                <li>are schema/index definitions included?</li>
+            </ul>
+            <p>Replication is not a backup.</p>
+            <h2 id="derived-store-backup-decision">Derived-store backup decision</h2>
+            <p>A fully rebuildable cache/search index may not need the same backup policy as the primary database.</p>
+            <p>Trade-off:</p>
+            <div>
+                <pre><code class="language-text">backup derived store
+vs
+rebuild from source</code></pre>
+            </div>
+            <p>Compare:</p>
+            <ul>
+                <li>backup cost,</li>
+                <li>rebuild duration,</li>
+                <li>source retention,</li>
+                <li>user impact.</li>
+            </ul>
+            <h2 id="capacity-dimensions-differ-by-model">Capacity dimensions differ by model</h2>
+            <p>Document stores:</p>
+            <ul>
+                <li>document count/size,</li>
+                <li>working-set memory,</li>
+                <li>index size,</li>
+                <li>update rate.</li>
+            </ul>
+            <p>Key-value stores:</p>
+            <ul>
+                <li>key count,</li>
+                <li>value size,</li>
+                <li>memory,</li>
+                <li>TTL/eviction rate,</li>
+                <li>hot keys.</li>
+            </ul>
+            <p>Wide-column stores:</p>
+            <ul>
+                <li>partition size,</li>
+                <li>write rate,</li>
+                <li>tombstones,</li>
+                <li>compaction,</li>
+                <li>repair.</li>
+            </ul>
+            <p>Graph databases:</p>
+            <ul>
+                <li>node/relationship count,</li>
+                <li>degree distribution,</li>
+                <li>traversal depth,</li>
+                <li>memory/cache.</li>
+            </ul>
+            <p>Use model-specific capacity metrics.</p>
+            <h2 id="hotspot-testing">Hotspot testing</h2>
+            <p>Average traffic hides skew.</p>
+            <p>Examples:</p>
+            <ul>
+                <li>one celebrity account,</li>
+                <li>one huge tenant,</li>
+                <li>one popular cache key,</li>
+                <li>one Cassandra partition,</li>
+                <li>one graph supernode.</li>
+            </ul>
+            <p>Benchmark the hottest realistic key/partition/node, not only uniform random data.</p>
+            <h2 id="schema-and-index-lifecycle">Schema and index lifecycle</h2>
+            <p>Flexible schema still needs change management.</p>
+            <p>Production rollout may require:</p>
+            <div>
+                <pre><code class="language-text">new code reads old + new
+       |
+       v
+backfill / rebuild index
+       |
+       v
+new code writes new shape
+       |
+       v
+remove compatibility</code></pre>
+            </div>
+            <p>Index builds can consume significant CPU, disk, memory, and replication bandwidth.</p>
+            <p>Treat them as migrations.</p>
+            <h2 id="observability">Observability</h2>
+            <p>For every database, monitor at least:</p>
+            <ul>
+                <li>request/query latency,</li>
+                <li>throughput,</li>
+                <li>errors/timeouts,</li>
+                <li>resource saturation,</li>
+                <li>replication/consistency health,</li>
+                <li>storage headroom,</li>
+                <li>backup success.</li>
+            </ul>
+            <p>Then add model-specific signals.</p>
+            <h2 id="document-store-signals">Document-store signals</h2>
+            <p>Examples:</p>
+            <ul>
+                <li>slow queries,</li>
+                <li>documents scanned vs returned,</li>
+                <li>index hit behavior,</li>
+                <li>replication lag,</li>
+                <li>chunk/shard imbalance.</li>
+            </ul>
+            <h2 id="key-value-signals">Key-value signals</h2>
+            <p>Examples:</p>
+            <ul>
+                <li>hit/miss rate,</li>
+                <li>evictions,</li>
+                <li>memory fragmentation,</li>
+                <li>hot keys,</li>
+                <li>expired keys,</li>
+                <li>command latency.</li>
+            </ul>
+            <h2 id="wide-column-signals">Wide-column signals</h2>
+            <p>Examples:</p>
+            <ul>
+                <li>pending compactions,</li>
+                <li>tombstone warnings,</li>
+                <li>dropped messages,</li>
+                <li>partition size,</li>
+                <li>repair status,</li>
+                <li>coordinator latency.</li>
+            </ul>
+            <h2 id="graph-signals">Graph signals</h2>
+            <p>Examples:</p>
+            <ul>
+                <li>traversal latency,</li>
+                <li>page/cache hit behavior,</li>
+                <li>high-degree nodes,</li>
+                <li>transaction contention,</li>
+                <li>query-plan expansion.</li>
+            </ul>
+            <h2 id="security">Security</h2>
+            <p>NoSQL does not reduce security requirements.</p>
+            <p>Apply:</p>
+            <ul>
+                <li>authentication,</li>
+                <li>least privilege,</li>
+                <li>TLS,</li>
+                <li>private networking,</li>
+                <li>secret rotation,</li>
+                <li>audit logging,</li>
+                <li>backup protection.</li>
+            </ul>
+            <p>Do not expose a development database directly to the public internet merely because the quickstart did so.</p>
+            <h2 id="tenant-isolation">Tenant isolation</h2>
+            <p>Multi-tenant NoSQL systems need deliberate isolation.</p>
+            <p>Possible approaches:</p>
+            <ul>
+                <li>tenant field in every record,</li>
+                <li>tenant-prefixed keys,</li>
+                <li>tenant-specific partitions,</li>
+                <li>separate databases/collections,</li>
+                <li>separate clusters for strong isolation.</li>
+            </ul>
+            <p>The application must not rely on naming convention alone for authorization.</p>
+            <h2 id="data-retention">Data retention</h2>
+            <p>Retention affects every copy:</p>
+            <div>
+                <pre><code class="language-text">primary
+replicas
+cache
+search
+analytics
+backup</code></pre>
+            </div>
+            <p>A privacy/delete request is incomplete if only one store is updated.</p>
+            <p>Define how deletions propagate to derived systems.</p>
+            <h2 id="disaster-recovery">Disaster recovery</h2>
+            <p>A DR plan should include dependencies such as:</p>
+            <ul>
+                <li>identity provider,</li>
+                <li>KMS/secrets,</li>
+                <li>object-storage backups,</li>
+                <li>DNS,</li>
+                <li>event offsets,</li>
+                <li>schema/index definitions.</li>
+            </ul>
+            <p>Restoring the raw data without the supporting configuration may not restore the service.</p>
+            <h2 id="failure-modes-to-test">Failure modes to test</h2>
+            <p>Test at least:</p>
+            <ul>
+                <li>node failure,</li>
+                <li>replica lag,</li>
+                <li>network delay,</li>
+                <li>disk full,</li>
+                <li>credential rotation,</li>
+                <li>expired certificate,</li>
+                <li>projection consumer stopped,</li>
+                <li>backup restore,</li>
+                <li>duplicate event replay.</li>
+            </ul>
+            <p>The operational model is part of the database model.</p>
+            <h2 id="managed-service-versus-self-managed">Managed service versus self-managed</h2>
+            <p>Managed services can reduce responsibility for:</p>
+            <ul>
+                <li>patching,</li>
+                <li>node replacement,</li>
+                <li>some backup automation,</li>
+                <li>infrastructure scaling.</li>
+            </ul>
+            <p>You still own:</p>
+            <ul>
+                <li>access model,</li>
+                <li>data design,</li>
+                <li>queries,</li>
+                <li>index choices,</li>
+                <li>costs,</li>
+                <li>recovery objectives,</li>
+                <li>application behavior during failover.</li>
+            </ul>
+            <h2 id="cost-model">Cost model</h2>
+            <p>Specialized stores add cost beyond server price:</p>
+            <ul>
+                <li>replicated storage,</li>
+                <li>network transfer,</li>
+                <li>backups,</li>
+                <li>monitoring,</li>
+                <li>operational labor,</li>
+                <li>developer complexity,</li>
+                <li>data synchronization.</li>
+            </ul>
+            <p>A system that saves 5 ms but doubles operational complexity may not be worthwhile.</p>
+            <h2 id="avoid-premature-polyglot-persistence">Avoid premature polyglot persistence</h2>
+            <p>Bad reasoning:</p>
+            <div>
+                <pre><code class="language-text">sessions -&gt; Redis
+search -&gt; OpenSearch
+graph -&gt; Neo4j
+events -&gt; Cassandra
+analytics -&gt; ClickHouse</code></pre>
+            </div>
+            <p>simply because each technology is known for that category.</p>
+            <p>Better reasoning:</p>
+            <ol>
+                <li>measure the current bottleneck,</li>
+                <li>define the exact workload,</li>
+                <li>test simpler options,</li>
+                <li>benchmark the candidate,</li>
+                <li>include failure/operations cost,</li>
+                <li>add the store only if the benefit remains compelling.</li>
+            </ol>
+            <h2 id="migration-into-a-specialized-store">Migration into a specialized store</h2>
+            <p>A safe sequence:</p>
+            <div>
+                <pre><code class="language-text">create target schema/model
+       |
+       v
+bulk backfill
+       |
+       v
+start CDC/event sync
+       |
+       v
+validate source vs target
+       |
+       v
+shadow reads / compare
+       |
+       v
+move production reads</code></pre>
+            </div>
+            <p>Keep rollback possible until confidence is high.</p>
+            <h2 id="migration-away-from-a-specialized-store">Migration away from a specialized store</h2>
+            <p>Exit strategy matters too.</p>
+            <p>Ask:</p>
+            <ul>
+                <li>can data be exported?</li>
+                <li>are proprietary APIs deeply embedded?</li>
+                <li>can authoritative state be reconstructed?</li>
+                <li>what downtime is required?</li>
+            </ul>
+            <p>Avoid accidental lock-in where portability is important.</p>
+            <h2 id="ownership">Ownership</h2>
+            <p>Every data store needs a clear owner responsible for:</p>
+            <ul>
+                <li>schema/model review,</li>
+                <li>access control,</li>
+                <li>alerts,</li>
+                <li>backup/restore,</li>
+                <li>patching/upgrades,</li>
+                <li>incident response.</li>
+            </ul>
+            <p>A database with no owner is an operational risk.</p>
+            <h2 id="documentation">Documentation</h2>
+            <p>Document:</p>
+            <ul>
+                <li>why the store exists,</li>
+                <li>authoritative versus derived status,</li>
+                <li>main access patterns,</li>
+                <li>consistency assumptions,</li>
+                <li>rebuild/restore procedure,</li>
+                <li>dashboards/alerts,</li>
+                <li>escalation contacts.</li>
+            </ul>
+            <p>This prevents future teams from treating a derived cache as irreplaceable business truth.</p>
+            <h2 id="practical-technology-map">Practical technology map</h2>
+            <p>Use the focused engine notes for concrete implementations:</p>
+            <ul>
+                <li><a href="../12_database_engines/04_mongodb.html">MongoDB</a> — document database,</li>
+                <li><a href="../12_database_engines/05_neo4j.html">Neo4j</a> — graph database,</li>
+                <li><a href="../12_database_engines/10_redis.html">Redis</a> — key-value/data-structure store,</li>
+                <li><a href="../12_database_engines/11_cassandra.html">Cassandra</a> — wide-column database,</li>
+                <li><a href="../12_database_engines/12_elasticsearch_and_opensearch.html">OpenSearch/Elasticsearch</a> — search projection,</li>
+                <li><a href="../12_database_engines/13_clickhouse.html">ClickHouse</a> — analytical projection.</li>
+            </ul>
+            <h2 id="production-checklist">Production checklist</h2>
+            <p>Before introducing another NoSQL database:</p>
+            <ol>
+                <li>What exact workload does it solve?</li>
+                <li>Why is the existing database insufficient?</li>
+                <li>Is this source of truth or derived?</li>
+                <li>How is data synchronized?</li>
+                <li>What is the tolerated lag?</li>
+                <li>How is divergence detected?</li>
+                <li>Can the data be rebuilt?</li>
+                <li>What is the backup/restore plan?</li>
+                <li>What are the model-specific capacity limits?</li>
+                <li>How are security and tenant isolation enforced?</li>
+                <li>What happens during node/network failure?</li>
+                <li>Who owns it operationally?</li>
+                <li>What is the total cost?</li>
+                <li>How would we migrate away later?</li>
+            </ol>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="01_nosql_databases_intro.html">NoSQL introduction</a></li>
+                <li><a href="09_consistency_transactions_and_replication.html">Consistency, transactions, and replication</a></li>
+                <li><a href="../11_security_best_practices/02_database_security.html">Database security</a></li>
+                <li><a href="../11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and recovery</a></li>
+                <li><a href="../11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance monitoring</a></li>
+                <li><a href="../12_database_engines/07_choosing_database.html">Choosing a database</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/2_systems_of_equations/jacobi_method",
             "description": "The Jacobi method is a classical iterative algorithm used to approximate the solution of a system of linear equations Ax = b.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/4974bdab-baec-4cde-af8c-77ed2a30e8bf-1e94470bba.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="The Jacobi method is a classical iterative algorithm used to approximate the solution of a system of linear equations Ax = b." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/4974bdab-baec-4cde-af8c-77ed2a30e8bf-1e94470bba.webp" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -234,7 +234,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -298,7 +298,7 @@ messageStyle: "none"
             <p>$$x_i = \frac{b_i - \sum_{j \ne i} a_{ij} x_j}{a_{ii}}.$$</p>
             <p>In an iterative scheme, at iteration $k+1$, you use the old values $x_j^{(k)}$ on the right-hand side:</p>
             <p>$$x_i^{(k+1)} = \frac{b_i - \sum_{j \ne i} a_{ij} x_j^{(k)}}{a_{ii}}.$$</p>
-            <p>This process defines the Jacobi iteration. The method converges if the spectral radius of the iteration matrix $D^{-1}(L+U)$ is less than one, which is guaranteed if $A$ is strictly diagonally dominant or meets certain sufficient conditions (e.g., symmetric positive definite under some constraints).</p>
+            <p>This process defines the Jacobi iteration. The method converges for every initial guess if and only if the spectral radius of the iteration matrix $T_J = -D^{-1}(L+U)$ is less than one, $\rho(T_J) &lt; 1$ (necessary and sufficient). Checking this directly requires eigenvalues, so in practice one uses sufficient conditions, the most common being that $A$ is strictly diagonally dominant (by rows, $|a_{ii}| &gt; \sum_{j\neq i}|a_{ij}|$, or by columns), which implies $\rho(T_J)&lt;1$. Being symmetric positive definite is <strong>not</strong> sufficient for Jacobi: an SPD matrix can have $\rho(T_J) \geq 1$ (for example, $3\times 3$ with $1$ on the diagonal and $0.9$ off the diagonal has $\rho(T_J)=1.8$), in which case the iteration diverges. (Gauss-Seidel, in contrast, converges for every SPD matrix.)</p>
             <h3 id="algorithm-steps">Algorithm Steps</h3>
             <p>I. <strong>Initialization</strong>:</p>
             <p>Choose an initial guess $\mathbf{x}^{(0)} = (x_1^{(0)}, x_2^{(0)}, \ldots, x_n^{(0)})^\top$. A common choice is the zero vector or a small random vector.</p>
@@ -309,7 +309,7 @@ messageStyle: "none"
                 i = 1, 2, \ldots, n.
                 $$</p>
             <p>III. <strong>Convergence Check</strong>:</p>
-            <p>After computing $\mathbf{x}^{(k+1)}$, check if $\|\mathbf{x}^{(k+1)} - \mathbf{x}^{(k)}\|$ (or $\|A\mathbf{x}^{(k+1)}-\mathbf{b}\|$) is less than a given tolerance $\varepsilon$. If yes, stop; otherwise, continue iterating.</p>
+            <p>After computing $\mathbf{x}^{(k+1)}$, check if $\|\mathbf{x}^{(k+1)} - \mathbf{x}^{(k)}\|$ (or $\|A\mathbf{x}^{(k+1)}-\mathbf{b}\|$) is less than a given tolerance $\varepsilon$. If yes, stop; otherwise, continue iterating. The implementation uses the first criterion with the infinity norm, and raises an error if the iteration cap (<code>max_iterations</code>) is reached first.</p>
             <h3 id="example">Example</h3>
             <p><strong>Given System</strong>:</p>
             <p>$$
@@ -340,16 +340,16 @@ messageStyle: "none"
                 x^{(3)} = \frac{5 + 1.5}{2} = \frac{6.5}{2} = 3.25, \quad
                 y^{(3)} = \frac{7 - 3.66665}{3} = \frac{3.33335}{3} = 1.1111167.
                 $$</p>
-            <p>Continue iterating until $|x^{(k+1)} - x^{(k)}|$ and $|y^{(k+1)} - y^{(k)}|$ are below a desired tolerance (e.g., $10^{-4}$). Over many iterations, the values will approach the true solution (which, by direct solving, is $x=3, y= \frac{4}{3} \approx 1.3333$). The Jacobi iterations gradually "home in" on this solution.</p>
+            <p>Continue iterating until $|x^{(k+1)} - x^{(k)}|$ and $|y^{(k+1)} - y^{(k)}|$ are below a desired tolerance (e.g., $10^{-4}$). Over many iterations, the values will approach the true solution (which, by direct solving, is $x=\frac{22}{7} \approx 3.1429, y= \frac{9}{7} \approx 1.2857$). The Jacobi iterations gradually "home in" on this solution.</p>
             <h3 id="advantages">Advantages</h3>
             <ul>
                 <li>The <strong>simplicity of implementation</strong> is a key advantage of the Jacobi method, as each new approximation depends solely on values from the previous iteration, making the algorithm straightforward to code and understand.</li>
                 <li>The Jacobi method supports <strong>parallelization</strong> effectively because each component $x_i^{(k+1)}$ depends only on values $x_j^{(k)}$ from the previous iteration. This allows computations for all $i$ to be performed simultaneously, leveraging modern parallel computing hardware such as multi-core CPUs or GPUs.</li>
-                <li>The method offers <strong>wide applicability</strong> as it can be used for any system where the diagonal elements of $A$ are nonzero. While convergence is guaranteed under diagonal dominance, additional techniques such as relaxation can expand its usability.</li>
+                <li>The method is <strong>easy to apply</strong> to any system whose diagonal elements are nonzero (a zero diagonal entry makes the update undefined). Nonzero diagonal only makes the iteration <em>defined</em>, not convergent: convergence is guaranteed under strict diagonal dominance (or, more generally, whenever $\rho(D^{-1}(L+U)) &lt; 1$), and techniques such as relaxation can expand its usability.</li>
             </ul>
             <h3 id="limitations">Limitations</h3>
             <ul>
-                <li><strong>Diagonal dominance or specific convergence conditions</strong> are necessary for the Jacobi method to work effectively. Without these, the method may fail to converge, oscillate, or converge at an impractically slow rate.</li>
+                <li><strong>Convergence is conditional</strong>: it requires $\rho(D^{-1}(L+U)) &lt; 1$, which strict diagonal dominance is sufficient (but not necessary) for. Symmetric positive definiteness is not enough. Without such a condition, the method may diverge, oscillate, or converge at an impractically slow rate.</li>
                 <li>The Jacobi method suffers from <strong>slow convergence</strong> compared to more advanced iterative methods like Gauss-Seidel or conjugate gradient methods. Its relative inefficiency often makes it less attractive for practical applications unless used as part of a preconditioning strategy.</li>
                 <li>The method exhibits <strong>sensitivity to the initial guess</strong>. Although a poor initial guess does not affect the correctness of the final solution if convergence occurs, it can significantly increase the number of iterations needed or result in stagnation near suboptimal values.</li>
             </ul>

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Clustered Indexes, Heap Tables, and Row Locality | Adam Djellouli</title>
+    <meta content="A table's primary key does not imply one universal physical layout." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Clustered Indexes, Heap Tables, and Row Locality",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality",
+            "description": "A table's primary key does not imply one universal physical layout.",
+            "dateModified": "2026-10-02",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Clustered Indexes, Heap Tables, and Row Locality" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="A table's primary key does not imply one universal physical layout." property="og:description" />
+    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Storage And Indexing</li><li><span aria-current="page">Clustered Indexes, Heap Tables, and Row Locality</span></li></ol></div>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#heap-table">Heap table</a></li>
+                    <li><a href="#clustered-index-organized-table">Clustered/index-organized table</a></li>
+                    <li><a href="#why-clustered-is-overloaded">Why "clustered" is overloaded</a></li>
+                    <li><a href="#postgresql-heap-layout">PostgreSQL heap layout</a></li>
+                    <li><a href="#innodb-clustered-primary-key">InnoDB clustered primary key</a></li>
+                    <li><a href="#wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</a></li>
+                    <li><a href="#sql-server-clustered-index">SQL Server clustered index</a></li>
+                    <li><a href="#sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</a></li>
+                    <li><a href="#sqlite-rowid-table">SQLite rowid table</a></li>
+                    <li><a href="#sqlite-without-rowid">SQLite WITHOUT ROWID</a></li>
+                    <li><a href="#runnable-sqlite-comparison">Runnable SQLite comparison</a></li>
+                    <li><a href="#locality">Locality</a></li>
+                    <li><a href="#secondary-lookup-cost">Secondary lookup cost</a></li>
+                    <li><a href="#primary-key-lookup-advantage">Primary-key lookup advantage</a></li>
+                    <li><a href="#range-access-advantage">Range access advantage</a></li>
+                    <li><a href="#random-identifiers">Random identifiers</a></li>
+                    <li><a href="#clustering-key-stability">Clustering key stability</a></li>
+                    <li><a href="#surrogate-versus-natural-key">Surrogate versus natural key</a></li>
+                    <li><a href="#physical-clustering-in-postgresql">Physical clustering in PostgreSQL</a></li>
+                    <li><a href="#re-clustering-cost">Re-clustering cost</a></li>
+                    <li><a href="#correlation-statistics">Correlation statistics</a></li>
+                    <li><a href="#row-locality-versus-columnar-storage">Row locality versus columnar storage</a></li>
+                    <li><a href="#choosing-a-clustering-key">Choosing a clustering key</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#primary-key-means-clustered">"Primary key means clustered"</a></li>
+                            <li><a href="#clustered-means-rows-remain-perfectly-ordered-forever">"Clustered means rows remain perfectly ordered forever"</a></li>
+                            <li><a href="#very-wide-clustered-primary-key">Very wide clustered primary key</a></li>
+                            <li><a href="#mutable-clustered-key">Mutable clustered key</a></li>
+                            <li><a href="#clustering-for-one-rare-report">Clustering for one rare report</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering, Partial, and Expression Indexes</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures: Hash, GIN, GiST, SP-GiST, BRIN, Bitmap, and Search</a></li><li><a href="/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Clustered Indexes, Heap Tables, and Row Locality</h1>
+            <p>A table's primary key does not imply one universal physical layout.</p>
+            <p>Different engines organize base-table rows differently, and that changes how secondary indexes behave.</p>
+            <p>The two broad patterns are:</p>
+            <p>~~~text
+                heap table + separate indexes
+                ~~~</p>
+            <p>and:</p>
+            <p>~~~text
+                clustered/index-organized table
+                ~~~</p>
+            <p>Understanding the difference explains why the same schema can have different storage and performance characteristics across PostgreSQL, InnoDB, SQL Server, and SQLite.</p>
+            <h2 id="heap-table">Heap table</h2>
+            <p>In a heap-style table, rows are stored independently of a particular logical index order.</p>
+            <p>Conceptually:</p>
+            <p>~~~text
+                table pages:
+                [row A] [row X] [row C] [row B]</p>
+            <p>secondary index:
+                A -&gt; row location
+                B -&gt; row location
+                C -&gt; row location
+                X -&gt; row location
+                ~~~</p>
+            <p>The index locates a row; the table stores the full row separately.</p>
+            <p>PostgreSQL normally uses this model.</p>
+            <h2 id="clustered-index-organized-table">Clustered/index-organized table</h2>
+            <p>In a clustered structure, the row data is organized by an index key.</p>
+            <p>~~~text
+                B-tree leaves:
+                key 10 -&gt; row data
+                key 20 -&gt; row data
+                key 30 -&gt; row data
+                ~~~</p>
+            <p>The leaf level is effectively the table's row storage.</p>
+            <p>InnoDB uses the primary key as the clustered index.</p>
+            <p>SQLite WITHOUT ROWID tables are organized by their primary key.</p>
+            <p>SQL Server allows one clustered index per table; it does not have to be the primary key.</p>
+            <h2 id="why-clustered-is-overloaded">Why "clustered" is overloaded</h2>
+            <p>Different products use the term differently.</p>
+            <p>In PostgreSQL, CLUSTER can physically reorder a table using an index, but that order is not automatically maintained after future writes.</p>
+            <p>In SQL Server and InnoDB, clustered indexing is a persistent storage organization concept.</p>
+            <p>Always read the engine-specific meaning.</p>
+            <h2 id="postgresql-heap-layout">PostgreSQL heap layout</h2>
+            <p>PostgreSQL index:</p>
+            <p>~~~text
+                B-tree leaf entry
+                |
+                v
+                heap tuple identifier
+                |
+                v
+                heap page
+                ~~~</p>
+            <p>An ordinary index lookup can require:</p>
+            <ol>
+                <li>index traversal,</li>
+                <li>heap/table access,</li>
+                <li>visibility checks.</li>
+            </ol>
+            <p>Index-only scans can avoid some heap visits when the index covers the query and visibility-map conditions are satisfied.</p>
+            <h2 id="innodb-clustered-primary-key">InnoDB clustered primary key</h2>
+            <p>InnoDB's clustered index leaf stores the row.</p>
+            <p>~~~text
+                PRIMARY KEY B-tree
+                |
+                v
+                leaf contains row columns
+                ~~~</p>
+            <p>Secondary indexes do not point to a physical heap address.</p>
+            <p>They carry the clustered primary-key value.</p>
+            <p>~~~text
+                secondary key
+                |
+                v
+                primary-key value
+                |
+                v
+                clustered lookup
+                ~~~</p>
+            <p>This makes primary-key width relevant to every secondary index.</p>
+            <h2 id="wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</h2>
+            <p>Suppose primary key is:</p>
+            <p>~~~text
+                long VARCHAR
+                ~~~</p>
+            <p>instead of:</p>
+            <p>~~~text
+                BIGINT
+                ~~~</p>
+            <p>If every secondary index stores that primary-key value, wider keys can multiply storage and cache cost.</p>
+            <p>Primary-key design can therefore affect the entire index set.</p>
+            <h2 id="sql-server-clustered-index">SQL Server clustered index</h2>
+            <p>SQL Server permits one clustered index because table rows can only be physically ordered through one clustered structure at a time.</p>
+            <p>A primary key constraint may create a clustered index by default in some common cases, but primary key and clustering are conceptually separate choices.</p>
+            <p>A table without a clustered index is a heap.</p>
+            <h2 id="sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</h2>
+            <p>For a clustered table, a nonclustered index uses the clustering key to locate rows.</p>
+            <p>For a heap, it uses a row identifier.</p>
+            <p>This mirrors the general trade-off:</p>
+            <p>~~~text
+                secondary index
+                -&gt; clustered key
+                or
+                -&gt; heap row locator
+                ~~~</p>
+            <h2 id="sqlite-rowid-table">SQLite rowid table</h2>
+            <p>Most SQLite tables are rowid tables.</p>
+            <p>If the schema declares:</p>
+            <p>~~~sql
+                id INTEGER PRIMARY KEY
+                ~~~</p>
+            <p>id becomes an alias for rowid.</p>
+            <p>Secondary indexes can use rowid to locate the table row.</p>
+            <h2 id="sqlite-without-rowid">SQLite WITHOUT ROWID</h2>
+            <p>A WITHOUT ROWID table stores rows according to the declared PRIMARY KEY.</p>
+            <p>Example:</p>
+            <p>~~~sql
+                CREATE TABLE inventory (
+                warehouse_id INTEGER NOT NULL,
+                sku TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                PRIMARY KEY (warehouse_id, sku)
+                ) WITHOUT ROWID;
+                ~~~</p>
+            <p>This can avoid maintaining a separate hidden rowid for schemas whose natural primary key is already the access key.</p>
+            <p>It is not always faster; row width and query patterns matter.</p>
+            <h2 id="runnable-sqlite-comparison">Runnable SQLite comparison</h2>
+            <p>This chapter adds:</p>
+            <p>~~~text
+                scripts/indexing/sqlite_rowid_vs_without_rowid.py
+                ~~~</p>
+            <p>Run:</p>
+            <p>~~~bash
+                python scripts/indexing/sqlite_rowid_vs_without_rowid.py
+                ~~~</p>
+            <p>The script creates equivalent rowid and WITHOUT ROWID tables with a composite primary key, inserts the same synthetic data, and compares:</p>
+            <ul>
+                <li>file/page usage,</li>
+                <li>point-lookup plans,</li>
+                <li>local repeated lookup timing.</li>
+            </ul>
+            <p>The numbers are local measurements only.</p>
+            <h2 id="locality">Locality</h2>
+            <p>If related rows are physically close, range scans can need fewer pages.</p>
+            <p>Suppose orders are clustered by:</p>
+            <p>~~~text
+                (customer_id, order_date)
+                ~~~</p>
+            <p>Rows for one customer may be physically adjacent.</p>
+            <p>That can improve:</p>
+            <ul>
+                <li>range reads,</li>
+                <li>cache locality,</li>
+                <li>sequential I/O.</li>
+            </ul>
+            <p>But maintaining strict physical order during arbitrary writes has cost.</p>
+            <h2 id="secondary-lookup-cost">Secondary lookup cost</h2>
+            <p>Heap model:</p>
+            <p>~~~text
+                secondary index
+                |
+                v
+                heap page
+                ~~~</p>
+            <p>Clustered model:</p>
+            <p>~~~text
+                secondary index
+                |
+                v
+                clustered primary-key lookup
+                |
+                v
+                row
+                ~~~</p>
+            <p>A clustered design can mean two B-tree traversals for a secondary lookup.</p>
+            <p>Whether that is expensive depends on:</p>
+            <ul>
+                <li>cache,</li>
+                <li>tree depth,</li>
+                <li>result count,</li>
+                <li>key width.</li>
+            </ul>
+            <h2 id="primary-key-lookup-advantage">Primary-key lookup advantage</h2>
+            <p>In a clustered table, primary-key lookup lands directly on the row-containing leaf.</p>
+            <p>That is excellent for workloads dominated by primary-key access.</p>
+            <p>But secondary-key workloads can pay for the second lookup.</p>
+            <h2 id="range-access-advantage">Range access advantage</h2>
+            <p>Clustering by a range key can make related rows contiguous.</p>
+            <p>Example:</p>
+            <p>~~~text
+                (account_id, transaction_time)
+                ~~~</p>
+            <p>can support account-history reads efficiently.</p>
+            <p>But a single table only has one primary clustering order.</p>
+            <p>Other access paths need secondary indexes or separate projections.</p>
+            <h2 id="random-identifiers">Random identifiers</h2>
+            <p>Random clustered keys can spread insertion across many pages.</p>
+            <p>This may:</p>
+            <ul>
+                <li>reduce one right-edge hotspot,</li>
+                <li>increase random page activity,</li>
+                <li>increase page splits.</li>
+            </ul>
+            <p>Sequential clustered keys can do the reverse.</p>
+            <p>The right choice depends on concurrency and engine behavior.</p>
+            <h2 id="clustering-key-stability">Clustering key stability</h2>
+            <p>Changing a clustered/index-organized primary key can require moving the row and updating secondary references.</p>
+            <p>Therefore clustered keys should usually be stable.</p>
+            <p>A mutable natural identifier is often a poor clustering key.</p>
+            <h2 id="surrogate-versus-natural-key">Surrogate versus natural key</h2>
+            <p>A narrow surrogate key can reduce clustered and secondary index width.</p>
+            <p>A natural key can avoid an extra uniqueness structure if it is already compact and stable.</p>
+            <p>Consider:</p>
+            <ul>
+                <li>business semantics,</li>
+                <li>width,</li>
+                <li>stability,</li>
+                <li>secondary index duplication,</li>
+                <li>join ergonomics.</li>
+            </ul>
+            <p>There is no universal winner.</p>
+            <h2 id="physical-clustering-in-postgresql">Physical clustering in PostgreSQL</h2>
+            <p>PostgreSQL can reorder a table with:</p>
+            <p>~~~sql
+                CLUSTER orders USING idx_orders_customer_date;
+                ~~~</p>
+            <p>This rewrites the table according to the index at that moment.</p>
+            <p>Later inserts/updates do not automatically preserve that physical order.</p>
+            <p>Therefore PostgreSQL CLUSTER is not equivalent to an InnoDB clustered index.</p>
+            <h2 id="re-clustering-cost">Re-clustering cost</h2>
+            <p>Physically rewriting a large table can consume:</p>
+            <ul>
+                <li>disk space,</li>
+                <li>I/O,</li>
+                <li>WAL depending on operation,</li>
+                <li>locks,</li>
+                <li>maintenance time.</li>
+            </ul>
+            <p>Use it only when measured locality benefits justify the operational cost.</p>
+            <h2 id="correlation-statistics">Correlation statistics</h2>
+            <p>PostgreSQL tracks correlation between physical row order and column values.</p>
+            <p>High physical correlation can make an index range scan cheaper because heap visits are more sequential.</p>
+            <p>This is one reason physical locality can influence the optimizer.</p>
+            <h2 id="row-locality-versus-columnar-storage">Row locality versus columnar storage</h2>
+            <p>Clustering rows by key is still row-oriented organization.</p>
+            <p>It is different from columnar storage, where values of each column are stored together.</p>
+            <p>Do not confuse:</p>
+            <p>~~~text
+                clustered B-tree row layout
+                ~~~</p>
+            <p>with:</p>
+            <p>~~~text
+                column-oriented analytical storage
+                ~~~</p>
+            <h2 id="choosing-a-clustering-key">Choosing a clustering key</h2>
+            <p>Ask:</p>
+            <ol>
+                <li>Which range reads matter?</li>
+                <li>Which point lookups dominate?</li>
+                <li>Is the key stable?</li>
+                <li>How wide is it?</li>
+                <li>Does the engine copy it into secondary indexes?</li>
+                <li>Are inserts monotonic/random?</li>
+                <li>Will clustering create a write hotspot?</li>
+                <li>Do secondary queries dominate instead?</li>
+            </ol>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="primary-key-means-clustered">"Primary key means clustered"</h3>
+            <p>Not in every engine.</p>
+            <h3 id="clustered-means-rows-remain-perfectly-ordered-forever">"Clustered means rows remain perfectly ordered forever"</h3>
+            <p>Engine semantics differ.</p>
+            <h3 id="very-wide-clustered-primary-key">Very wide clustered primary key</h3>
+            <p>Secondary indexes may become much larger.</p>
+            <h3 id="mutable-clustered-key">Mutable clustered key</h3>
+            <p>Updates become expensive.</p>
+            <h3 id="clustering-for-one-rare-report">Clustering for one rare report</h3>
+            <p>Write/storage cost may exceed benefit.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="03_primary_key_vs_secondary_key.html">Primary keys and secondary indexes</a></li>
+                <li><a href="04_database_pages.html">Database pages</a></li>
+                <li><a href="06_btree_internals_and_page_splits.html">B-tree internals</a></li>
+                <li><a href="02_row_based_vs_column_based_databases.html">Row versus column storage</a></li>
+                <li><a href="../12_database_engines/02_mysql.html">MySQL/InnoDB engine note</a></li>
+                <li><a href="../12_database_engines/03_postgresql.html">PostgreSQL engine note</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

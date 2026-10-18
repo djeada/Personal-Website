@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/ssh_and_scp",
             "description": "SSH, SFTP, and SCP are network protocols that provide secure data communication and file transfer over insecure networks.",
-            "dateModified": "2026-06-01",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="SSH, SFTP, and SCP are network protocols that provide secure data communication and file transfer over insecure networks." property="og:description" />
-    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -205,7 +205,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -242,11 +242,11 @@
      |                                      |
      |  &lt;- 2. Sends Server's Public Key ----|
      |                                      |
-     | 3. Creates Encrypted Session Key --&gt; |
-     | (using server's public key)          |
+     | 3. Exchange key-agreement data &lt;--&gt;  |
+     | (derive shared session keys)        |
      |                                      |
-     |  &lt;- 4. Decrypts Session Key (using   |
-     | private key) &amp; establishes session   |
+     |  &lt;- 4. Server signs exchange; client |
+     | verifies the server's host identity |
      |                                      |
      | 5. Client Authenticates using -&gt;     |
      | its private key                      |
@@ -259,6 +259,8 @@
      |______________________________________|</code></pre>
             </div>
             <p>SSH leverages public-key cryptography to authenticate users and to secure the data being transferred. This ensures that only authorized users can connect, and the data cannot be intercepted in a readable format by malicious actors.</p>
+            <p>The diagram is simplified: modern SSH negotiates a key-exchange algorithm to derive shared traffic keys. The server's host key authenticates the exchange; it is not simply used to decrypt a session key sent by the client. User authentication happens inside the protected connection and may use a password or a signature made by the client's private key. The private key itself is never sent to the server.</p>
+            <p>On a first connection, verify the server's host-key fingerprint through a trusted channel before accepting it. An unexpected changed-host-key warning needs investigation; deleting the stored key without checking removes this identity check.</p>
             <h4 id="connecting-with-ssh">Connecting with SSH</h4>
             <p>To initiate a connection using SSH, you require several details and credentials which include:</p>
             <ol>
@@ -275,12 +277,12 @@
             <p>The ssh command accommodates various flags that allow you to customize your connection further. Here are some notable options:</p>
             <ul>
                 <li>The <code>-l</code> option specifies the username for the SSH connection. An alternative way to include the username is by using the format <code>ssh -l username serverhost</code>.</li>
-                <li>With the <code>-i</code> option, you can designate the path to the private key file used for key authentication. By default, SSH looks for the key file in the <code>~/.ssh/id_rsa</code> directory.</li>
+                <li>With <code>-i</code>, specify an identity file, such as <code>~/.ssh/id_ed25519</code> or <code>~/.ssh/id_rsa</code>. These are files inside <code>~/.ssh</code>, not directories. OpenSSH can also use other default identity filenames and keys supplied by an authentication agent.</li>
                 <li>The <code>-F</code> option indicates the path to the SSH connection configuration file. Each user typically has a personal configuration file at <code>~/.ssh/config</code>, while a global configuration file is located at <code>/etc/ssh/ssh_config</code>.</li>
                 <li>Using the <code>-p</code> option, you can specify a different port number if the SSH server is not using the default port 22.</li>
                 <li>The <code>-v, -vv, -vvv</code> options increase the verbosity of the SSH command, providing more detailed output, which is particularly useful for troubleshooting connection issues.</li>
             </ul>
-            <p>For example SSH usually uses port 22, but you can use another port for better security. To use a different port, like 561, do this:</p>
+            <p>SSH usually uses port 22. A different port may reduce automated scanning noise, but it does not replace authentication, updates, or access controls. If the server is configured to listen on port 561, connect with:</p>
             <div>
                 <pre><code class="language-shell">ssh -p 561 username@serverhost</code></pre>
             </div>
@@ -320,7 +322,7 @@ sudo systemctl start ssh</code></pre>
             </div>
             <p>These commands will install the SSH server package, enable the SSH service to start at boot, and initiate the SSH service immediately, making your server ready to accept secure connections.</p>
             <h3 id="transferring-files-with-scp">Transferring Files with SCP</h3>
-            <p>SCP (Secure Copy Protocol), which utilizes SSH for data transfer, offers a secure method for transferring files between computers over a network. Here's how you can leverage SCP for various tasks:</p>
+            <p>The <code>scp</code> command copies files over SSH. Since <a href="https://www.openssh.com/txt/release-9.0">OpenSSH 9.0</a>, it uses SFTP by default; the older SCP/rcp wire protocol is available with <code>-O</code> when compatibility requires it. Distinguish the command's name from the protocol it actually uses when comparing <code>scp</code> and <code>sftp</code>.</p>
             <h4 id="uploading-files-to-a-remote-server">Uploading Files to a Remote Server</h4>
             <p>To upload a file from your local machine to a remote server, use the following syntax:</p>
             <div>
@@ -352,9 +354,9 @@ sudo systemctl start ssh</code></pre>
             <p>II. Configure SSH Server</p>
             <ul>
                 <li>SFTP depends on the SSH server configuration. It uses the SSH server's settings for port numbers, encryption types, and authentication methods.</li>
-                <li>The SSH configuration file (usually <code>/etc/ssh/sshd_config</code>) should have an entry like <code>Subsystem sftp /usr/lib/openssh/sftp-server</code> to enable SFTP service.</li>
+                <li>The SSH configuration file (usually <code>/etc/ssh/sshd_config</code>) should enable an SFTP subsystem. The executable path, such as <code>/usr/lib/openssh/sftp-server</code>, varies by distribution; <code>Subsystem sftp internal-sftp</code> uses OpenSSH's in-process implementation instead. Configure one subsystem entry, not both.</li>
             </ul>
-            <p>III. Apply the changes by restarting the SSH service (<code>sudo systemctl restart ssh</code>).</p>
+            <p>III. Check the configuration with <code>sudo sshd -t</code>, then reload the service (<code>sudo systemctl reload ssh</code> on Debian/Ubuntu, or <code>sshd</code> on many RPM-based systems). Keep the existing session open and test a second connection before disconnecting.</p>
             <h4 id="client-setup">Client Setup</h4>
             <ul>
                 <li>For command-line usage, no additional installation is required as SFTP comes with most SSH clients.</li>

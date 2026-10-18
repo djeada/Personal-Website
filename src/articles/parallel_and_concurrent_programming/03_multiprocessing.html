@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Multiprocessing | Adam Djellouli</title>
-    <meta content="Multiprocessing runs work across multiple processes." name="description" />
+    <meta content="Multiprocessing runs work in several processes, each normally with its own virtual address space." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing"
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing",
-            "description": "Multiprocessing runs work across multiple processes.",
-            "dateModified": "2026-09-12",
+            "description": "Multiprocessing runs work in several processes, each normally with its own virtual address space.",
+            "dateModified": "2026-10-18",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Multiprocessing runs work across multiple processes." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="Multiprocessing runs work in several processes, each normally with its own virtual address space." property="og:description" />
+    <meta content="2026-10-18" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -155,7 +155,7 @@ messageStyle: "none"
                         </ol>
                     </li>
                     <li><a href="#typical-applications">Typical Applications</a></li>
-                    <li><a href="#alternatives-to-multiprocessing">Alternatives to Multiprocessing</a>
+                    <li><a href="#related-deployment-and-architecture-choices">Related Deployment and Architecture Choices</a>
                         <ol>
                             <li><a href="#containers">Containers</a></li>
                             <li><a href="#event-driven-architectures">Event-Driven Architectures</a></li>
@@ -190,7 +190,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -210,7 +210,8 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Multiprocessing</h1>
-            <p><strong>Multiprocessing</strong> runs work across multiple processes. Each process normally has its own virtual address space, so processes are more isolated from one another than threads, which typically share a process's memory. This isolation reduces accidental shared-state interference and improves fault isolation. Multiprocessing is often used to take advantage of multiple CPU cores for CPU-bound work. Processes communicate through inter-process communication (IPC) mechanisms such as pipes, sockets, message queues, or explicitly shared memory. The trade-off is higher creation, memory, and communication overhead than with threads.</p>
+            <p><strong>Multiprocessing</strong> runs work in several processes, each normally with its own virtual address space. Separate address spaces help contain accidental memory changes and failures. CPU-bound work can run across multiple cores when enough independent work is available.</p>
+            <p>Processes exchange data through inter-process communication (IPC), such as pipes, sockets, message queues, or explicitly shared memory. Compared with threads, they usually cost more to start and require more memory and communication work. Isolation does not remove the need to coordinate access to shared resources.</p>
             <h3 id="introduction-to-processes">Introduction to Processes</h3>
             <p>In computing, a process is an instance of a program in execution. It includes the program code, execution state, and associated resources such as memory and file descriptors. Processes are fundamental to multitasking because they allow multiple programs to make progress concurrently on one system. A process can create other processes, called child processes. The creating process is the parent and can monitor, communicate with, and wait for its children.</p>
             <h4 id="child-processes">Child Processes</h4>
@@ -236,79 +237,86 @@ messageStyle: "none"
                 <li>Runs independently but can communicate with the parent or other processes through IPC.</li>
                 <li>Terminates when its work finishes, when it exits explicitly, or when it is terminated externally.</li>
             </ul>
-            <p><strong>Diagram of Parent and Child Process Relationship</strong>:</p>
+            <p><strong>Process Tree</strong></p>
             <div>
-                <pre><code class="language-shell">+-------------------+
-|  Parent Process   |
-|                   |
-|  +-------------+  |
-|  | Child Proc  |  |
-|  | (Process 1) |  |
-|  +-------------+  |
-|                   |
-|  +-------------+  |
-|  | Child Proc  |  |
-|  | (Process 2) |  |
-|  +-------------+  |
-|                   |
-+-------------------+</code></pre>
+                <pre><code class="language-text">                 Parent process
+                 /            \
+                /              \
+       Child process 1    Child process 2
+       own address space  own address space</code></pre>
             </div>
+            <p>The tree describes who created each process. Children are separate processes, rather than memory regions inside their parent.</p>
             <p><strong>Creating Child Processes</strong></p>
-            <p>Creating child processes involves spawning new processes from an existing parent process. Different programming languages and operating systems provide methods and APIs for process creation. Here are the common approaches:</p>
-            <ul>
-                <li>In UNIX-based systems, forking involves the parent process creating a child process by duplicating itself, allowing both processes to continue execution independently from the point of the fork. </li>
-                <li>On both Windows and UNIX systems, spawning allows the parent process to start a new child process, with the child initializing independently rather than inheriting the exact state of the parent. </li>
-                <li>High-level libraries in programming languages, such as Python's <code>multiprocessing.Process</code>, offer simplified abstractions for process creation, reducing the complexity of manually handling system calls. </li>
-                <li>After <code>fork()</code>, the child has a separate virtual address space that initially mirrors the parent's. Operating systems commonly use copy-on-write so unchanged pages can share the same physical memory until either process writes to them. </li>
-                <li>Spawning generally involves starting a completely new process that does not share memory or state with the parent, making it more isolated but potentially slower to initialize. </li>
-                <li>On UNIX systems, the <code>fork()</code> system call is commonly used for process creation, whereas on Windows, functions like <code>CreateProcess()</code> handle similar tasks. </li>
-                <li>Libraries like Python's <code>multiprocessing</code> module provide a consistent interface for process management across different operating systems, abstracting away platform-specific details. </li>
-                <li>Forking can be efficient when a child needs much of the parent's initial state because copy-on-write delays physical memory duplication until pages are modified. </li>
-                <li>Spawning is more suitable for processes that require distinct and isolated environments to avoid accidental data interference. </li>
-                <li>High-level abstractions also handle inter-process communication (IPC) and synchronization mechanisms, such as pipes and queues, making it easier for developers to manage complex workflows. </li>
-                <li>The choice between forking and spawning often depends on the operating system, programming language, and specific application requirements. </li>
-                <li>A common UNIX pattern is <code>fork()</code> followed by an <code>exec</code> family call, which replaces the child's process image with a new program. </li>
-                <li>Both techniques require careful consideration of process termination and resource cleanup to prevent issues like zombie processes or memory leaks. </li>
-                <li>High-level libraries often include utilities to manage process lifecycles, allowing developers to terminate or join processes without directly handling low-level details.</li>
-            </ul>
-            <p><strong>Managing Child Processes</strong></p>
-            <p>Parent processes have several mechanisms to manage child processes effectively:</p>
-            <ul>
-                <li>Waiting for a child process to finish execution can be achieved by the parent using system calls like <code>wait</code> or <code>waitpid</code>, which also allow the parent to collect the child’s exit status to assess if it terminated successfully. </li>
-                <li>Monitoring the state of a child process enables the parent to identify conditions such as running (actively executing), sleeping (waiting for a resource), stopped (suspended), or zombie (completed but not reaped). </li>
-                <li>Inter-process communication (IPC) facilitates data or signal exchange between parent and child processes, with mechanisms including pipes, sockets, message queues, and shared memory providing flexible options for different use cases. </li>
-                <li>Terminating a child process can be necessary when it misbehaves or exceeds a time limit, and this is commonly achieved using system calls like <code>kill</code>, which send signals to the target process. </li>
-                <li>Using the <code>wait</code> system call ensures that zombie processes are avoided by allowing the parent to properly reap the terminated child process and free its resources. </li>
-                <li>Shared memory is a high-speed IPC mechanism that allows parent and child processes to directly access a common memory segment, but it requires careful synchronization to avoid race conditions. </li>
-                <li>Pipes are commonly used for unidirectional data transfer between processes, while sockets provide bidirectional communication and can work across network boundaries. </li>
-                <li>The <code>kill</code> system call sends specific signals to processes, which can either terminate the process or trigger custom signal handlers, depending on the signal type and the process setup. </li>
-                <li>Monitoring tools like <code>/proc</code> on UNIX systems provide real-time information about the state and resources of running or stopped processes, aiding in diagnostics. </li>
-                <li>Synchronization primitives like semaphores and mutexes can be used alongside IPC mechanisms to ensure orderly communication and prevent issues like deadlocks.</li>
-            </ul>
-            <p>Different Process States:</p>
+            <p>Process creation and starting a new program are related but distinct operations:</p>
             <table>
                 <thead>
                     <tr>
-                        <th><strong>State</strong></th>
-                        <th><strong>Description</strong></th>
+                        <th>Operation</th>
+                        <th>What happens?</th>
+                        <th>What to remember</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Running</td>
-                        <td>The process is actively executing.</td>
+                        <td>POSIX <code>fork()</code></td>
+                        <td>Creates a child that continues after the same call. The parent receives the child's PID; the child receives <code>0</code>.</td>
+                        <td>Ordinary memory is logically separate. Copy-on-write may delay physical copying. Open file descriptors are inherited.</td>
                     </tr>
                     <tr>
-                        <td>Sleeping</td>
-                        <td>The process is waiting for a resource.</td>
+                        <td>POSIX <code>exec</code> family</td>
+                        <td>Replaces the calling process's program image.</td>
+                        <td>It does not create another process. A common pattern is <code>fork()</code> followed by <code>exec()</code> in the child.</td>
+                    </tr>
+                    <tr>
+                        <td>Spawn APIs / Windows <code>CreateProcess()</code></td>
+                        <td>Start a child running a chosen program.</td>
+                        <td>Arguments, environment, and inherited handles must be supplied according to the API.</td>
+                    </tr>
+                    <tr>
+                        <td>Python <code>multiprocessing.Process</code></td>
+                        <td>Starts a Python target function using the selected start method.</td>
+                        <td>Startup and serialization rules depend on the method and Python version.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>After <code>fork()</code>, changing an ordinary variable in the child does not update the parent's variable. Use IPC or explicitly shared memory to exchange changes. The inherited file descriptors can still refer to the same underlying open files or pipes, so closing unused endpoints is part of process setup.</p>
+            <p><strong>Managing Child Processes</strong></p>
+            <p>A parent should manage a child's whole lifetime:</p>
+            <ol>
+                <li>Create the child and set up the IPC channels it needs.</li>
+                <li>Close unused pipe ends or file descriptors in both processes.</li>
+                <li>Exchange work and results, with a clear rule for completion and errors.</li>
+                <li>Request shutdown through a message or signal when appropriate.</li>
+                <li>Wait for termination, inspect the exit status, and release remaining resources.</li>
+            </ol>
+            <p>On POSIX systems, <code>kill()</code> sends a signal; it does not wait for the target to terminate. <code>wait()</code> or <code>waitpid()</code> collects a child's termination status and reaps it. Logs should include process identifiers so events from different children can be correlated.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ready</td>
+                        <td>Able to run, waiting for CPU time.</td>
+                    </tr>
+                    <tr>
+                        <td>Running</td>
+                        <td>Executing on a CPU.</td>
+                    </tr>
+                    <tr>
+                        <td>Sleeping / blocked</td>
+                        <td>Waiting for an event or resource.</td>
                     </tr>
                     <tr>
                         <td>Stopped</td>
-                        <td>The process is suspended.</td>
+                        <td>Suspended, for example by a signal or debugger.</td>
                     </tr>
                     <tr>
                         <td>Zombie</td>
-                        <td>The process has completed but has not been reaped by the parent.</td>
+                        <td>Execution has ended, but termination status has not been collected.</td>
                     </tr>
                 </tbody>
             </table>
@@ -414,6 +422,34 @@ After Parent Terminates:
 [init/subreaper] ---&gt; [Orphan Child Process]</code></pre>
             </div>
             <h3 id="communication-between-processes">Communication Between Processes</h3>
+            <p>Choose an IPC mechanism by what it transfers and how the receiver knows that a complete item has arrived.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mechanism</th>
+                        <th>Transfers</th>
+                        <th>Typical coordination requirement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Pipe or TCP socket</td>
+                        <td>A stream of bytes</td>
+                        <td>Define message boundaries and handle short reads and writes.</td>
+                    </tr>
+                    <tr>
+                        <td>Message queue</td>
+                        <td>Individual messages</td>
+                        <td>Bound queue capacity and define a shutdown message.</td>
+                    </tr>
+                    <tr>
+                        <td>Shared memory</td>
+                        <td>Data in a common memory region</td>
+                        <td>Protect updates and signal when data is ready.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>For a byte stream, one write is not guaranteed to correspond to one read. A receiver might get half a message or several messages together. Use a fixed size, a length prefix, or a delimiter with an escaping rule. A pipe reader sees EOF only after every write endpoint is closed; an inherited endpoint left open can make it wait forever.</p>
             <p>Effective multiprocessing often requires processes to communicate with each other to share data, synchronize actions, or coordinate tasks. There are several methods to facilitate this communication, each with its own advantages and limitations. Choosing the appropriate method depends on factors like the amount of data being transferred, the need for synchronization, and whether the processes are running on the same or different machines.</p>
             <h4 id="message-passing">Message Passing</h4>
             <p>Message passing is a communication method where processes exchange data through messages. This method can be implemented using various Inter-Process Communication (IPC) mechanisms, such as:</p>
@@ -1085,7 +1121,7 @@ key→hash(key) -&gt; next node clockwise</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="alternatives-to-multiprocessing">Alternatives to Multiprocessing</h3>
+            <h3 id="related-deployment-and-architecture-choices">Related Deployment and Architecture Choices</h3>
             <p>Multiprocessing is one way to gain parallelism and isolation, but broader architectural approaches can address some of the same goals. The following options are not direct replacements for operating-system processes—in fact, many use processes internally—but they provide different ways to structure, deploy, isolate, or scale work:</p>
             <h4 id="containers">Containers</h4>
             <p>Containers package applications and their dependencies into isolated runtime environments while sharing the host kernel. They are often used with microservices and deployment platforms to simplify packaging, rollout, and scaling. Advantages include:</p>
@@ -1396,7 +1432,7 @@ int main() {
                 <thead>
                     <tr>
                         <th>No.</th>
-                        <th>Filename</th>
+                        <th>Example or reference</th>
                         <th>Description</th>
                     </tr>
                 </thead>
@@ -1413,8 +1449,8 @@ int main() {
                     </tr>
                     <tr>
                         <td>3</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/exec_process.cpp">exec_process.cpp</a></td>
-                        <td>fork+exec family (execvp/execl/execve), FD_CLOEXEC, pipe+dup2+exec pipeline</td>
+                        <td><a href="https://man7.org/linux/man-pages/man3/exec.3.html">exec family reference</a></td>
+                        <td>Manual for execvp/execl/execve; reference material rather than a repository example</td>
                     </tr>
                     <tr>
                         <td>4</td>
@@ -1428,13 +1464,13 @@ int main() {
                     </tr>
                     <tr>
                         <td>6</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/deadlock.cpp">deadlock.cpp</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/deadlock_antipattern.cpp">deadlock_antipattern.cpp</a></td>
                         <td>⚠️ ANTIPATTERN — circular-wait deadlock; exits via sem_timedwait timeout</td>
                     </tr>
                     <tr>
                         <td>7</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/deadlock_avoidance.cpp">deadlock_avoidance.cpp</a></td>
-                        <td>Lock-ordering fix for deadlock.cpp; both processes acquire locks in same order</td>
+                        <td>Lock-ordering fix for deadlock_antipattern.cpp; both processes acquire locks in same order</td>
                     </tr>
                     <tr>
                         <td>8</td>
@@ -1458,7 +1494,7 @@ int main() {
                     </tr>
                     <tr>
                         <td>12</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/shared_array.cpp">shared_array.cpp</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/shared_array_antipattern.cpp">shared_array_antipattern.cpp</a></td>
                         <td>⚠️ ANTIPATTERN — mmap shared array without synchronization (torn reads/writes)</td>
                     </tr>
                     <tr>
@@ -1488,13 +1524,15 @@ int main() {
                     </tr>
                     <tr>
                         <td>18</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/zombie_process.cpp">zombie_process.cpp</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/zombie_process_antipattern.cpp">zombie_process_antipattern.cpp</a></td>
                         <td>Demonstrate a zombie process scenario</td>
                     </tr>
                 </tbody>
             </table>
             <h4 id="examples-in-python">Examples in Python</h4>
-            <p>In Python, the <code>multiprocessing</code> module creates and manages separate processes. Each process has its own interpreter and ordinary memory space, which provides stronger isolation than threads and allows CPU-bound Python code to run in parallel across cores in CPython.</p>
+            <p>In Python, the <code>multiprocessing</code> module runs work in separate interpreters and address spaces, allowing CPU-bound Python code to use multiple cores.</p>
+            <p><strong>Start methods matter.</strong> <code>spawn</code> starts a fresh interpreter; <code>fork</code> inherits a snapshot of the parent; <code>forkserver</code> asks a separate server to fork children. In Python 3.14, <code>fork</code> is no longer the default anywhere. Windows and macOS use <code>spawn</code>; supported POSIX platforms such as Linux use <code>forkserver</code> by default.</p>
+            <p>For portable examples, define worker functions at module scope, use picklable arguments, and protect process startup with <code>if __name__ == '__main__':</code>. Libraries should accept an appropriate multiprocessing context rather than silently changing the application's global start method. See the <a href="https://docs.python.org/3.14/library/multiprocessing.html#contexts-and-start-methods">Python start-method documentation</a>.</p>
             <h5>Creating Processes</h5>
             <p>To create a new process, the <code>multiprocessing</code> module provides the <code>Process</code> class. You can define a target function and pass it to a <code>Process</code> object, along with any arguments required by the function.</p>
             <div>
@@ -1826,7 +1864,7 @@ workers.forEach((worker, index) =&gt; {
                     </tr>
                     <tr>
                         <td>3</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multiprocessing/03_deadlock.js">deadlock.js</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multiprocessing/03_deadlock_antipattern.js">deadlock.js</a></td>
                         <td>⚠️ ANTIPATTERN: circular lock acquisition causing deadlock; auto-detected after timeout</td>
                     </tr>
                     <tr>
@@ -1876,7 +1914,7 @@ workers.forEach((worker, index) =&gt; {
                     </tr>
                     <tr>
                         <td>13</td>
-                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multiprocessing/13_orphan.js">orphan.js</a></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/js/multiprocessing/13_orphan_antipattern.js">orphan.js</a></td>
                         <td>⚠️ ANTIPATTERN: parent exits before child; child becomes orphan (adopted by init/subreaper)</td>
                     </tr>
                     <tr>

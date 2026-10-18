@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0d1117";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Schema Migrations | Adam Djellouli</title>
+    <meta content="An ORM maps application code to a database schema, but the schema changes over time." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Schema Migrations",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations",
+            "description": "An ORM maps application code to a database schema, but the schema changes over time.",
+            "dateModified": "2026-09-30",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Schema Migrations" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="An ORM maps application code to a database schema, but the schema changes over time." property="og:description" />
+    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" decoding="async" height="66" id="logo-image" src="/resources/brand/logo.webp" width="344"/>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/databases_notes.html">Databases Notes</a></li><li>Orm</li><li><span aria-current="page">Schema Migrations</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#migration-mental-model">Migration mental model</a></li>
+                    <li><a href="#why-migrations-are-necessary">Why migrations are necessary</a></li>
+                    <li><a href="#common-tools">Common tools</a></li>
+                    <li><a href="#alembic-setup-example">Alembic setup example</a></li>
+                    <li><a href="#autogenerate">Autogenerate</a></li>
+                    <li><a href="#applying-migrations">Applying migrations</a></li>
+                    <li><a href="#expand-and-contract">Expand and contract</a>
+                        <ol>
+                            <li><a href="#step-1-expand">Step 1: expand</a></li>
+                            <li><a href="#step-2-backfill">Step 2: backfill</a></li>
+                            <li><a href="#step-3-switch">Step 3: switch</a></li>
+                            <li><a href="#step-4-contract">Step 4: contract</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#adding-a-non-null-column">Adding a non-null column</a></li>
+                    <li><a href="#backfills">Backfills</a></li>
+                    <li><a href="#index-creation">Index creation</a></li>
+                    <li><a href="#migrations-and-transactions">Migrations and transactions</a></li>
+                    <li><a href="#generated-migrations-need-review">Generated migrations need review</a></li>
+                    <li><a href="#migration-dependencies">Migration dependencies</a></li>
+                    <li><a href="#forward-compatibility">Forward compatibility</a></li>
+                    <li><a href="#migration-locks">Migration locks</a></li>
+                    <li><a href="#reversible-does-not-mean-safe">Reversible does not mean safe</a></li>
+                    <li><a href="#database-migrations-in-ci-cd">Database migrations in CI/CD</a></li>
+                    <li><a href="#offline-sql-review">Offline SQL review</a></li>
+                    <li><a href="#production-migration-checklist">Production migration checklist</a></li>
+                    <li><a href="#common-mistakes">Common mistakes</a>
+                        <ol>
+                            <li><a href="#editing-old-migration-files-after-deployment">Editing old migration files after deployment</a></li>
+                            <li><a href="#combining-huge-backfills-with-schema-ddl">Combining huge backfills with schema DDL</a></li>
+                            <li><a href="#dropping-columns-immediately">Dropping columns immediately</a></li>
+                            <li><a href="#trusting-autogenerate-blindly">Trusting autogenerate blindly</a></li>
+                            <li><a href="#running-migrations-automatically-on-every-application-instance">Running migrations automatically on every application instance</a></li>
+                            <li><a href="#ignoring-database-specific-ddl">Ignoring database-specific DDL</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#related-notes">Related notes</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/14_orm/02_popular_orm_tools.html">ORM Tools and Their Trade-offs</a></li><li><a href="/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li><li><a href="/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Object-Relational Mapping</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
+                    <li>
+                        <details>
+                            <summary>Introduction to Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Sql</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Acid Properties and Transactions</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Storage and Indexing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Concurrency Control</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Performance</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Replication</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Nosql Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security Best Practices</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Database Engines</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details open="">
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Schema Migrations</h1>
+            <p>An ORM maps application code to a database schema, but the schema changes over time. <strong>Schema migrations</strong> are versioned changes that move the database from one known structure to another.</p>
+            <p>Typical changes include:</p>
+            <ul>
+                <li>adding or removing a column,</li>
+                <li>creating an index,</li>
+                <li>introducing a new table,</li>
+                <li>renaming a field,</li>
+                <li>splitting one table into two,</li>
+                <li>backfilling derived data,</li>
+                <li>tightening a constraint.</li>
+            </ul>
+            <p>A production migration is not only "make the model class compile." It must preserve live data and remain compatible with application deployments.</p>
+            <h2 id="migration-mental-model">Migration mental model</h2>
+            <p>Suppose version 1 has:</p>
+            <div>
+                <pre><code class="language-text">users
+┌────┬───────────────┐
+│ id │ name          │
+└────┴───────────────┘</code></pre>
+            </div>
+            <p>Version 2 needs an email field:</p>
+            <div>
+                <pre><code class="language-text">users
+┌────┬───────────────┬─────────────────────┐
+│ id │ name          │ email               │
+└────┴───────────────┴─────────────────────┘</code></pre>
+            </div>
+            <p>The migration history might be:</p>
+            <div>
+                <pre><code class="language-text">001_create_users
+        │
+        ▼
+002_add_email
+        │
+        ▼
+003_unique_email</code></pre>
+            </div>
+            <p>Each database instance records which revisions have already been applied.</p>
+            <h2 id="why-migrations-are-necessary">Why migrations are necessary</h2>
+            <p>This is useful in a demo:</p>
+            <div>
+                <pre><code class="language-python">Base.metadata.create_all(engine)</code></pre>
+            </div>
+            <p>It creates missing objects, but it does not describe a safe history of how an existing production database should change.</p>
+            <p>For example, <code>create_all()</code> does not tell you how to:</p>
+            <ul>
+                <li>rename a populated column,</li>
+                <li>backfill data before making it non-null,</li>
+                <li>migrate one representation into another,</li>
+                <li>build an index safely on a large table,</li>
+                <li>coordinate two application versions during deployment.</li>
+            </ul>
+            <p>Migrations make those changes explicit and reviewable.</p>
+            <h2 id="common-tools">Common tools</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ecosystem</th>
+                        <th>Typical migration tool</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>SQLAlchemy</td>
+                        <td>Alembic</td>
+                    </tr>
+                    <tr>
+                        <td>Django</td>
+                        <td>built-in migrations</td>
+                    </tr>
+                    <tr>
+                        <td>Entity Framework Core</td>
+                        <td>EF Core migrations</td>
+                    </tr>
+                    <tr>
+                        <td>Rails</td>
+                        <td>Active Record migrations</td>
+                    </tr>
+                    <tr>
+                        <td>Prisma</td>
+                        <td>Prisma Migrate</td>
+                    </tr>
+                    <tr>
+                        <td>Java projects</td>
+                        <td>Flyway or Liquibase are common</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The exact tooling differs, but the operational problems are similar.</p>
+            <h2 id="alembic-setup-example">Alembic setup example</h2>
+            <p>For a SQLAlchemy project:</p>
+            <div>
+                <pre><code class="language-bash">python -m venv .venv
+source .venv/bin/activate
+python -m pip install sqlalchemy alembic</code></pre>
+            </div>
+            <p>Initialize migration files:</p>
+            <div>
+                <pre><code class="language-bash">alembic init migrations</code></pre>
+            </div>
+            <p>Typical layout:</p>
+            <div>
+                <pre><code class="language-text">project/
+├── alembic.ini
+├── app/
+│   └── models.py
+└── migrations/
+    ├── env.py
+    └── versions/</code></pre>
+            </div>
+            <p>Configure the database URL in <code>alembic.ini</code> or application configuration, then expose your SQLAlchemy metadata in <code>migrations/env.py</code>.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-python">from app.models import Base
+
+target_metadata = Base.metadata</code></pre>
+            </div>
+            <h2 id="autogenerate">Autogenerate</h2>
+            <p>After changing a mapped model:</p>
+            <div>
+                <pre><code class="language-python">class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(255))</code></pre>
+            </div>
+            <p>Generate a candidate migration:</p>
+            <div>
+                <pre><code class="language-bash">alembic revision --autogenerate -m "add user email"</code></pre>
+            </div>
+            <p>Then inspect the generated file.</p>
+            <p>A typical migration contains:</p>
+            <div>
+                <pre><code class="language-python">def upgrade() -&gt; None:
+    op.add_column(
+        "users",
+        sa.Column("email", sa.String(length=255), nullable=True),
+    )
+
+
+def downgrade() -&gt; None:
+    op.drop_column("users", "email")</code></pre>
+            </div>
+            <p>Alembic's documentation describes autogeneration as producing <strong>candidate</strong> migrations by comparing database state with application metadata. Those candidates should be reviewed and adjusted by hand.</p>
+            <h2 id="applying-migrations">Applying migrations</h2>
+            <p>Apply everything up to the newest revision:</p>
+            <div>
+                <pre><code class="language-bash">alembic upgrade head</code></pre>
+            </div>
+            <p>Show current revision:</p>
+            <div>
+                <pre><code class="language-bash">alembic current</code></pre>
+            </div>
+            <p>Show history:</p>
+            <div>
+                <pre><code class="language-bash">alembic history</code></pre>
+            </div>
+            <p>Move one revision backward:</p>
+            <div>
+                <pre><code class="language-bash">alembic downgrade -1</code></pre>
+            </div>
+            <p>A downgrade path can be useful in development, but production rollback is not always safe. If a migration destroys data, recreating the old schema does not restore the deleted values.</p>
+            <h2 id="expand-and-contract">Expand and contract</h2>
+            <p>The safest production migrations often avoid changing application expectations in one step.</p>
+            <p>Suppose <code>users.name</code> should become <code>display_name</code>.</p>
+            <p>A risky deployment is:</p>
+            <div>
+                <pre><code class="language-text">migration renames column
+        │
+        ▼
+old application still expects "name"
+        │
+        ▼
+requests fail</code></pre>
+            </div>
+            <p>An <strong>expand-and-contract</strong> deployment separates the change.</p>
+            <h3 id="step-1-expand">Step 1: expand</h3>
+            <p>Add the new field while keeping the old one.</p>
+            <div>
+                <pre><code class="language-text">users
+├── name
+└── display_name</code></pre>
+            </div>
+            <p>Deploy application code that can work with both.</p>
+            <h3 id="step-2-backfill">Step 2: backfill</h3>
+            <p>Copy old data:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE users
+SET display_name = name
+WHERE display_name IS NULL;</code></pre>
+            </div>
+            <h3 id="step-3-switch">Step 3: switch</h3>
+            <p>Deploy code that reads and writes only <code>display_name</code>.</p>
+            <h3 id="step-4-contract">Step 4: contract</h3>
+            <p>After old application versions are gone, remove <code>name</code>.</p>
+            <div>
+                <pre><code class="language-text">schema v1        expanded          new app stable      contracted
+name      ───►   name            display_name  ───►   display_name
+                 display_name</code></pre>
+            </div>
+            <p>This pattern is especially useful in rolling deployments where multiple application versions coexist.</p>
+            <h2 id="adding-a-non-null-column">Adding a non-null column</h2>
+            <p>This innocent-looking migration can be dangerous on a populated table:</p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE users
+ADD COLUMN country VARCHAR(2) NOT NULL;</code></pre>
+            </div>
+            <p>Existing rows have no value.</p>
+            <p>A safer sequence is often:</p>
+            <div>
+                <pre><code class="language-text">1. add nullable column
+2. deploy writers that populate it
+3. backfill historical rows
+4. verify no nulls remain
+5. add NOT NULL constraint</code></pre>
+            </div>
+            <p>SQL:</p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE users
+ADD COLUMN country VARCHAR(2);
+
+UPDATE users
+SET country = 'US'
+WHERE country IS NULL;
+
+ALTER TABLE users
+ALTER COLUMN country SET NOT NULL;</code></pre>
+            </div>
+            <p>The exact syntax and locking behavior depend on the database engine.</p>
+            <h2 id="backfills">Backfills</h2>
+            <p>A <strong>schema migration</strong> changes structure. A <strong>data migration</strong> changes stored values.</p>
+            <p>Examples:</p>
+            <ul>
+                <li>populate a new derived field,</li>
+                <li>normalize old enum values,</li>
+                <li>copy data into a new table,</li>
+                <li>calculate hashes,</li>
+                <li>convert legacy units.</li>
+            </ul>
+            <p>Large backfills should not automatically happen in one giant transaction.</p>
+            <p>Problem:</p>
+            <div>
+                <pre><code class="language-text">UPDATE 500 million rows
+        │
+        ├── long locks
+        ├── huge transaction log
+        ├── replication lag
+        └── difficult rollback</code></pre>
+            </div>
+            <p>Better:</p>
+            <div>
+                <pre><code class="language-text">batch 1 -&gt; commit
+batch 2 -&gt; commit
+batch 3 -&gt; commit
+...</code></pre>
+            </div>
+            <p>Use checkpoints so the backfill can resume.</p>
+            <h2 id="index-creation">Index creation</h2>
+            <p>Adding an index can be expensive.</p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_orders_created_at
+ON orders(created_at);</code></pre>
+            </div>
+            <p>On a large production table, database-specific online or concurrent index creation features may be preferable.</p>
+            <p>For example, PostgreSQL supports:</p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX CONCURRENTLY ...</code></pre>
+            </div>
+            <p>That has its own restrictions and transaction behavior, so migration tools sometimes require special handling.</p>
+            <p>Always understand the target database rather than assuming all DDL behaves the same way.</p>
+            <h2 id="migrations-and-transactions">Migrations and transactions</h2>
+            <p>Different databases treat DDL differently.</p>
+            <p>PostgreSQL supports transactional behavior for many DDL operations.</p>
+            <p>MySQL has operations that can implicitly commit or use online DDL mechanisms depending on operation and version.</p>
+            <p>SQLite may need a move-and-copy strategy for some table alterations. Alembic includes a batch migration mode designed for this class of operation.</p>
+            <p>The migration framework cannot erase engine-specific behavior.</p>
+            <h2 id="generated-migrations-need-review">Generated migrations need review</h2>
+            <p>Autogeneration can detect many structural differences, but it cannot reliably understand intent.</p>
+            <p>Suppose the model changes:</p>
+            <div>
+                <pre><code class="language-text">old: first_name
+new: given_name</code></pre>
+            </div>
+            <p>A tool may interpret this as:</p>
+            <div>
+                <pre><code class="language-text">DROP first_name
+ADD given_name</code></pre>
+            </div>
+            <p>But the intended operation is:</p>
+            <div>
+                <pre><code class="language-text">RENAME first_name TO given_name</code></pre>
+            </div>
+            <p>Those operations have very different data-loss consequences.</p>
+            <p>Review every generated migration.</p>
+            <h2 id="migration-dependencies">Migration dependencies</h2>
+            <p>A migration must match the application version that expects it.</p>
+            <p>A safe deployment plan might be:</p>
+            <div>
+                <pre><code class="language-text">migration A: add optional column
+        │
+        ▼
+deploy app version 2
+        │
+        ▼
+backfill data
+        │
+        ▼
+migration B: enforce constraint</code></pre>
+            </div>
+            <p>Do not assume deployment is atomic across every server.</p>
+            <h2 id="forward-compatibility">Forward compatibility</h2>
+            <p>During a rolling deploy:</p>
+            <div>
+                <pre><code class="language-text">server 1 -&gt; app v1
+server 2 -&gt; app v1
+server 3 -&gt; app v2
+server 4 -&gt; app v2</code></pre>
+            </div>
+            <p>The database schema must temporarily support both versions.</p>
+            <p>This is why destructive migrations usually happen after new code has fully replaced old code.</p>
+            <h2 id="migration-locks">Migration locks</h2>
+            <p>DDL can block other database work.</p>
+            <p>Possible effects:</p>
+            <ul>
+                <li>table locks,</li>
+                <li>blocked writes,</li>
+                <li>lock queues,</li>
+                <li>transaction timeouts,</li>
+                <li>replication delay.</li>
+            </ul>
+            <p>Before running a migration on a large table, investigate:</p>
+            <ol>
+                <li>lock level,</li>
+                <li>expected duration,</li>
+                <li>table size,</li>
+                <li>write rate,</li>
+                <li>replica behavior,</li>
+                <li>rollback/recovery plan.</li>
+            </ol>
+            <h2 id="reversible-does-not-mean-safe">Reversible does not mean safe</h2>
+            <p>A migration can define a <code>downgrade()</code> but still lose information.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">upgrade:
+DROP COLUMN legacy_code
+
+downgrade:
+ADD COLUMN legacy_code</code></pre>
+            </div>
+            <p>The column structure comes back, but its values do not.</p>
+            <p>For destructive changes, recovery may require backups or a forward repair migration.</p>
+            <h2 id="database-migrations-in-ci-cd">Database migrations in CI/CD</h2>
+            <p>A common workflow is:</p>
+            <div>
+                <pre><code class="language-text">pull request
+    │
+    ▼
+migration generated
+    │
+    ▼
+review SQL / operations
+    │
+    ▼
+run against temporary database
+    │
+    ▼
+application tests
+    │
+    ▼
+deploy</code></pre>
+            </div>
+            <p>Useful automated checks include:</p>
+            <ul>
+                <li>migration chain has one expected head,</li>
+                <li>empty database can migrate from zero,</li>
+                <li>production-like schema can upgrade,</li>
+                <li>migration does not accidentally drop important objects,</li>
+                <li>application starts after migration.</li>
+            </ul>
+            <h2 id="offline-sql-review">Offline SQL review</h2>
+            <p>Some tools can render migration SQL without applying it.</p>
+            <p>Alembic supports SQL-generation workflows for migrations where teams want to inspect statements before execution.</p>
+            <p>This is useful in organizations where:</p>
+            <ul>
+                <li>DBAs review DDL,</li>
+                <li>production access is restricted,</li>
+                <li>migration SQL is executed through a separate deployment system.</li>
+            </ul>
+            <h2 id="production-migration-checklist">Production migration checklist</h2>
+            <p>Before applying a migration:</p>
+            <ol>
+                <li>What exact SQL or database operations will run?</li>
+                <li>Does it lock a hot table?</li>
+                <li>How much data will be touched?</li>
+                <li>Can old application versions keep running?</li>
+                <li>Does a backfill need batching?</li>
+                <li>What happens on replicas?</li>
+                <li>Is the migration idempotent or restartable?</li>
+                <li>What happens if it fails halfway?</li>
+                <li>Is rollback actually possible?</li>
+                <li>Is a backup or restore point needed?</li>
+            </ol>
+            <h2 id="common-mistakes">Common mistakes</h2>
+            <h3 id="editing-old-migration-files-after-deployment">Editing old migration files after deployment</h3>
+            <p>Applied migration history should be treated as immutable. Add a new migration instead.</p>
+            <h3 id="combining-huge-backfills-with-schema-ddl">Combining huge backfills with schema DDL</h3>
+            <p>Separate operationally risky steps.</p>
+            <h3 id="dropping-columns-immediately">Dropping columns immediately</h3>
+            <p>Wait until old application versions no longer need them.</p>
+            <h3 id="trusting-autogenerate-blindly">Trusting autogenerate blindly</h3>
+            <p>A tool sees structural differences, not business intent.</p>
+            <h3 id="running-migrations-automatically-on-every-application-instance">Running migrations automatically on every application instance</h3>
+            <p>Multiple replicas may race to modify the schema. Production systems usually centralize migration execution.</p>
+            <h3 id="ignoring-database-specific-ddl">Ignoring database-specific DDL</h3>
+            <p>ORM portability does not imply migration portability.</p>
+            <h2 id="related-notes">Related notes</h2>
+            <ul>
+                <li><a href="01_introduction_to_orm.html">Introduction to ORM</a></li>
+                <li><a href="02_popular_orm_tools.html">ORM tools and their trade-offs</a></li>
+                <li><a href="04_relationship_loading_and_query_performance.html">Relationship loading and query performance</a></li>
+                <li><a href="05_transactions_concurrency_and_unit_of_work.html">Transactions, concurrency, and unit of work</a></li>
+                <li><a href="https://github.com/djeada/Databases-Notes/blob/main/notes/04_acid_properties_and_transactions">Transactions and ACID</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

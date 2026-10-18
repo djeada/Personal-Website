@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/2_systems_of_equations/lu_decomposition",
             "description": "LU Decomposition (or LU Factorization) is a powerful and widely used technique in numerical linear algebra for solving systems of linear equations,\u2026",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/bff6e465-54b0-49b6-b53e-c8061217bf9b-6a10b747e8.webp",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="LU Decomposition (or LU Factorization) is a powerful and widely used technique in numerical linear algebra for solving systems of linear equations,…" property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/bff6e465-54b0-49b6-b53e-c8061217bf9b-6a10b747e8.webp" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -234,7 +234,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -288,7 +288,7 @@ messageStyle: "none"
                 0 &amp; 0 &amp; 0 &amp; \cdots &amp; u_{nn}
                 \end{bmatrix}
                 $$</p>
-            <p>Here, $L$ is lower-triangular with ones on the diagonal, and $U$ is upper-triangular. The factorization is not always guaranteed to exist unless certain conditions are met (e.g., no zero pivots without partial pivoting, or $A$ being nonsingular and well-conditioned).</p>
+            <p>Here, $L$ is lower-triangular with ones on the diagonal, and $U$ is upper-triangular. The factorization is not always guaranteed to exist unless certain conditions are met (e.g., all leading principal minors of $A$ being nonzero when no pivoting is used; with partial pivoting, a factorization $PA = LU$ exists for every nonsingular $A$).</p>
             <h3 id="derivation">Derivation</h3>
             <p>The derivation of the LU decomposition closely follows the steps of Gaussian elimination. Gaussian elimination transforms the matrix $A$ into an upper-triangular matrix by adding multiples of one row to another. These multipliers can be stored in the entries of a lower-triangular matrix $L$.</p>
             <p>Starting from:</p>
@@ -322,7 +322,17 @@ messageStyle: "none"
             <p>Backward substitution for $U\mathbf{x} = \mathbf{c}$:</p>
             <p>For $i = n$ down to $1$:</p>
             <p>$$x_i = \frac{c_i - \sum_{k=i+1}^{n} u_{ik}x_{k}}{u_{ii}}.$$</p>
+            <p>V. <strong>Partial pivoting (what the implementation does)</strong>:</p>
+            <p>The steps above assume every pivot $u_{ii}$ is nonzero. The implementation instead performs partial pivoting: at step $i$ it swaps row $i$ with the row $p \geq i$ whose entry in column $i$ has the largest absolute value, recording the swap in a permutation matrix $P$ (and in the already computed columns of $L$), and then eliminates as before. The result is the factorization</p>
+            <p>$$PA = LU,$$</p>
+            <p>with $L$ unit lower-triangular, $U$ upper-triangular and $P$ a permutation matrix, returned as <code>(P, L, U)</code>. If the largest available pivot is not larger than $n\,\varepsilon_{\text{mach}}\max_{ij}|a_{ij}|$ the matrix is treated as singular and an error is raised.</p>
+            <p>Solving $A\mathbf{x}=\mathbf{b}$ then reads $PA\mathbf{x} = P\mathbf{b}$, so forward substitution is applied to $P\mathbf{b}$:</p>
+            <p>$$L\mathbf{c} = P\mathbf{b}, \qquad U\mathbf{x} = \mathbf{c}.$$</p>
+            <p>The determinant follows from $\det(P)\det(A) = \det(L)\det(U)$. Since $\det(L)=1$ and $\det(P) = (-1)^s$ where $s$ is the number of row swaps,</p>
+            <p>$$\det(A) = (-1)^{s}\prod_{i=1}^{n} u_{ii}.$$</p>
+            <p>(Without pivoting, $s=0$ and this reduces to $\det(A)=\prod u_{ii}$.)</p>
             <h3 id="example">Example</h3>
+            <p>The example below is worked without pivoting (so $P = I$) to keep the arithmetic simple. The implementation, with partial pivoting, would first swap rows 1 and 2 (the entry $3$ is the largest in the first column) and so produce a different, equally valid factorization $PA = LU$; the solution $\mathbf{x}$ is the same.</p>
             <p>Consider the system of equations:</p>
             <p>$$
                 \begin{aligned}
@@ -446,7 +456,7 @@ messageStyle: "none"
             <ul>
                 <li>Once $A = LU$ is computed, <strong>solving multiple systems $A\mathbf{x} = \mathbf{b}$</strong> becomes efficient, as only forward and backward substitution are required for each new right-hand-side vector $\mathbf{b}$. This is particularly beneficial in applications requiring repeated solves with the same matrix $A$.</li>
                 <li>LU decomposition organizes the <strong>elimination steps into the matrices $L$ (lower triangular) and $U$ (upper triangular)</strong>, simplifying the process and providing a structured representation of the system. Partial pivoting can be incorporated, enhancing numerical stability for a wide range of problems.</li>
-                <li>It allows for the efficient computation of <strong>matrix determinants</strong> (via $\det(A) = \prod u_{ii}$) and matrix inverses, and serves as a building block for advanced numerical techniques, such as eigenvalue computations and solving partial differential equations.</li>
+                <li>It allows for the efficient computation of <strong>matrix determinants</strong> (via $\det(A) = (-1)^{s}\prod u_{ii}$, where $s$ is the number of row swaps in $PA = LU$; $s=0$ without pivoting) and matrix inverses, and serves as a building block for advanced numerical techniques, such as eigenvalue computations and solving partial differential equations.</li>
             </ul>
             <h3 id="limitations">Limitations</h3>
             <ul>

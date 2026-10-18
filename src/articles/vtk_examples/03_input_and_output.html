@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/03_input_and_output",
             "description": "Input/output is where VTK starts being a tool you can actually plug into real workflows.",
-            "dateModified": "2026-03-27",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/vtk_examples/03_input_and_output" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Input/output is where VTK starts being a tool you can actually plug into real workflows." property="og:description" />
-    <meta content="2026-03-27" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -124,11 +124,13 @@
                     <li><a href="#reading-and-writing-data">Reading and Writing Data</a>
                         <ol>
                             <li><a href="#subclasses-for-data-reading-and-writing">Subclasses for Data Reading and Writing</a></li>
-                            <li><a href="#example">Example</a>
-                                <ol>
-                                    <li><a href="#readers-and-writers-comparison">Readers and Writers Comparison</a></li>
-                                </ol>
-                            </li>
+                            <li><a href="#example">Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#readers-and-writers-comparison">Readers and Writers Comparison</a></li>
+                    <li><a href="#round-trip-validation-vtp-with-a-point-attribute">Round-trip validation: VTP with a point attribute</a>
+                        <ol>
+                            <li><a href="#choose-a-format-based-on-what-must-survive">Choose a format based on what must survive</a></li>
                         </ol>
                     </li>
                 </ol>
@@ -150,7 +152,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: March 27, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -170,19 +172,18 @@
                     </button></div>
             </div>
             <h1>Input and Output</h1>
-            <p>Input/output is where VTK starts being a tool you can actually plug into real workflows. Your data almost never starts life inside VTK, it comes from scanners, simulators, CAD tools, or research pipelines. So the ability to read reliably, preserve attributes, and write back out in the right format is what makes your visualizations reproducible and shareable.</p>
+            <p>Input/output is where VTK starts being a tool you can actually plug into real workflows. Data rarely originates inside VTK; it usually comes from scanners, simulators, CAD tools, or research pipelines. So the ability to read reliably, preserve attributes, and write back out in the right format is what makes your visualizations reproducible and shareable.</p>
             <p>VTK offers a comprehensive suite of tools for reading and writing a variety of data formats. This includes the native VTK file formats (legacy and XML-based), as well as numerous third-party formats.</p>
             <p>A useful way to think about it: file formats are not just “containers,” they encode assumptions, what kind of dataset it is, how connectivity is represented, and which attributes are supported. When a file load “works” but looks wrong, it’s usually because something about those assumptions didn’t match your expectations.</p>
             <p><strong>Do</strong> treat file I/O as part of your pipeline design, not a last-minute step.
                 <strong>Don’t</strong> assume every format preserves every attribute (normals, scalars, materials, units, time steps, etc.) the same way.
             </p>
-            <h3 id="common-file-formats">Common File Formats</h3>
-            <p>VTK supports an extensive range of data formats, including:</p>
-            <p>Before diving into formats, here’s the big “why”: the <em>best</em> format depends on what you care about most, human readability, storage size, speed, compatibility, or rich metadata. That’s why VTK still supports both the old legacy format and the newer XML formats, plus popular third-party mesh standards.</p>
+            <h2 id="common-file-formats">Common File Formats</h2>
+            <p>Before comparing formats, here’s the key question: the <em>best</em> format depends on what you care about most, human readability, storage size, speed, compatibility, or rich metadata. That’s why VTK still supports both the old legacy format and the newer XML formats, plus popular third-party mesh standards.</p>
             <p><strong>Do</strong> pick the format that matches your goal (debugging vs production vs interoperability).
                 <strong>Don’t</strong> default to the first one that loads, your future self will thank you for choosing intentionally.
             </p>
-            <h4 id="i-legacy-vtk-file-format">I. Legacy VTK File Format</h4>
+            <h3 id="i-legacy-vtk-file-format">I. Legacy VTK File Format</h3>
             <ul>
                 <li><strong>Nature</strong>: ASCII or binary.</li>
                 <li><strong>Features</strong>: Supports various data structures and attributes.</li>
@@ -211,7 +212,7 @@ POLYGONS 6 30
 4 0 1 2 3
 ...</code></pre>
             </div>
-            <h4 id="ii-xml-based-vtk-file-format">II. XML-Based VTK File Format</h4>
+            <h3 id="ii-xml-based-vtk-file-format">II. XML-Based VTK File Format</h3>
             <ul>
                 <li><strong>Nature</strong>: ASCII or binary, offering enhanced flexibility and extensibility.</li>
                 <li><strong>Features</strong>: Supports a diverse range of data structures and attributes.</li>
@@ -242,7 +243,7 @@ POLYGONS 6 30
   &lt;/PolyData&gt;
 &lt;/VTKFile&gt;</code></pre>
             </div>
-            <h4 id="iii-third-party-file-formats">III. Third-Party File Formats</h4>
+            <h3 id="iii-third-party-file-formats">III. Third-Party File Formats</h3>
             <ul>
                 <li><strong>Scope</strong>: VTK interfaces seamlessly with many popular 3D graphics and scientific visualization file formats.</li>
                 <li><strong>STL</strong>: Predominantly used in 3D printing and CAD exchange. Stores only triangle geometry (no colors, normals arrays, or cell data). Available in ASCII and binary variants.</li>
@@ -283,22 +284,22 @@ end_header
 3 0 1 2
 ...</code></pre>
             </div>
-            <h3 id="reading-and-writing-data">Reading and Writing Data</h3>
+            <h2 id="reading-and-writing-data">Reading and Writing Data</h2>
             <p>I/O in VTK is designed to feel consistent: you pick a reader or writer class for a format, set the filename, connect the pipeline, and execute. That consistency is the real quality-of-life feature, once you learn one reader/writer pair, you’ve basically learned the pattern for dozens.</p>
-            <p>There is a suite of subclasses derived from <code>vtkDataReader</code> and <code>vtkDataWriter</code>. These subclasses are specialized for handling various VTK data structures, emphasizing efficient and accurate data manipulation. The design ensures flexibility in reading and writing different types of data while maintaining the robustness of data integrity and format compatibility.</p>
+            <p>VTK provides format-specific readers and writers. Legacy VTK formats use classes such as <code>vtkPolyDataReader</code> and <code>vtkPolyDataWriter</code>; XML formats use separate classes such as <code>vtkXMLPolyDataReader</code> and <code>vtkXMLPolyDataWriter</code>.</p>
             <p>The important “why” behind the subclass approach: different dataset types need different handling. Writing <code>vtkPolyData</code> is not the same as writing <code>vtkImageData</code>, and mixing them up tends to fail loudly, or worse, appear to work while silently dropping information.</p>
             <p><strong>Do</strong> match the reader/writer to the dataset type you expect.
                 <strong>Don’t</strong> ignore the output type, knowing whether you got <code>vtkPolyData</code> vs <code>vtkUnstructuredGrid</code> determines what filters you can apply next.
             </p>
-            <h4 id="subclasses-for-data-reading-and-writing">Subclasses for Data Reading and Writing</h4>
-            <p>Each subclass under <code>vtkDataReader</code> and <code>vtkDataWriter</code> is tailored for specific data structures, facilitating precise and optimized read/write operations:</p>
+            <h3 id="subclasses-for-data-reading-and-writing">Subclasses for Data Reading and Writing</h3>
+            <p>Common legacy reader/writer pairs are:</p>
             <ul>
                 <li><strong>vtkPolyDataReader</strong> and <strong>vtkPolyDataWriter</strong>: For handling polygonal data, commonly used in 3D graphics and modeling.</li>
                 <li><strong>vtkStructuredPointsReader</strong> and <strong>vtkStructuredPointsWriter</strong>: Optimized for structured point datasets, where data is arranged in a regular grid.</li>
                 <li><strong>vtkStructuredGridReader</strong> and <strong>vtkStructuredGridWriter</strong>: Suitable for structured grid data, a step above structured points in complexity, allowing for non-uniform grids.</li>
                 <li><strong>vtkUnstructuredGridReader</strong> and <strong>vtkUnstructuredGridWriter</strong>: Designed for unstructured grid data, which is the most flexible, accommodating irregularly spaced data points.</li>
             </ul>
-            <h4 id="example">Example</h4>
+            <h3 id="example">Example</h3>
             <p>This example is a great “real life” scenario: you get something common and portable (STL), but you want to bring it into the VTK world so you can run filters, add attributes, and keep a pipeline consistent. Converting to a VTK-native format is often the first step in building a repeatable workflow.</p>
             <p><strong>Do</strong> treat conversion scripts like this as reusable utilities in your toolbox.
                 <strong>Don’t</strong> forget what STL represents: it’s primarily a surface triangle mesh, so you shouldn’t expect volumetric cells or rich per-point attributes unless you add them later.
@@ -436,6 +437,75 @@ vtk_writer.Write()</code></pre>
                     </tr>
                 </tbody>
             </table>
+            <h2 id="round-trip-validation-vtp-with-a-point-attribute">Round-trip validation: VTP with a point attribute</h2>
+            <p>A successful write does not prove that reading the file will reconstruct the intended dataset. A useful check is to compare invariants: dataset type, point/cell counts, array names, component counts, and relevant bounds.</p>
+            <p>~~~python
+                from pathlib import Path
+                from tempfile import TemporaryDirectory
+                import vtk</p>
+            <p>source = vtk.vtkSphereSource()
+                source.Update()
+                mesh = source.GetOutput()</p>
+            <p>intensity = vtk.vtkFloatArray()
+                intensity.SetName("intensity")
+                intensity.SetNumberOfTuples(mesh.GetNumberOfPoints())
+                for i in range(mesh.GetNumberOfPoints()):
+                intensity.SetValue(i, float(i))
+                mesh.GetPointData().AddArray(intensity)</p>
+            <p>with TemporaryDirectory() as directory:
+                filename = str(Path(directory) / "surface.vtp")
+                writer = vtk.vtkXMLPolyDataWriter()
+                writer.SetFileName(filename)
+                writer.SetInputData(mesh)
+                assert writer.Write() == 1</p>
+            <pre><code class="language-none">reader = vtk.vtkXMLPolyDataReader()
+reader.SetFileName(filename)
+reader.Update()
+loaded = reader.GetOutput()
+assert loaded.GetNumberOfPoints() == mesh.GetNumberOfPoints()
+values = loaded.GetPointData().GetArray("intensity")
+assert values is not None
+assert values.GetNumberOfTuples() == loaded.GetNumberOfPoints()
+</code></pre>
+            <p>~~~</p>
+            <h3 id="choose-a-format-based-on-what-must-survive">Choose a format based on what must survive</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Typical choice</th>
+                        <th>Limitation or check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Polygonal surface and numeric attributes</td>
+                        <td><code>.vtp</code></td>
+                        <td>Verify point/cell arrays after reload</td>
+                    </tr>
+                    <tr>
+                        <td>Mixed volumetric elements</td>
+                        <td><code>.vtu</code></td>
+                        <td>Check cell types and connectivity</td>
+                    </tr>
+                    <tr>
+                        <td>Regularly sampled voxel grid</td>
+                        <td><code>.vti</code></td>
+                        <td>Record origin and spacing</td>
+                    </tr>
+                    <tr>
+                        <td>Surface interchange with 3D-printing tools</td>
+                        <td><code>.stl</code></td>
+                        <td>General VTK arrays are not preserved</td>
+                    </tr>
+                    <tr>
+                        <td>Multiple datasets in one collection</td>
+                        <td><code>.vtm</code></td>
+                        <td>Each block retains its own type</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>File extensions are not a substitute for checking the actual data type. In particular, STL is primarily a triangle-surface exchange format, not an attribute-rich CFD format. Document coordinate systems and physical units separately when the chosen format cannot store them reliably.</p>
         </article-section>
     </div>
     </main>

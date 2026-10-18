@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect",
             "description": "Input redirection (<) allows a command to read from a file, while output redirection (>) sends a command's output to a file.",
-            "dateModified": "2026-06-01",
+            "dateModified": "2026-10-17",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Input redirection (&lt;) allows a command to read from a file, while output redirection (&gt;) sends a command's output to a file." property="og:description" />
-    <meta content="2026-06-01" property="article:modified_time" />
+    <meta content="2026-10-17" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -210,7 +210,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: June 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -347,6 +347,7 @@ echo "World!" &gt;&gt; file.txt</code></pre>
                 <pre><code class="language-bash">command &amp;&gt; output.txt
 command &amp;&gt;&gt; output.txt</code></pre>
             </div>
+            <p>These combined operators are Bash syntax. The portable forms are <code>command &gt; output.txt 2&gt;&amp;1</code> and <code>command &gt;&gt; output.txt 2&gt;&amp;1</code>. Redirections are processed left to right: <code>command 2&gt;&amp;1 &gt; output.txt</code> leaves stderr pointing to the original stdout instead of sending both streams to the file.</p>
             <h4 id="iv-redirecting-standard-input">IV. Redirecting Standard Input</h4>
             <p>The <code>&lt;</code> symbol redirects the standard input of a command to come from a file instead of the keyboard. For example:</p>
             <div>
@@ -369,6 +370,7 @@ of text.
 EOF</code></pre>
             </div>
             <p>In this example, everything between <code>&lt;&lt;EOF</code> and <code>EOF</code> is treated as input to the <code>cat</code> command. The delimiter <code>EOF</code> can be replaced with any token, and it marks the end of the input block.</p>
+            <p>With an unquoted delimiter, the shell expands variables and command substitutions in the body. Use <code>cat &lt;&lt;'EOF'</code> when you want literal text, such as a configuration example containing <code>$variables</code>.</p>
             <h4 id="vii-view-and-save-output-simultaneously">VII. View and Save Output Simultaneously</h4>
             <p>The <code>tee</code> command is useful for displaying output on the screen while also saving it to a file:</p>
             <div>
@@ -381,7 +383,7 @@ command | tee -a output.txt   # append to the file</code></pre>
                 <pre><code class="language-bash">output=$(script -c your_command /dev/null)
 echo "$output"</code></pre>
             </div>
-            <p>Here, the <code>-c</code> option specifies the command to run, while <code>/dev/null</code> discards any input. The result is captured in the <code>output</code> variable.</p>
+            <p>Here, <code>script -c</code> runs the command through a pseudoterminal, which can change its buffering behavior. <code>/dev/null</code> is the destination for the saved typescript, not a discarded input stream. Command substitution captures terminal output only after the command finishes and strips trailing newlines. For live output, run <code>script -q -c 'your_command' /dev/null</code>; terminal control sequences may still be present.</p>
             <h4 id="summary-table">Summary Table</h4>
             <table>
                 <thead>
@@ -502,9 +504,9 @@ echo "$output"</code></pre>
             <h4 id="feeding-command-output-to-commands-that-expect-files">Feeding Command Output to Commands That Expect Files</h4>
             <p>Some commands accept only file arguments and cannot read from standard input. Process substitution bridges that gap:</p>
             <div>
-                <pre><code class="language-bash">paste &lt;(cut -f1 data.csv) &lt;(cut -f3 data.csv)</code></pre>
+                <pre><code class="language-bash">paste &lt;(cut -d, -f1 data.csv) &lt;(cut -d, -f3 data.csv)</code></pre>
             </div>
-            <p>This extracts the first and third columns from <code>data.csv</code> and pastes them side by side.</p>
+            <p>This extracts the first and third comma-separated fields and pastes them side by side with a tab between them. It works for simple delimiter-separated text; <code>cut</code> does not understand CSV quoting or embedded commas. For tab-separated input, omit <code>-d,</code>.</p>
             <h4 id="output-process-substitution">Output Process Substitution</h4>
             <p>The <code>&gt;(command)</code> form redirects output into another command's standard input via a file descriptor:</p>
             <div>

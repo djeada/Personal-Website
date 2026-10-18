@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware",
             "description": "Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time.",
-            "dateModified": "2026-09-12",
+            "dateModified": "2026-10-12",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +59,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time." property="og:description" />
-    <meta content="2026-09-12" property="article:modified_time" />
+    <meta content="2026-10-12" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,6 +114,7 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
+                    <li><a href="#hardware-and-software-vocabulary">Hardware and Software Vocabulary</a></li>
                     <li><a href="#ways-of-achieving-parallelism">Ways of Achieving Parallelism</a></li>
                     <li><a href="#single-core-cpu">Single-Core CPU</a>
                         <ol>
@@ -168,7 +169,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -189,6 +190,45 @@
             </div>
             <h1>Hardware in Parallel Computing</h1>
             <p>Parallel computing uses multiple hardware execution resources to make progress on more than one operation at a time. Those resources may exist inside one CPU core, across several cores or processor sockets, on a GPU, or across multiple networked machines. The useful performance gain depends not only on how much work can run in parallel, but also on memory bandwidth, communication cost, synchronization, and how well the workload matches the hardware.</p>
+            <h3 id="hardware-and-software-vocabulary">Hardware and Software Vocabulary</h3>
+            <p>A software thread is work to schedule; a hardware execution resource is where that work runs.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Term</th>
+                        <th>Meaning</th>
+                        <th>What it does not imply</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Physical CPU core</td>
+                        <td>An execution engine with its own architectural state.</td>
+                        <td>Unlimited memory bandwidth for every core.</td>
+                    </tr>
+                    <tr>
+                        <td>Hardware thread / logical CPU</td>
+                        <td>An execution context exposed by a core, for example through SMT.</td>
+                        <td>A separate physical core.</td>
+                    </tr>
+                    <tr>
+                        <td>Software thread</td>
+                        <td>A path of execution managed by an OS or runtime.</td>
+                        <td>A dedicated core for its whole lifetime.</td>
+                    </tr>
+                    <tr>
+                        <td>SIMD lane</td>
+                        <td>One data element's position in a vector operation.</td>
+                        <td>An independently scheduled OS thread.</td>
+                    </tr>
+                    <tr>
+                        <td>GPU thread</td>
+                        <td>A logical instance of kernel code.</td>
+                        <td>A dedicated execution lane that is always running.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>For example, eight physical cores with two SMT contexts each expose sixteen logical CPUs. Sixteen busy software threads can use those contexts, but still share eight cores' execution resources. A GPU can launch more logical threads than it has resources to execute simultaneously.</p>
             <h3 id="ways-of-achieving-parallelism">Ways of Achieving Parallelism</h3>
             <p>Hardware and software expose parallelism at several levels:</p>
             <ul>
@@ -241,6 +281,7 @@
                 <li><strong>False sharing</strong> occurs when cores update different variables that happen to occupy the same cache line.</li>
                 <li>Read-mostly data is generally easier to scale than heavily shared writable data.</li>
             </ul>
+            <p>False sharing can slow down a program even when it has no data race. Two threads may safely update separate atomic counters, yet repeatedly transfer ownership of the same cache line if those counters are adjacent. Separating frequently written per-worker data can reduce that traffic; measure before adding padding.</p>
             <p>Cache coherence is not the same as a programming-language memory model. Correct concurrent programs still need appropriate synchronization such as atomics, locks, barriers, or message passing.</p>
             <h4 id="memory-bandwidth-and-interconnects">Memory Bandwidth and Interconnects</h4>
             <p>Adding cores increases potential compute throughput, but all cores still depend on finite memory and interconnect bandwidth. A program can therefore stop scaling long before all cores are computationally saturated.</p>

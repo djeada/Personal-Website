@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Window Functions in SQL | Adam Djellouli</title>
-    <meta content="Window functions in SQL are powerful tools that allow you to perform calculations across a set of table rows that are related to the current row." name="description" />
+    <meta content="A window function calculates a value across rows related to the current row while retaining those rows in the result." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -49,8 +49,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions",
-            "description": "Window functions in SQL are powerful tools that allow you to perform calculations across a set of table rows that are related to the current row.",
-            "dateModified": "2025-01-27",
+            "description": "A window function calculates a value across rows related to the current row while retaining those rows in the result.",
+            "dateModified": "2026-10-04",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +58,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Window functions in SQL are powerful tools that allow you to perform calculations across a set of table rows that are related to the current row." property="og:description" />
-    <meta content="2025-01-27" property="article:modified_time" />
+    <meta content="A window function calculates a value across rows related to the current row while retaining those rows in the result." property="og:description" />
+    <meta content="2026-10-04" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,8 +114,10 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
+                    <li><a href="#read-the-window-in-three-parts">Read the window in three parts</a></li>
                     <li><a href="#common-window-functions">Common Window Functions</a></li>
                     <li><a href="#setting-up-example-tables">Setting Up Example Tables</a></li>
+                    <li><a href="#ordering-and-dialect-assumptions">Ordering and dialect assumptions</a></li>
                     <li><a href="#understanding-the-over-clause">Understanding the OVER Clause</a></li>
                     <li><a href="#row_number-function">ROW_NUMBER Function</a>
                         <ol>
@@ -147,7 +149,7 @@
                             <li><a href="#example-assigning-row-numbers-with-null-quantities">Example: Assigning Row Numbers with NULL Quantities</a></li>
                         </ol>
                     </li>
-                    <li><a href="#practical-tips-for-using-window-functions">Practical Tips for Using Window Functions</a></li>
+                    <li><a href="#readability-and-filtering">Readability and filtering</a></li>
                     <li><a href="#window-functions-vs-aggregate-functions">Window Functions vs. Aggregate Functions</a>
                         <ol>
                             <li><a href="#example-comparing-aggregate-and-window-functions">Example: Comparing Aggregate and Window Functions</a></li>
@@ -175,13 +177,19 @@
                         </ol>
                     </li>
                     <li><a href="#limitations-and-considerations">Limitations and Considerations</a></li>
-                    <li><a href="#advanced-window-function-features">Advanced Window Function Features</a></li>
+                    <li><a href="#further-frame-choices">Further frame choices</a></li>
                     <li><a href="#example-use-case-sales-trend-analysis">Example Use Case: Sales Trend Analysis</a></li>
+                    <li><a href="#see-ties-change-a-running-total">See ties change a running total</a></li>
+                    <li><a href="#ask-what-last-means-for-last_value">Ask what “last” means for LAST_VALUE</a></li>
+                    <li><a href="#a-time-interval-is-different-from-a-fixed-number-of-rows">A time interval is different from a fixed number of rows</a></li>
+                    <li><a href="#build-the-partition-at-the-right-stage">Build the partition at the right stage</a></li>
+                    <li><a href="#review-questions">Review questions</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions in SQL</a></li><li><a href="/articles/databases_notes/03_sql/09_hierarchical_data.html">Storing Hierarchical Data in Relational Databases with SQL</a></li><li><a href="/articles/databases_notes/03_sql/08_triggers.html">Understanding Triggers in SQL</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions in SQL</a></li><li><a href="/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data: Represent and Query a Tree</a></li><li><a href="/articles/databases_notes/03_sql/08_triggers.html">Triggers: Run Database Logic When Data Changes</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
+                    <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
                     <li>
                         <details>
                             <summary>Introduction to Databases</summary>
@@ -245,6 +253,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits.html">Btree Internals and Page Splits</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order.html">Composite Indexes and Column Order</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes.html">Covering Partial and Expression Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality.html">Clustered Indexes Heap Tables and Row Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/10_specialized_index_structures.html">Specialized Index Structures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations.html">Index Maintenance Bloat and Online Operations</a></li>
                             </ol>
                         </details>
                     </li>
@@ -259,7 +273,6 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
-                                <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
                             </ol>
                         </details>
                     </li>
@@ -285,6 +298,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/07_execution_plans_statistics_and_cardinality.html">Execution Plans Statistics and Cardinality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/08_connection_pooling_batching_and_n_plus_one.html">Connection Pooling Batching and N Plus One</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/09_pagination_and_large_result_sets.html">Pagination and Large Result Sets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/10_partitioning_sharding_and_data_locality.html">Partitioning Sharding and Data Locality</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/11_benchmarking_load_testing_and_capacity.html">Benchmarking Load Testing and Capacity</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/12_write_performance_vacuum_and_bloat.html">Write Performance Vacuum and Bloat</a></li>
                             </ol>
                         </details>
                     </li>
@@ -307,6 +326,12 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/05_document_modeling.html">Document Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/06_key_value_modeling.html">Key Value Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/07_wide_column_modeling.html">Wide Column Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/08_graph_modeling.html">Graph Modeling</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/09_consistency_transactions_and_replication.html">Consistency Transactions and Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/10_operating_nosql_and_polyglot_persistence.html">Operating Nosql and Polyglot Persistence</a></li>
                             </ol>
                         </details>
                     </li>
@@ -321,6 +346,11 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/08_identity_authentication_and_access_control.html">Identity Authentication and Access Control</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/09_encryption_secrets_and_key_management.html">Encryption Secrets and Key Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/10_auditing_compliance_and_data_governance.html">Auditing Compliance and Data Governance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/11_database_hardening_and_patch_management.html">Database Hardening and Patch Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/12_incident_response_and_disaster_recovery_drills.html">Incident Response and Disaster Recovery Drills</a></li>
                             </ol>
                         </details>
                     </li>
@@ -335,6 +365,39 @@
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
                                 <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/08_gcp_services.html">Gcp Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/09_sql_server.html">Sql Server</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/10_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/11_cassandra.html">Cassandra</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/12_elasticsearch_and_opensearch.html">Elasticsearch and Opensearch</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/13_clickhouse.html">Clickhouse</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/14_distributed_sql.html">Distributed Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/15_azure_services.html">Azure Services</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Big Data</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/01_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/02_hadoop_and_hdfs.html">Hadoop and Hdfs</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/03_spark_sql.html">Spark Sql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/04_data_lakes_and_lakehouses.html">Data Lakes and Lakehouses</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/05_streaming_kafka_and_cdc.html">Streaming Kafka and Cdc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/13_big_data/06_data_pipelines_orchestration_and_quality.html">Data Pipelines Orchestration and Quality</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Orm</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/01_introduction_to_orm.html">Introduction to Orm</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/02_popular_orm_tools.html">Popular Orm Tools</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/03_schema_migrations.html">Schema Migrations</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/04_relationship_loading_and_query_performance.html">Relationship Loading and Query Performance</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/databases_notes/14_orm/05_transactions_concurrency_and_unit_of_work.html">Transactions Concurrency and Unit of Work</a></li>
                             </ol>
                         </details>
                     </li>
@@ -343,7 +406,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: January 27, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -363,16 +426,12 @@
                     </button></div>
             </div>
             <h1>Window Functions in SQL</h1>
-            <p>Window functions in SQL are powerful tools that allow you to perform calculations across a set of table rows that are related to the current row. Unlike aggregate functions, window functions do not collapse rows into a single output row; instead, they retain the individual row identities while providing additional analytical capabilities. Window functions are essential for advanced data analysis, reporting, and generating insights that require comparisons or calculations across related rows.</p>
-            <p>After reading the material, you should be able to answer the following questions:</p>
-            <ol>
-                <li>What are window functions in SQL, and how do they differ from aggregate functions?</li>
-                <li>What are some common window functions, and what are their typical use cases?</li>
-                <li>How does the <code>OVER</code> clause define the window for window functions, and what components can it include?</li>
-                <li>What are the advantages and limitations of using window functions compared to traditional methods like self-joins?</li>
-                <li>What best practices should be followed when implementing window functions in SQL to ensure optimal performance and maintainability?</li>
-            </ol>
-            <h3 id="common-window-functions">Common Window Functions</h3>
+            <p>A window function calculates a value across rows related to the current row while retaining those rows in the result. Use it for rankings, running totals, and comparisons with earlier or later rows. <code>OVER</code> defines the partition, order, and, where applicable, frame.</p>
+            <h2 id="read-the-window-in-three-parts">Read the window in three parts</h2>
+            <p>An aggregate with <code>GROUP BY ProductID</code> produces one result row per product. A windowed sum can put that same product total beside <strong>each original sale</strong>. It calculates across related rows without collapsing them.</p>
+            <p>Inside <code>OVER</code>, <code>PARTITION BY</code> chooses related rows, <code>ORDER BY</code> puts them in calculation order, and a <strong>frame</strong> selects which of those rows participate in the current calculation. A running total uses an expanding frame; a moving average can use a small frame around the current row. Ranking and offset functions use the partition and order with their own rules, rather than all behaving like framed sums.</p>
+            <p>Read <a href="10_aggregate_functions.html">aggregate functions</a> first. Start here with row numbering and running totals, then compare ranks, earlier/later values, and moving averages. The sales example below is a separate practice database.</p>
+            <h2 id="common-window-functions">Common Window Functions</h2>
             <p>Here are some of the most commonly used window functions in SQL:</p>
             <ul>
                 <li><strong><code>ROW_NUMBER()</code></strong>: Assigns a unique sequential integer to rows within a partition of a result set, starting at 1 for the first row in each partition.</li>
@@ -383,8 +442,39 @@
                 <li><strong><code>LAG()</code></strong>: Provides access to a preceding row’s data without the need for a self-join.</li>
                 <li><strong>Aggregate Window Functions</strong>: Such as <code>SUM()</code>, <code>AVG()</code>, <code>COUNT()</code>, which perform aggregate calculations over a window.</li>
             </ul>
-            <h3 id="setting-up-example-tables">Setting Up Example Tables</h3>
-            <p>Suppose we have two tables: <code>Sales</code> and <code>Products</code>.</p>
+            <h2 id="setting-up-example-tables">Setting Up Example Tables</h2>
+            <p>Run this setup once in a <strong>fresh SQLite database</strong> with window-function support. Continue using this database throughout the chapter; the null-value section adds sale 11 explicitly.</p>
+            <div>
+                <pre><code class="language-sql">PRAGMA foreign_keys = ON;
+
+CREATE TABLE Products (
+    ProductID INTEGER PRIMARY KEY,
+    ProductName TEXT NOT NULL,
+    Category TEXT NOT NULL
+);
+CREATE TABLE Sales (
+    SaleID INTEGER PRIMARY KEY,
+    ProductID INTEGER NOT NULL REFERENCES Products(ProductID),
+    SaleDate TEXT NOT NULL,
+    Quantity INTEGER,
+    Price REAL NOT NULL
+);
+INSERT INTO Products VALUES
+    (101, 'Widget A', 'Gadgets'), (102, 'Widget B', 'Gadgets'),
+    (103, 'Gizmo C', 'Widgets'), (104, 'Gizmo D', 'Widgets');
+INSERT INTO Sales VALUES
+    (1, 101, '2024-01-05', 10, 15.00),
+    (2, 102, '2024-01-07', 5, 25.00),
+    (3, 101, '2024-01-10', 20, 15.00),
+    (4, 103, '2024-01-12', 7, 30.00),
+    (5, 102, '2024-01-15', 10, 25.00),
+    (6, 101, '2024-01-20', 15, 15.00),
+    (7, 103, '2024-01-22', 5, 30.00),
+    (8, 104, '2024-01-25', 12, 20.00),
+    (9, 102, '2024-01-28', 8, 25.00),
+    (10, 104, '2024-01-30', 10, 20.00);</code></pre>
+            </div>
+            <p><code>Price</code> is the per-unit sale price. <code>REAL</code> demonstrates the calculations simply; use an intentional exact representation for production money. These statements produce the following initial data:</p>
             <p><strong>Sales Table</strong></p>
             <table>
                 <thead>
@@ -501,16 +591,19 @@
                     </tr>
                 </tbody>
             </table>
-            <h3 id="understanding-the-over-clause">Understanding the <code>OVER</code> Clause</h3>
+            <h2 id="ordering-and-dialect-assumptions">Ordering and dialect assumptions</h2>
+            <p>Examples use window-capable SQL engines. Date-range <code>RANGE</code> frames and interval syntax are engine-specific. With tied dates, <code>ROW_NUMBER</code>, <code>LAG</code>, and <code>LEAD</code> need an additional unique ordering column such as <code>SaleID</code> for deterministic results. Preserve ties deliberately when demonstrating <code>RANK</code> and <code>DENSE_RANK</code>. A window's <code>ORDER BY</code> does not sort the final result.</p>
+            <p>For running totals, specify a <code>ROWS</code> frame when you want one row at a time; the default ordered frame can include all peers sharing the ordering value. The later nullable-quantity examples assume sale 11 has been added to the initial sample.</p>
+            <h2 id="understanding-the-over-clause">Understanding the <code>OVER</code> Clause</h2>
             <p>Window functions use the <code>OVER</code> clause to define the window or the set of rows the function should operate on. The <code>OVER</code> clause can include:</p>
             <ul>
                 <li><strong><code>PARTITION BY</code></strong>: Divides the result set into partitions to which the window function is applied.</li>
                 <li><strong><code>ORDER BY</code></strong>: Defines the logical order of rows within each partition.</li>
                 <li><strong>Window Frame Specification</strong>: Specifies the subset of rows within the partition for frame-based calculations (e.g., <code>ROWS BETWEEN</code>).</li>
             </ul>
-            <h3 id="row_number-function">ROW_NUMBER Function</h3>
+            <h2 id="row_number-function">ROW_NUMBER Function</h2>
             <p>The <code>ROW_NUMBER()</code> function assigns a unique sequential integer to rows within a partition, starting at 1 for the first row in each partition.</p>
-            <h4 id="example-assigning-row-numbers-to-sales-per-product">Example: Assigning Row Numbers to Sales per Product</h4>
+            <h3 id="example-assigning-row-numbers-to-sales-per-product">Example: Assigning Row Numbers to Sales per Product</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -624,13 +717,13 @@ ORDER BY
                 <li>The <code>ROW_NUMBER()</code> function assigns a unique row number to each sale within its <code>ProductID</code> partition based on the <code>SaleDate</code>.</li>
                 <li>Useful for tasks like pagination or identifying specific rows within partitions.</li>
             </ul>
-            <h3 id="rank-and-dense_rank-functions">RANK and DENSE_RANK Functions</h3>
+            <h2 id="rank-and-dense_rank-functions">RANK and DENSE_RANK Functions</h2>
             <p>Both <code>RANK()</code> and <code>DENSE_RANK()</code> assign a rank to each row within a partition. The difference lies in how they handle ties.</p>
             <ul>
                 <li><strong><code>RANK()</code></strong>: Assigns the same rank to tied rows but leaves gaps in the ranking sequence.</li>
                 <li><strong><code>DENSE_RANK()</code></strong>: Assigns the same rank to tied rows without leaving gaps.</li>
             </ul>
-            <h4 id="example-ranking-sales-by-quantity-per-product">Example: Ranking Sales by Quantity per Product</h4>
+            <h3 id="example-ranking-sales-by-quantity-per-product">Example: Ranking Sales by Quantity per Product</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -638,8 +731,8 @@ ORDER BY
     SaleDate,
     Quantity,
     Price,
-    RANK() OVER (PARTITION BY ProductID ORDER BY Quantity DESC) AS Rank,
-    DENSE_RANK() OVER (PARTITION BY ProductID ORDER BY Quantity DESC) AS DenseRank
+    RANK() OVER (PARTITION BY ProductID ORDER BY CASE WHEN Quantity IS NULL THEN 1 ELSE 0 END, Quantity DESC) AS Rank,
+    DENSE_RANK() OVER (PARTITION BY ProductID ORDER BY CASE WHEN Quantity IS NULL THEN 1 ELSE 0 END, Quantity DESC) AS DenseRank
 FROM
     Sales
 ORDER BY
@@ -661,7 +754,7 @@ ORDER BY
                 </thead>
                 <tbody>
                     <tr>
-                        <td>101</td>
+                        <td>3</td>
                         <td>101</td>
                         <td>2024-01-10</td>
                         <td>20</td>
@@ -688,7 +781,7 @@ ORDER BY
                         <td>3</td>
                     </tr>
                     <tr>
-                        <td>102</td>
+                        <td>5</td>
                         <td>102</td>
                         <td>2024-01-15</td>
                         <td>10</td>
@@ -715,7 +808,7 @@ ORDER BY
                         <td>3</td>
                     </tr>
                     <tr>
-                        <td>103</td>
+                        <td>4</td>
                         <td>103</td>
                         <td>2024-01-12</td>
                         <td>7</td>
@@ -733,7 +826,7 @@ ORDER BY
                         <td>2</td>
                     </tr>
                     <tr>
-                        <td>104</td>
+                        <td>8</td>
                         <td>104</td>
                         <td>2024-01-25</td>
                         <td>12</td>
@@ -753,11 +846,11 @@ ORDER BY
                 </tbody>
             </table>
             <ul>
-                <li><strong><code>RANK()</code></strong> and <strong><code>DENSE_RANK()</code></strong> are useful for identifying the position of rows within partitions, especially when dealing with ties.</li>
+                <li><strong><code>RANK()</code></strong> and <code>DENSE_RANK()</code> are useful for identifying the position of rows within partitions, especially when dealing with ties.</li>
             </ul>
-            <h3 id="ntile-function">NTILE Function</h3>
+            <h2 id="ntile-function">NTILE Function</h2>
             <p>The <code>NTILE()</code> function distributes the rows in an ordered partition into a specified number of roughly equal groups.</p>
-            <h4 id="example-dividing-sales-into-quartiles-per-product">Example: Dividing Sales into Quartiles per Product</h4>
+            <h3 id="example-dividing-sales-into-quartiles-per-product">Example: Dividing Sales into Quartiles per Product</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -786,7 +879,7 @@ ORDER BY
                 </thead>
                 <tbody>
                     <tr>
-                        <td>101</td>
+                        <td>3</td>
                         <td>101</td>
                         <td>2024-01-10</td>
                         <td>20</td>
@@ -810,7 +903,7 @@ ORDER BY
                         <td>3</td>
                     </tr>
                     <tr>
-                        <td>102</td>
+                        <td>5</td>
                         <td>102</td>
                         <td>2024-01-15</td>
                         <td>10</td>
@@ -834,7 +927,7 @@ ORDER BY
                         <td>3</td>
                     </tr>
                     <tr>
-                        <td>103</td>
+                        <td>4</td>
                         <td>103</td>
                         <td>2024-01-12</td>
                         <td>7</td>
@@ -850,7 +943,7 @@ ORDER BY
                         <td>2</td>
                     </tr>
                     <tr>
-                        <td>104</td>
+                        <td>8</td>
                         <td>104</td>
                         <td>2024-01-25</td>
                         <td>12</td>
@@ -871,9 +964,9 @@ ORDER BY
                 <li>The <code>NTILE(4)</code> function divides each <code>ProductID</code> partition into four quartiles based on <code>Quantity</code>.</li>
                 <li>Useful for categorizing data into percentile-based groups.</li>
             </ul>
-            <h3 id="lead-and-lag-functions">LEAD and LAG Functions</h3>
+            <h2 id="lead-and-lag-functions">LEAD and LAG Functions</h2>
             <p><code>LEAD()</code> and <code>LAG()</code> functions allow you to access subsequent and preceding rows' data without the need for self-joins.</p>
-            <h4 id="example-comparing-current-sale-with-previous-sale-quantity-per-product">Example: Comparing Current Sale with Previous Sale Quantity per Product</h4>
+            <h3 id="example-comparing-current-sale-with-previous-sale-quantity-per-product">Example: Comparing Current Sale with Previous Sale Quantity per Product</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -1000,9 +1093,9 @@ ORDER BY
                 <li><strong><code>LEAD()</code></strong> can similarly retrieve data from subsequent rows.</li>
                 <li>Useful for trend analysis and calculating differences between consecutive rows.</li>
             </ul>
-            <h3 id="aggregate-window-functions">Aggregate Window Functions</h3>
+            <h2 id="aggregate-window-functions">Aggregate Window Functions</h2>
             <p>Aggregate functions like <code>SUM()</code>, <code>AVG()</code>, and <code>COUNT()</code> can also be used as window functions to perform calculations across a window of rows.</p>
-            <h4 id="example-calculating-running-total-of-sales-amount-per-product">Example: Calculating Running Total of Sales Amount per Product</h4>
+            <h3 id="example-calculating-running-total-of-sales-amount-per-product">Example: Calculating Running Total of Sales Amount per Product</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -1128,11 +1221,15 @@ ORDER BY
                 <li><strong><code>SUM(Quantity * Price) OVER (...)</code></strong> calculates a running total of sales amounts within each <code>ProductID</code> partition ordered by <code>SaleDate</code>.</li>
                 <li>The window frame <code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> defines the range from the first row to the current row for cumulative calculations.</li>
             </ul>
-            <h3 id="handling-null-values-in-window-functions">Handling NULL Values in Window Functions</h3>
+            <h2 id="handling-null-values-in-window-functions">Handling NULL Values in Window Functions</h2>
             <p>Window functions typically handle <code>NULL</code> values based on the specific function's behavior. For example, <code>SUM()</code> ignores <code>NULL</code> values, while <code>ROW_NUMBER()</code> assigns a unique number regardless of <code>NULL</code>s.</p>
-            <h4 id="example-assigning-row-numbers-with-null-quantities">Example: Assigning Row Numbers with NULL Quantities</h4>
+            <h3 id="example-assigning-row-numbers-with-null-quantities">Example: Assigning Row Numbers with NULL Quantities</h3>
             <p>Suppose we have an additional sale with a <code>NULL</code> quantity.</p>
-            <p><strong>Updated Sales Table</strong></p>
+            <p>Before the examples in this section and all later sections, add the following sale once:</p>
+            <div>
+                <pre><code class="language-sql">INSERT INTO Sales VALUES (11, 101, '2024-01-25', NULL, 15.00);</code></pre>
+            </div>
+            <p><strong>The additional row</strong></p>
             <table>
                 <thead>
                     <tr>
@@ -1227,67 +1324,14 @@ ORDER BY
                 <li>The <code>ROW_NUMBER()</code> function assigns a row number to the sale with <code>NULL</code> quantity without any issues.</li>
                 <li>Other window functions may handle <code>NULL</code> values differently, depending on their logic.</li>
             </ul>
-            <h3 id="practical-tips-for-using-window-functions">Practical Tips for Using Window Functions</h3>
-            <ul>
-                <li><strong>Use Meaningful Aliases</strong>: Assign descriptive aliases to window function results to improve query readability.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  ROW_NUMBER() OVER (...) AS RowNumber
-  </code></pre>
-            </div>
-            <ul>
-                <li><strong>Combine with <code>PARTITION BY</code> and <code>ORDER BY</code></strong>: Leverage <code>PARTITION BY</code> to segment data and <code>ORDER BY</code> to define the sequence within each partition.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  RANK() OVER (PARTITION BY Category ORDER BY SaleAmount DESC) AS SaleRank
-  </code></pre>
-            </div>
-            <ul>
-                <li><strong>Leverage Window Frames for Advanced Calculations</strong>: Use window frame specifications like <code>ROWS BETWEEN</code> to define dynamic ranges for calculations.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  AVG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS MovingAverage
-  </code></pre>
-            </div>
-            <ul>
-                <li>
-                    <p><strong>Avoid Overusing Window Functions</strong>: While powerful, excessive use of window functions can lead to complex and less performant queries. Use them judiciously.</p>
-                </li>
-                <li>
-                    <p><strong>Understand Performance Implications</strong>: Window functions can impact query performance, especially on large datasets. Ensure proper indexing and consider query optimization techniques.</p>
-                </li>
-                <li>
-                    <p><strong>Combine with Other SQL Features</strong>: Window functions can be combined with CTEs (Common Table Expressions), subqueries, and other SQL features for more complex analyses.</p>
-                </li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  WITH RankedSales AS (
-      SELECT
-          SaleID,
-          ProductID,
-          SaleDate,
-          Quantity,
-          Price,
-          RANK() OVER (PARTITION BY ProductID ORDER BY Quantity DESC) AS SaleRank
-      FROM
-          Sales
-  )
-  SELECT
-      rs.SaleID,
-      rs.ProductID,
-      rs.SaleDate,
-      rs.Quantity,
-      rs.Price
-  FROM
-      RankedSales rs
-  WHERE
-      rs.SaleRank = 1;
-  </code></pre>
-            </div>
-            <h3 id="window-functions-vs-aggregate-functions">Window Functions vs. Aggregate Functions</h3>
+            <h2 id="readability-and-filtering">Readability and filtering</h2>
+            <p>Give calculated columns clear aliases, such as <code>RowNum</code> or <code>RunningTotal</code>. Use the same partition and ordering consistently when the calculations describe the same sequence. Add a unique tie-breaker for row numbering and earlier/later comparisons, but preserve ties deliberately for ranking.</p>
+            <p>To filter by a window result, calculate it in a CTE or subquery and filter in an outer query. A window result is not available to the same query level's <code>WHERE</code> clause. The later top-two-sales example demonstrates the complete pattern.</p>
+            <p>A window may require sorting many rows. Inspect the execution plan on representative data rather than assuming a shorter query must run faster.</p>
+            <h2 id="window-functions-vs-aggregate-functions">Window Functions vs. Aggregate Functions</h2>
             <p>While both window functions and aggregate functions perform calculations over sets of rows, they differ in key ways:</p>
             <ul>
-                <li><strong>Row Retention</strong>: </li>
+                <li><strong>Row Retention</strong>:</li>
                 <li><strong>Aggregate Functions</strong>: Collapse multiple rows into a single summary row per group.</li>
                 <li>
                     <p><strong>Window Functions</strong>: Retain individual row identities while providing additional calculated data.</p>
@@ -1295,10 +1339,10 @@ ORDER BY
                 <li>
                     <p><strong>Usage with <code>GROUP BY</code></strong>:</p>
                 </li>
-                <li><strong>Aggregate Functions</strong>: Require <code>GROUP BY</code> to define grouping.</li>
+                <li><strong>Aggregate Functions</strong>: Use <code>GROUP BY</code> for multiple groups; without it, aggregate over the entire input.</li>
                 <li><strong>Window Functions</strong>: Use the <code>OVER</code> clause to define partitions and ordering without collapsing rows.</li>
             </ul>
-            <h4 id="example-comparing-aggregate-and-window-functions">Example: Comparing Aggregate and Window Functions</h4>
+            <h3 id="example-comparing-aggregate-and-window-functions">Example: Comparing Aggregate and Window Functions</h3>
             <p><strong>Aggregate Function Example: Total Sales per Product</strong></p>
             <div>
                 <pre><code class="language-sql">SELECT
@@ -1309,6 +1353,33 @@ FROM
 GROUP BY
     ProductID;</code></pre>
             </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ProductID</th>
+                        <th>TotalSales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>675.00</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>575.00</td>
+                    </tr>
+                    <tr>
+                        <td>103</td>
+                        <td>360.00</td>
+                    </tr>
+                    <tr>
+                        <td>104</td>
+                        <td>440.00</td>
+                    </tr>
+                </tbody>
+            </table>
             <p><strong>Window Function Example: Total Sales per Product Alongside Each Sale</strong></p>
             <div>
                 <pre><code class="language-sql">SELECT
@@ -1324,13 +1395,80 @@ ORDER BY
     ProductID,
     SaleDate;</code></pre>
             </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>SaleID</th>
+                        <th>ProductID</th>
+                        <th>TotalSalesPerProduct</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>101</td>
+                        <td>675.00</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>101</td>
+                        <td>675.00</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>101</td>
+                        <td>675.00</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>101</td>
+                        <td>675.00</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>102</td>
+                        <td>575.00</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>102</td>
+                        <td>575.00</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>102</td>
+                        <td>575.00</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>103</td>
+                        <td>360.00</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>103</td>
+                        <td>360.00</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>104</td>
+                        <td>440.00</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>104</td>
+                        <td>440.00</td>
+                    </tr>
+                </tbody>
+            </table>
             <ul>
-                <li>The <strong>aggregate function</strong> provides a summarized view with one row per <code>ProductID</code>.</li>
-                <li>The <strong>window function</strong> adds the total sales per product to each individual sale row without reducing the number of rows.</li>
+                <li>The aggregate function provides a summarized view with one row per <code>ProductID</code>.</li>
+                <li>The window function adds the total sales per product to each individual sale row without reducing the number of rows.</li>
             </ul>
-            <h3 id="combining-multiple-window-functions">Combining Multiple Window Functions</h3>
+            <h2 id="combining-multiple-window-functions">Combining Multiple Window Functions</h2>
             <p>You can use multiple window functions within a single query to perform various analyses simultaneously.</p>
-            <h4 id="example-sales-analysis-with-multiple-window-functions">Example: Sales Analysis with Multiple Window Functions</h4>
+            <h3 id="example-sales-analysis-with-multiple-window-functions">Example: Sales Analysis with Multiple Window Functions</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -1339,7 +1477,7 @@ ORDER BY
     Quantity,
     Price,
     ROW_NUMBER() OVER (PARTITION BY ProductID ORDER BY SaleDate) AS RowNum,
-    RANK() OVER (PARTITION BY ProductID ORDER BY Quantity DESC) AS QuantityRank,
+    RANK() OVER (PARTITION BY ProductID ORDER BY CASE WHEN Quantity IS NULL THEN 1 ELSE 0 END, Quantity DESC) AS QuantityRank,
     SUM(Quantity * Price) OVER (PARTITION BY ProductID ORDER BY SaleDate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RunningTotal
 FROM
     Sales
@@ -1369,7 +1507,7 @@ ORDER BY
                         <td>10</td>
                         <td>15.00</td>
                         <td>1</td>
-                        <td>2</td>
+                        <td>3</td>
                         <td>150.00</td>
                     </tr>
                     <tr>
@@ -1389,7 +1527,7 @@ ORDER BY
                         <td>15</td>
                         <td>15.00</td>
                         <td>3</td>
-                        <td>3</td>
+                        <td>2</td>
                         <td>675.00</td>
                     </tr>
                     <tr>
@@ -1479,9 +1617,9 @@ ORDER BY
                 <li><strong><code>RANK()</code></strong> assigns ranks based on <code>Quantity</code> within each <code>ProductID</code>.</li>
                 <li><strong><code>SUM() OVER (...)</code></strong> calculates a running total of sales amounts per <code>ProductID</code>.</li>
             </ul>
-            <h3 id="window-frames">Window Frames</h3>
+            <h2 id="window-frames">Window Frames</h2>
             <p>Window frames define the subset of rows within the partition to be used for calculations in window functions. They are specified using the <code>ROWS BETWEEN</code> or <code>RANGE BETWEEN</code> clauses.</p>
-            <h4 id="example-calculating-a-moving-average-of-quantity">Example: Calculating a Moving Average of Quantity</h4>
+            <h3 id="example-calculating-a-moving-average-of-quantity">Example: Calculating a Moving Average of Quantity</h3>
             <div>
                 <pre><code class="language-sql">SELECT
     SaleID,
@@ -1543,7 +1681,7 @@ ORDER BY
                         <td>2024-01-25</td>
                         <td>NULL</td>
                         <td>15.00</td>
-                        <td>12.50</td>
+                        <td>17.50</td>
                     </tr>
                     <tr>
                         <td>2</td>
@@ -1607,7 +1745,7 @@ ORDER BY
                 <li>The <code>AVG(Quantity)</code> function calculates the average quantity over the current row and the two preceding rows within each <code>ProductID</code> partition.</li>
                 <li>Useful for trend analysis and smoothing out short-term fluctuations.</li>
             </ul>
-            <h3 id="practical-use-cases-for-window-functions">Practical Use Cases for Window Functions</h3>
+            <h2 id="practical-use-cases-for-window-functions">Practical Use Cases for Window Functions</h2>
             <ul>
                 <li><strong>Pagination</strong>: Assign row numbers to implement pagination in queries.</li>
                 <li><strong>Running Totals and Moving Averages</strong>: Calculate cumulative sums or averages over a specified window.</li>
@@ -1615,9 +1753,9 @@ ORDER BY
                 <li><strong>Comparative Analysis</strong>: Compare current row values with previous or next rows without self-joins.</li>
                 <li><strong>Data Transformation</strong>: Restructure data for reporting and analytics purposes.</li>
             </ul>
-            <h3 id="combining-window-functions-with-other-sql-features">Combining Window Functions with Other SQL Features</h3>
+            <h2 id="combining-window-functions-with-other-sql-features">Combining Window Functions with Other SQL Features</h2>
             <p>Window functions can be combined with Common Table Expressions (CTEs), subqueries, and other SQL constructs to perform complex data transformations and analyses.</p>
-            <h4 id="example-identifying-top-2-sales-per-product">Example: Identifying Top 2 Sales per Product</h4>
+            <h3 id="example-identifying-top-2-sales-per-product">Example: Identifying Top 2 Sales per Product</h3>
             <div>
                 <pre><code class="language-sql">WITH RankedSales AS (
     SELECT
@@ -1626,7 +1764,7 @@ ORDER BY
         SaleDate,
         Quantity,
         Price,
-        RANK() OVER (PARTITION BY ProductID ORDER BY Quantity DESC) AS SaleRank
+        RANK() OVER (PARTITION BY ProductID ORDER BY CASE WHEN Quantity IS NULL THEN 1 ELSE 0 END, Quantity DESC) AS SaleRank
     FROM
         Sales
 )
@@ -1718,9 +1856,9 @@ ORDER BY
                 <li>The CTE <code>RankedSales</code> assigns a rank to each sale based on <code>Quantity</code> within each <code>ProductID</code>.</li>
                 <li>The outer query filters to include only the top 2 sales per product.</li>
             </ul>
-            <h3 id="comparing-window-functions-with-self-joins">Comparing Window Functions with Self-Joins</h3>
+            <h2 id="comparing-window-functions-with-self-joins">Comparing Window Functions with Self-Joins</h2>
             <p>Before window functions were widely supported, similar analyses often required complex self-joins. Window functions simplify these operations, making queries more readable and efficient.</p>
-            <h4 id="example-using-window-functions-vs-self-joins-to-compare-current-and-previous-sales">Example: Using Window Functions vs. Self-Joins to Compare Current and Previous Sales</h4>
+            <h3 id="example-using-window-functions-vs-self-joins-to-compare-current-and-previous-sales">Example: Using Window Functions vs. Self-Joins to Compare Current and Previous Sales</h3>
             <p><strong>Using Window Functions</strong></p>
             <div>
                 <pre><code class="language-sql">SELECT
@@ -1736,6 +1874,73 @@ ORDER BY
     ProductID,
     SaleDate;</code></pre>
             </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>SaleID</th>
+                        <th>ProductID</th>
+                        <th>PreviousQuantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>101</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>101</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>101</td>
+                        <td>20</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>101</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>102</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>102</td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>102</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>103</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>103</td>
+                        <td>7</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>104</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>104</td>
+                        <td>12</td>
+                    </tr>
+                </tbody>
+            </table>
             <p><strong>Using Self-Joins</strong></p>
             <div>
                 <pre><code class="language-sql">SELECT
@@ -1762,51 +1967,89 @@ ORDER BY
     s1.ProductID,
     s1.SaleDate;</code></pre>
             </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>SaleID</th>
+                        <th>ProductID</th>
+                        <th>PreviousQuantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>101</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>101</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>101</td>
+                        <td>20</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>101</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>102</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>102</td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>102</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>103</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>103</td>
+                        <td>7</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>104</td>
+                        <td>NULL</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>104</td>
+                        <td>12</td>
+                    </tr>
+                </tbody>
+            </table>
             <ul>
-                <li>The <strong>window function</strong> approach is more straightforward, readable, and performs better.</li>
-                <li>The <strong>self-join</strong> approach is more complex and can be less efficient, especially on large datasets.</li>
+                <li>The window function directly expresses the previous-row operation and is usually easier to read. Compare plans to determine its performance benefit.</li>
+                <li>The self-join approach is more complex and can be less efficient, especially on large datasets.</li>
             </ul>
-            <h3 id="limitations-and-considerations">Limitations and Considerations</h3>
+            <h2 id="limitations-and-considerations">Limitations and Considerations</h2>
             <ul>
-                <li><strong>Performance</strong>: Window functions can be resource-intensive on large datasets. Proper indexing and query optimization are crucial.</li>
+                <li><strong>Performance</strong>: The ranking examples put null quantities last explicitly so the result is independent of the engine’s default null ordering. Window functions can be resource-intensive on large datasets. Proper indexing and query optimization are crucial.</li>
                 <li><strong>Compatibility</strong>: Ensure that your SQL database system supports the window functions you intend to use (e.g., PostgreSQL, SQL Server, Oracle, MySQL 8.0+).</li>
                 <li><strong>Complexity</strong>: While window functions simplify many operations, overusing them or using them in overly complex ways can make queries harder to maintain.</li>
                 <li><strong>Understanding Window Frames</strong>: Properly defining window frames is essential for accurate calculations, especially for running totals and moving averages.</li>
             </ul>
-            <h3 id="advanced-window-function-features">Advanced Window Function Features</h3>
-            <ul>
-                <li><strong>Frame Specifications</strong>: Define dynamic ranges for window functions to perform calculations like moving averages, cumulative sums, etc.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  SUM(Quantity) OVER (
-      PARTITION BY ProductID
-      ORDER BY SaleDate
-      ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
-  ) AS SumQuantity
-  </code></pre>
-            </div>
-            <ul>
-                <li><strong>Multiple Partitioning and Ordering</strong>: Combine multiple columns in <code>PARTITION BY</code> and <code>ORDER BY</code> for more granular control.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  ROW_NUMBER() OVER (
-      PARTITION BY Category, SubCategory
-      ORDER BY SaleDate DESC
-  ) AS RowNum
-  </code></pre>
-            </div>
-            <ul>
-                <li><strong>Using <code>RANGE</code> Instead of <code>ROWS</code></strong>: Define frames based on logical ranges rather than physical row counts.</li>
-            </ul>
-            <div>
-                <pre><code class="language-sql">  AVG(Price) OVER (
-      PARTITION BY ProductID
-      ORDER BY SaleDate
-      RANGE BETWEEN INTERVAL '7' DAY PRECEDING AND CURRENT ROW
-  ) AS WeeklyAveragePrice
-  </code></pre>
-            </div>
-            <h3 id="example-use-case-sales-trend-analysis">Example Use Case: Sales Trend Analysis</h3>
+            <h2 id="further-frame-choices">Further frame choices</h2>
+            <p><code>ROWS</code> counts positions in the ordered sequence. For example, <code>ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING</code> includes the previous row, current row, and next row where present. It does not mean “the previous and next day.” The existing moving-average query shows a runnable row-based frame.</p>
+            <p><code>RANGE</code> works with ordering values and peer groups rather than simply counting rows. Date-based range offsets and interval syntax depend on the engine; a PostgreSQL interval expression cannot be pasted unchanged into this SQLite exercise. Multiple-column partitioning is also possible when several fields define the group, provided those columns actually exist in the input.</p>
+            <p>Before using a more advanced frame, state which rows should contribute for a concrete current row, then compare that prediction with the result. Frame clauses affect aggregate windows differently from ranking and offset functions.</p>
+            <h2 id="example-use-case-sales-trend-analysis">Example Use Case: Sales Trend Analysis</h2>
             <p>Suppose you want to analyze sales trends by calculating the percentage change in quantity compared to the previous sale for each product.</p>
             <div>
                 <pre><code class="language-sql">SELECT
@@ -1816,8 +2059,9 @@ ORDER BY
     Quantity,
     Price,
     LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate) AS PreviousQuantity,
-    CASE 
-        WHEN LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate) IS NULL THEN NULL
+    CASE
+        WHEN LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate) IS NULL
+          OR LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate) = 0 THEN NULL
         ELSE ((Quantity - LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate)) * 100.0) / LAG(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate)
     END AS PercentageChange
 FROM
@@ -1874,7 +2118,7 @@ ORDER BY
                         <td>NULL</td>
                         <td>15.00</td>
                         <td>15</td>
-                        <td>-100.00</td>
+                        <td>NULL</td>
                     </tr>
                     <tr>
                         <td>2</td>
@@ -1945,6 +2189,226 @@ ORDER BY
                 <li>This query calculates the percentage change in <code>Quantity</code> compared to the previous sale for each <code>ProductID</code>.</li>
                 <li>Useful for identifying trends, growth, or decline in sales over time.</li>
             </ul>
+            <h2 id="see-ties-change-a-running-total">See ties change a running total</h2>
+            <p>An independent three-row example makes frame differences visible without changing Sales:</p>
+            <div>
+                <pre><code class="language-sql">WITH tied_sales(sale_id, amount) AS (
+    VALUES (1, 100), (2, 100), (3, 200)
+)
+SELECT sale_id, amount,
+       ROW_NUMBER() OVER (ORDER BY amount, sale_id) AS row_number,
+       RANK() OVER (ORDER BY amount) AS rank_with_gaps,
+       DENSE_RANK() OVER (ORDER BY amount) AS dense_rank,
+       SUM(amount) OVER (
+           ORDER BY amount
+           RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+       ) AS peer_total,
+       SUM(amount) OVER (
+           ORDER BY amount, sale_id
+           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+       ) AS row_total
+FROM tied_sales
+ORDER BY amount, sale_id;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>sale_id</th>
+                        <th>amount</th>
+                        <th>row_number</th>
+                        <th>rank_with_gaps</th>
+                        <th>dense_rank</th>
+                        <th>peer_total</th>
+                        <th>row_total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>100</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>200</td>
+                        <td>100</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>100</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>200</td>
+                        <td>200</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>200</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td>400</td>
+                        <td>400</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Both 100-valued rows are peers under <code>ORDER BY amount</code>. The range frame includes that whole peer group at its current boundary, so its first displayed total is already 200. The rows frame has a unique order and advances one row at a time. Adding <code>sale_id</code> to the ranking order would also break the tie, making those ranks different. Use tie-breaking only where it matches the desired meaning.</p>
+            <p>The outer <code>ORDER BY</code> controls presentation. The orders inside <code>OVER</code> control calculations. A result may display newest-first while computing a cumulative total oldest-first; make both choices explicit.</p>
+            <h2 id="ask-what-last-means-for-last_value">Ask what “last” means for LAST_VALUE</h2>
+            <p>The default ordered frame commonly ends at the current row's peer group, rather than the end of the partition. That can make <code>LAST_VALUE</code> look unexpectedly like the current value:</p>
+            <p>Input (<code>sample_values</code>):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>100</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>150</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>200</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div>
+                <pre><code class="language-sql">WITH sample_values(id, amount) AS (VALUES (1, 100), (2, 150), (3, 200))
+SELECT id,
+       LAST_VALUE(amount) OVER (ORDER BY id) AS last_in_default_frame,
+       LAST_VALUE(amount) OVER (
+           ORDER BY id
+           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+       ) AS last_in_partition
+FROM sample_values
+ORDER BY id;</code></pre>
+            </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>last_in_default_frame</th>
+                        <th>last_in_partition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>100</td>
+                        <td>200</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>150</td>
+                        <td>200</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>200</td>
+                        <td>200</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>UNBOUNDED FOLLOWING</code> is necessary when the desired answer lies after the current row. <code>LAG</code> and <code>LEAD</code> have different offset semantics and should not be explained as though they simply aggregate the same frame.</p>
+            <h2 id="a-time-interval-is-different-from-a-fixed-number-of-rows">A time interval is different from a fixed number of rows</h2>
+            <p>Three recent sale rows might cover three minutes or three months. For a time-based report, use the engine's supported time-range syntax. This <strong>PostgreSQL</strong> example is independent of the SQLite Sales table:</p>
+            <p>Input (<code>dated_sales</code>):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>sale_id</th>
+                        <th>sold_at</th>
+                        <th>quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>2025-01-01 12:00</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>2025-01-03 12:00</td>
+                        <td>20</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>2025-01-10 12:00</td>
+                        <td>30</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div>
+                <pre><code class="language-sql">-- PostgreSQL
+WITH dated_sales(sale_id, sold_at, quantity) AS (
+    VALUES
+        (1, TIMESTAMP '2025-01-01 12:00:00', 10),
+        (2, TIMESTAMP '2025-01-03 12:00:00', 20),
+        (3, TIMESTAMP '2025-01-10 12:00:00', 30)
+)
+SELECT sale_id,
+       AVG(quantity) OVER (
+           ORDER BY sold_at
+           RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW
+       ) AS seven_day_average,
+       AVG(quantity) OVER (
+           ORDER BY sold_at, sale_id
+           ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+       ) AS three_row_average
+FROM dated_sales
+ORDER BY sale_id;</code></pre>
+            </div>
+            <p>Result:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>sale_id</th>
+                        <th>seven_day_average</th>
+                        <th>three_row_average</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>10</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>15</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>25</td>
+                        <td>20</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>On January 10, the seven-day range includes January 3 at the boundary and January 10, excluding January 1. The three-row frame includes all three sales. Neither calculates an average per calendar day including days with no sales: that requires generating or joining a calendar and deciding how empty days contribute.</p>
+            <p>An offset range frame in PostgreSQL requires a single ordering expression. Its timestamp interval does not use the same spelling as SQLite's numeric <code>RANGE</code> offsets. For SQLite, a suitable numeric time expression such as <code>julianday(...)</code> can be used with a deliberately chosen numeric-day offset; do not paste PostgreSQL's interval literal into it.</p>
+            <h2 id="build-the-partition-at-the-right-stage">Build the partition at the right stage</h2>
+            <p>Window functions operate on the rows supplied by the query after its relevant filtering and grouping. If <code>WHERE</code> removes cancelled orders, a later windowed total excludes them too. If <code>GROUP BY</code> produces one row per month, a window can calculate a running total across those monthly summaries. It is not operating on the original order lines at that stage.</p>
+            <p>To display only the top ranked rows, calculate ranks in a CTE or subquery, then filter the rank outside it. Filtering input rows before ranking answers a different question. For “latest sale for each product,” rank by date descending and sale ID descending so same-date ties have a defined winner. For “all sales tied for greatest amount,” use a tie-preserving rank instead.</p>
+            <p>Window calculations may require sorting and buffering partitions. Multiple incompatible orders can require additional work, and a full-partition last value may need rows beyond the current one. An index can help some plans, but it does not guarantee that every window runs without a sort. Inspect plans with representative data and keep long analytical queries' transaction and memory requirements in view.</p>
+            <p>References: <a href="https://www.sqlite.org/windowfunctions.html">SQLite window frames</a> and <a href="https://www.postgresql.org/docs/current/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS">PostgreSQL window syntax</a>.</p>
+            <h2 id="review-questions">Review questions</h2>
+            <ol>
+                <li>What are window functions in SQL, and how do they differ from aggregate functions?</li>
+                <li>What are some common window functions, and what are their typical use cases?</li>
+                <li>How does the <code>OVER</code> clause define the window for window functions, and what components can it include?</li>
+                <li>What are the advantages and limitations of using window functions compared to traditional methods like self-joins?</li>
+                <li>What best practices should be followed when implementing window functions in SQL to ensure optimal performance and maintainability?</li>
+            </ol>
         </article-section>
     </div>
     </main>

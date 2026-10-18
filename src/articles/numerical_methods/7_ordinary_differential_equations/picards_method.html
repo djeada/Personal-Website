@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/7_ordinary_differential_equations/picards_method",
             "description": "Picard iteration turns an initial value problem into a sequence of integral approximations.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/picard-iterates-b75bae6819.svg",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Picard iteration turns an initial value problem into a sequence of integral approximations." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/picard-iterates-b75bae6819.svg" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -235,7 +235,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -348,6 +348,39 @@ messageStyle: "none"
                 y(x) = 2e^x - x - 1.
                 $$</p>
             <p>The iterates approach this solution on intervals where the contraction argument applies.</p>
+            <p>At $x=1$ the exact value is $2e-2\approx3.4366$, and the iterates give:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Iterate</th>
+                        <th>$y_n(1)$</th>
+                        <th>Error at $x=1$</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>$y_0$</td>
+                        <td>$1$</td>
+                        <td>$2.4366$</td>
+                    </tr>
+                    <tr>
+                        <td>$y_1$</td>
+                        <td>$2.5$</td>
+                        <td>$0.9366$</td>
+                    </tr>
+                    <tr>
+                        <td>$y_2$</td>
+                        <td>$3.1667$</td>
+                        <td>$0.2699$</td>
+                    </tr>
+                    <tr>
+                        <td>$y_3$</td>
+                        <td>$3.375$</td>
+                        <td>$0.0616$</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The iterate $y_n$ agrees with the Taylor series of the exact solution through the $x^n$ term, so the error shrinks rapidly on this short interval.</p>
             <p><img alt="Picard iteration error decreases with iteration count" decoding="async" loading="lazy" src="../../../resources/article-images/picard-convergence-8b756657ca.svg" /></p>
             <h3 id="an-important-distinction">An Important Distinction</h3>
             <p>Picard iteration is sometimes described as a numerical method, but a direct implementation can be expensive because every iteration requires a new integral over an entire function.</p>
@@ -374,6 +407,12 @@ messageStyle: "none"
                 <li>quadrature error from approximating the integral.</li>
             </ol>
             <p>The two errors should not be confused.</p>
+            <p>The repository function <code>picard_method</code> in <code>src/7_ordinary_differential_equations/picard</code> is <strong>not</strong> Picard iteration on whole functions, despite its name. It is a step-by-step method: on each step it solves the implicit midpoint equation</p>
+            <p>$$
+                y_{n+1} = y_n + h f\left(t_n + \frac{h}{2}, \frac{y_n + y_{n+1}}{2}\right)
+                $$</p>
+            <p>by fixed-point (Picard-style) substitution. The substitution converges when $hL/2&lt;1$, and the resulting method is second-order accurate. The name refers only to the fixed-point iteration used inside each step.</p>
+            <p>When $(t_\text{end}-t_0)/h$ is not an integer, the last step is shortened so that the returned grid ends exactly at $t_\text{end}$. The returned array has shape <code>(n + 1,)</code> for a scalar ODE and <code>(n + 1, d)</code> for a system with <code>d</code> components.</p>
             <h3 id="convergence-caveats">Convergence Caveats</h3>
             <p>Picard iteration may fail or become inconvenient when:</p>
             <ul>

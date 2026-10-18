@@ -50,7 +50,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/7_ordinary_differential_equations/heuns_method",
             "description": "Heun's method improves Euler's method by using information from both ends of each step.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-13",
             "image": "https://adamdjellouli.com/resources/article-images/heun-predictor-corrector-e0fe2bb3b9.svg",
             "inLanguage": "en"
         }
@@ -61,7 +61,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Heun's method improves Euler's method by using information from both ends of each step." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/heun-predictor-corrector-e0fe2bb3b9.svg" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-13" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
-tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+tex2jax: { inlineMath: [ ["$", "$"], ["\\(", "\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
 TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
 messageStyle: "none"
 });
@@ -132,6 +132,7 @@ messageStyle: "none"
                     <li><a href="#worked-example">Worked Example</a></li>
                     <li><a href="#runge-kutta-interpretation">Runge--Kutta Interpretation</a></li>
                     <li><a href="#algorithm">Algorithm</a></li>
+                    <li><a href="#repository-implementation">Repository Implementation</a></li>
                     <li><a href="#accuracy-versus-cost">Accuracy Versus Cost</a></li>
                     <li><a href="#stability">Stability</a></li>
                     <li><a href="#advantages">Advantages</a></li>
@@ -239,7 +240,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -344,13 +345,16 @@ messageStyle: "none"
 u = u0
 
 while t &lt; tf:
+    h_n = min(h, tf - t)    # shorten the last step to land on tf
     k1 = f(t, u)
-    predictor = u + h*k1
-    k2 = f(t + h, predictor)
+    predictor = u + h_n*k1
+    k2 = f(t + h_n, predictor)
 
-    u = u + h*(k1 + k2)/2
-    t = t + h</code></pre>
+    u = u + h_n*(k1 + k2)/2
+    t = t + h_n</code></pre>
             </div>
+            <h3 id="repository-implementation">Repository Implementation</h3>
+            <p><code>heun_method</code> takes a final time <code>t_end</code> and a nominal step <code>h</code>. When <code>(t_end - t0)/h</code> is not an integer, the last step is shortened so that the returned grid ends exactly at <code>t_end</code>; all earlier steps have length <code>h</code>. The returned array has shape <code>(n + 1,)</code> for a scalar ODE (one component) and <code>(n + 1, d)</code> for a system with <code>d</code> components.</p>
             <h3 id="accuracy-versus-cost">Accuracy Versus Cost</h3>
             <p>Compared with Euler:</p>
             <table>
@@ -389,7 +393,7 @@ while t &lt; tf:
             <p>$$
                 |R(z)|\le 1.
                 $$</p>
-            <p>Its stability region is larger than Euler's in some directions, but Heun is still explicit and is not a good default for strongly stiff systems.</p>
+            <p>On the negative real axis this is $-2\le z\le 0$, the same interval as for Euler. The region is larger than Euler's disk $|1+z|\le1$ off the real axis, but Heun is still explicit and is not a good default for strongly stiff systems.</p>
             <h3 id="advantages">Advantages</h3>
             <ul>
                 <li>Second-order accuracy with a simple formula.</li>
