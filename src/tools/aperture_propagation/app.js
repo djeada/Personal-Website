@@ -8,6 +8,7 @@
         MM = 1e-3,
         NP_MAX = 2048;
     const pal = UI.palette().canvas;
+    const tint = UI.withAlpha;
     const fmt = (v, u, d) => core.formatSI(v, u, d);
 
     const fmtArea = (v) => {
@@ -839,7 +840,7 @@
         if (o.cursor) {
             const p = map.toPx(cursor.x * u.s, cursor.y * u.s);
             ctx.save();
-            ctx.strokeStyle = "rgba(255,255,255,0.75)";
+            ctx.strokeStyle = tint(pal.cursor, 0.75);
             ctx.setLineDash([4, 4]);
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -1067,7 +1068,7 @@
         const c = map.toPx(hover.x * u.s, hover.y * u.s);
         const rpx = Math.abs(map.xToPx(r * u.s) - map.xToPx(0));
         ctx.save();
-        ctx.strokeStyle = toolCtl.get().tool === "erase" ? "#ff9f6b" : "#69f5e7";
+        ctx.strokeStyle = toolCtl.get().tool === "erase" ? pal.series[5] : pal.series[0];
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(c.x, c.y, Math.max(2, rpx), 0, 2 * Math.PI);
@@ -1182,7 +1183,7 @@
         for (const w of warns) {
             const p = document.createElement("p");
             p.className = "optics-warning";
-            p.textContent = (w.level === "warn" ? "⚠ " : "ℹ ") + w.text;
+            p.textContent = w.text;
             host.appendChild(p);
         }
 

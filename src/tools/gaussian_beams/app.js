@@ -9,12 +9,13 @@
         MM = 1e-3,
         MW = 1e-3;
     const TH = UI.palette().canvas;
+    const tint = UI.withAlpha;
     const COL = {
         beam: TH.series[0],
         arc: TH.series[1],
         lens: TH.series[3],
         waist: TH.marker,
-        zr: "rgba(105, 245, 231, 0.07)",
+        zr: tint(TH.series[0], 0.07),
         phase: TH.series[2]
     };
     const F_MIN_MM = 5;
@@ -413,7 +414,7 @@
         });
         for (let i = zmm.length - 1; i >= 0; i--) ctx.lineTo(map.xToPx(zmm[i]), map.yToPx(dn[i]));
         ctx.closePath();
-        ctx.fillStyle = "rgba(105, 245, 231, 0.16)";
+        ctx.fillStyle = tint(TH.series[0], 0.16);
         ctx.fill();
 
         let E = null;
@@ -489,7 +490,7 @@
             const label = (k === 0 ? "w₀ " : "w₀′ ") + fmtLen(sg.w0);
             const tw = ctx.measureText(label).width;
             const lx = Math.min(P.x + P.w - tw - 4, Math.max(P.x + 4, x - tw / 2));
-            ctx.fillStyle = "rgba(7,7,13,0.8)";
+            ctx.fillStyle = tint(TH.background, 0.8);
             ctx.fillRect(lx - 2, y0 + 10, tw + 4, 16);
             ctx.fillStyle = COL.waist;
             ctx.textAlign = "left";
@@ -530,7 +531,7 @@
             const label = "L" + Ls.idx + " f=" + Math.round(Ls.f / MM);
             const tw = ctx.measureText(label).width;
             const lx = Math.min(P.x + P.w - tw - 4, Math.max(P.x + 4, x - tw / 2));
-            ctx.fillStyle = "rgba(7,7,13,0.8)";
+            ctx.fillStyle = tint(TH.background, 0.8);
             ctx.fillRect(lx - 2, P.y + 3, tw + 4, 16);
             ctx.fillStyle = COL.lens;
             ctx.textAlign = "left";
@@ -546,7 +547,7 @@
             if (cur.invR === 0) lines.push("cursor: planar (R = ∞)");
             lines.forEach((txt, i) => {
                 const y = P.y + P.h - 22 - 18 * (lines.length - i);
-                ctx.fillStyle = "rgba(7,7,13,0.8)";
+                ctx.fillStyle = tint(TH.background, 0.8);
                 ctx.fillRect(P.x + 4, y - 2, ctx.measureText(txt).width + 8, 16);
                 ctx.fillStyle = TH.textMuted;
                 ctx.fillText(txt, P.x + 8, y);
@@ -746,7 +747,7 @@
         });
 
         ctx.save();
-        ctx.strokeStyle = kind === "int" ? "rgba(255,255,255,0.85)" : TH.text;
+        ctx.strokeStyle = kind === "int" ? tint(TH.cursor, 0.85) : TH.text;
         ctx.setLineDash([5, 4]);
         ctx.lineWidth = 1.2;
         ctx.beginPath();

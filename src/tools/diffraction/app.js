@@ -6,6 +6,7 @@
     const core = window.OpticsModels.core;
     const Model = window.OpticsModels.diffraction;
     const C = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const $ = (id) => document.getElementById(id);
 
 
@@ -361,7 +362,7 @@
 
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1.2;
-        ctx.strokeStyle = "rgba(105, 245, 231, 0.75)";
+        ctx.strokeStyle = tint(C.series[0], 0.75);
         const cx = detMap.xToPx(0),
             cy = detMap.yToPx(0),
             pxPerMm = P.w / (2 * R);
@@ -398,7 +399,7 @@
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             const label = (S.type === "circular" ? "1st dark ring r₁ = " : "y₁ = ") + (S.mins[0].y * 1e3).toPrecision(3) + " mm";
-            ctx.fillStyle = "rgba(7,7,13,0.72)";
+            ctx.fillStyle = tint(C.background, 0.72);
             const tw = ctx.measureText(label).width;
             ctx.fillRect(P.x + 4, P.y + 4, tw + 8, fs + 6);
             ctx.fillStyle = C.text;
@@ -591,7 +592,7 @@
 
         if (S.s.wav) {
             ctx.lineWidth = 1;
-            ctx.strokeStyle = "rgba(236, 233, 248, 0.28)";
+            ctx.strokeStyle = tint(C.text, 0.28);
             const nSrc = 7;
             for (let i = 0; i < nSrc; i++) {
                 const yy = cy - gap / 2 + (gap * (i + 0.5)) / nSrc;
@@ -608,11 +609,11 @@
             }
         }
 
-        ctx.fillStyle = "#3a3654";
+        ctx.fillStyle = tint(C.axis, 0.55);
         ctx.fillRect(xa - 4, 0, 8, cy - gap / 2);
         ctx.fillRect(xa - 4, cy + gap / 2, 8, h - cy - gap / 2);
 
-        ctx.fillStyle = "#26233a";
+        ctx.fillStyle = tint(C.axis, 0.32);
         ctx.fillRect(xs, cy - half, 4, 2 * half);
         const prof = Math.max(20, w - xs - 14);
         ctx.strokeStyle = col;
@@ -853,7 +854,7 @@
         schH.redraw();
     }, {
         onChange: (running) => {
-            startBtn.textContent = running ? "⏸ Pause" : "▶ Start";
+            startBtn.textContent = running ? "Pause" : "Start";
             startBtn.setAttribute("aria-pressed", running ? "true" : "false");
         }
     });

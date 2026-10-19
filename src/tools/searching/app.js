@@ -25,7 +25,18 @@ document.addEventListener("DOMContentLoaded", () => {
         jump: "Jump",
         interpolation: "Interpolation"
     };
-    const color = (name, fallback) => getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
+    const fallbackPalette = {
+        canvas: "#fbf8f1",
+        grid: "rgba(28, 26, 23, 0.08)",
+        rule: "#d8d0bf",
+        ruleStrong: "#a8946a",
+        ink2: "#4f4a40",
+        ink3: "#6c6557",
+        gold: "#8a6620",
+        verdigris: "#2e6e62",
+        moon: "#3d5a85"
+    };
+    const palette = () => Object.assign({}, fallbackPalette, window.ToolShared?.palette?.() || {});
     const toast = window.ToolShared?.showToast || ((message) => console.info(message));
     window.ToolShared?.initCardToggles();
 
@@ -149,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
             this.paused = false;
             this.manual = false;
             this.credits = 0;
-            ui.pause.innerHTML = '<span class="btn-icon">⏸️</span> Pause'
+            ui.pause.innerHTML = 'Pause'
         }
         clear() {
             this.visited.clear();
@@ -179,7 +190,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         draw(current = -1, found = -1, range = null, message) {
             if (!this.width) this.resize();
-            const w = this.width,
+            this.lastFrame = [current, found, range];
+            const c = palette(),
+                w = this.width,
                 h = this.height,
                 n = this.array.length,
                 p = Math.max(18, w * .045),
@@ -190,14 +203,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 gap = Math.min(5, Math.max(1, slot * .14)),
                 bw = Math.max(2, slot - gap);
             ctx.clearRect(0, 0, w, h);
-            const bg = ctx.createLinearGradient(0, 0, 0, h);
-            bg.addColorStop(0, "rgba(56,198,194,.10)");
-            bg.addColorStop(1, "rgba(56,198,194,.015)");
-            ctx.fillStyle = bg;
+            ctx.fillStyle = c.canvas;
             ctx.fillRect(0, 0, w, h);
-            ctx.strokeStyle = "rgba(148,163,184,.16)";
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
             for (let i = 1; i < 5; i++) {
-                const y = top + (base - top) * i / 5;
+                const y = Math.round(top + (base - top) * i / 5) + .5;
                 ctx.beginPath();
                 ctx.moveTo(p, y);
                 ctx.lineTo(w - p, y);
@@ -207,25 +218,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 const bh = Math.max(3, (base - top) * v / max),
                     x = p + i * slot + gap / 2,
                     y = base - bh;
-                let fill = color("frontier", "#4aa3b5");
-                if (this.visited.has(i)) fill = color("wall", "#536474");
-                if (range && (i < range[0] || i > range[1])) fill = color("wall", "#536474");
-                if (i === current) fill = color("current", "#ffb547");
-                if (i === found) fill = color("success", "#21a179");
+                let fill = c.ink3,
+                    alpha = .42;
+                if (this.visited.has(i)) [fill, alpha] = [c.moon, .85];
+                if (range && (i < range[0] || i > range[1])) [fill, alpha] = [c.rule, 1];
+                if (i === current) [fill, alpha] = [c.gold, 1];
+                if (i === found) [fill, alpha] = [c.verdigris, 1];
+                ctx.globalAlpha = alpha;
                 ctx.fillStyle = fill;
-                ctx.shadowColor = fill;
-                ctx.shadowBlur = i === current || i === found ? 14 : 3;
-                ctx.beginPath();
-                ctx.roundRect(x, y, bw, bh, [Math.min(5, bw / 2), Math.min(5, bw / 2), 1, 1]);
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                ctx.fillRect(x, y, bw, bh);
+                ctx.globalAlpha = 1;
                 if (slot >= 24 || n <= 16) {
-                    ctx.fillStyle = y > top + 22 ? "#fff" : "#dbeafe";
-                    ctx.font = `700 ${Math.max(10,Math.min(14,slot*.38))}px system-ui`;
+                    ctx.fillStyle = i === current ? c.gold : i === found ? c.verdigris : c.ink2;
+                    ctx.font = `500 ${Math.max(10,Math.min(13,slot*.36))}px "IBM Plex Mono", ui-monospace, monospace`;
                     ctx.textAlign = "center";
-                    ctx.fillText(String(v), x + bw / 2, y > top + 22 ? y + 17 : y - 7)
+                    ctx.fillText(String(v), x + bw / 2, y - 7)
                 }
             });
+            ctx.strokeStyle = c.ruleStrong;
+            ctx.beginPath();
+            ctx.moveTo(p, Math.round(base) + .5);
+            ctx.lineTo(w - p, Math.round(base) + .5);
+            ctx.stroke();
             if (message) ui.operation.textContent = message
         }
         async check(index, range, message) {
@@ -244,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!this.running) return;
             this.manual = false;
             this.paused = !this.paused;
-            ui.pause.innerHTML = this.paused ? '<span class="btn-icon">▶️</span> Resume' : '<span class="btn-icon">⏸️</span> Pause'
+            ui.pause.innerHTML = this.paused ? 'Resume' : 'Pause'
         }
         step() {
             if (!this.running) {
@@ -346,8 +360,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const visualizer = new SearchVisualizer(),
         resize = () => {
             visualizer.resize();
-            visualizer.draw()
+            visualizer.draw(...(visualizer.lastFrame || []))
         };
     new ResizeObserver(resize).observe(canvas.closest(".canvas-wrapper"));
     window.addEventListener("resize", resize);
+    window.ToolShared?.onThemeChange?.(() => visualizer.draw(...(visualizer.lastFrame || [])));
 });

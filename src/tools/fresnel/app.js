@@ -7,28 +7,32 @@
     const Fresnel = window.OpticsModels.fresnel;
     const UI = window.OpticsUI;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const C = Fresnel.complex;
     const DEG = Math.PI / 180;
     const deg = (rad) => rad / DEG;
 
 
     const COL = {
-        incident: "#f8d477",
-        reflected: "#f187c8",
-        transmitted: "#7ee787",
-        s: "#8ab4ff",
-        p: "#ff9f6b",
-        sDim: "rgba(138, 180, 255, 0.32)",
-        pDim: "rgba(255, 159, 107, 0.32)",
-        unpol: "#ece9f8",
-        brewster: "#f8d477",
-        critical: "#a78bfa",
-        interface: "#8f89a8",
-        guide: "rgba(184, 178, 207, 0.6)",
-        medium1: "rgba(138, 180, 255, 0.04)",
-        medium2: "rgba(138, 180, 255, 0.12)",
-        band: "126, 231, 135"
+        incident: PAL.series[1],
+        reflected: PAL.series[2],
+        transmitted: PAL.series[4],
+        s: PAL.series[6],
+        p: PAL.series[5],
+        sDim: tint(PAL.series[6], 0.32),
+        pDim: tint(PAL.series[5], 0.32),
+        unpol: PAL.text,
+        brewster: PAL.marker,
+        critical: PAL.series[3],
+        interface: PAL.axis,
+        guide: tint(PAL.textMuted, 0.6),
+        medium1: tint(PAL.series[6], 0.04),
+        medium2: tint(PAL.series[6], 0.12)
     };
+    document.querySelectorAll(".fresnel-legend").forEach((ul) => {
+        ul.style.setProperty("--swatch-chip", PAL.background);
+        ul.querySelectorAll(".swatch[data-col]").forEach((el) => el.style.setProperty("--c", COL[el.dataset.col]));
+    });
 
     const DEFAULTS = {
         n1: 1,
@@ -351,7 +355,7 @@
         const tw = ctx.measureText(text).width;
         let lx = align === "right" ? x - tw : align === "center" ? x - tw / 2 : x;
         lx = Math.max(4, Math.min(w - tw - 4, lx));
-        ctx.fillStyle = "rgba(7, 7, 13, 0.72)";
+        ctx.fillStyle = tint(PAL.background, 0.72);
         ctx.fillRect(lx - 3, y - fs + 1, tw + 6, fs + 5);
         ctx.fillStyle = color;
         ctx.textAlign = "left";
@@ -422,7 +426,7 @@
             const g = ctx.createLinearGradient(0, oy, 0, h);
             for (let i = 0; i <= 10; i++) {
                 const z = depth * i / 10;
-                g.addColorStop(i / 10, "rgba(" + COL.band + "," + (0.34 * Math.exp(-2 * z / dDisp)).toFixed(3) + ")");
+                g.addColorStop(i / 10, tint(COL.transmitted, (0.34 * Math.exp(-2 * z / dDisp)).toFixed(3)));
             }
             ctx.fillStyle = g;
             ctx.fillRect(0, oy, w, depth);
@@ -507,7 +511,7 @@
 
                 const phi0 = C.arg(amps.transmitted);
                 const depthL = (h - oy) / (scale * zoom);
-                ctx.strokeStyle = "rgb(" + COL.band + ")";
+                ctx.strokeStyle = COL.transmitted;
                 if (s.kx > 1e-6) {
                     for (let m = -80; m <= 80; m++) {
                         const xAt = (z) => (m - (phi0 - wt) / (2 * Math.PI) - s.kz2.re * z) / s.kx;
@@ -845,7 +849,7 @@
             let lx = px + 6 + tw > P.x + P.w - 3 ? px - 6 - tw : px + 6;
             lx = Math.max(P.x + 3, Math.min(P.x + P.w - tw - 3, lx));
             const ly = P.y + 4 + yFrac * P.h + row++ * (fs + 8);
-            ctx.fillStyle = "rgba(7, 7, 13, 0.85)";
+            ctx.fillStyle = tint(PAL.background, 0.85);
             ctx.fillRect(lx - 3, ly - 2, tw + 6, fs + 6);
             ctx.fillStyle = m.color || PAL.marker;
             ctx.fillText(m.label, lx, ly + 1);
@@ -1158,7 +1162,7 @@
         geoCanvas.redraw();
     }, {
         onChange: (running) => {
-            startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause' : '<span aria-hidden="true">▶</span> Animate ωt';
+            startStopBtn.innerHTML = running ? "Pause" : "Animate ωt";
             startStopBtn.setAttribute("aria-pressed", String(running));
         }
     });

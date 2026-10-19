@@ -129,18 +129,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            background: ${type === 'error' ? '#f44336' : '#4CAF50'};
-            color: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-        `;
         document.body.appendChild(notification);
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-out';
@@ -181,19 +169,19 @@ document.addEventListener('DOMContentLoaded', function() {
         statsDisplay.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-item">
-                    <span class="stat-label">Total Words:</span>
+                    <span class="stat-label">Total Words</span>
                     <span class="stat-value">${totalWords}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Unique Words:</span>
+                    <span class="stat-label">Unique Words</span>
                     <span class="stat-value">${uniqueWords}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Duplicate Words:</span>
+                    <span class="stat-label">Duplicate Words</span>
                     <span class="stat-value">${duplicateWords}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Duplicate %:</span>
+                    <span class="stat-label">Duplicate %</span>
                     <span class="stat-value">${duplicatePercentage}%</span>
                 </div>
             </div>

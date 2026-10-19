@@ -478,6 +478,8 @@
 
 
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     let naMap = null;
 
     function prefixScale(maxAbs, unit) {
@@ -505,7 +507,7 @@
 
     function beamColor(alpha) {
         const nm = Math.min(700, Math.max(400, P.lambda0 * 1e9));
-        return P.lambda0 * 1e9 > 720 || P.lambda0 * 1e9 < 380 ? "rgba(241, 135, 200, " + alpha + ")" : UI.wavelengthToCSS(nm, alpha);
+        return P.lambda0 * 1e9 > 720 || P.lambda0 * 1e9 < 380 ? tint(PAL.series[3], alpha) : UI.wavelengthToCSS(nm, alpha);
     }
 
     function drawBench(ctx, w, h) {
@@ -534,11 +536,11 @@
 
 
         if (P.no > 1.0001) {
-            ctx.fillStyle = "rgba(138, 180, 255, " + Math.min(0.22, (P.no - 1) * 0.3) + ")";
+            ctx.fillStyle = tint(PAL.series[5], Math.min(0.22, (P.no - 1) * 0.3));
             ctx.fillRect(0, mt - 8, X(zL), h - mt - mb + 16);
         }
         if (P.ni > 1.0001) {
-            ctx.fillStyle = "rgba(138, 180, 255, " + Math.min(0.22, (P.ni - 1) * 0.3) + ")";
+            ctx.fillStyle = tint(PAL.series[5], Math.min(0.22, (P.ni - 1) * 0.3));
             ctx.fillRect(X(zL), mt - 8, w - X(zL), h - mt - mb + 16);
         }
 
@@ -669,27 +671,27 @@
                 ctx.stroke();
             }
         } else {
-            ctx.fillStyle = "#3a3550";
+            ctx.fillStyle = tint(PAL.textMuted, 0.3);
             ctx.fillRect(X(0) - 14, Y(0) - 8, 12, 16);
             ctx.fillStyle = beamColor(1);
             ctx.fillRect(X(0) - 2, Y(P.w0), 3, Math.max(2, 2 * P.w0 * sy));
         }
 
-        ctx.fillStyle = "#4a4560";
+        ctx.fillStyle = tint(PAL.textMuted, 0.38);
         ctx.fillRect(X(zL) - 3, Y(ymax * 1.05), 6, Y(E.R) - Y(ymax * 1.05));
         ctx.fillRect(X(zL) - 3, Y(-E.R), 6, Y(-ymax * 1.05) - Y(-E.R));
         const lensW = Math.max(6, Math.min(16, E.R * sy * 0.25));
-        ctx.fillStyle = "rgba(105, 245, 231, 0.18)";
-        ctx.strokeStyle = "#69f5e7";
+        ctx.fillStyle = tint(PAL.series[1], 0.18);
+        ctx.strokeStyle = PAL.series[1];
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.ellipse(X(zL), Y(0), lensW / 2, Math.max(3, E.R * sy), 0, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "#8ab4ff";
+        ctx.fillStyle = PAL.series[5];
         ctx.fillRect(X(zD) - 2, Y(P.rd), 5, Math.max(2, 2 * P.rd * sy));
-        ctx.strokeStyle = "#8ab4ff";
+        ctx.strokeStyle = PAL.series[5];
         ctx.lineWidth = 1;
         ctx.strokeRect(X(zD) + 3, Y(P.rd), 5, Math.max(2, 2 * P.rd * sy));
         if (real && imgR > 0) {
@@ -923,7 +925,7 @@
         const markers = [{
             x: E.R * 1e3,
             label: "D/2",
-            color: "#69f5e7"
+            color: PAL.series[1]
         }];
         if (P.source === "lambert" && P.a * 1e3 < irr.rhoMax * 1e3) markers.push({
             x: P.a * 1e3,

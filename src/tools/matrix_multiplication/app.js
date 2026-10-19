@@ -229,17 +229,25 @@
         geometryCanvas.style.width = `${width}px`;
         geometryContext.setTransform(dpr, 0, 0, dpr, 0, 0);
         const ctx = geometryContext;
-        const surface = getComputedStyle(document.body).getPropertyValue("--tool-surface-raised").trim() || "#f8fafc";
-        const border = getComputedStyle(document.body).getPropertyValue("--tool-border").trim() || "#dbe3ec";
-        const text = getComputedStyle(document.body).getPropertyValue("--tool-text").trim() || "#1e293b";
-        const muted = getComputedStyle(document.body).getPropertyValue("--tool-text-muted").trim() || "#64748b";
-        const accent = getComputedStyle(document.body).getPropertyValue("--tool-primary").trim() || "#087e8b";
+        const colors = window.ToolShared ? window.ToolShared.palette() : {};
+        const surface = colors.canvas || "#fbf8f1";
+        const border = colors.rule || "#d8d0bf";
+        const text = colors.ink || "#1c1a17";
+        const muted = colors.ink3 || "#6c6557";
+        const accent = colors.gold || "#8a6620";
+        const accentSoft = colors.goldSoft || "rgba(138, 102, 32, 0.1)";
+        const gridLine = colors.grid || "rgba(28, 26, 23, 0.08)";
+        const firstColor = colors.rose || "#9e3b36";
+        const secondColor = colors.verdigris || "#2e6e62";
+        const displayFont = "'Cormorant Garamond', Garamond, serif";
+        const monoFont = "'IBM Plex Mono', ui-monospace, monospace";
+        const sansFont = "'IBM Plex Sans', system-ui, sans-serif";
         ctx.clearRect(0, 0, width, height);
         ctx.fillStyle = surface;
         ctx.fillRect(0, 0, width, height);
         if (!valid) {
             ctx.fillStyle = muted;
-            ctx.font = "14px system-ui, sans-serif";
+            ctx.font = `14px ${sansFont}`;
             ctx.textAlign = "center";
             ctx.fillText("Geometric grid composition requires A and B to both be 2 × 2.", width / 2, height / 2);
             geometryMessage.textContent = "This product is still valid algebraically, but its input and output spaces cannot all be drawn on one 2D plane.";
@@ -291,19 +299,17 @@
             ctx.save();
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
-            ctx.lineWidth = 6;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 12;
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = "butt";
+            ctx.lineJoin = "miter";
             ctx.beginPath();
             ctx.moveTo(...from);
             ctx.lineTo(...to);
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(...to);
-            ctx.lineTo(to[0] - 15 * Math.cos(angle - .48), to[1] - 15 * Math.sin(angle - .48));
-            ctx.lineTo(to[0] - 15 * Math.cos(angle + .48), to[1] - 15 * Math.sin(angle + .48));
+            ctx.lineTo(to[0] - 12 * Math.cos(angle - .42), to[1] - 12 * Math.sin(angle - .42));
+            ctx.lineTo(to[0] - 12 * Math.cos(angle + .42), to[1] - 12 * Math.sin(angle + .42));
             ctx.closePath();
             ctx.fill();
             ctx.restore();
@@ -320,22 +326,22 @@
             const scale = Math.min((panelWidth - 42) / (2 * stageExtent), (plotHeight - 24) / (2 * stageExtent));
             const mapRaw = p => [origin[0] + p[0] * scale, origin[1] - p[1] * scale];
             const map = p => mapRaw(apply(matrix, p));
-            ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.12)" : "rgba(148,163,184,.025)";
+            ctx.fillStyle = index === geometryStage ? accentSoft : surface;
             ctx.strokeStyle = index === geometryStage ? accent : border;
-            ctx.lineWidth = index === geometryStage ? 2.5 : 1;
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.roundRect(left, 8, panelWidth, height - 18, 10);
+            ctx.rect(left + .5, 8.5, panelWidth - 1, height - 18);
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = text;
-            ctx.font = "800 18px system-ui";
+            ctx.font = `600 20px ${displayFont}`;
             ctx.textAlign = "center";
             ctx.fillText(stage.title, left + panelWidth / 2, 32);
             ctx.fillStyle = index === geometryStage ? accent : text;
-            ctx.font = "800 14px system-ui";
+            ctx.font = `500 13px ${monoFont}`;
             ctx.fillText(stage.formula, left + panelWidth / 2, 55);
             ctx.fillStyle = muted;
-            ctx.font = "12px system-ui";
+            ctx.font = `12px ${sansFont}`;
             ctx.fillText(`${stage.note} · upright auto-fit view`, left + panelWidth / 2, 73);
             ctx.save();
             ctx.beginPath();
@@ -344,21 +350,24 @@
             for (let k = -6; k <= 6; k++) {
                 let p1 = map([k, -6]),
                     p2 = map([k, 6]);
-                ctx.strokeStyle = k === 0 ? "rgba(255,77,103,.24)" : "rgba(148,163,184,.09)";
-                ctx.lineWidth = k === 0 ? 1.5 : .7;
+                ctx.strokeStyle = k === 0 ? firstColor : gridLine;
+                ctx.globalAlpha = k === 0 ? .45 : 1;
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(...p1);
                 ctx.lineTo(...p2);
                 ctx.stroke();
                 p1 = map([-6, k]);
                 p2 = map([6, k]);
-                ctx.strokeStyle = k === 0 ? "rgba(36,224,209,.24)" : "rgba(148,163,184,.09)";
-                ctx.lineWidth = k === 0 ? 1.5 : .7;
+                ctx.strokeStyle = k === 0 ? secondColor : gridLine;
+                ctx.globalAlpha = k === 0 ? .45 : 1;
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(...p1);
                 ctx.lineTo(...p2);
                 ctx.stroke();
             }
+            ctx.globalAlpha = 1;
             const vertices = [
                 [0, 0],
                 [1, 0],
@@ -366,57 +375,58 @@
                 [0, 1]
             ].map(map);
             ctx.save();
-            ctx.fillStyle = "rgba(255,213,74,.18)";
-            ctx.strokeStyle = "#ffd54a";
-            ctx.lineWidth = 5;
-            ctx.lineJoin = "round";
-            ctx.shadowColor = "#ffd54a";
-            ctx.shadowBlur = 14;
+            ctx.fillStyle = accent;
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 2;
+            ctx.lineJoin = "miter";
             ctx.beginPath();
             ctx.moveTo(...vertices[0]);
             vertices.slice(1).forEach(p => ctx.lineTo(...p));
             ctx.closePath();
+            ctx.globalAlpha = .16;
             ctx.fill();
+            ctx.globalAlpha = 1;
             ctx.stroke();
             ctx.restore();
             vertices.forEach(p => {
                 ctx.save();
-                ctx.fillStyle = "#fff3a6";
-                ctx.shadowColor = "#ffd54a";
-                ctx.shadowBlur = 12;
+                ctx.fillStyle = accent;
+                ctx.strokeStyle = surface;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+                ctx.arc(p[0], p[1], 4, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
                 ctx.restore();
             });
             const firstEnd = map([1, 0]);
             const secondEnd = map([0, 1]);
             const cross = Math.abs((firstEnd[0] - origin[0]) * (secondEnd[1] - origin[1]) - (firstEnd[1] - origin[1]) * (secondEnd[0] - origin[0]));
             const nearlyOverlapping = cross < 900;
-            drawArrow(origin, firstEnd, "#ff4d67", nearlyOverlapping ? -5 : 0);
-            drawArrow(origin, secondEnd, "#24e0d1", nearlyOverlapping ? 5 : 0);
+            drawArrow(origin, firstEnd, firstColor, nearlyOverlapping ? -5 : 0);
+            drawArrow(origin, secondEnd, secondColor, nearlyOverlapping ? 5 : 0);
             ctx.restore();
 
             const det = determinant(stage.matrix);
             const first = apply(stage.matrix, [1, 0]);
             const second = apply(stage.matrix, [0, 1]);
             const prefix = index === 0 ? "" : index === 1 ? "B" : "AB";
-            ctx.font = "800 12px ui-monospace, monospace";
+            ctx.font = `500 12px ${monoFont}`;
             ctx.textAlign = "center";
-            ctx.fillStyle = "#ff4d67";
+            ctx.fillStyle = firstColor;
             ctx.fillText(`${prefix}e₁ = (${fmt(first[0])}, ${fmt(first[1])})`, left + panelWidth * .27, height - 50);
-            ctx.fillStyle = "#24e0d1";
+            ctx.fillStyle = secondColor;
             ctx.fillText(`${prefix}e₂ = (${fmt(second[0])}, ${fmt(second[1])})`, left + panelWidth * .73, height - 50);
-            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#ffd54a" : text;
-            ctx.font = "800 12px system-ui";
-            ctx.fillText(Math.abs(det) < 1e-8 ? "The square collapses to a line (area = 0)" : `Yellow area scales by |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 25);
+            ctx.fillStyle = Math.abs(det) < 1e-8 ? accent : muted;
+            ctx.font = `12px ${sansFont}`;
+            ctx.fillText(Math.abs(det) < 1e-8 ? "The square collapses to a line (area = 0)" : `Gold area scales by |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 25);
             if (index < 2) {
                 ctx.fillStyle = accent;
-                ctx.font = "900 24px system-ui";
+                ctx.font = `20px ${sansFont}`;
                 ctx.fillText("→", left + panelWidth + panelGap / 2, height / 2);
             }
         });
-        geometryMessage.textContent = geometryStage === 0 ? "Start: the yellow unit square has area 1." : geometryStage === 1 ? "B acts first. The red and teal arrows are B's columns; they show where the original basis vectors land." : "A now acts on Bx. The last panel is the single transformation C = AB.";
+        geometryMessage.textContent = geometryStage === 0 ? "Start: the gold unit square has area 1." : geometryStage === 1 ? "B acts first. The rose and blue-green arrows are B's columns; they show where the original basis vectors land." : "A now acts on Bx. The last panel is the single transformation C = AB.";
         geometryCanvas.dataset.available = "true";
         geometryCanvas.dataset.product = JSON.stringify(C);
         geometryCanvas.dataset.stage = String(geometryStage);
@@ -653,7 +663,7 @@
             lastProductPlot.selectedCol
         );
     });
-    document.getElementById("dark-mode-button")?.addEventListener("click", () => setTimeout(() => {
+    if (window.ToolShared && window.ToolShared.onThemeChange) window.ToolShared.onThemeChange(() => {
         if (lastProductPlot) renderProductPlot(
             lastProductPlot.A,
             lastProductPlot.B,
@@ -661,7 +671,7 @@
             lastProductPlot.selectedRow,
             lastProductPlot.selectedCol
         );
-    }, 0));
+    });
 
     updateActiveCells();
     applyPreset("geometric");

@@ -13,7 +13,6 @@
         timerSecondsPerCard: 90,
         timerWarningThreshold: 60,
         timerCriticalThreshold: 15,
-        timerEmoji: '\u23F1\uFE0F',
     };
 
 
@@ -76,19 +75,8 @@
             elements.errorDiv.id = 'errorMessage';
             elements.errorDiv.setAttribute('role', 'alert');
             elements.errorDiv.setAttribute('aria-live', 'assertive');
-            Object.assign(elements.errorDiv.style, {
-                position: 'fixed',
-                top: '0',
-                left: '0',
-                right: '0',
-                color: 'white',
-                backgroundColor: '#ef4444',
-                padding: '1rem',
-                textAlign: 'center',
-                zIndex: '9999',
-                display: 'none',
-                fontWeight: '500'
-            });
+            elements.errorDiv.className = 'flash-error';
+            elements.errorDiv.style.display = 'none';
             document.body.prepend(elements.errorDiv);
         }
         elements.errorDiv.textContent = msg;
@@ -333,9 +321,7 @@
         if (state.cards.length === 0) {
             elements.flashcardFront.innerHTML = `
                 <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <span class="empty-state-mark" aria-hidden="true"></span>
                     <p class="empty-state-title">No cards available</p>
                     <p class="empty-state-description">Select subcategories to begin studying</p>
                 </div>
@@ -359,10 +345,8 @@
         if (!found) {
             elements.flashcardFront.innerHTML = `
                 <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p class="empty-state-title">Congratulations! 🎉</p>
+                    <span class="empty-state-mark" aria-hidden="true"></span>
+                    <p class="empty-state-title">Congratulations!</p>
                     <p class="empty-state-description">You've completed all flashcards. Click Reset to study again.</p>
                 </div>
             `;
@@ -459,7 +443,7 @@
         stopTimer();
         state.timerSecondsLeft = 0;
         if (elements.timerDisplay) {
-            elements.timerDisplay.textContent = CONFIG.timerEmoji + ' --:--';
+            elements.timerDisplay.textContent = '--:--';
             elements.timerDisplay.classList.remove('warning', 'critical');
         }
     }
@@ -467,7 +451,7 @@
     function updateTimerDisplay() {
         if (!elements.timerDisplay) return;
 
-        elements.timerDisplay.textContent = CONFIG.timerEmoji + ' ' + formatTime(state.timerSecondsLeft);
+        elements.timerDisplay.textContent = formatTime(state.timerSecondsLeft);
         elements.timerDisplay.classList.remove('warning', 'critical');
 
         if (state.timerSecondsLeft <= CONFIG.timerCriticalThreshold) {

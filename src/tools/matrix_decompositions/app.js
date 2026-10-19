@@ -20,14 +20,22 @@
     const canvas = document.getElementById("decomposition-canvas");
     const canvasContainer = document.getElementById("canvas-container");
     const ctx = canvas.getContext("2d");
-    const plotColors = {
-        base: "#60a5fa",
-        transformed: "#fb7185",
-        column1: "#c084fc",
-        column2: "#22d3ee",
-        direction1: "#4ade80",
-        direction2: "#fbbf24"
+    const readPlotColors = () => {
+        const colors = window.ToolShared ? window.ToolShared.palette() : {};
+        return {
+            canvas: colors.canvas || "#fbf8f1",
+            grid: colors.rule || "#d8d0bf",
+            axis: colors.ink3 || "#6c6557",
+            text: colors.ink3 || "#6c6557",
+            base: colors.moon || "#3d5a85",
+            transformed: colors.rose || "#9e3b36",
+            column1: colors.ember || "#a4511f",
+            column2: colors.ink2 || "#4f4a40",
+            direction1: colors.verdigris || "#2e6e62",
+            direction2: colors.gold || "#8a6620"
+        };
     };
+    let plotColors = readPlotColors();
     const storyInput = document.getElementById("story-input");
     const storyAction = document.getElementById("story-action");
     const storyOutput = document.getElementById("story-output");
@@ -306,6 +314,9 @@
         canvasContainer.style.height = `${height}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
+        plotColors = readPlotColors();
+        ctx.fillStyle = plotColors.canvas;
+        ctx.fillRect(0, 0, width, height);
         return {
             width,
             height
@@ -321,11 +332,10 @@
     function drawGrid(width, height, scale, axisNames = ["x", "y"]) {
         const cx = width / 2;
         const cy = height / 2;
-        const styles = getComputedStyle(document.documentElement);
-        const gridColor = styles.getPropertyValue("--tool-border").trim() || "#d1d5db";
-        const textColor = styles.getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        const gridColor = plotColors.grid;
+        const textColor = plotColors.text;
         ctx.save();
-        ctx.globalAlpha = document.body.classList.contains("dark-mode") ? 0.38 : 0.62;
+        ctx.globalAlpha = 0.8;
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         for (let x = cx % scale; x < width; x += scale) {
@@ -340,9 +350,9 @@
             ctx.lineTo(width, y);
             ctx.stroke();
         }
-        ctx.globalAlpha = 0.82;
-        ctx.strokeStyle = document.body.classList.contains("dark-mode") ? "#94a3b8" : "#64748b";
-        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = plotColors.axis;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, cy);
         ctx.lineTo(width, cy);
@@ -354,7 +364,7 @@
         const maxX = Math.floor(width / (2 * scale));
         const maxY = Math.floor(height / (2 * scale));
         ctx.fillStyle = textColor;
-        ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         for (let value = -maxX; value <= maxX; value += labelStep) {
@@ -377,7 +387,7 @@
             ctx.stroke();
             ctx.fillText(String(value), cx - 8, y);
         }
-        ctx.font = "700 14px sans-serif";
+        ctx.font = "italic 15px 'Cormorant Garamond', Garamond, serif";
         ctx.textAlign = "right";
         ctx.textBaseline = "bottom";
         ctx.fillText(axisNames[0], width - 10, cy - 8);
@@ -399,11 +409,9 @@
         ctx.save();
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 13;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "butt";
+        ctx.lineJoin = "miter";
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(x, y);
@@ -411,20 +419,17 @@
         const angle = Math.atan2(y - cy, x - cx);
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x - 13 * Math.cos(angle - Math.PI / 6), y - 13 * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(x - 13 * Math.cos(angle + Math.PI / 6), y - 13 * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(x - 11 * Math.cos(angle - Math.PI / 7), y - 11 * Math.sin(angle - Math.PI / 7));
+        ctx.lineTo(x - 11 * Math.cos(angle + Math.PI / 7), y - 11 * Math.sin(angle + Math.PI / 7));
         ctx.closePath();
         ctx.fill();
         if (label) {
-            ctx.shadowBlur = 0;
-            ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif";
+            ctx.font = "500 13px 'IBM Plex Mono', ui-monospace, monospace";
             const labelX = x + 9;
             const labelY = y - 10;
             const metrics = ctx.measureText(label);
-            ctx.fillStyle = document.body.classList.contains("dark-mode") ? "rgba(5,5,12,.88)" : "rgba(255,255,255,.9)";
-            ctx.beginPath();
-            ctx.roundRect(labelX - 4, labelY - 14, metrics.width + 8, 20, 5);
-            ctx.fill();
+            ctx.fillStyle = plotColors.canvas;
+            ctx.fillRect(labelX - 4, labelY - 14, metrics.width + 8, 20);
             ctx.fillStyle = color;
             ctx.fillText(label, labelX, labelY);
         }
@@ -441,8 +446,6 @@
         drawGrid(width, height, scale);
         ctx.lineWidth = 2;
         ctx.strokeStyle = plotColors.base;
-        ctx.shadowColor = plotColors.base;
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         for (let i = 0; i <= 180; i++) {
             const t = (i / 180) * Math.PI * 2;
@@ -453,7 +456,6 @@
         ctx.stroke();
 
         ctx.strokeStyle = plotColors.transformed;
-        ctx.shadowColor = plotColors.transformed;
         ctx.beginPath();
         for (let i = 0; i <= 180; i++) {
             const t = (i / 180) * Math.PI * 2;
@@ -462,7 +464,6 @@
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
-        ctx.shadowBlur = 0;
         drawVector(matVec(A, [1, 0]), plotColors.column1, width, height, scale, "Ae₁");
         drawVector(matVec(A, [0, 1]), plotColors.column2, width, height, scale, "Ae₂");
         drawVector(result.V[0], plotColors.direction1, width, height, scale, "v₁");
@@ -489,8 +490,6 @@
         const scale = Math.min(width, height) / (centeredExtent * 2.35);
         drawGrid(width, height, scale, ["centered x", "centered y"]);
         ctx.fillStyle = plotColors.base;
-        ctx.shadowColor = plotColors.base;
-        ctx.shadowBlur = 8;
         result.points.forEach(point => {
             const centered = [point[0] - result.mean[0], point[1] - result.mean[1]];
             const [x, y] = toCanvas(centered, width, height, scale);
@@ -498,7 +497,6 @@
             ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.fill();
         });
-        ctx.shadowBlur = 0;
         drawVector(result.vectors[0].map(value => value * Math.sqrt(result.values[0]) * 2), plotColors.transformed, width, height, scale, "PC1");
         drawVector(result.vectors[1].map(value => value * Math.sqrt(result.values[1]) * 2), plotColors.direction1, width, height, scale, "PC2");
         setLegend([
@@ -531,8 +529,6 @@
         ];
         ctx.strokeStyle = plotColors.base;
         ctx.lineWidth = 3;
-        ctx.shadowColor = plotColors.base;
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         square.forEach((point, index) => {
             const [x, y] = toCanvas(point, width, height, scale);
@@ -540,14 +536,12 @@
         });
         ctx.stroke();
         ctx.strokeStyle = plotColors.transformed;
-        ctx.shadowColor = plotColors.transformed;
         ctx.beginPath();
         square.map(point => matVec(A, point)).forEach((point, index) => {
             const [x, y] = toCanvas(point, width, height, scale);
             index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.stroke();
-        ctx.shadowBlur = 0;
         drawVector(matVec(A, [1, 0]), plotColors.column1, width, height, scale, "Ae₁");
         drawVector(matVec(A, [0, 1]), plotColors.column2, width, height, scale, "Ae₂");
         if (result.real) {
@@ -567,7 +561,7 @@
 
     function runSvd() {
         const A = readMatrix();
-        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the purple arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the cyan arrow.`;
+        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the copper arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the grey arrow.`;
         const result = svd2x2(A);
         drawSvd(A, result);
         renderResults([
@@ -577,7 +571,7 @@
             ]),
             card("Output directions (U)", matrixFmt(transpose(result.U)), true),
             card("Input directions (V)", matrixFmt(transpose(result.V)), true)
-        ], "The two singular values are the stretch along the orange and green directions.");
+        ], "The two singular values are the stretch along the gold and blue-green directions.");
         const ratio = result.singularValues[1] < 1e-9 ? Infinity : result.singularValues[0] / result.singularValues[1];
         setTeaching(Number.isFinite(ratio) ? `The first singular direction is stretched ${fmt(ratio)} times as strongly as the second.` : "The second singular value is zero, so the transformation collapses the plane onto a line.", ["Mode: SVD", `Primary strength: ${fmt(result.singularValues[0])}`, `Secondary strength: ${fmt(result.singularValues[1])}`, `Condition ratio: ${Number.isFinite(ratio) ? fmt(ratio) : "infinite"}`]);
         setStatus("SVD complete.", "success");
@@ -601,7 +595,7 @@
 
     function runEvd() {
         const A = readMatrix();
-        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the purple arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the cyan arrow.`;
+        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the copper arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the grey arrow.`;
         const result = eigen2x2(A);
         drawEvd(A, result);
         if (!result.real) {
@@ -649,9 +643,9 @@
             "This matrix moves, rotates, stretches, or flips every point in the plane.";
         visualHeading.textContent = mode === "pca" ? "Your points and their main directions" : "Before and after applying matrix A";
         visualDescription.textContent = {
-            svd: "Blue is the original unit circle. Red is the same circle after your matrix transforms it.",
-            pca: "Blue dots are your data, moved so their mean is at the center. Red PC1 shows the strongest spread.",
-            evd: "Blue is the original square. Red is that square after applying your matrix. The arrows are directions that stay on the same line."
+            svd: "Blue is the original unit circle. Rose is the same circle after your matrix transforms it.",
+            pca: "Blue dots are your data, moved so their mean is at the center. Rose PC1 shows the strongest spread.",
+            evd: "Blue is the original square. Rose is that square after applying your matrix. The arrows are directions that stay on the same line."
         } [mode];
         const story = {
             svd: ["Unit circle", "Your matrix A", "Ellipse + stretch axes"],
@@ -707,6 +701,8 @@
     } else {
         window.addEventListener("resize", resizeVisualization);
     }
+
+    if (window.ToolShared && window.ToolShared.onThemeChange) window.ToolShared.onThemeChange(resizeVisualization);
 
     setMode("svd");
 })();

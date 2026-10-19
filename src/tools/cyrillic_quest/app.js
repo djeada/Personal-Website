@@ -27,15 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
 
-        const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
-        };
-
         toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span aria-hidden="true" class="toast-icon"></span>
             <span class="toast-message">${message}</span>
         `;
 
@@ -75,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(error => {
             console.error('Error loading word database:', error);
-            loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Failed to load data. Please refresh the page.</span>';
+            loadingMessage.innerHTML = '<span class="failure">Failed to load data. Please refresh the page.</span>';
             showToast("Error loading word database. Please refresh the page.", "error");
         });
 
@@ -147,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const hintCell = document.createElement('td');
                 const hintButton = document.createElement('button');
                 hintButton.className = 'action-btn hint-btn';
-                hintButton.innerHTML = '💡 Hint';
+                hintButton.textContent = 'Hint';
                 hintButton.title = `English: ${word.translation}`;
                 hintButton.addEventListener('click', () => {
                     transliterationInput.value = word.transliteration;
@@ -159,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const validateCell = document.createElement('td');
                 const validateButton = document.createElement('button');
                 validateButton.className = 'action-btn validate-btn';
-                validateButton.innerHTML = '✓ Check';
+                validateButton.textContent = 'Check';
                 validateButton.title = 'Check your answer';
                 validateButton.addEventListener('click', () => validateTransliteration(transliterationInput, word.transliteration, resultCell, index));
                 validateCell.appendChild(validateButton);
@@ -188,17 +181,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userAnswer === correctAnswer) {
             input.classList.add('input-success');
             input.classList.remove('input-failure');
-            resultCell.innerHTML = '<span class="success">✓ Correct!</span>';
+            resultCell.innerHTML = '<span class="success">Correct</span>';
 
             if (!wasAttempted) {
                 stats.correct++;
                 stats.attempted.add(wordIndex);
-                showToast("Correct! Great job! 🎉", "success");
+                showToast("Correct. Well done.", "success");
             }
         } else {
             input.classList.add('input-failure');
             input.classList.remove('input-success');
-            resultCell.innerHTML = '<span class="failure">✗ Try again</span>';
+            resultCell.innerHTML = '<span class="failure">Try again</span>';
 
             if (!wasAttempted) {
                 stats.incorrect++;

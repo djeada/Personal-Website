@@ -5,6 +5,8 @@
         HG = window.OpticsModels.holography;
     const $ = (id) => document.getElementById(id);
     const TH = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const FS = 12;
     const DEG = Math.PI / 180;
     const fmt = (v, d = 3) => (Number.isFinite(v) ? Number(v.toPrecision(d)).toString() : "—");
@@ -289,7 +291,7 @@
         gsChanged();
     }, {
         onChange: (running) => {
-            $("gsRun").textContent = running ? "⏸ Pause" : "▶ Run";
+            $("gsRun").textContent = running ? "Pause" : "Run";
             updateGSText();
         }
     });
@@ -439,7 +441,7 @@
         ctx.font = FS + "px " + TH.font;
         const tw = ctx.measureText(text).width;
         const x0 = align === "right" ? x - tw : align === "center" ? x - tw / 2 : x;
-        ctx.fillStyle = "rgba(7,7,13,0.8)";
+        ctx.fillStyle = tint(TH.background, 0.8);
         ctx.fillRect(x0 - 3, y - 2, tw + 6, FS + 5);
         ctx.fillStyle = color || TH.text;
         ctx.textAlign = "left";

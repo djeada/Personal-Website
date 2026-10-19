@@ -27,7 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
         heap: "Heap",
         radix: "Radix"
     };
-    const color = (name, fallback) => getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
+    const fallbackPalette = {
+        canvas: "#fbf8f1",
+        grid: "rgba(28, 26, 23, 0.08)",
+        ruleStrong: "#a8946a",
+        ink2: "#4f4a40",
+        ink3: "#6c6557",
+        gold: "#8a6620",
+        verdigris: "#2e6e62",
+        moon: "#3d5a85"
+    };
+    const palette = () => Object.assign({}, fallbackPalette, window.ToolShared?.palette?.() || {});
     const toast = window.ToolShared?.showToast || ((message) => console.info(message));
     window.ToolShared?.initCardToggles();
 
@@ -160,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
             this.running = false;
             this.paused = false;
             this.stepCredits = 0;
-            controls.pause.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
+            controls.pause.innerHTML = 'Pause';
         }
         clearStats() {
             this.completed.clear();
@@ -197,22 +207,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         draw(active = [], special = [], message) {
             if (!this.width) this.resize();
-            const w = this.width,
+            this.lastFrame = [active, special];
+            const p = palette(),
+                w = this.width,
                 h = this.height,
                 n = this.array.length,
                 pad = Math.max(18, w * .045),
                 top = Math.max(42, h * .1),
                 base = h - pad;
             ctx.clearRect(0, 0, w, h);
-            const gradient = ctx.createLinearGradient(0, 0, 0, h);
-            gradient.addColorStop(0, "rgba(56,198,194,.10)");
-            gradient.addColorStop(1, "rgba(56,198,194,.015)");
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = p.canvas;
             ctx.fillRect(0, 0, w, h);
-            ctx.strokeStyle = color("grid", "rgba(148,163,184,.16)");
+            ctx.strokeStyle = p.grid;
             ctx.lineWidth = 1;
             for (let i = 1; i < 5; i++) {
-                const y = top + ((base - top) * i) / 5;
+                const y = Math.round(top + ((base - top) * i) / 5) + .5;
                 ctx.beginPath();
                 ctx.moveTo(pad, y);
                 ctx.lineTo(w - pad, y);
@@ -221,30 +230,33 @@ document.addEventListener("DOMContentLoaded", () => {
             const max = Math.max(...this.array, 1),
                 slot = (w - pad * 2) / n,
                 gap = Math.min(5, Math.max(1, slot * .14)),
-                barW = Math.max(2, slot - gap);
+                barW = Math.max(2, slot - gap),
+                labels = slot >= 24 || n <= 16;
             this.array.forEach((value, i) => {
                 const barH = Math.max(3, ((base - top) * value) / max),
                     x = pad + i * slot + gap / 2,
                     y = base - barH;
-                let fill = color("frontier", "#4aa3b5");
-                if (this.completed.has(i)) fill = color("success", "#21a179");
-                if (special.includes(i)) fill = color("pivot", "#a78bfa");
-                if (active.includes(i)) fill = color("current", "#ffb547");
-                ctx.shadowColor = fill;
-                ctx.shadowBlur = active.includes(i) || special.includes(i) ? 14 : 3;
+                let fill = p.ink3,
+                    alpha = .42;
+                if (this.completed.has(i)) [fill, alpha] = [p.verdigris, 1];
+                if (special.includes(i)) [fill, alpha] = [p.moon, 1];
+                if (active.includes(i)) [fill, alpha] = [p.gold, 1];
+                ctx.globalAlpha = alpha;
                 ctx.fillStyle = fill;
-                ctx.beginPath();
-                const radius = Math.min(5, barW / 2);
-                ctx.roundRect(x, y, barW, barH, [radius, radius, 1, 1]);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                if (slot >= 24 || n <= 16) {
-                    ctx.fillStyle = y > top + 22 ? "#fff" : color("text", "#dbeafe");
-                    ctx.font = `700 ${Math.max(10, Math.min(14, slot * .38))}px system-ui`;
+                ctx.fillRect(x, y, barW, barH);
+                ctx.globalAlpha = 1;
+                if (labels) {
+                    ctx.fillStyle = active.includes(i) ? p.gold : p.ink2;
+                    ctx.font = `500 ${Math.max(10, Math.min(13, slot * .36))}px "IBM Plex Mono", ui-monospace, monospace`;
                     ctx.textAlign = "center";
-                    ctx.fillText(String(value), x + barW / 2, y > top + 22 ? y + 17 : y - 7);
+                    ctx.fillText(String(value), x + barW / 2, y - 7);
                 }
             });
+            ctx.strokeStyle = p.ruleStrong;
+            ctx.beginPath();
+            ctx.moveTo(pad, Math.round(base) + .5);
+            ctx.lineTo(w - pad, Math.round(base) + .5);
+            ctx.stroke();
             if (message) this.operation(message);
         }
 
@@ -264,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!this.running) return;
             this.manualStep = false;
             this.paused = !this.paused;
-            controls.pause.innerHTML = this.paused ? '<span class="btn-icon">▶️</span> Resume' : '<span class="btn-icon">⏸️</span> Pause';
+            controls.pause.innerHTML = this.paused ? 'Resume' : 'Pause';
         }
         step() {
             if (!this.running) {
@@ -295,7 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
             this.running = false;
             this.manualStep = false;
             this.completed = new Set(this.array.map((_, i) => i));
-            this.draw([], [], "Sorted ✓");
+            this.draw([], [], "Sorted");
             this.stats();
             controls.values.value = this.array.join(", ");
             toast(`Sorted with ${this.comparisons} comparisons and ${this.swaps} writes/swaps`, "success");
@@ -444,8 +456,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const visualizer = new SortingVisualizer();
     const resize = () => {
         visualizer.resize();
-        visualizer.draw();
+        visualizer.draw(...(visualizer.lastFrame || []));
     };
     new ResizeObserver(resize).observe(canvas.closest(".canvas-wrapper"));
     window.addEventListener("resize", resize);
+    window.ToolShared?.onThemeChange?.(() => visualizer.draw(...(visualizer.lastFrame || [])));
 });

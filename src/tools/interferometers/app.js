@@ -7,6 +7,8 @@
     const core = window.OpticsModels.core;
     const IF = window.OpticsModels.interferometers;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const c0 = core.constants.c;
     const $ = (id) => document.getElementById(id);
     const fmt = (v, u, d = 3) => core.formatSI(v, u, d);
@@ -296,7 +298,7 @@
     const playBtn = $("playBtn");
     const loop = UI.createLoop((dt) => advance(dt * ctl.get().spd * 8), {
         onChange: (running) => {
-            playBtn.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause scan' : '<span aria-hidden="true">▶</span> Scan mirror';
+            playBtn.innerHTML = running ? 'Pause scan' : 'Scan mirror';
             playBtn.setAttribute("aria-pressed", String(running));
         }
     });
@@ -613,7 +615,7 @@
             const w = ctx.measureText(s).width,
                 hgt = (opts.size || FS) + 6;
             const bx = opts.align === "center" ? x - w / 2 : opts.align === "right" ? x - w : x;
-            ctx.fillStyle = "rgba(7, 7, 13, 0.82)";
+            ctx.fillStyle = tint(PAL.background, 0.82);
             ctx.fillRect(bx - 3, y - hgt / 2, w + 6, hgt);
             ctx.fillStyle = opts.color || PAL.text;
         }
@@ -662,7 +664,7 @@
 
     function splitter(ctx, x, y, s, label) {
         ctx.save();
-        ctx.strokeStyle = "#c9d6ff";
+        ctx.strokeStyle = PAL.series[5];
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x - s, y + s);
@@ -677,7 +679,7 @@
 
     function mirrorLine(ctx, x1, y1, x2, y2) {
         ctx.save();
-        ctx.strokeStyle = "#e6e6f0";
+        ctx.strokeStyle = PAL.text;
         ctx.lineWidth = 4;
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -689,7 +691,7 @@
 
     function box(ctx, x, y, w, h, label, active) {
         ctx.save();
-        ctx.fillStyle = active ? "rgba(248, 212, 119, 0.22)" : "rgba(184, 178, 207, 0.12)";
+        ctx.fillStyle = active ? tint(PAL.marker, 0.22) : tint(PAL.textMuted, 0.12);
         ctx.strokeStyle = active ? PAL.marker : PAL.axis;
         ctx.lineWidth = 1;
         ctx.fillRect(x - w / 2, y - h / 2, w, h);
@@ -704,7 +706,7 @@
 
     function detector(ctx, x, y, label, power, side) {
         ctx.save();
-        ctx.fillStyle = "#2b2b3d";
+        ctx.fillStyle = PAL.panel;
         ctx.strokeStyle = PAL.textMuted;
         ctx.fillRect(x - 9, y - 9, 18, 18);
         ctx.strokeRect(x - 8.5, y - 8.5, 17, 17);

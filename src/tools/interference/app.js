@@ -962,6 +962,8 @@
     }
 
 
+    $("plotLegend").style.background = PAL.background;
+    $("plotLegend").style.color = PAL.text;
     document.querySelectorAll("#plotLegend .swatch").forEach((el) => {
         el.style.borderTopColor = COLORS[el.dataset.key];
     });
@@ -973,7 +975,7 @@
         render();
     }, {
         onChange(running) {
-            startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸️</span> Pause' : '<span aria-hidden="true">▶️</span> Start';
+            startStopBtn.innerHTML = running ? 'Pause' : 'Start';
             startStopBtn.setAttribute("aria-pressed", running ? "true" : "false");
         },
     });

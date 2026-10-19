@@ -5,6 +5,7 @@
         FO = window.OpticsModels.fourierOptics;
     const $ = (id) => document.getElementById(id);
     const TH = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const FS = 12;
     const fmt = (v, d = 3) => (Number.isFinite(v) ? Number(v.toPrecision(d)).toString() : "—");
     const um = (m, d = 3) => (Number.isFinite(m) ? fmt(m * 1e6, d) + " µm" : "—");
@@ -349,7 +350,7 @@
     function tag(ctx, text, x, y, color) {
         ctx.font = FS + "px " + TH.font;
         const tw = ctx.measureText(text).width;
-        ctx.fillStyle = "rgba(7,7,13,0.78)";
+        ctx.fillStyle = tint(TH.background, 0.78);
         ctx.fillRect(x - 3, y - 2, tw + 6, FS + 5);
         ctx.fillStyle = color || TH.text;
         ctx.textAlign = "left";
@@ -505,16 +506,16 @@
                 const fc = R.fc * 1e-6;
                 if (p.filter === "knife") {
                     const x0 = map.xToPx(0);
-                    cx.fillStyle = "rgba(7,7,13,0.55)";
+                    cx.fillStyle = tint(TH.background, 0.55);
                     cx.fillRect(map.plot.x, map.plot.y, x0 - map.plot.x, map.plot.h);
                 }
-                circle(cx, map, fc, "#ffffff", [], 1.5);
-                circle(cx, map, 2 * fc, "#ffffff", [6, 4], 1.2);
+                circle(cx, map, fc, TH.cursor, [], 1.5);
+                circle(cx, map, 2 * fc, TH.cursor, [6, 4], 1.2);
                 if (["lowpass", "highpass", "bandpass"].includes(p.filter)) circle(cx, map, p.r1 * fc, TH.series[0], [4, 3], 1.5);
                 if (p.filter === "bandpass") circle(cx, map, p.r2 * fc, TH.series[0], [4, 3], 1.5);
                 if (p.filter === "darkfield" || p.filter === "phasecontrast") circle(cx, map, Math.max(0.51 * g.df, p.r1 * R.fc) * 1e-6, TH.series[0], [], 2);
                 const q = map.toPx(fc * Math.SQRT1_2, fc * Math.SQRT1_2);
-                tag(cx, "NA/λ₀", q.x + 3, q.y - FS - 6, "#ffffff");
+                tag(cx, "NA/λ₀", q.x + 3, q.y - FS - 6, TH.cursor);
             }
         });
     }
@@ -559,9 +560,9 @@
                 cx.beginPath();
                 cx.arc(cc.x, cc.y, r, 0, 2 * Math.PI);
                 cx.clip();
-                cx.fillStyle = "#1c1a2b";
+                cx.fillStyle = TH.panel;
                 cx.fillRect(cc.x - r, cc.y - r, 2 * r, 2 * r);
-                cx.strokeStyle = "rgba(184,178,207,0.55)";
+                cx.strokeStyle = tint(TH.textMuted, 0.55);
                 cx.lineWidth = 1;
                 for (let s = -2 * r; s < 2 * r; s += 7) {
                     cx.beginPath();
@@ -571,7 +572,7 @@
                 }
             },
             overlay: (cx, map) => {
-                circle(cx, map, R.fc * 1e-6, "#ffffff", [], 1.2);
+                circle(cx, map, R.fc * 1e-6, TH.cursor, [], 1.2);
                 if (p.filter === "phasecontrast") {
                     const rr = Math.max(0.51 * g.df, p.r1 * R.fc) * 1e-6;
                     circle(cx, map, rr, TH.marker, [], 2.5);

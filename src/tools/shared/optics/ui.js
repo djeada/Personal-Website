@@ -6,26 +6,27 @@
     "use strict";
 
     const hasDOM = typeof window !== "undefined" && typeof document !== "undefined";
-    const FONT_FAMILY = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-    const MONO_FAMILY = "ui-monospace, SFMono-Regular, Consolas, monospace";
+    const FONT_FAMILY = "'IBM Plex Sans', 'Helvetica Neue', Arial, system-ui, sans-serif";
+    const MONO_FAMILY = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 
 
     const CANVAS_PALETTE = Object.freeze({
-        background: "#07070d",
-        panel: "#0d0d18",
-        grid: "rgba(184, 178, 207, 0.13)",
-        gridStrong: "rgba(184, 178, 207, 0.28)",
-        axis: "#8f89a8",
-        text: "#ece9f8",
-        textMuted: "#b8b2cf",
-        cursor: "#ffffff",
-        marker: "#f8d477",
-        warning: "#ffb86b",
+        background: "#0c0d10",
+        panel: "#0e0f13",
+        grid: "rgba(233, 228, 216, 0.08)",
+        gridStrong: "rgba(233, 228, 216, 0.2)",
+        axis: "#a7a294",
+        text: "#e9e4d8",
+        textMuted: "#a7a294",
+        cursor: "#c8a55a",
+        marker: "#c8a55a",
+        warning: "#d0843c",
+        scrim: "rgba(14, 15, 19, 0.86)",
         font: FONT_FAMILY,
         mono: MONO_FAMILY,
 
-        series: ["#69f5e7", "#f8d477", "#f187c8", "#a78bfa", "#7ee787", "#ff9f6b", "#8ab4ff"],
+        series: ["#c8a55a", "#6fb3a3", "#9fb4d4", "#c9716a", "#d0843c", "#b3a1cf", "#9fbf78"],
         dashes: [
             [],
             [7, 4],
@@ -38,25 +39,53 @@
     });
 
     const LIGHT_FALLBACK = {
-        text: "#202437",
-        textSecondary: "#4c5368",
-        textMuted: "#5f667b",
-        surface: "#ffffff",
-        surfaceElevated: "#f7f6fb",
-        border: "#dcd8eb",
-        primary: "#6855bd",
-        accent: "#0f8c86"
+        text: "#1c1a17",
+        textSecondary: "#4f4a40",
+        textMuted: "#6c6557",
+        surface: "#fbf8f1",
+        surfaceElevated: "#efe9dc",
+        border: "#d8d0bf",
+        primary: "#8a6620",
+        accent: "#2e6e62",
+        spectrum: {
+            cyan: "#2e6e62",
+            violet: "#3d5a85",
+            rose: "#9e3b36",
+            gold: "#8a6620"
+        }
     };
     const DARK_FALLBACK = {
-        text: "#f5f3ff",
-        textSecondary: "#b8b2cf",
-        textMuted: "#9d97b5",
-        surface: "#0d0d18",
-        surfaceElevated: "#131322",
-        border: "rgba(167, 139, 250, .18)",
-        primary: "#a78bfa",
-        accent: "#69f5e7"
+        text: "#e9e4d8",
+        textSecondary: "#a7a294",
+        textMuted: "#85806f",
+        surface: "#121318",
+        surfaceElevated: "#181a20",
+        border: "#2a2b31",
+        primary: "#c8a55a",
+        accent: "#6fb3a3",
+        spectrum: {
+            cyan: "#6fb3a3",
+            violet: "#9fb4d4",
+            rose: "#c9716a",
+            gold: "#c8a55a"
+        }
     };
+
+    function withAlpha(color, alpha) {
+        const c = String(color).trim();
+        const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
+        if (hex) {
+            const h = hex[1].length === 3 ? hex[1].replace(/./g, "$&$&") : hex[1];
+            const n = parseInt(h, 16);
+            return "rgba(" + (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + alpha + ")";
+        }
+        const fn = /^rgba?\(([^)]*)\)$/i.exec(c);
+        if (fn) {
+            const parts = fn[1].match(/-?[\d.]+/g);
+            if (parts && parts.length >= 3) return "rgba(" + parts.slice(0, 3).map(Number).join(",") + "," + alpha + ")";
+        }
+        return color;
+    }
 
     function isDarkTheme() {
         if (!hasDOM) return true;
@@ -88,12 +117,12 @@
             surfaceElevated: tok("--surface-elevated", fb.surfaceElevated),
             border: tok("--border-color", fb.border),
             primary: tok("--primary-color", fb.primary),
-            accent: fb.accent,
+            accent: tok("--g-verdigris", fb.accent),
             spectrum: {
-                cyan: tok("--spectrum-cyan", "#69f5e7"),
-                violet: tok("--spectrum-violet", "#a78bfa"),
-                rose: tok("--spectrum-rose", "#f187c8"),
-                gold: tok("--spectrum-gold", "#f8d477")
+                cyan: tok("--spectrum-cyan", fb.spectrum.cyan),
+                violet: tok("--spectrum-violet", fb.spectrum.violet),
+                rose: tok("--spectrum-rose", fb.spectrum.rose),
+                gold: tok("--spectrum-gold", fb.spectrum.gold)
             },
             canvas: CANVAS_PALETTE
         };
@@ -666,7 +695,7 @@
                     const tw = ctx.measureText(opts.cursor.label).width;
                     const lx = Math.min(P.x + P.w - tw - 8, Math.max(P.x + 2, px + 6));
                     const ly = P.y + P.h - fs - 10;
-                    ctx.fillStyle = "rgba(7, 7, 13, 0.85)";
+                    ctx.fillStyle = th.scrim || CANVAS_PALETTE.scrim;
                     ctx.fillRect(lx - 3, ly - 2, tw + 6, fs + 6);
                     ctx.fillStyle = opts.cursor.color || th.cursor;
                     ctx.fillText(opts.cursor.label, lx, ly + 1);
@@ -686,7 +715,7 @@
             const h = labelled.length * rowH + 6;
             const lx = opts.legendPosition === "left" ? P.x + 6 : P.x + P.w - w - 6,
                 ly = P.y + 6;
-            ctx.fillStyle = "rgba(7, 7, 13, 0.82)";
+            ctx.fillStyle = th.scrim || CANVAS_PALETTE.scrim;
             ctx.fillRect(lx, ly, w, h);
             ctx.strokeStyle = th.grid;
             ctx.strokeRect(lx + 0.5, ly + 0.5, w - 1, h - 1);
@@ -1487,6 +1516,7 @@
         // theme
         CANVAS_PALETTE,
         palette,
+        withAlpha,
         onThemeChange,
         isDarkTheme,
         prefersReducedMotion,

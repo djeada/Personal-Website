@@ -29,14 +29,14 @@ const DATASETS = {
 const SERIES = [{
         key: "a",
         label: "Dataset A",
-        color: "#60a5fa",
-        fill: "rgba(96, 165, 250, 0.16)"
+        color: "#8a6620",
+        fill: "rgba(138, 102, 32, 0.16)"
     },
     {
         key: "b",
         label: "Dataset B",
-        color: "#fb7185",
-        fill: "rgba(251, 113, 133, 0.14)"
+        color: "#2e6e62",
+        fill: "rgba(46, 110, 98, 0.14)"
     }
 ];
 
@@ -309,12 +309,48 @@ function resizeCanvas(activeCount, showIqr, showStd, showPoints) {
     };
 }
 
-function getColor(light, dark) {
-    const darkModeValue = getCookie("darkMode");
-    return darkModeValue && darkModeValue.toLowerCase() === "true" ? dark : light;
+let THEME = {};
+
+const CHART_FONT_SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
+const CHART_FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+
+function withAlpha(color, alpha) {
+    const hex = String(color || "").trim().replace("#", "");
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return color;
+    const value = parseInt(hex, 16);
+    return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
+function refreshTheme() {
+    const palette = window.ToolShared && typeof window.ToolShared.palette === "function" ?
+        window.ToolShared.palette() :
+        {};
+    const pick = (key, fallback) => palette[key] || fallback;
+    const isDark = Boolean(palette.isDark);
+    const seriesColors = {
+        a: pick("gold", "#8a6620"),
+        b: pick("verdigris", "#2e6e62")
+    };
+
+    SERIES.forEach(series => {
+        series.color = seriesColors[series.key];
+        series.fill = withAlpha(series.color, isDark ? 0.2 : 0.16);
+    });
+
+    THEME = {
+        canvas: pick("canvas", "#fbf8f1"),
+        frame: pick("rule", "#d8d0bf"),
+        axis: pick("ruleStrong", "#a8946a"),
+        grid: pick("grid", "rgba(28, 26, 23, 0.08)"),
+        text: pick("ink2", "#4f4a40"),
+        muted: pick("ink3", "#6c6557"),
+        guide: withAlpha(pick("ink3", "#6c6557"), 0.4),
+        ink: pick("ink", "#1c1a17")
+    };
 }
 
 function draw() {
+    refreshTheme();
     const canvas = document.getElementById("canvas");
     const valuesA = parseValues(document.getElementById("dataset-a").value);
     const valuesB = parseValues(document.getElementById("dataset-b").value);
@@ -385,7 +421,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
         drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
         if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xScale, x, y);
         drawVerticalMarker(ctx, x(summary.mean), CHART.top, CHART.top + CHART.plotHeight, series.color, false);
-        drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
+        drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, THEME.ink, true);
     });
 
     if (showIqr || showStd) drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd);
@@ -478,17 +514,14 @@ function clampToPlot(px, scale) {
 }
 
 function drawBackground(ctx, dimensions) {
-    ctx.fillStyle = getColor("#fbfcfe", "#171717");
+    ctx.fillStyle = THEME.canvas;
     ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-    ctx.strokeStyle = getColor("#e3e8ef", "#333333");
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, dimensions.width - 1, dimensions.height - 1);
 }
 
 function drawAxes(ctx, dimensions, xScale, densityMax, x) {
-    const axisColor = getColor("#667085", "#cbd5e1");
-    const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
-    const textColor = getColor("#536174", "#cbd5e1");
+    const axisColor = THEME.axis;
+    const gridColor = THEME.grid;
+    const textColor = THEME.text;
     const bottom = CHART.top + CHART.plotHeight;
     const plotRight = dimensions.width - CHART.right;
     const xTicks = axisTicks(xScale);
@@ -522,7 +555,7 @@ function drawAxes(ctx, dimensions, xScale, densityMax, x) {
     ctx.stroke();
 
     ctx.fillStyle = textColor;
-    ctx.font = "12px Arial";
+    ctx.font = `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     xTicks.forEach(tick => {
@@ -578,7 +611,7 @@ function axisTicks(xScale) {
 }
 
 function drawAxisBreaks(ctx, xScale, bottom) {
-    const breakColor = getColor("#667085", "#cbd5e1");
+    const breakColor = THEME.axis;
     ctx.save();
     ctx.strokeStyle = breakColor;
     ctx.lineWidth = 1.2;
@@ -671,9 +704,9 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
     drawSectionLabel(ctx, "Spread intervals", CHART.left, CHART.spreadTop - 38);
 
     if (!showIqr && !showStd) {
-        const muted = getColor("#64748b", "#94a3b8");
+        const muted = THEME.muted;
         ctx.fillStyle = muted;
-        ctx.font = "12px Arial";
+        ctx.font = `12px ${CHART_FONT_MONO}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText("Turn on IQR arrow or Sigma arrows to compare spread lengths.", CHART.left, CHART.spreadTop + 18);
@@ -685,8 +718,8 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
         const rowGap = CHART.spreadRowGap;
         const baseY = CHART.spreadTop + 10 + seriesIndex * CHART.spreadSeriesGap;
 
-        ctx.fillStyle = getColor("#475467", "#dbe4ef");
-        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
+        ctx.fillStyle = THEME.text;
+        ctx.font = CHART.narrow ? `11px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         ctx.fillText(series.key.toUpperCase(), CHART.left - 10, baseY + (showIqr && showStd ? rowGap * 1.5 : 0));
@@ -706,7 +739,7 @@ function drawSigmaMarkers(ctx, dimensions, summary, x, y, color) {
     if (summary.std <= 0) {
         ctx.save();
         ctx.fillStyle = color;
-        ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+        ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("σ = 0", x(summary.mean), y);
@@ -745,7 +778,7 @@ function drawSigmaMarkers(ctx, dimensions, summary, x, y, color) {
         ctx.stroke();
     });
 
-    ctx.font = CHART.narrow ? "10px Arial" : "11px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `11px ${CHART_FONT_MONO}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     labels.forEach(label => {
@@ -784,7 +817,7 @@ function drawDoubleArrow(ctx, left, right, y, color, label, dashed, alpha) {
     drawArrowHead(ctx, start, y, 1, head);
     drawArrowHead(ctx, end, y, -1, head);
 
-    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     if (span > (CHART.narrow ? 36 : 52)) ctx.fillText(label, (start + end) / 2, y - 5);
@@ -801,7 +834,7 @@ function drawArrowHead(ctx, xPos, yPos, direction, size) {
 }
 
 function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
-    const textColor = getColor("#475467", "#dbe4ef");
+    const textColor = THEME.text;
     drawDivider(ctx, dimensions, CHART.boxTop - 24);
     drawSectionLabel(ctx, CHART.narrow ? "Tukey box plots" : "Tukey box plots: whiskers exclude outliers", CHART.left, CHART.boxTop - 38);
 
@@ -826,7 +859,7 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         drawCap(ctx, x(summary.lowerWhisker), yCenter, boxHeight);
         drawCap(ctx, x(summary.upperWhisker), yCenter, boxHeight);
 
-        ctx.strokeStyle = getColor("#111827", "#f8fafc");
+        ctx.strokeStyle = THEME.ink;
         ctx.beginPath();
         ctx.moveTo(x(summary.median), yCenter - boxHeight / 2 - 4);
         ctx.lineTo(x(summary.median), yCenter + boxHeight / 2 + 4);
@@ -838,7 +871,7 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         summary.outliers.forEach(value => drawCircle(ctx, x(value), yCenter, 4, false));
 
         ctx.fillStyle = textColor;
-        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
+        ctx.font = CHART.narrow ? `11px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         ctx.fillText(CHART.narrow ? series.key.toUpperCase() : series.label, CHART.left - 10, yCenter);
@@ -847,8 +880,8 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
 }
 
 function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, seriesIndex) {
-    const labelColor = getColor("#344054", "#e5e7eb");
-    const guideColor = getColor("rgba(71, 84, 103, 0.28)", "rgba(226, 232, 240, 0.35)");
+    const labelColor = THEME.text;
+    const guideColor = THEME.guide;
     const labelOffset = CHART.narrow ? 17 : 20;
     const labelDirection = seriesIndex % 2 === 0 ? -1 : 1;
     const labelY = yCenter + labelDirection * (boxHeight / 2 + labelOffset);
@@ -874,7 +907,7 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, 
         targetX: x(item.value)
     })), CHART.narrow ? 20 : 28, CHART.left + 14, dimensions.width - CHART.right - 14);
 
-    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     labels.forEach(item => {
         ctx.strokeStyle = guideColor;
         ctx.lineWidth = 1;
@@ -921,7 +954,7 @@ function distributeLabels(labels, minSpacing, minX, maxX) {
 }
 
 function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
-    const textColor = getColor("#475467", "#dbe4ef");
+    const textColor = THEME.text;
     drawDivider(ctx, dimensions, CHART.dotTop - 24);
     drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 38);
 
@@ -935,7 +968,7 @@ function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         });
 
         ctx.fillStyle = textColor;
-        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
+        ctx.font = CHART.narrow ? `11px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         ctx.fillText(CHART.narrow ? series.key.toUpperCase() : series.label, CHART.left - 10, yCenter);
@@ -959,7 +992,7 @@ function drawCircle(ctx, xPos, yPos, radius, filled, color) {
 }
 
 function drawDivider(ctx, dimensions, y) {
-    ctx.strokeStyle = getColor("#e3e8ef", "#333333");
+    ctx.strokeStyle = THEME.frame;
     ctx.beginPath();
     ctx.moveTo(CHART.left, y);
     ctx.lineTo(dimensions.width - CHART.right, y);
@@ -967,16 +1000,16 @@ function drawDivider(ctx, dimensions, y) {
 }
 
 function drawSectionLabel(ctx, label, x, y) {
-    ctx.fillStyle = getColor("#111827", "#e5e7eb");
-    ctx.font = CHART.narrow ? "700 12px Arial" : "700 13px Arial";
+    ctx.fillStyle = THEME.ink;
+    ctx.font = CHART.narrow ? `600 12px ${CHART_FONT_SANS}` : `600 13px ${CHART_FONT_SANS}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(label, x, y);
 }
 
 function drawMessage(ctx, dimensions, message) {
-    ctx.fillStyle = getColor("#333", "#eee");
-    ctx.font = "16px Arial";
+    ctx.fillStyle = THEME.ink;
+    ctx.font = `16px ${CHART_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
@@ -1069,21 +1102,11 @@ function applyPreset(key) {
     draw();
 }
 
-function getCookie(name) {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-        let [key, value] = cookie.trim().split("=");
-        if (key === name) return value;
-    }
-    return null;
-}
-
 document.addEventListener("DOMContentLoaded", function() {
     const drawButton = document.querySelector(".draw-button");
     const generateButton = document.getElementById("generate-button");
     const presetSelect = document.getElementById("preset-select");
     const inputs = document.querySelectorAll("textarea, input[type='checkbox']");
-    const toggleButton = document.querySelector(".toggle-dark-mode, #dark-mode-button");
 
     if (drawButton) {
         drawButton.addEventListener("click", draw);
@@ -1107,10 +1130,8 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    if (toggleButton) {
-        toggleButton.addEventListener("click", function() {
-            window.setTimeout(draw, 0);
-        });
+    if (window.ToolShared && typeof window.ToolShared.onThemeChange === "function") {
+        window.ToolShared.onThemeChange(draw);
     }
 
     applyPreset(presetSelect.value);

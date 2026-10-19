@@ -6,7 +6,7 @@ This guide covers the shared foundation for the optics tools: `core.js` (numeric
 
 Copy `src/tools/fresnel/index.html` into `src/tools/<tool>/index.html` and keep these parts verbatim, changing only the text:
 
-- `<head>`: the adsbygoogle `<script async>` (first line), `<title>`, meta description and keywords, icon, font preconnects, the stylesheets **in this order**: `../../resources/style.css`, `../shared/base.css`, `../shared/simulation.css`, `style.css`, `../shared/array-visualizer-theme.css`, `../shared/optics-lab-theme.css`, then the viewport meta, the canonical link `https://adamdjellouli.com/tools/<tool>/` and the JSON-LD `structured-data` block.
+- `<head>`: the adsbygoogle `<script async>` (first line), `<title>`, meta description and keywords, icon, font preconnects, the stylesheets **in this order**: `../../resources/style.css`, `../shared/base.css`, `../shared/simulation.css`, `style.css`, `../shared/array-visualizer-theme.css`, `../shared/optics-lab-theme.css`, `../shared/grimoire.css` (always last), then the viewport meta, the canonical link `https://adamdjellouli.com/tools/<tool>/` and the JSON-LD `structured-data` block.
 - `<body class="tool-page tool-simulation tool-array-visualizer tool-optics-lab">`, the whole `<nav>` (including `#dark-mode-button` and the Google CSE), and the whole `<footer>`, which contains the copyright script and `<script src="/app.js">`. `/app.js` adds `body.dark-mode` from the cookie and runs the theme toggle.
 - Do not use a `<nav>` element inside `<main>` (e.g. for related-tool links): the site-wide `nav` styles apply to it and break layout. Use `<section class="optics-related">` or `<div role="navigation">`.
 - `<main class="tool-main">` → `header.tool-header`, `.stats-bar`, then `section.tool-content` with `aside.options-sidebar` (controls) and `div.canvas-area` (plots), then `.help-box` and the teaching and explanation sections.
@@ -38,7 +38,7 @@ A model that needs core should use `const core = (typeof require === "function" 
 <div id="exportHost"></div>
 ```
 
-- Use `class="optics-canvas"` on new canvases. Do not use a bare `.canvas-container > canvas`: the legacy rule caps it at 760 px with margins. Canvases are **always dark** in both site themes. Draw them with `OpticsUI.palette().canvas` (`CANVAS_PALETTE`), never with DOM text tokens.
+- Use `class="optics-canvas"` on new canvases. Do not use a bare `.canvas-container > canvas`: the legacy rule caps it at 760 px with margins. Canvases are **always dark** in both site themes. Draw them with `OpticsUI.palette().canvas` (`CANVAS_PALETTE`), never with DOM text tokens. It is the grimoire night palette: background `#0c0d10` (plot panel `#0e0f13`), grid hairlines in bone at low alpha, axes and labels in bone (`#e9e4d8`, muted `#a7a294`), cursor and markers in candle gold `#c8a55a`, warnings in ember, and `scrim` behind in-plot labels and legends. `series` runs gold, verdigris, moonlight, rose, ember, heather, lichen; pair it with `dashes` so curves stay distinct without colour. The CSS background of `.optics-canvas` is `--optics-canvas-bg`, which matches it. No glows, gradients or rounded frames on canvases; wavelength colours from `wavelengthToRGB` are physical data and stay as they are.
 - `setupCanvas` calls `draw` **immediately**, so declare everything `draw` reads (state, describeCanvas handles) before you call it.
 
 ```js

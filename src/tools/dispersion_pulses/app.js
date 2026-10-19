@@ -6,6 +6,7 @@
     const core = window.OpticsModels.core;
     const Model = window.OpticsModels.dispersion;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const $ = (id) => document.getElementById(id);
     const c0 = core.constants.c;
     const FS = 1e-15;
@@ -589,9 +590,9 @@
         ctx.beginPath();
         ctx.rect(a, P.y, b - a, P.h);
         ctx.clip();
-        ctx.fillStyle = "rgba(255, 184, 107, 0.07)";
+        ctx.fillStyle = tint(PAL.warning, 0.07);
         ctx.fillRect(a, P.y, b - a, P.h);
-        ctx.strokeStyle = "rgba(255, 184, 107, 0.35)";
+        ctx.strokeStyle = tint(PAL.warning, 0.35);
         ctx.lineWidth = 1;
         for (let x = a - P.h; x < b; x += 9) {
             ctx.beginPath();
@@ -1048,7 +1049,7 @@
         ctx.lineTo(br.x, br.y);
         ctx.lineTo(bl.x, bl.y);
         ctx.closePath();
-        ctx.fillStyle = "rgba(167, 139, 250, 0.14)";
+        ctx.fillStyle = tint(PAL.series[3], 0.14);
         ctx.fill();
         ctx.strokeStyle = PAL.series[3];
         ctx.lineWidth = 1.5;
@@ -1085,7 +1086,7 @@
         });
         const dIn = rot(nIn, -Pd.g.theta1);
         const L1 = w * 0.3;
-        ctx.strokeStyle = "#f5f3ff";
+        ctx.strokeStyle = PAL.text;
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         ctx.moveTo(pin.x - dIn.x * L1, pin.y - dIn.y * L1);
@@ -1135,7 +1136,7 @@
             lh = 17;
         const lx = Math.max(4, w - lw - 6),
             ly = 6;
-        ctx.fillStyle = "rgba(7, 7, 13, 0.82)";
+        ctx.fillStyle = tint(PAL.background, 0.82);
         ctx.fillRect(lx, ly, lw, legend.length * lh + 6);
         legend.forEach((l, i) => {
             const yy = ly + 3 + lh * i + lh / 2;

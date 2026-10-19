@@ -74,12 +74,45 @@
             fallback;
     }
 
+    const PALETTE_KEYS = ["bg", "panel", "panel-2", "rule", "rule-strong", "ink", "ink-2", "ink-3",
+        "gold", "gold-soft", "verdigris", "moon", "ember", "rose", "on-gold", "canvas", "grid"
+    ];
+
+    function palette() {
+        const style = getComputedStyle(document.body || document.documentElement);
+        const colors = {};
+        PALETTE_KEYS.forEach((key) => {
+            const camel = key.replace(/-(\w)/g, (_, c) => c.toUpperCase());
+            colors[camel] = style.getPropertyValue(`--g-${key}`).trim();
+        });
+        colors.isDark = document.body ? document.body.classList.contains("dark-mode") : false;
+        return colors;
+    }
+
+    function onThemeChange(callback) {
+        const target = document.body || document.documentElement;
+        let dark = target.classList.contains("dark-mode");
+        const observer = new MutationObserver(() => {
+            const now = target.classList.contains("dark-mode");
+            if (now === dark) return;
+            dark = now;
+            callback(palette());
+        });
+        observer.observe(target, {
+            attributes: true,
+            attributeFilter: ["class"]
+        });
+        return () => observer.disconnect();
+    }
+
     window.ToolShared = {
         debounce,
         ensureToastContainer,
         fitCanvasToDisplay,
         getCSSColor,
         initCardToggles,
+        onThemeChange,
+        palette,
         showToast
     };
 

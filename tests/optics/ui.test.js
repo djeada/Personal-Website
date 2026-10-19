@@ -78,3 +78,14 @@ test("interpAt interpolates and returns NaN outside", () => {
     assert.equal(ui.interpAt(xs, ys, 1.5), 5);
     assert.ok(Number.isNaN(ui.interpAt(xs, ys, 3)));
 });
+
+test("withAlpha converts hex and rgb()/rgba() colours to rgba with the given alpha", () => {
+    assert.equal(ui.withAlpha("#c8a55a", 0.3), "rgba(200,165,90,0.3)");
+    assert.equal(ui.withAlpha("#C8A55A", 1), "rgba(200,165,90,1)");
+    assert.equal(ui.withAlpha("#fa0", 0.5), "rgba(255,170,0,0.5)");
+    assert.equal(ui.withAlpha("rgb(12, 13, 16)", 0.2), "rgba(12,13,16,0.2)");
+    assert.equal(ui.withAlpha("rgba(233, 228, 216, 0.08)", 0.6), "rgba(233,228,216,0.6)");
+    assert.equal(ui.withAlpha(" #6fb3a3 ", 0), "rgba(111,179,163,0)");
+    assert.equal(ui.withAlpha("transparent", 0.5), "transparent");
+    assert.equal(ui.withAlpha(ui.CANVAS_PALETTE.series[1], 0.25), "rgba(111,179,163,0.25)");
+});

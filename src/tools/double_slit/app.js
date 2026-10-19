@@ -7,6 +7,7 @@
     const core = window.OpticsModels.core;
     const UI = window.OpticsUI;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
 
     const el = (id) => document.getElementById(id);
 
@@ -785,7 +786,7 @@
         }
 
 
-        ctx.fillStyle = "#9aa3b5";
+        ctx.fillStyle = PAL.axis;
         const bw = 6;
         ctx.fillRect(barrierX - bw / 2, top, bw, c1 - halfA - top);
         ctx.fillRect(barrierX - bw / 2, c1 + halfA, bw, c2 - halfA - (c1 + halfA));
@@ -820,7 +821,7 @@
             ctx.textAlign = align;
             const tw = ctx.measureText(txt).width;
             const bx = align === "right" ? x - tw : x;
-            ctx.fillStyle = "rgba(7,7,13,0.78)";
+            ctx.fillStyle = tint(PAL.background, 0.78);
             ctx.fillRect(bx - 3, y - fs, tw + 6, fs + 5);
             ctx.fillStyle = PAL.text;
             ctx.fillText(txt, x, y);
@@ -1300,7 +1301,7 @@
         schem.redraw();
     }, {
         onChange: (running) => {
-            startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸️</span> Pause' : '<span aria-hidden="true">▶️</span> Start';
+            startStopBtn.innerHTML = running ? "Pause" : "Start";
             startStopBtn.setAttribute("aria-pressed", running ? "true" : "false");
         },
     });

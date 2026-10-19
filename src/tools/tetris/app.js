@@ -1,5 +1,8 @@
 const canvas = document.getElementById('canvas');
 const context = canvas.getContext('2d');
+const FONT_DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+const FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
+let pal = ToolShared.palette();
 let grid;
 let shapes;
 let currentShape = null;
@@ -59,6 +62,10 @@ class Shape {
         );
     }
 
+    get color() {
+        return pal[this.tone];
+    }
+
     rotate() {
 
     }
@@ -115,7 +122,7 @@ class TShape extends Shape {
         super(startX, startY, [
             new Position(0, 0), new Position(-1, 0), new Position(1, 0), new Position(0, -1)
         ]);
-        this.color = "#FFD700";
+        this.tone = "gold";
     }
 
     rotate() {
@@ -138,7 +145,7 @@ class SquareShape extends Shape {
         super(startX, startY, [
             new Position(0, 0), new Position(0, 1), new Position(1, 0), new Position(1, 1)
         ]);
-        this.color = "#f98776";
+        this.tone = "verdigris";
     }
 
     rotate() {}
@@ -152,7 +159,7 @@ class LineShape extends Shape {
             new Position(1, 0),
             new Position(2, 0)
         ]);
-        this.color = "#ADD8E6";
+        this.tone = "moon";
     }
 
     rotate() {
@@ -176,7 +183,7 @@ class LShape extends Shape {
             new Position(1, -1)
         ]);
         this.rotationState = 0;
-        this.color = "#d3d3d3";
+        this.tone = "rose";
     }
 
     rotate() {
@@ -209,7 +216,7 @@ class ReversedLShape extends Shape {
             new Position(-1, -1)
         ]);
         this.rotationState = 0;
-        this.color = "#f0a500";
+        this.tone = "ember";
     }
 
     rotate() {
@@ -288,7 +295,7 @@ class Cell {
     }
 
     reset() {
-        this.color = getColorForMode('white', 'black');
+        this.color = pal.canvas;
     }
 
     fill(color) {
@@ -332,8 +339,19 @@ class Grid {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const cell = this.array[y][x];
-                context.fillStyle = cell.color;
+                context.fillStyle = pal.canvas;
                 context.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                context.strokeStyle = pal.grid;
+                context.lineWidth = 1;
+                context.strokeRect(x * cellSize + 0.5, y * cellSize + 0.5, cellSize - 1, cellSize - 1);
+                if (cell.color !== pal.canvas) {
+                    context.fillStyle = cell.color;
+                    context.fillRect(x * cellSize + 1, y * cellSize + 1, cellSize - 2, cellSize - 2);
+                    context.globalAlpha = 0.35;
+                    context.strokeStyle = pal.canvas;
+                    context.strokeRect(x * cellSize + 4.5, y * cellSize + 4.5, cellSize - 9, cellSize - 9);
+                    context.globalAlpha = 1;
+                }
             }
         }
     }
@@ -387,6 +405,7 @@ function gameLoop(timestamp) {
 
     updateAndRender();
     requestAnimationFrame(gameLoop);
+
     let fullRows = getFullRows();
     if (fullRows.length > 0) {
         console.log(fullRows);
@@ -408,7 +427,7 @@ function getFullRows() {
     for (let y = 0; y < grid.height; y++) {
         let isRowFull = true;
         for (let x = 0; x < grid.width; x++) {
-            if (!grid.array[y][x].color || grid.array[y][x].color === getColorForMode('white', 'black')) {
+            if (!grid.array[y][x].color || grid.array[y][x].color === pal.canvas) {
                 isRowFull = false;
                 break;
             }
@@ -450,12 +469,34 @@ function clearFullRows(fullRows) {
 }
 
 function renderGameOverOverlay() {
-    context.fillStyle = 'rgba(128, 128, 128, 0.5)';
+    const w = Math.min(canvas.width - 32, 280);
+    const h = 132;
+    const x = (canvas.width - w) / 2;
+    const y = (canvas.height - h) / 2;
+    const t = 16;
+    context.globalAlpha = 0.6;
+    context.fillStyle = pal.bg;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = getColorForMode('black', 'white');
-    context.font = '40px Arial';
+    context.globalAlpha = 1;
+    context.fillStyle = pal.panel;
+    context.fillRect(x, y, w, h);
+    context.strokeStyle = pal.rule;
+    context.lineWidth = 1;
+    context.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    context.fillStyle = pal.gold;
+    context.fillRect(x, y, t, 2);
+    context.fillRect(x, y, 2, t);
+    context.fillRect(x + w - t, y + h - 2, t, 2);
+    context.fillRect(x + w - 2, y + h - t, 2, t);
     context.textAlign = 'center';
-    context.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+    context.textBaseline = 'alphabetic';
+    context.fillStyle = pal.ink;
+    context.font = `600 44px ${FONT_DISPLAY}`;
+    context.fillText('Game over', canvas.width / 2, y + 62);
+    context.fillStyle = pal.ink3;
+    context.font = `500 13px ${FONT_MONO}`;
+    context.fillText(`SCORE ${score}`, canvas.width / 2, y + 96);
+    context.textAlign = 'left';
 }
 
 function updateAndRender() {
@@ -472,9 +513,21 @@ function updateAndRender() {
 }
 
 function renderScore() {
-    context.fillStyle = getColorForMode('black', 'white');
-    context.font = '20px Arial';
-    context.fillText('Score: ' + score, 10, 30);
+    const text = `SCORE ${score}`;
+    context.font = `500 13px ${FONT_MONO}`;
+    context.textAlign = 'left';
+    context.textBaseline = 'middle';
+    const w = context.measureText(text).width + 20;
+    context.globalAlpha = 0.92;
+    context.fillStyle = pal.panel;
+    context.fillRect(8, 8, w, 26);
+    context.globalAlpha = 1;
+    context.strokeStyle = pal.rule;
+    context.lineWidth = 1;
+    context.strokeRect(8.5, 8.5, w - 1, 25);
+    context.fillStyle = pal.ink;
+    context.fillText(text, 18, 22);
+    context.textBaseline = 'alphabetic';
 }
 
 function restartGame() {
@@ -486,6 +539,7 @@ function restartGame() {
     lastTime = 0;
     updateAndRender();
     requestAnimationFrame(gameLoop);
+
 }
 
 document.addEventListener('keydown', function(event) {
@@ -544,3 +598,9 @@ currentShape = createNewShape();
 shapes = [];
 
 requestAnimationFrame(gameLoop);
+
+ToolShared.onThemeChange(next => {
+    pal = next;
+    updateAndRender();
+    if (gameOver) renderGameOverOverlay();
+});

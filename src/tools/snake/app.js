@@ -19,6 +19,92 @@ const cellSize = canvas.width / gridSize;
 let isPaused = false;
 let lastTapTime = 0;
 
+const FONT_DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+const FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
+const FONT_SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
+let pal = ToolShared.palette();
+
+function drawClasp(x, y, w, h) {
+    const t = 18;
+    ctx.fillStyle = pal.gold;
+    ctx.fillRect(x, y, t, 2);
+    ctx.fillRect(x, y, 2, t);
+    ctx.fillRect(x + w - t, y + h - 2, t, 2);
+    ctx.fillRect(x + w - 2, y + h - t, 2, t);
+}
+
+function uiScale() {
+    const shown = canvas.getBoundingClientRect().width || canvas.width;
+    return Math.min(1.8, Math.max(1, canvas.width / shown * 0.75));
+}
+
+function drawChip(text, x, y, align) {
+    const u = uiScale();
+    ctx.font = `500 ${15 * u}px ${FONT_MONO}`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const w = ctx.measureText(text).width + 24 * u;
+    const h = 32 * u;
+    const left = align === 'right' ? x - w : x;
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = pal.panel;
+    ctx.fillRect(left, y, w, h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = pal.rule;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(left + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.fillStyle = pal.ink;
+    ctx.fillText(text, left + 12 * u, y + h / 2 + 1);
+}
+
+function drawCard(title, lines) {
+    const u = uiScale();
+    const cx = canvas.width / 2;
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+
+    ctx.font = `600 ${64 * u}px ${FONT_DISPLAY}`;
+    let width = ctx.measureText(title).width;
+    ctx.font = `400 ${20 * u}px ${FONT_SANS}`;
+    lines.forEach(line => {
+        width = Math.max(width, ctx.measureText(line).width);
+    });
+    const w = Math.min(canvas.width - 40, Math.max(360 * u, width + 96 * u));
+    const h = (150 + lines.length * 34) * u;
+    const x = (canvas.width - w) / 2;
+    const y = (canvas.height - h) / 2;
+
+    ctx.fillStyle = pal.panel;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = pal.rule;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    drawClasp(x, y, w, h);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = pal.ink;
+    ctx.font = `600 ${64 * u}px ${FONT_DISPLAY}`;
+    ctx.fillText(title, cx, y + 86 * u);
+
+    const ry = Math.round(y + 112 * u);
+    ctx.fillStyle = pal.gold;
+    ctx.save();
+    ctx.translate(cx, ry);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-4 * u, -4 * u, 8 * u, 8 * u);
+    ctx.restore();
+    ctx.fillRect(cx - 70 * u, ry, 52 * u, Math.max(1, u));
+    ctx.fillRect(cx + 18 * u, ry, 52 * u, Math.max(1, u));
+
+    lines.forEach((line, i) => {
+        ctx.fillStyle = i === 0 ? pal.ink2 : pal.ink3;
+        ctx.font = i === 0 ? `400 ${20 * u}px ${FONT_SANS}` : `500 ${15 * u}px ${FONT_MONO}`;
+        ctx.fillText(i === 0 ? line : line.toUpperCase(), cx, y + (152 + i * 34) * u, w - 32);
+    });
+}
 
 let game;
 let highScore = parseInt(getCookie('SNAKE_HIGH_SCORE')) || 0;
@@ -114,188 +200,41 @@ class Game {
     }
 
     render() {
-
-        const FONT = '16px "Helvetica Neue", sans-serif';
-        const TEXT_COLOR = 'rgba(255,255,255,0.9)';
-        const PANEL_BG = 'rgba(255,255,255,0.15)';
-        const PANEL_BORDER = 'rgba(255,255,255,0.4)';
-        const SHADOW_COLOR = 'rgba(0,0,0,0.3)';
-        const SHADOW_BLUR = 10;
-        const RADIUS = 8;
-        const PADDING_X = 12;
-        const PADDING_Y = 8;
-
-
-        function drawPanel(textLines, x, y) {
-            ctx.font = FONT;
-
-            const widths = textLines.map(t => ctx.measureText(t).width);
-            const w = Math.max(...widths) + PADDING_X * 2;
-            const h = textLines.length * (parseInt(FONT) + 4) + PADDING_Y * 2;
-
-
-            ctx.shadowColor = SHADOW_COLOR;
-            ctx.shadowBlur = SHADOW_BLUR;
-
-
-            ctx.fillStyle = PANEL_BG;
-            ctx.strokeStyle = PANEL_BORDER;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(x + RADIUS, y);
-            ctx.lineTo(x + w - RADIUS, y);
-            ctx.quadraticCurveTo(x + w, y, x + w, y + RADIUS);
-            ctx.lineTo(x + w, y + h - RADIUS);
-            ctx.quadraticCurveTo(x + w, y + h, x + w - RADIUS, y + h);
-            ctx.lineTo(x + RADIUS, y + h);
-            ctx.quadraticCurveTo(x, y + h, x, y + h - RADIUS);
-            ctx.lineTo(x, y + RADIUS);
-            ctx.quadraticCurveTo(x, y, x + RADIUS, y);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-
-            ctx.shadowBlur = 0;
-
-
-            ctx.fillStyle = TEXT_COLOR;
-            ctx.textBaseline = 'top';
-            ctx.textAlign = 'left';
-            textLines.forEach((line, i) => {
-                ctx.fillText(
-                    line,
-                    x + PADDING_X,
-                    y + PADDING_Y + i * (parseInt(FONT) + 4)
-                );
-            });
-
-            return w;
-        }
-
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let y = 0; y < gridSize; y++) {
             for (let x = 0; x < gridSize; x++) {
-                ctx.fillStyle = (x + y) % 2 === 0 ? '#AAD751' : '#A2D149';
+                ctx.fillStyle = pal.canvas;
                 ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                if ((x + y) % 2 === 0) {
+                    ctx.fillStyle = pal.grid;
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
             }
         }
 
-
-        ctx.fillStyle = '#8B4513';
-        this.obstacles.forEach(o =>
-            ctx.fillRect(o.x * cellSize, o.y * cellSize, cellSize, cellSize)
-        );
+        this.obstacles.forEach(o => {
+            const x = o.x * cellSize;
+            const y = o.y * cellSize;
+            ctx.fillStyle = pal.ink3;
+            ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+            ctx.strokeStyle = pal.canvas;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y + 2);
+            ctx.lineTo(x + cellSize - 2, y + cellSize - 2);
+            ctx.moveTo(x + cellSize - 2, y + 2);
+            ctx.lineTo(x + 2, y + cellSize - 2);
+            ctx.stroke();
+        });
         this.food.render();
         this.snake.render();
 
-
-
-        drawPanel(
-            [`Score: ${this.score}`, `High: ${highScore}`],
-            10, 10
-        );
-
-
-        const lvlText = [`Level: ${this.level}`];
-        const panelW = drawPanel(
-            lvlText,
-            canvas.width - 10 - (ctx.measureText(lvlText[0]).width + PADDING_X * 2),
-            10
-        );
+        drawChip(`SCORE ${this.score}   BEST ${highScore}`, 12, 12, 'left');
+        drawChip(`LEVEL ${this.level}`, canvas.width - 12, 12, 'right');
     }
 
     renderGameOver() {
-
-        const FONT_TITLE = '36px "Helvetica Neue", sans-serif';
-        const FONT_BODY = '20px "Helvetica Neue", sans-serif';
-        const TEXT_COLOR = 'rgba(255,255,255,0.9)';
-        const PANEL_BG = 'rgba(0, 0, 0, 0.6)';
-        const PANEL_BORDER = 'rgba(255,255,255,0.3)';
-        const SHADOW_COLOR = 'rgba(0,0,0,0.4)';
-        const SHADOW_BLUR = 12;
-        const RADIUS = 12;
-        const PADDING = 20;
-
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-
-
-        const lines = [{
-                text: 'Game Over',
-                font: FONT_TITLE,
-                gap: 0
-            },
-            {
-                text: `Score: ${this.score}`,
-                font: FONT_BODY,
-                gap: 16
-            },
-            {
-                text: 'Tap to Restart',
-                font: FONT_BODY,
-                gap: 32
-            },
-        ];
-
-
-        ctx.textAlign = 'center';
-        let panelWidth = 0;
-        let panelHeight = PADDING * 2;
-        lines.forEach(({
-            text,
-            font,
-            gap
-        }) => {
-            ctx.font = font;
-            const w = ctx.measureText(text).width;
-            panelWidth = Math.max(panelWidth, w);
-            panelHeight += parseInt(font) + gap;
-        });
-        panelWidth += PADDING * 2;
-
-        const panelX = centerX - panelWidth / 2;
-        const panelY = centerY - panelHeight / 2;
-
-
-        ctx.shadowColor = SHADOW_COLOR;
-        ctx.shadowBlur = SHADOW_BLUR;
-
-
-        ctx.fillStyle = PANEL_BG;
-        ctx.strokeStyle = PANEL_BORDER;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(panelX + RADIUS, panelY);
-        ctx.lineTo(panelX + panelWidth - RADIUS, panelY);
-        ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + RADIUS);
-        ctx.lineTo(panelX + panelWidth, panelY + panelHeight - RADIUS);
-        ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - RADIUS, panelY + panelHeight);
-        ctx.lineTo(panelX + RADIUS, panelY + panelHeight);
-        ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - RADIUS);
-        ctx.lineTo(panelX, panelY + RADIUS);
-        ctx.quadraticCurveTo(panelX, panelY, panelX + RADIUS, panelY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-
-        ctx.shadowBlur = 0;
-
-
-        let cursorY = panelY + PADDING;
-        lines.forEach(({
-            text,
-            font,
-            gap
-        }) => {
-            ctx.font = font;
-            ctx.fillStyle = TEXT_COLOR;
-            ctx.textBaseline = 'top';
-            ctx.fillText(text, centerX, cursorY);
-            cursorY += parseInt(font) + gap;
-        });
+        drawCard('Game over', [`Score ${this.score}`, 'Tap or press Space to play again']);
     }
 
 }
@@ -376,22 +315,13 @@ class Snake {
     }
 
     render() {
-
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 4;
-
         this.body.forEach((segment, index) => {
             const x = segment.x * cellSize;
             const y = segment.y * cellSize;
 
             if (index === 0) {
-
-                ctx.fillStyle = 'darkgreen';
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-                ctx.fillRect(x, y, cellSize, cellSize);
-                ctx.strokeRect(x, y, cellSize, cellSize);
-
+                ctx.fillStyle = pal.gold;
+                ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
 
                 const eyeSize = cellSize / 6;
                 const eyeOffsetX = this.direction.x === 0 ?
@@ -405,24 +335,18 @@ class Snake {
                         3 * cellSize / 4 - eyeSize / 2 :
                         cellSize / 4 - eyeSize / 2);
 
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 1;
+                ctx.fillStyle = pal.canvas;
                 ctx.fillRect(x + eyeOffsetX, y + eyeOffsetY, eyeSize, eyeSize);
-                ctx.strokeRect(x + eyeOffsetX, y + eyeOffsetY, eyeSize, eyeSize);
-
+                if (this.direction.x === 0) {
+                    ctx.fillRect(x + cellSize - eyeOffsetX - eyeSize, y + eyeOffsetY, eyeSize, eyeSize);
+                } else {
+                    ctx.fillRect(x + eyeOffsetX, y + cellSize - eyeOffsetY - eyeSize, eyeSize, eyeSize);
+                }
             } else {
-
-                ctx.fillStyle = 'green';
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 1;
-                ctx.fillRect(x, y, cellSize, cellSize);
-                ctx.strokeRect(x, y, cellSize, cellSize);
+                ctx.fillStyle = pal.verdigris;
+                ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             }
         });
-
-
-        ctx.shadowBlur = 0;
     }
 
 }
@@ -451,50 +375,18 @@ class Food {
     render() {
         const x = this.x * cellSize + cellSize / 2;
         const y = this.y * cellSize + cellSize / 2;
-        const radius = cellSize * 0.4;
+        const radius = cellSize * 0.32;
 
-
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 1;
-        ctx.shadowOffsetY = 1;
-
-
-        const grad = ctx.createRadialGradient(
-            x - radius * 0.3, y - radius * 0.3, radius * 0.2,
-            x, y, radius
-        );
-        grad.addColorStop(0, '#ff6b6b');
-        grad.addColorStop(1, '#c0392b');
-
-        ctx.fillStyle = grad;
+        ctx.fillStyle = pal.rose;
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.arc(x, y + radius * 0.15, radius, 0, Math.PI * 2);
         ctx.fill();
 
-
-        ctx.restore();
-
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.strokeStyle = pal.gold;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(
-            x - radius * 0.3,
-            y - radius * 0.3,
-            radius * 0.3,
-            radius * 0.2,
-            -Math.PI / 4,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-
-
-        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.moveTo(x, y - radius * 0.6);
+        ctx.lineTo(x + radius * 0.35, y - radius * 1.25);
         ctx.stroke();
     }
 
@@ -635,14 +527,7 @@ canvas.addEventListener('touchend', e => {
 function renderPauseOverlay() {
     if (game.gameOver) return;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = 'white';
-    ctx.font = '30px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
-    ctx.fillText('Tap to Resume', canvas.width / 2, canvas.height / 2 + 40);
+    drawCard('Paused', ['Press Space or double-tap to resume']);
 }
 
 
@@ -668,100 +553,29 @@ function enableScrolling() {
 
 
 function renderStartScreen() {
-
-    const BG_COLOR = '#AAD751';
-    const FONT_TITLE = '48px "Helvetica Neue", sans-serif';
-    const FONT_BODY = '24px "Helvetica Neue", sans-serif';
-    const TEXT_COLOR = 'rgba(255,255,255,0.9)';
-    const PANEL_BG = 'rgba(0, 0, 0, 0.4)';
-    const PANEL_BORDER = 'rgba(255,255,255,0.3)';
-    const SHADOW_COLOR = 'rgba(0,0,0,0.4)';
-    const SHADOW_BLUR = 10;
-    const RADIUS = 12;
-    const PADDING = 24;
-
-
-    ctx.fillStyle = BG_COLOR;
+    ctx.fillStyle = pal.canvas;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+            if ((x + y) % 2 === 0) {
+                ctx.fillStyle = pal.grid;
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    drawCard('Snake', ['Tap or click the board to start', `Best ${highScore}`]);
+}
 
 
-    const lines = [{
-            text: 'Snake Game',
-            font: FONT_TITLE,
-            gap: 16
-        },
-        {
-            text: 'Tap to Start',
-            font: FONT_BODY,
-            gap: 12
-        },
-        {
-            text: `High Score: ${highScore}`,
-            font: FONT_BODY,
-            gap: 0
-        },
-    ];
-
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-
-    ctx.textAlign = 'center';
-    let panelWidth = 0;
-    let panelHeight = PADDING * 2;
-    lines.forEach(({
-        text,
-        font,
-        gap
-    }) => {
-        ctx.font = font;
-        const w = ctx.measureText(text).width;
-        panelWidth = Math.max(panelWidth, w);
-        panelHeight += parseInt(font) + gap;
-    });
-    panelWidth += PADDING * 2;
-    const panelX = centerX - panelWidth / 2;
-    const panelY = centerY - panelHeight / 2;
-
-
-    ctx.shadowColor = SHADOW_COLOR;
-    ctx.shadowBlur = SHADOW_BLUR;
-
-
-    ctx.fillStyle = PANEL_BG;
-    ctx.strokeStyle = PANEL_BORDER;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(panelX + RADIUS, panelY);
-    ctx.lineTo(panelX + panelWidth - RADIUS, panelY);
-    ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + RADIUS);
-    ctx.lineTo(panelX + panelWidth, panelY + panelHeight - RADIUS);
-    ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - RADIUS, panelY + panelHeight);
-    ctx.lineTo(panelX + RADIUS, panelY + panelHeight);
-    ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - RADIUS);
-    ctx.lineTo(panelX, panelY + RADIUS);
-    ctx.quadraticCurveTo(panelX, panelY, panelX + RADIUS, panelY);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-
-    ctx.shadowBlur = 0;
-
-
-    let cursorY = panelY + PADDING;
-    lines.forEach(({
-        text,
-        font,
-        gap
-    }) => {
-        ctx.font = font;
-        ctx.fillStyle = TEXT_COLOR;
-        ctx.textBaseline = 'top';
-        ctx.fillText(text, centerX, cursorY);
-        cursorY += parseInt(font) + gap;
-    });
+function redraw() {
+    if (!game) {
+        renderStartScreen();
+        return;
+    }
+    game.render();
+    if (game.gameOver) game.renderGameOver();
+    else if (isPaused) renderPauseOverlay();
 }
 
 
@@ -782,3 +596,10 @@ canvas.addEventListener('touchstart', e => {
 
 renderStartScreen();
 disableScrolling();
+
+ToolShared.onThemeChange(next => {
+    pal = next;
+    redraw();
+});
+
+if (document.fonts) document.fonts.ready.then(redraw);

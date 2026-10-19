@@ -12,6 +12,8 @@
         MWCM2 = 1e10,
         PMV = 1e-12;
     const TH = UI.palette().canvas;
+    const tint = UI.withAlpha;
+
     const COL = {
         pump: TH.series[0],
         sh: TH.series[1],
@@ -718,7 +720,7 @@
                 }],
                 hlines: [{
                     y: r.eta * scale,
-                    color: "rgba(248,212,119,0.35)"
+                    color: tint(TH.marker, 0.35)
                 }],
                 legendPosition: "left",
                 margin: {
@@ -1042,7 +1044,7 @@
             if (k.b2 < 0 && Number.isFinite(k.LD)) {
                 const z0 = Math.PI * k.LD / 2;
                 ctx.save();
-                ctx.strokeStyle = "rgba(255,255,255,0.35)";
+                ctx.strokeStyle = tint(TH.text, 0.35);
                 ctx.setLineDash([3, 5]);
                 ctx.fillStyle = TH.textMuted;
                 ctx.font = "11px " + TH.font;
