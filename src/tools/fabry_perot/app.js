@@ -4,6 +4,7 @@
     const core = window.OpticsModels.core;
     const res = window.OpticsModels.resonator;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const $ = (id) => document.getElementById(id);
     const fmt = (v, u, d = 3) => core.formatSI(v, u, d);
     const fixed = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : "—");
@@ -519,7 +520,7 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
             const tw = ctx.measureText(label).width;
-            ctx.fillStyle = "rgba(7,7,13,0.8)";
+            ctx.fillStyle = tint(PAL.background, 0.8);
             ctx.fillRect((x0 + x1) / 2 - tw / 2 - 3, y - 18, tw + 6, 15);
             ctx.fillStyle = color;
             ctx.fillText(label, (x0 + x1) / 2, y - 4);
@@ -604,7 +605,7 @@
             const half = P.h * 0.42;
             const curv = Number.isFinite(Rc) ? Math.max(-1, Math.min(1, L / Rc)) : 0;
             const sag = 14 * curv * dirIn;
-            ctx.strokeStyle = "#c9d4ff";
+            ctx.strokeStyle = PAL.textMuted;
             ctx.lineWidth = 5;
             ctx.lineCap = "round";
             ctx.beginPath();
@@ -711,7 +712,7 @@
             fontSize: small(w) ? 11 : 12,
             hlines: Number.isFinite(cav.fwhm) ? [{
                 y: cav.Tmax / 2,
-                color: "rgba(105,245,231,0.45)"
+                color: tint(PAL.series[0], 0.45)
             }] : [],
             cursor: {
                 x: (nuProbe - cav.nuRes) / unit.s,
@@ -934,7 +935,7 @@
         const za = Math.max(0, f.a) * 1e3,
             zb = Math.min(cav.L, f.b) * 1e3;
         ctx.save();
-        ctx.fillStyle = "rgba(248,212,119,0.35)";
+        ctx.fillStyle = tint(PAL.marker, 0.35);
         const xa = m1.xToPx(za),
             xb = Math.max(xa + 3, m1.xToPx(zb));
         ctx.fillRect(xa - 1, m1.plot.y, xb - xa + 2, m1.plot.h);
@@ -1011,7 +1012,7 @@
         ctx.beginPath();
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
-        ctx.fillStyle = "rgba(201,212,255,0.28)";
+        ctx.fillStyle = tint(PAL.textMuted, 0.28);
         if (f.a < 0) {
             const x = m2.xToPx((0 - f.ref) * 1e6);
             ctx.fillRect(P.x, P.y, x - P.x, P.h);
@@ -1094,7 +1095,7 @@
             }],
             hlines: [{
                 y: tr.steadyT,
-                color: "rgba(105,245,231,0.4)"
+                color: tint(PAL.series[0], 0.4)
             }],
             fontSize: small(w) ? 11 : 12,
             legendPosition: "left"
@@ -1135,7 +1136,7 @@
         ctx.rect(P.x, P.y, P.w, P.h);
         ctx.clip();
 
-        ctx.fillStyle = "rgba(105,245,231,0.16)";
+        ctx.fillStyle = tint(PAL.series[0], 0.16);
         for (const s of [1, -1]) {
             ctx.beginPath();
             ctx.moveTo(X(0), Y(0));
@@ -1206,7 +1207,7 @@
             ctx.textAlign = a < 0 ? "left" : "left";
             ctx.fillText(t, X(a) + 6, Y(b) + (a === 0 ? 10 : -10));
         }
-        ctx.fillStyle = "rgba(105,245,231,0.9)";
+        ctx.fillStyle = tint(PAL.series[0], 0.9);
         ctx.textAlign = "center";
         ctx.fillText("stable", X(0.3), Y(1.9));
         ctx.fillText("stable", X(-0.3), Y(-1.9));
@@ -1216,13 +1217,13 @@
 
         const g1 = Math.max(-GR, Math.min(GR, md.g1)),
             g2 = Math.max(-GR, Math.min(GR, md.g2));
-        const col = md.status === "stable" ? PAL.series[4] : md.status === "marginal" ? PAL.marker : "#ff6b6b";
+        const col = md.status === "stable" ? PAL.series[4] : md.status === "marginal" ? PAL.marker : PAL.series[2];
         ctx.beginPath();
         ctx.arc(X(g1), Y(g2), 8, 0, 2 * Math.PI);
         ctx.fillStyle = col;
         ctx.fill();
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#07070d";
+        ctx.strokeStyle = PAL.background;
         ctx.stroke();
         if (gFocused) {
             ctx.beginPath();
@@ -1240,7 +1241,7 @@
         ctx.textBaseline = "top";
         const lab = "(" + md.g1.toFixed(3) + ", " + md.g2.toFixed(3) + ")  " + md.status;
         const tw = ctx.measureText(lab).width;
-        ctx.fillStyle = "rgba(7,7,13,0.85)";
+        ctx.fillStyle = tint(PAL.background, 0.85);
         ctx.fillRect(P.x + 4, P.y + 4, tw + 8, 18);
         ctx.fillStyle = col;
         ctx.fillText(lab, P.x + 8, P.y + 7);
@@ -1461,7 +1462,7 @@
         fieldCv.redraw();
     }, {
         onChange: (running) => {
-            playBtn.textContent = running ? "⏸ Pause" : "▶ Animate field";
+            playBtn.textContent = running ? "Pause" : "Animate field";
             playBtn.setAttribute("aria-pressed", running ? "true" : "false");
         }
     });

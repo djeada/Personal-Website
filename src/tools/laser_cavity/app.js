@@ -6,21 +6,23 @@
     const core = window.OpticsModels.core;
     const model = window.OpticsModels.laserCavity;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const $ = (id) => document.getElementById(id);
     const fmt = (v, unit, d) => core.formatSI(v, unit, d == null ? 3 : d);
 
     const PUMP_PHOTON_ENERGY = model.H * model.C / model.DEFAULTS.pumpWavelength;
     const COLORS = {
-        inv: "#f187c8",
-        q: "#69f5e7",
-        out: "#7ee787",
-        gain: "#a78bfa",
-        loss: "#ff9f6b",
-        analytic: "#f8d477",
-        sweep: "#69f5e7",
-        mirror1: "#8ab4ff",
-        mirror2: "#a78bfa",
-        beam: "239, 68, 68"
+        inv: PAL.series[3],
+        q: PAL.series[1],
+        out: PAL.series[6],
+        gain: PAL.series[2],
+        loss: PAL.series[4],
+        analytic: PAL.marker,
+        sweep: PAL.series[1],
+        mirror1: PAL.series[5],
+        mirror2: PAL.series[2],
+        beam: PAL.series[3]
     };
 
 
@@ -626,7 +628,7 @@
         const gr = gainRegion();
         const gx0 = left + gr.x0 * span,
             gx1 = left + gr.x1 * span;
-        ctx.fillStyle = regime === "above" ? "rgba(241, 135, 200, 0.22)" : "rgba(184, 178, 207, 0.16)";
+        ctx.fillStyle = regime === "above" ? tint(PAL.series[3], 0.22) : tint(PAL.textMuted, 0.16);
         ctx.fillRect(gx0, top + 14, gx1 - gx0, bottom - top - 28);
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1.5;
@@ -641,13 +643,13 @@
         if (pw.output > 1e-6) {
             const a = Math.min(1, Math.max(0.1, Math.log10(pw.output / 1e-6) / 6));
             const grad = ctx.createLinearGradient(right, 0, w, 0);
-            grad.addColorStop(0, "rgba(" + COLORS.beam + ", " + a + ")");
-            grad.addColorStop(1, "rgba(" + COLORS.beam + ", 0)");
+            grad.addColorStop(0, tint(COLORS.beam, a));
+            grad.addColorStop(1, tint(COLORS.beam, 0));
             ctx.fillStyle = grad;
             const bh = 6 + 16 * a;
             ctx.fillRect(right + 4, midY - bh / 2, w - right - 4, bh);
         }
-        ctx.fillStyle = pw.output > 1e-6 ? "#ff8a8a" : PAL.textMuted;
+        ctx.fillStyle = pw.output > 1e-6 ? COLORS.beam : PAL.textMuted;
         setFont(ctx, 12, 600);
         ctx.textAlign = "center";
         const outX = Math.min(w - 30, (right + w) / 2 + 4);
@@ -659,7 +661,7 @@
 
 
         sparks.forEach((s) => {
-            ctx.fillStyle = "rgba(248, 212, 119, " + (0.6 * s.life) + ")";
+            ctx.fillStyle = tint(PAL.marker, 0.6 * s.life);
             ctx.beginPath();
             ctx.arc(left + s.x * span, top + s.y * (bottom - top), 2.5, 0, Math.PI * 2);
             ctx.fill();
@@ -668,10 +670,7 @@
         photons.forEach((ph) => {
             const px = left + ph.x * span,
                 py = top + ph.y * (bottom - top);
-            const g = ctx.createRadialGradient(px, py, 0, px, py, 8);
-            g.addColorStop(0, "rgba(248, 212, 119, 0.8)");
-            g.addColorStop(1, "rgba(248, 212, 119, 0)");
-            ctx.fillStyle = g;
+            ctx.fillStyle = tint(PAL.marker, 0.22);
             ctx.beginPath();
             ctx.arc(px, py, 8, 0, Math.PI * 2);
             ctx.fill();
@@ -762,8 +761,8 @@
             ctx.textBaseline = "middle";
             ctx.fillText(lab, right + 8, y);
         });
-        drawArrow(ctx, left - 26, yE0, left - 26, yE3 + 2, "#7ee787");
-        ctx.fillStyle = "#7ee787";
+        drawArrow(ctx, left - 26, yE0, left - 26, yE3 + 2, PAL.series[6]);
+        ctx.fillStyle = PAL.series[6];
         ctx.save();
         ctx.translate(left - 36, (yE0 + yE3) / 2);
         ctx.rotate(-Math.PI / 2);
@@ -783,7 +782,7 @@
             const target = atom.excited ? yE2 + r + 2 : yE0 - r - 2;
             const from = atom.excited ? yE0 - r - 2 : yE2 + r + 2;
             const y = target + (from - target) * atom.anim;
-            ctx.fillStyle = atom.excited ? "#ff6b6b" : "#8ab4ff";
+            ctx.fillStyle = atom.excited ? PAL.series[3] : PAL.series[5];
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fill();
@@ -1159,7 +1158,7 @@
             markers: rr.peaks.slice(0, 3).map((p, i) => ({
                 x: p.t * 1e6,
                 label: i === 0 ? "T_R = " + fmt(rr.period, "s") : "",
-                color: "rgba(248, 212, 119, 0.6)"
+                color: tint(PAL.marker, 0.6)
             }))
         });
     }
@@ -1321,7 +1320,7 @@
 
 
     function setButton(running) {
-        startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause' : '<span aria-hidden="true">▶</span> Start';
+        startStopBtn.innerHTML = running ? 'Pause' : 'Start';
         startStopBtn.setAttribute("aria-pressed", running ? "true" : "false");
     }
 

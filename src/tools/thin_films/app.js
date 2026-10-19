@@ -4,6 +4,8 @@
     const core = window.OpticsModels.core;
     const tf = window.OpticsModels.thinFilms;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const NM = 1e-9,
         DEG = Math.PI / 180;
     const $ = (id) => document.getElementById(id);
@@ -961,10 +963,10 @@
                     x1 = fieldMap.xToPx(z1);
                 const frac = Math.min(1, Math.max(0.12, (n - 0.9) / Math.max(0.2, maxN - 0.9)));
                 const top = P.y + P.h * (1 - 0.9 * frac);
-                ctx.fillStyle = "rgba(167, 139, 250, " + (0.1 + 0.18 * frac) + ")";
+                ctx.fillStyle = tint(PAL.series[2], 0.1 + 0.18 * frac);
                 ctx.fillRect(x0, top, x1 - x0, P.y + P.h - top);
                 if (k > 0) {
-                    ctx.strokeStyle = "rgba(255, 159, 107, 0.45)";
+                    ctx.strokeStyle = tint(PAL.series[4], 0.45);
                     ctx.lineWidth = 1;
                     ctx.beginPath();
                     for (let x = x0 - P.h; x < x1; x += 7) {

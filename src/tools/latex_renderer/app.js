@@ -725,8 +725,8 @@ class LatexRenderer {
         const placeholder = document.createElement('div');
         placeholder.className = 'placeholder';
 
-        const icon = document.createElement('i');
-        icon.className = 'fa fa-code';
+        const icon = document.createElement('span');
+        icon.className = 'placeholder-mark';
         icon.setAttribute('aria-hidden', 'true');
 
         const text = document.createElement('p');
@@ -819,7 +819,7 @@ class LatexRenderer {
     copyToClipboard() {
         this.copyText(this.input.value)
             .then(() => {
-                this.flashButton(this.copyBtn, 'fa fa-check', 'Copied');
+                this.flashButton(this.copyBtn, 'Copied');
                 this.setStatus('Copied source', 'success');
                 this.announce('Copied to clipboard');
             })
@@ -887,7 +887,7 @@ class LatexRenderer {
 
         this.copyText(url.toString())
             .then(() => {
-                this.flashButton(this.shareBtn, 'fa fa-check', 'Copied');
+                this.flashButton(this.shareBtn, 'Copied');
                 this.setStatus('Share link copied', 'success');
                 this.announce('Share link copied');
             })
@@ -949,15 +949,13 @@ class LatexRenderer {
         });
     }
 
-    flashButton(button, iconClass, label) {
+    flashButton(button, label) {
         if (!button) return;
         const originalNodes = [...button.childNodes].map((node) => node.cloneNode(true));
-        const icon = document.createElement('i');
-        icon.className = iconClass;
         const text = document.createElement('span');
         text.textContent = label;
 
-        button.replaceChildren(icon, text);
+        button.replaceChildren(text);
         button.classList.add('is-success');
         setTimeout(() => {
             button.replaceChildren(...originalNodes);

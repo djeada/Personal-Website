@@ -2,9 +2,14 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const names = ['Orbit', 'Prism', 'Spark'];
-    const colors = ['#84eee0', '#c4acff', '#ffc576'];
     const symbols = ['◯', '△', 'ϟ'];
-    const gold = '#ffd36b';
+    const symbolVar = i => `var(--oracle-sym-${i})`;
+    const readPalette = () => window.ToolShared.palette();
+    let pal = readPalette();
+    let colors = [pal.moon, pal.gold, pal.ember];
+    const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+    const SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
+    const DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
     const params = new URLSearchParams(location.search);
     const raw = params.get('challenge') || '';
     const validDate = /^\d{4}-\d{2}-\d{2}$/.test(raw) && Number.isFinite(Date.parse(raw)) && new Date(raw).toISOString().slice(0, 10) === raw;
@@ -195,11 +200,10 @@
     function spark(a, b, progress, color, radius) {
         const x = a.x + (b.x - a.x) * progress,
             y = a.y + (b.y - a.y) * progress;
-        const glow = context.createRadialGradient(x, y, 0, x, y, radius * 4);
-        glow.addColorStop(0, color);
-        glow.addColorStop(1, 'transparent');
-        context.fillStyle = glow;
-        context.fillRect(x - radius * 4, y - radius * 4, radius * 8, radius * 8);
+        context.fillStyle = color;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
     }
 
     function draw(elapsed = -1) {
@@ -233,58 +237,47 @@
                 context.beginPath();
                 context.moveTo(a.x, a.y);
                 context.lineTo(b.x, b.y);
-                context.strokeStyle = weight >= 0 ? '#84eee0' : '#fc94c3';
-                context.globalAlpha = Math.min(.65, .08 + Math.abs(weight) * .35);
-                context.lineWidth = .4 + Math.min(2, Math.abs(weight) * 2);
+                context.strokeStyle = weight >= 0 ? pal.verdigris : pal.rose;
+                context.globalAlpha = Math.min(.9, .2 + Math.abs(weight) * .5);
+                context.lineWidth = .5 + Math.min(1.25, Math.abs(weight) * 1.25);
                 context.stroke();
                 const change = delta ? delta[l][j][i] / delta.max : 0;
                 if (learnGlow > 0 && change > .2) {
-                    context.strokeStyle = gold;
+                    context.strokeStyle = pal.gold;
                     context.globalAlpha = learnGlow * change * .9;
-                    context.lineWidth = 1 + change * 2.5;
+                    context.lineWidth = 1 + change * 1.5;
                     context.stroke();
                 }
             }));
         });
         context.globalAlpha = 1;
         if (animating) {
-            context.globalCompositeOperation = 'lighter';
             [current.weights.w1, current.weights.w2].forEach((matrix, l) => {
                 const phase = forward * 2 - l;
                 if (phase > 0 && phase < 1) matrix.forEach((row, j) => row.forEach((weight, i) => {
                     const signal = Math.abs(layers[l][i] * weight);
-                    if (signal > .04) spark(positions[l][i], positions[l + 1][j], phase, weight >= 0 ? 'rgba(220,255,250,.9)' : 'rgba(255,190,225,.9)', 1.2 + Math.min(1.6, signal * 3));
+                    if (signal > .04) spark(positions[l][i], positions[l + 1][j], phase, weight >= 0 ? pal.verdigris : pal.rose, 1 + Math.min(1.4, signal * 2.5));
                 }));
                 const back = backward * 2 - (1 - l);
                 if (delta && back > 0 && back < 1) matrix.forEach((row, j) => row.forEach((_, i) => {
                     const change = delta[l][j][i] / delta.max;
-                    if (change > .25) spark(positions[l + 1][j], positions[l][i], back, 'rgba(255,211,107,.95)', 1.2 + change * 2);
+                    if (change > .25) spark(positions[l + 1][j], positions[l][i], back, pal.gold, 1 + change * 1.6);
                 }));
             });
-            context.globalCompositeOperation = 'source-over';
         }
         const revealed = last && forward >= 1;
         positions.forEach((layer, l) => layer.forEach((point, i) => {
             const activation = Math.abs(layers[l][i]);
             const lit = l === 0 ? forward > 0 : l === 1 ? forward > .5 : forward >= 1;
             const shown = animating && !lit ? 0 : activation;
-            const color = l === 2 ? colors[i] : '#84eee0';
+            const color = l === 2 ? colors[i] : pal.gold;
             const outer = l === 2 ? 14 : 6 + shown * 3;
-            if (shown > .3) {
-                const halo = context.createRadialGradient(point.x, point.y, outer * .5, point.x, point.y, outer * 2.6);
-                halo.addColorStop(0, `${color}55`);
-                halo.addColorStop(1, `${color}00`);
-                context.fillStyle = halo;
-                context.beginPath();
-                context.arc(point.x, point.y, outer * 2.6, 0, Math.PI * 2);
-                context.fill();
-            }
             context.beginPath();
             context.arc(point.x, point.y, outer, 0, Math.PI * 2);
-            context.fillStyle = '#101d33';
+            context.fillStyle = pal.canvas;
             context.fill();
-            context.strokeStyle = color;
-            context.lineWidth = 1 + shown * 2;
+            context.strokeStyle = l === 2 ? color : pal.gold;
+            context.lineWidth = 1 + shown;
             context.stroke();
             context.beginPath();
             context.arc(point.x, point.y, l === 2 ? 6 + shown * 5 : 2 + shown * 3, 0, Math.PI * 2);
@@ -292,8 +285,8 @@
             context.globalAlpha = .2 + .8 * shown;
             context.fill();
             context.globalAlpha = 1;
-            context.font = `${width < 450 ? 9 : 11}px monospace`;
-            context.fillStyle = '#b1c1db';
+            context.font = `${width < 450 ? 9 : 11}px ${MONO}`;
+            context.fillStyle = pal.ink3;
             if (l === 0) context.fillText(`${Math.floor(i / 3) + 1}${'OPS'[i % 3]}`, point.x - 27, point.y + 4);
             if (l === 1) context.fillText(`h${i + 1}`, point.x + 14, point.y + 4);
             if (l === 2) {
@@ -301,20 +294,20 @@
                 context.fillText(`${symbols[i]} ${Math.round(activation * 100)}%`, point.x + 20, point.y + 4);
                 if (revealed && last.prediction === i) {
                     context.setLineDash([3, 3]);
-                    context.strokeStyle = '#fff';
+                    context.strokeStyle = pal.ink;
                     context.lineWidth = 1;
                     context.beginPath();
                     context.arc(point.x, point.y, 20, 0, Math.PI * 2);
                     context.stroke();
                     context.setLineDash([]);
-                    context.fillStyle = '#fff';
+                    context.fillStyle = pal.ink;
                     context.fillText('BET', point.x - 11, point.y - 25);
                 }
                 if (revealed && last.choice === i) {
                     const ring = animating ? 1 - backward : 0;
-                    context.strokeStyle = last.escaped ? '#84eee0' : '#fc94c3';
+                    context.strokeStyle = last.escaped ? pal.verdigris : pal.rose;
                     context.globalAlpha = .4 + .6 * ring;
-                    context.lineWidth = 2 + ring * 2;
+                    context.lineWidth = 1.5 + ring;
                     context.beginPath();
                     context.arc(point.x, point.y, 24 + ring * 10, 0, Math.PI * 2);
                     context.stroke();
@@ -367,7 +360,7 @@
                 vy: Math.sin(angle) * velocity - speed * .4,
                 life: 1,
                 size: 1.5 + Math.random() * 3,
-                color: Math.random() < .25 ? '#ffffff' : color
+                color: Math.random() < .25 ? pal.ink2 : color
             });
         }
         if (!fxFrame) fxFrame = requestAnimationFrame(stepParticles);
@@ -377,7 +370,6 @@
         const dpr = Math.min(devicePixelRatio || 1, 2);
         fx.setTransform(dpr, 0, 0, dpr, 0, 0);
         fx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-        fx.globalCompositeOperation = 'lighter';
         particles = particles.filter(p => p.life > 0);
         particles.forEach(p => {
             p.x += p.vx;
@@ -528,7 +520,7 @@
         $('probability-bars').replaceChildren(...current.probabilities.map((p, i) => {
             const bar = document.createElement('span');
             bar.style.setProperty('--p', `${(p * 100).toFixed(1)}%`);
-            bar.style.setProperty('--c', colors[i]);
+            bar.style.setProperty('--c', symbolVar(i));
             if (last && last.choice === i) bar.className = 'chosen';
             bar.innerHTML = `<b>${symbols[i]}</b>${names[i]}<em>${(p * 100).toFixed(1)}%</em>`;
             return bar;
@@ -562,7 +554,7 @@
             const slot = document.createElement('li');
             const choice = recent[i];
             slot.textContent = choice === undefined ? '·' : symbols[choice];
-            slot.style.color = choice === undefined ? '' : colors[choice];
+            slot.style.color = choice === undefined ? '' : symbolVar(choice);
             if (choice !== undefined) slot.dataset.symbol = String(choice);
             slot.setAttribute('aria-label', choice === undefined ? 'empty' : `${i === 0 ? 'newest' : i === 1 ? 'previous' : 'oldest'}: ${names[choice]}`);
             return slot;
@@ -587,11 +579,11 @@
         clearTimeout(resealTimer);
         const confidence = result.snapshot.probabilities[result.prediction];
         $('guess-symbol').textContent = symbols[result.prediction];
-        $('guess-symbol').style.color = colors[result.prediction];
+        $('guess-symbol').style.color = symbolVar(result.prediction);
         $('guess-symbol').dataset.symbol = String(result.prediction);
         $('guess-detail').textContent = `${Math.round(confidence * 100)}% sure`;
         $('pick-symbol').textContent = symbols[result.choice];
-        $('pick-symbol').style.color = colors[result.choice];
+        $('pick-symbol').style.color = symbolVar(result.choice);
         $('pick-symbol').dataset.symbol = String(result.choice);
         $('pick-detail').textContent = `${Math.round(result.snapshot.probabilities[result.choice] * 100)}% expected`;
         $('guess-card').classList.add('revealed', result.escaped ? 'miss' : 'hit');
@@ -689,20 +681,21 @@
             base = height - 16;
         game.results.forEach((r, i) => {
             const p = r.snapshot.probabilities[r.choice];
-            ctx.fillStyle = r.escaped ? '#84eee0' : '#fc94c3';
+            ctx.fillStyle = r.escaped ? pal.verdigris : pal.rose;
             ctx.fillRect(pad + i * slot + slot * .15, base - p * (base - 8), slot * .7, p * (base - 8));
         });
-        ctx.strokeStyle = '#edf4ff';
+        ctx.strokeStyle = pal.ink2;
+        ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
-        ctx.globalAlpha = .6;
+        ctx.globalAlpha = .8;
         ctx.beginPath();
         ctx.moveTo(pad, base - (base - 8) / 3);
         ctx.lineTo(width - pad, base - (base - 8) / 3);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#a9bad6';
-        ctx.font = '10px monospace';
+        ctx.fillStyle = pal.ink3;
+        ctx.font = `10px ${MONO}`;
         ctx.fillText('move 1', pad, height - 3);
         ctx.fillText('30', width - pad - 14, height - 3);
     }
@@ -725,26 +718,31 @@
         card.width = 1080;
         card.height = 1350;
         const ctx = card.getContext('2d');
-        const background = ctx.createRadialGradient(540, 420, 40, 540, 600, 900);
-        background.addColorStop(0, '#172949');
-        background.addColorStop(1, '#060b18');
-        ctx.fillStyle = background;
+        ctx.fillStyle = pal.canvas;
         ctx.fillRect(0, 0, 1080, 1350);
+        ctx.strokeStyle = pal.rule;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(40, 40, 1000, 1270);
+        ctx.fillStyle = pal.gold;
+        [[40, 40, 1, 1], [1040, 1310, -1, -1]].forEach(([x, y, dx, dy]) => {
+            ctx.fillRect(dx > 0 ? x : x - 56, y - (dy > 0 ? 0 : 2), 56, 2);
+            ctx.fillRect(x - (dx > 0 ? 0 : 2), dy > 0 ? y : y - 56, 2, 56);
+        });
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#84eee0';
-        ctx.font = '700 30px monospace';
-        ctx.fillText('A NEURAL NETWORK TRIED TO PREDICT ME', 540, 130);
-        ctx.fillStyle = '#edf4ff';
-        ctx.font = '800 92px system-ui, sans-serif';
-        ctx.fillText('Outclick the Oracle', 540, 240);
-        ctx.font = '900 250px system-ui, sans-serif';
-        ctx.fillStyle = '#84eee0';
-        ctx.fillText(game.score.toLocaleString('en-US'), 540, 500);
-        ctx.font = '600 40px monospace';
-        ctx.fillStyle = '#a9bad6';
+        ctx.fillStyle = pal.ink3;
+        ctx.font = `500 28px ${MONO}`;
+        ctx.fillText('A NEURAL NETWORK TRIED TO PREDICT ME', 540, 140);
+        ctx.fillStyle = pal.ink;
+        ctx.font = `600 104px ${DISPLAY}`;
+        ctx.fillText('Outclick the Oracle', 540, 250);
+        ctx.font = `500 200px ${MONO}`;
+        ctx.fillStyle = pal.gold;
+        ctx.fillText(game.score.toLocaleString('en-US'), 540, 470);
+        ctx.font = `500 36px ${MONO}`;
+        ctx.fillStyle = pal.ink2;
         ctx.fillText('/ 3,000 SURPRISE POINTS', 540, 565);
-        ctx.font = '900 76px system-ui, sans-serif';
-        ctx.fillStyle = gold;
+        ctx.font = `600 80px ${DISPLAY}`;
+        ctx.fillStyle = pal.ink;
         ctx.fillText(rank(game.score)[0], 540, 680);
         const size = 78,
             gap = 12,
@@ -752,25 +750,21 @@
         game.results.forEach((r, i) => {
             const x = left + (i % 10) * (size + gap),
                 y = 750 + Math.floor(i / 10) * (size + gap);
-            ctx.fillStyle = r.escaped ? '#84eee0' : '#fc94c3';
-            ctx.globalAlpha = r.escaped ? 1 : .85;
-            ctx.beginPath();
-            ctx.roundRect(x, y, size, size, 14);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = '#080f20';
-            ctx.font = '700 44px system-ui, sans-serif';
-            ctx.fillText(symbols[r.choice], x + size / 2, y + size / 2 + 16);
+            ctx.fillStyle = r.escaped ? pal.verdigris : pal.rose;
+            ctx.fillRect(x, y, size, size);
+            ctx.fillStyle = pal.canvas;
+            ctx.font = `600 40px ${SANS}`;
+            ctx.fillText(symbols[r.choice], x + size / 2, y + size / 2 + 14);
         });
         const escapes = game.results.filter(r => r.escaped).length;
-        ctx.font = '600 38px system-ui, sans-serif';
-        ctx.fillStyle = '#edf4ff';
+        ctx.font = `500 32px ${MONO}`;
+        ctx.fillStyle = pal.ink2;
         ctx.fillText(`${escapes}/30 escapes · best streak ${game.bestStreak} · brain ${challenge}`, 540, 1090);
-        ctx.font = '700 44px system-ui, sans-serif';
-        ctx.fillStyle = '#ffffff';
+        ctx.font = `600 56px ${DISPLAY}`;
+        ctx.fillStyle = pal.ink;
         ctx.fillText('Think you are less predictable?', 540, 1190);
-        ctx.font = '600 34px monospace';
-        ctx.fillStyle = '#84eee0';
+        ctx.font = `500 30px ${MONO}`;
+        ctx.fillStyle = pal.gold;
         ctx.fillText('adamdjellouli.com/tools/neural_oracle', 540, 1250);
         return card;
     }
@@ -795,7 +789,7 @@
             preventScroll: true
         });
         sound.finish(game.score >= 2000);
-        if (game.score >= 2000) burst($('result').getBoundingClientRect(), gold, 90, 7);
+        if (game.score >= 2000) burst($('result').getBoundingClientRect(), pal.gold, 90, 7);
         if (game.score > best) {
             best = game.score;
             try {
@@ -959,6 +953,12 @@
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) cancelAnimationFrame(frame);
         else draw();
+    });
+    if (window.ToolShared) window.ToolShared.onThemeChange(() => {
+        pal = readPalette();
+        colors = [pal.moon, pal.gold, pal.ember];
+        draw();
+        if (!$('result').hidden) chart();
     });
     reducedMotion.addEventListener('change', () => {
         cancelAnimationFrame(frame);

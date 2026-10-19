@@ -4,29 +4,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const $ = selector => document.querySelector(selector);
 
 
-    const toastContainer = $('#toast-container');
-
     function showToast(message, type = "info") {
-        const toast = document.createElement("div");
-        toast.className = `toast ${type}`;
-
-        const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
-        };
-
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.info}</span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
+        window.ToolShared.showToast(message, type);
     }
 
 
@@ -209,13 +188,17 @@ document.addEventListener("DOMContentLoaded", function() {
     function buildCacheHeader(blk) {
         const thead = $('#cache thead tr');
 
-        while (thead.children.length > 3) thead.removeChild(thead.lastChild);
+        while (thead.children.length > 3) thead.removeChild(thead.lastElementChild);
 
         for (let off = 0; off < blk; off++) {
             const th = document.createElement('th');
             th.textContent = `Off ${off}`;
-            thead.insertBefore(th, thead.lastChild);
+            thead.appendChild(th);
         }
+
+        const lru = document.createElement('th');
+        lru.textContent = 'LRU';
+        thead.appendChild(lru);
     }
 
 
@@ -285,6 +268,60 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let chart;
 
+    function chartTheme() {
+        const p = window.ToolShared.palette();
+        const tint = (hex, alpha) => {
+            const n = parseInt(hex.replace('#', ''), 16);
+            return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+        };
+        return {
+            hit: p.verdigris,
+            hitFill: tint(p.verdigris, 0.1),
+            miss: p.rose,
+            missFill: tint(p.rose, 0.1),
+            ink: p.ink2,
+            muted: p.ink3,
+            grid: p.grid,
+            rule: p.rule
+        };
+    }
+
+    function applyChartTheme() {
+        if (!chart) return;
+        const t = chartTheme();
+        const [hits, misses] = chart.data.datasets;
+        hits.borderColor = t.hit;
+        hits.backgroundColor = t.hitFill;
+        misses.borderColor = t.miss;
+        misses.backgroundColor = t.missFill;
+        const o = chart.options;
+        o.plugins.legend.labels.color = t.ink;
+        o.plugins.legend.labels.font = {
+            family: 'IBM Plex Mono, monospace',
+            size: 11
+        };
+        ['x', 'y'].forEach(axis => {
+            const sc = o.scales[axis];
+            sc.ticks = Object.assign(sc.ticks || {}, {
+                color: t.muted,
+                font: {
+                    family: 'IBM Plex Mono, monospace',
+                    size: 10
+                }
+            });
+            sc.title.color = t.muted;
+            sc.title.font = {
+                family: 'IBM Plex Sans, sans-serif',
+                size: 11
+            };
+            sc.border = {
+                color: t.rule
+            };
+        });
+        o.scales.y.grid.color = t.grid;
+        chart.update();
+    }
+
     function newChart() {
         if (chart) chart.destroy();
         const ctx = $('#chart').getContext('2d');
@@ -295,17 +332,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 datasets: [{
                     label: 'Hits',
                     data: [],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     pointRadius: 0,
                     fill: true
                 }, {
                     label: 'Misses',
                     data: [],
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     pointRadius: 0,
                     fill: true
                 }]
@@ -322,7 +355,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            usePointStyle: true,
+                            boxWidth: 10,
+                            boxHeight: 10,
                             padding: 15
                         }
                     }
@@ -343,14 +377,15 @@ document.addEventListener("DOMContentLoaded", function() {
                             text: 'Cumulative'
                         },
                         beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
+                        grid: {}
                     }
                 }
             }
         });
+        applyChartTheme();
     }
+
+    window.ToolShared.onThemeChange(applyChartTheme);
 
     function pushChart(step, sim) {
         chart.data.labels.push(step);

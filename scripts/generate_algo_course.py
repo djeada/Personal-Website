@@ -1292,7 +1292,6 @@ def build_lesson_pages(lessons: List[Lesson]) -> None:
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional">
     <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="{RESOURCE_PREFIX}resources/style.css">
     <link rel="preload" as="image" href="https://i.ytimg.com/vi/{video.video_id}/hqdefault.jpg">
@@ -1490,7 +1489,7 @@ def update_course_page(lessons: List[Lesson]) -> None:
                 <div class="course-overview-copy">
                     <span class="course-page-badge">Free video course · Python</span>
                     <h2>Build the patterns behind coding interviews</h2>
-                    <p>{COURSE_DESCRIPTION} Every lesson pairs a video walkthrough with notes, the target complexity, and links to deeper articles.</p>
+                    <p>Every lesson pairs a video walkthrough with notes, the target complexity, and links to deeper articles.</p>
                     <div class="course-overview-actions">
                         <a href="./lessons/{first.slug}.html" class="course-start-button" data-course-continue>Start lesson 1 <span aria-hidden="true">→</span></a>
                         <a href="{PLAYLIST_URL}" class="course-playlist-link" target="_blank" rel="noopener">YouTube playlist <span aria-hidden="true">↗</span></a>
@@ -1515,7 +1514,7 @@ def update_course_page(lessons: List[Lesson]) -> None:
             </section>
             <section class="course-curriculum" aria-labelledby="curriculum-title">
                 <div class="course-section-heading"><span class="course-page-badge">Curriculum</span><h2 id="curriculum-title">Choose your next problem</h2><p>Start at lesson 1 for the full path, or filter by the pattern you want to practise.</p></div>
-                <div class="course-discovery" role="search"><label for="course-search">Find a lesson</label><div class="course-search-wrap"><span aria-hidden="true">⌕</span><input id="course-search" type="search" placeholder="Search by problem, pattern or LeetCode number…" autocomplete="off"></div></div>
+                <div class="course-discovery" role="search"><label for="course-search">Find a lesson</label><div class="course-search-wrap"><input id="course-search" type="search" placeholder="Search by problem, pattern or LeetCode number…" autocomplete="off"></div></div>
                 <div class="course-filters" role="group" aria-label="Filter lessons by pattern"><button type="button" class="course-filter is-active" data-course-filter="all">All lessons <span>{total}</span></button>{topic_filters}</div>
                 <p class="course-results" aria-live="polite"><strong data-course-result-count>{total}</strong> lessons shown</p>
             </section>
@@ -1528,7 +1527,7 @@ def update_course_page(lessons: List[Lesson]) -> None:
             </div>
             <aside class="course-channel-card">
                 <div><span class="course-page-badge">Learn with Adam</span><h2>Prefer learning directly on YouTube?</h2><p>Open the complete playlist or visit the channel for more programming walkthroughs.</p></div>
-                <div class="course-overview-actions"><a href="{PLAYLIST_URL}" target="_blank" rel="noopener" class="course-youtube-primary">Play the full playlist <span aria-hidden="true">▶</span></a><a href="{CHANNEL_URL}" target="_blank" rel="noopener" class="course-channel-link">Visit my channel <span aria-hidden="true">↗</span></a></div>
+                <div class="course-overview-actions"><a href="{PLAYLIST_URL}" target="_blank" rel="noopener" class="course-youtube-primary">Play the full playlist</a><a href="{CHANNEL_URL}" target="_blank" rel="noopener" class="course-channel-link">Visit my channel <span aria-hidden="true">↗</span></a></div>
             </aside>
             <script src="./course.js"></script>
 """

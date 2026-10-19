@@ -201,14 +201,23 @@
         drawTransformation();
     }
 
-    function cssColor(name, fallback) {
-        return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+    function plotPalette() {
+        const colors = window.ToolShared ? window.ToolShared.palette() : {};
+        return {
+            canvas: colors.canvas || "#fbf8f1",
+            grid: colors.ruleStrong || "#a8946a",
+            text: colors.ink3 || "#6c6557",
+            vector: colors.gold || "#8a6620",
+            result: colors.verdigris || "#2e6e62",
+            basisOne: colors.moon || "#3d5a85",
+            basisTwo: colors.ember || "#a4511f"
+        };
     }
 
     function drawArrow(ctx, originX, originY, endX, endY, color, label, width = 3, options = {}) {
         const angle = Math.atan2(endY - originY, endX - originX);
         const length = Math.hypot(endX - originX, endY - originY);
-        const head = Math.max(14, Math.min(20, length * .18));
+        const head = Math.max(10, Math.min(15, length * .16));
         ctx.save();
         const offset = options.offset || 0;
         const offsetX = -Math.sin(angle) * offset;
@@ -219,11 +228,9 @@
         endY += offsetY;
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
-        ctx.lineWidth = Math.max(width, 5);
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
+        ctx.lineWidth = width;
+        ctx.lineCap = "butt";
+        ctx.lineJoin = "miter";
         if (options.dashed) ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.moveTo(originX, originY);
@@ -236,13 +243,12 @@
         ctx.closePath();
         ctx.fill();
         ctx.setLineDash([]);
-        ctx.shadowBlur = 0;
-        ctx.font = "800 14px system-ui, sans-serif";
+        ctx.font = "500 13px 'IBM Plex Mono', ui-monospace, monospace";
         const labelX = endX + 9 * Math.cos(angle) - Math.sin(angle) * (options.labelOffset || 0);
         const labelY = endY + 9 * Math.sin(angle) + Math.cos(angle) * (options.labelOffset || 0);
         ctx.lineJoin = "round";
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = cssColor("--tool-surface-raised", "#f8fafc");
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = plotPalette().canvas;
         ctx.strokeText(label, labelX, labelY);
         ctx.fillText(label, labelX, labelY);
         ctx.restore();
@@ -294,16 +300,17 @@
         const ctx = transformationContext;
         const width = cssWidth;
         const height = cssHeight;
-        const surface = cssColor("--tool-surface-raised", "#f8fafc");
-        const gridColor = cssColor("--tool-border", "#dbe3ec");
-        const textColor = cssColor("--tool-text-muted", "#64748b");
+        const colors = plotPalette();
+        const surface = colors.canvas;
+        const gridColor = colors.grid;
+        const textColor = colors.text;
         ctx.clearRect(0, 0, width, height);
         ctx.fillStyle = surface;
         ctx.fillRect(0, 0, width, height);
 
         if (!matrix) {
             ctx.fillStyle = textColor;
-            ctx.font = "14px system-ui, sans-serif";
+            ctx.font = "14px 'IBM Plex Sans', system-ui, sans-serif";
             ctx.textAlign = "center";
             ctx.fillText("Enter a complete numeric matrix to draw the transformation.", width / 2, height / 2);
             transformEquation.textContent = "Enter a valid matrix to plot Av.";
@@ -344,7 +351,7 @@
             const cleanValue = Math.abs(value) < tick / 100 ? 0 : value;
             const px = originX + cleanValue * scale;
             const py = originY - cleanValue * scale;
-            ctx.globalAlpha = cleanValue === 0 ? 0.34 : 0.10;
+            ctx.globalAlpha = cleanValue === 0 ? 0.7 : 0.22;
             ctx.beginPath();
             ctx.moveTo(px, 18);
             ctx.lineTo(px, height - 18);
@@ -354,9 +361,9 @@
             ctx.lineTo(width - 18, py);
             ctx.stroke();
             if (cleanValue !== 0) {
-                ctx.globalAlpha = .55;
+                ctx.globalAlpha = 1;
                 ctx.fillStyle = textColor;
-                ctx.font = "10px system-ui, sans-serif";
+                ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
                 ctx.textAlign = "center";
                 ctx.fillText(formatNumber(cleanValue), px, originY + 14);
                 ctx.textAlign = "right";
@@ -365,14 +372,14 @@
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = textColor;
-        ctx.font = "11px system-ui, sans-serif";
+        ctx.font = "italic 13px 'Cormorant Garamond', Garamond, serif";
         ctx.fillText("x", width - 22, originY - 7);
         ctx.fillText("y", originX + 7, 22);
 
-        const basisColor = "#8b5cf6";
-        const basisTwoColor = "#ec4899";
-        const vectorColor = "#ffd54a";
-        const resultColor = "#3b8cff";
+        const basisColor = colors.basisOne;
+        const basisTwoColor = colors.basisTwo;
+        const vectorColor = colors.vector;
+        const resultColor = colors.result;
         if (mode === "basis") {
             [
                 [1, 0],
@@ -398,10 +405,8 @@
             const length = Math.hypot(dx, dy) || 1;
             ctx.save();
             ctx.strokeStyle = textColor;
-            ctx.globalAlpha = .42;
-            ctx.lineWidth = 2;
-            ctx.shadowColor = "rgba(255,255,255,.38)";
-            ctx.shadowBlur = 5;
+            ctx.globalAlpha = .7;
+            ctx.lineWidth = 1;
             ctx.setLineDash([7, 6]);
             ctx.beginPath();
             ctx.moveTo(originX - dx / length * width, originY - dy / length * width);
@@ -836,7 +841,7 @@
     plotMode.addEventListener("change", syncPlotControls);
     plotEigenpair.addEventListener("change", syncPlotControls);
     window.addEventListener("resize", drawTransformation);
-    document.getElementById("dark-mode-button")?.addEventListener("click", () => setTimeout(drawTransformation, 0));
+    if (window.ToolShared && window.ToolShared.onThemeChange) window.ToolShared.onThemeChange(drawTransformation);
     document.addEventListener("DOMContentLoaded", drawTransformation);
 
     document.querySelectorAll("[data-preset]").forEach(button => {

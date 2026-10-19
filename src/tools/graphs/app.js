@@ -1,11 +1,15 @@
-function getColorForMode(colorLight, colorDark) {
-    const darkMode = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
-    const isDark = darkMode && darkMode.split('=')[1].toLowerCase() === 'true';
-    return isDark ? colorDark : colorLight;
-}
+const fallbackPalette = {
+    canvas: "#fbf8f1",
+    rule: "#d8d0bf",
+    ink3: "#6c6557",
+    gold: "#8a6620",
+    verdigris: "#2e6e62",
+    moon: "#3d5a85",
+    rose: "#9e3b36"
+};
 
-function visualColor(name, fallback) {
-    return getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
+function palette() {
+    return Object.assign({}, fallbackPalette, window.ToolShared?.palette?.() || {});
 }
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -49,10 +53,10 @@ document.addEventListener("DOMContentLoaded", function() {
         toast.className = `toast ${type}`;
 
         const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
+            success: "OK",
+            error: "!",
+            info: "i",
+            warning: "!"
         };
 
         toast.innerHTML = `
@@ -220,7 +224,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.paused = false;
             this.stepMode = false;
             this.startTime = Date.now();
-            pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
+            pauseButton.innerHTML = 'Pause';
             this.currentAlgorithm = this.getSelectedAlgorithm();
             this.openSet = [];
             this.closedSet = [];
@@ -269,8 +273,8 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.paused = !this.paused;
                 pauseButton.innerHTML = this.paused ?
-                    '<span class="btn-icon">▶️</span> Resume' :
-                    '<span class="btn-icon">⏸️</span> Pause';
+                    'Resume' :
+                    'Pause';
 
                 if (this.paused) {
                     showToast("Search paused", "info");
@@ -284,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
+                pauseButton.innerHTML = 'Pause';
             }
             this.openSet = [];
             this.closedSet = [];
@@ -315,7 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
+                pauseButton.innerHTML = 'Pause';
             }
             this.updateAlgorithmName();
             this.initializeMaze();
@@ -548,44 +552,63 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         drawMaze() {
+            const p = palette(),
+                colors = {
+                    wall: p.ink3,
+                    start: p.verdigris,
+                    end: p.rose,
+                    path: p.gold,
+                    visited: p.moon,
+                    frontier: p.moon,
+                    idle: p.canvas
+                };
             ctx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+            ctx.fillStyle = p.canvas;
+            ctx.fillRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+            ctx.lineWidth = 1;
             for (let i = 0; i < this.gridSize; i++) {
                 for (let j = 0; j < this.gridSize; j++) {
                     const cell = this.maze[i][j];
+                    let state = "idle";
 
                     if (cell.wall) {
-                        ctx.fillStyle = visualColor("wall", "#536474");
+                        state = "wall";
                     } else if (cell === this.startNode) {
-                        ctx.fillStyle = visualColor("success", "#21a179");
+                        state = "start";
                     } else if (cell === this.endNode) {
-                        ctx.fillStyle = visualColor("danger", "#dc4c64");
+                        state = "end";
                     } else if (this.path.includes(cell)) {
-                        ctx.fillStyle = visualColor("path", "#f4c95d");
+                        state = "path";
                     } else if (this.closedSet.includes(cell)) {
-                        ctx.fillStyle = visualColor("visited", "#8a6fb5");
+                        state = "visited";
                     } else if (this.openSet.includes(cell)) {
-                        ctx.fillStyle = visualColor("frontier", "#4aa3b5");
-                    } else {
-                        ctx.fillStyle = visualColor("idle", "#dce7ea");
+                        state = "frontier";
                     }
 
+                    ctx.globalAlpha = state === "visited" ? .28 : 1;
+                    ctx.fillStyle = colors[state];
                     ctx.fillRect(
                         cell.x * this.cellSize,
                         cell.y * this.cellSize,
                         this.cellSize,
                         this.cellSize
                     );
-
-                    if (this.showGridLines) {
-                        ctx.strokeStyle = visualColor("grid", "#b7c7ce");
-                        ctx.strokeRect(
-                            cell.x * this.cellSize,
-                            cell.y * this.cellSize,
-                            this.cellSize,
-                            this.cellSize
-                        );
-                    }
+                    ctx.globalAlpha = 1;
                 }
+            }
+
+            if (this.showGridLines) {
+                const extent = this.gridSize * this.cellSize;
+                ctx.strokeStyle = p.rule;
+                ctx.beginPath();
+                for (let k = 0; k <= this.gridSize; k++) {
+                    const offset = Math.min(k * this.cellSize, extent - 1) + .5;
+                    ctx.moveTo(offset, 0);
+                    ctx.lineTo(offset, extent);
+                    ctx.moveTo(0, offset);
+                    ctx.lineTo(extent, offset);
+                }
+                ctx.stroke();
             }
         }
     }
@@ -593,6 +616,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const visualizer = new MazeVisualizer();
 
     window.addEventListener("resize", setCanvasSize);
+    window.ToolShared?.onThemeChange?.(() => visualizer.drawMaze());
 
     setCanvasSize();
 });

@@ -54,6 +54,7 @@ for (const viewport of [
   test(`LaTeX diagnostics never shift the workspace on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/tools/latex_renderer/", { waitUntil: "domcontentloaded" });
+    await page.evaluate(() => document.fonts.ready);
     const editor = page.locator("#latex-input");
     const diagnostics = page.locator("#diagnostics-panel");
     const workspaceBounds = () => page.locator("#split-container").evaluate((element) => {
@@ -182,7 +183,7 @@ test("matrix multiplication draws 2D grid composition B then A", async ({ page }
   expect(geometry.product[1][0]).toBeCloseTo(0.63);
   expect(geometry.product[1][1]).toBeCloseTo(0.9075);
   expect(geometry.width).toBeGreaterThan(760);
-  expect(geometry.message).toContain("yellow unit square has area 1");
+  expect(geometry.message).toContain("gold unit square has area 1");
   await page.locator('[data-geometry-stage="2"]').click();
   await expect(page.locator("#matrix-geometry-canvas")).toHaveAttribute("data-stage", "2");
   await expect(page.locator("#geometry-message")).toContainText("single transformation C = AB");
@@ -221,8 +222,8 @@ for (const name of referenceTools) {
       };
     });
     expect(theme.reference).toBe(true);
-    expect(theme.accent).toBe("#38c6c2");
-    expect(theme.surface).toBe("#17222d");
+    expect(theme.accent).toBe("#c8a55a");
+    expect(theme.surface).toBe("#121318");
     expect(theme.pageWidth).toBeLessThanOrEqual(theme.viewportWidth + 1);
     expect(theme.contentPadding).toBe(0);
     expect(theme.headingAlignment).toBe("center");
@@ -231,14 +232,14 @@ for (const name of referenceTools) {
 }
 
 for (const name of ["ant_colony", "futuristic_city"]) {
-  test(`${name} retains its bespoke theme`, async ({ page, context }) => {
+  test(`${name} uses the grimoire accent`, async ({ page, context }) => {
     await context.addCookies([{ name: "darkMode", value: "true", domain: "127.0.0.1", path: "/" }]);
     await page.goto(`/tools/${name}/`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).not.toHaveClass(/tool-reference/);
     const accent = await page.locator("body").evaluate((body) =>
       getComputedStyle(body).getPropertyValue("--tool-primary").trim(),
     );
-    expect(accent).toBe("#ff9d1a");
+    expect(accent).toBe("#c8a55a");
   });
 }
 
@@ -263,8 +264,8 @@ for (const name of ["graphs", "sorting", "searching"]) {
     expect(layout.canvasWidth).toBeGreaterThan(layout.areaWidth * 0.7);
     expect(layout.intrinsicWidth).toBeGreaterThan(600);
     expect(layout.semanticLegend).toBeGreaterThanOrEqual(3);
-    expect(layout.current).toBe("#ffb547");
-    expect(layout.frontier).toBe("#4aa3b5");
+    expect(layout.current).toBe("#8a6620");
+    expect(layout.frontier).toBe("#2e6e62");
   });
 }
 

@@ -148,18 +148,54 @@ const DATASETS = {
 
 const DEFAULT_POINTS = DATASETS["positive-linear"].points;
 
-const COLORS = {
-    point: "#60a5fa",
-    pointFill: "rgba(96, 165, 250, 0.82)",
-    regression: "#fb7185",
-    mean: "#fbbf24",
-    positive: "rgba(96, 165, 250, 0.11)",
-    negative: "rgba(251, 113, 133, 0.10)",
-    residual: "rgba(251, 113, 133, 0.78)",
-    ellipse: "#4ade80",
-    spearman: "#8b5cf6",
-    spearmanFill: "rgba(139, 92, 246, 0.76)"
-};
+let COLORS = {};
+let THEME = {};
+
+const CHART_FONT_SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
+const CHART_FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+
+function withAlpha(color, alpha) {
+    const hex = String(color || "").trim().replace("#", "");
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return color;
+    const value = parseInt(hex, 16);
+    return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
+function refreshTheme() {
+    const palette = window.ToolShared && typeof window.ToolShared.palette === "function" ?
+        window.ToolShared.palette() :
+        {};
+    const pick = (key, fallback) => palette[key] || fallback;
+    const moon = pick("moon", "#3d5a85");
+    const gold = pick("gold", "#8a6620");
+    const verdigris = pick("verdigris", "#2e6e62");
+    const rose = pick("rose", "#9e3b36");
+    const ember = pick("ember", "#a4511f");
+    const isDark = Boolean(palette.isDark);
+
+    COLORS = {
+        point: moon,
+        pointFill: withAlpha(moon, 0.72),
+        regression: gold,
+        mean: pick("ink3", "#6c6557"),
+        positive: withAlpha(verdigris, isDark ? 0.1 : 0.08),
+        negative: withAlpha(rose, isDark ? 0.1 : 0.07),
+        residual: rose,
+        ellipse: verdigris,
+        spearman: ember,
+        spearmanFill: withAlpha(ember, 0.72)
+    };
+
+    THEME = {
+        canvas: pick("canvas", "#fbf8f1"),
+        frame: pick("rule", "#d8d0bf"),
+        axis: pick("ruleStrong", "#a8946a"),
+        grid: pick("grid", "rgba(28, 26, 23, 0.08)"),
+        text: pick("ink2", "#4f4a40"),
+        label: pick("ink2", "#4f4a40"),
+        heading: pick("ink", "#1c1a17")
+    };
+}
 
 const CHART = {
     left: 76,
@@ -664,21 +700,8 @@ function resizeCanvas(showResiduals, showSpearman) {
     };
 }
 
-function getCookie(name) {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-        const [key, value] = cookie.trim().split("=");
-        if (key === name) return value;
-    }
-    return null;
-}
-
-function getColor(light, dark) {
-    const darkModeValue = getCookie("darkMode");
-    return darkModeValue && darkModeValue.toLowerCase() === "true" ? dark : light;
-}
-
 function draw() {
+    refreshTheme();
     const points = parsePoints(document.getElementById("dataset-points").value);
     const message = document.getElementById("input-message");
     const showResiduals = document.getElementById("show-residuals").checked;
@@ -802,17 +825,14 @@ function createLinearScale(minValue, maxValue, minPx, maxPx) {
 }
 
 function drawBackground(ctx, dimensions) {
-    ctx.fillStyle = getColor("#fbfcfe", "#171717");
+    ctx.fillStyle = THEME.canvas;
     ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-    ctx.strokeStyle = getColor("#e3e8ef", "#333333");
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, dimensions.width - 1, dimensions.height - 1);
 }
 
 function drawScatterAxes(ctx, dimensions, summary, xScale, yScale) {
-    const axisColor = getColor("#667085", "#cbd5e1");
-    const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
-    const textColor = getColor("#536174", "#cbd5e1");
+    const axisColor = THEME.axis;
+    const gridColor = THEME.grid;
+    const textColor = THEME.text;
     const plotRight = dimensions.width - CHART.right;
     const plotBottom = CHART.top + CHART.plotHeight;
     const xTicks = ticks(xScale.min, xScale.max, CHART.narrow ? 4 : 7);
@@ -844,7 +864,7 @@ function drawScatterAxes(ctx, dimensions, summary, xScale, yScale) {
     ctx.stroke();
 
     ctx.fillStyle = textColor;
-    ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `11px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     xTicks.forEach(value => ctx.fillText(formatTick(value), xScale(value), plotBottom + 9));
@@ -901,7 +921,7 @@ function drawMeanLines(ctx, dimensions, summary, x, y) {
     ctx.lineTo(plotRight, meanY);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText("mean x", meanX + 6, CHART.top + 18);
@@ -989,8 +1009,8 @@ function drawPoints(ctx, summary, x, y, highlightRankExample = false) {
         }
 
         if (document.getElementById("show-labels").checked || (highlightRankExample && index === 0)) {
-            ctx.fillStyle = getColor("#344054", "#dbe4ef");
-            ctx.font = "10px Arial";
+            ctx.fillStyle = THEME.label;
+            ctx.font = `10px ${CHART_FONT_MONO}`;
             ctx.textAlign = "left";
             ctx.textBaseline = "bottom";
             ctx.fillText(index === 0 && highlightRankExample ? "point 1" : String(index + 1), x(point.x) + 7, y(point.y) - 5);
@@ -1000,9 +1020,9 @@ function drawPoints(ctx, summary, x, y, highlightRankExample = false) {
 }
 
 function drawResidualPlot(ctx, dimensions, summary, xScale) {
-    const textColor = getColor("#475467", "#dbe4ef");
-    const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
-    const axisColor = getColor("#667085", "#cbd5e1");
+    const textColor = THEME.text;
+    const gridColor = THEME.grid;
+    const axisColor = THEME.axis;
     const top = CHART.residualTop;
     const bottom = top + CHART.residualHeight;
     const plotRight = dimensions.width - CHART.right;
@@ -1048,7 +1068,7 @@ function drawResidualPlot(ctx, dimensions, summary, xScale) {
     });
 
     ctx.fillStyle = textColor;
-    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillText("0", CHART.left - 8, zeroY);
@@ -1057,9 +1077,9 @@ function drawResidualPlot(ctx, dimensions, summary, xScale) {
 }
 
 function drawSpearmanRankPlot(ctx, dimensions, summary) {
-    const textColor = getColor("#475467", "#dbe4ef");
-    const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
-    const axisColor = getColor("#667085", "#cbd5e1");
+    const textColor = THEME.text;
+    const gridColor = THEME.grid;
+    const axisColor = THEME.axis;
     const top = CHART.rankTop;
     const bottom = top + CHART.rankHeight;
     const right = dimensions.width - CHART.right;
@@ -1149,7 +1169,7 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
             ctx.stroke();
             if (count > 1) {
                 ctx.fillStyle = textColor;
-                ctx.font = "10px Arial";
+                ctx.font = `10px ${CHART_FONT_MONO}`;
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
                 ctx.fillText(`×${count}`, px + 6, py - 4);
@@ -1159,7 +1179,7 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
 
         if (document.getElementById("show-labels").checked || index === 0) {
             ctx.fillStyle = textColor;
-            ctx.font = "10px Arial";
+            ctx.font = `10px ${CHART_FONT_MONO}`;
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             ctx.fillText(index === 0 ? "point 1" : String(index + 1), px + 6, py + 5 + (index % 2) * 9);
@@ -1168,7 +1188,7 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
     ctx.restore();
 
     ctx.fillStyle = textColor;
-    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.font = CHART.narrow ? `10px ${CHART_FONT_MONO}` : `12px ${CHART_FONT_MONO}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     xTicks.forEach(value => ctx.fillText(formatTick(value), xScale(value), bottom + 8));
@@ -1265,7 +1285,7 @@ function renderSpearmanVisualGuide(summary, measures = selectedCorrelationMeasur
 }
 
 function drawDivider(ctx, dimensions, y) {
-    ctx.strokeStyle = getColor("#e3e8ef", "#333333");
+    ctx.strokeStyle = THEME.frame;
     ctx.beginPath();
     ctx.moveTo(CHART.left, y);
     ctx.lineTo(dimensions.width - CHART.right, y);
@@ -1273,16 +1293,16 @@ function drawDivider(ctx, dimensions, y) {
 }
 
 function drawSectionLabel(ctx, label, x, y) {
-    ctx.fillStyle = getColor("#111827", "#e5e7eb");
-    ctx.font = CHART.narrow ? "700 12px Arial" : "700 13px Arial";
+    ctx.fillStyle = THEME.heading;
+    ctx.font = CHART.narrow ? `600 12px ${CHART_FONT_SANS}` : `600 13px ${CHART_FONT_SANS}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(label, x, y);
 }
 
 function drawMessage(ctx, dimensions, message) {
-    ctx.fillStyle = getColor("#333", "#eee");
-    ctx.font = "16px Arial";
+    ctx.fillStyle = THEME.heading;
+    ctx.font = `16px ${CHART_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
@@ -1707,7 +1727,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const presetSelect = document.getElementById("preset-select");
     const inputs = document.querySelectorAll("textarea, input[type='checkbox']");
     const generatorInputs = document.querySelectorAll(".generator-grid input, .generator-grid select");
-    const toggleButton = document.querySelector(".toggle-dark-mode, #dark-mode-button");
 
     renderLegend();
 
@@ -1734,10 +1753,8 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    if (toggleButton) {
-        toggleButton.addEventListener("click", function() {
-            window.setTimeout(draw, 0);
-        });
+    if (window.ToolShared && typeof window.ToolShared.onThemeChange === "function") {
+        window.ToolShared.onThemeChange(draw);
     }
 
     applyPreset(presetSelect.value);

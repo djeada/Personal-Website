@@ -140,69 +140,36 @@ function getCookie(name) {
 }
 
 
-function isDarkMode() {
-    return document.body.classList.contains('dark-mode');
+function readFont(name, fallback) {
+    const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+    return value || fallback;
 }
 
-
 function getColors() {
-    const dark = isDarkMode();
-
-
-    const containerColors = isColorlessMode ? [
-        dark ? '#4169E1' : '#0047AB',
-        dark ? '#FF1493' : '#DC143C',
-        dark ? '#32CD32' : '#228B22'
-    ] : [
-        dark ? '#3b82f6' : '#2563eb',
-        dark ? '#ec4899' : '#f472b6',
-        dark ? '#6b7280' : '#9ca3af'
-    ];
-
-    const containerHover = isColorlessMode ? [
-        dark ? '#87CEEB' : '#1E90FF',
-        dark ? '#FFB6C1' : '#FF6B6B',
-        dark ? '#98FB98' : '#90EE90'
-    ] : [
-        dark ? '#60a5fa' : '#3b82f6',
-        dark ? '#f472b6' : '#f9a8d4',
-        dark ? '#94a3b8' : '#cbd5e1'
-    ];
-
-    const highlightCorrect = isColorlessMode ?
-        (dark ? 'rgba(50, 205, 50, 0.95)' : 'rgba(34, 139, 34, 0.95)') :
-        'rgba(16, 185, 129, 0.95)';
-    const highlightIncorrect = isColorlessMode ?
-        (dark ? 'rgba(255, 20, 147, 0.95)' : 'rgba(220, 20, 60, 0.95)') :
-        'rgba(239, 68, 68, 0.95)';
-    const particleColors = isColorlessMode ?
-        dark ? ['#87CEEB', '#98FB98', '#FFB6C1', '#4169E1', '#32CD32', '#FF1493'] : ['#1E90FF', '#90EE90', '#FF6B6B', '#0047AB', '#228B22', '#DC143C'] :
-        dark ? ['#fbbf24', '#f59e0b', '#60a5fa', '#fb7185', '#34d399', '#c084fc'] : ['#f59e0b', '#d97706', '#3b82f6', '#ec4899', '#10b981', '#a855f7'];
+    const p = ToolShared.palette();
+    const containerColors = isColorlessMode ? [p.moon, p.ember, p.ink2] : [p.moon, p.rose, p.verdigris];
 
     return {
-        bgGradientStart: dark ? '#0f0f23' : '#f8fafc',
-        bgGradientMid: dark ? '#1a1a2e' : '#e2e8f0',
-        bgGradientEnd: dark ? '#16213e' : '#dbe3f0',
-        gridColor: dark ? 'rgba(99, 102, 241, 0.03)' : 'rgba(15, 23, 42, 0.06)',
-        orbColors: dark ? [
-            'rgba(99, 102, 241, 0.12)',
-            'rgba(139, 92, 246, 0.1)',
-            'rgba(251, 191, 36, 0.06)'
-        ] : [
-            'rgba(59, 130, 246, 0.18)',
-            'rgba(236, 72, 153, 0.14)',
-            'rgba(148, 163, 184, 0.16)'
-        ],
-        wordColor: '#f8fafc',
-        wordShadow: 'rgba(0,0,0,0.6)',
+        background: p.canvas,
+        gridColor: p.grid,
+        panel: p.panel,
+        panel2: p.panel2,
+        rule: p.rule,
+        ruleStrong: p.ruleStrong,
+        ink: p.ink,
+        ink2: p.ink2,
+        ink3: p.ink3,
+        gold: p.gold,
+        moon: p.moon,
+        overlay: p.bg,
         containerColors,
-        containerHover,
-        labelColor: '#ffffff',
-        highlightCorrect,
-        highlightIncorrect,
-        gameOverBg: 'rgba(10, 10, 26, 0.95)',
-        gameOverText: '#ffffff',
-        particleColors
+        highlightCorrect: p.verdigris,
+        highlightIncorrect: p.rose,
+        particleSuccess: [p.verdigris, p.gold],
+        particleFailure: [p.rose, p.ember],
+        fontSans: readFont('--g-font-sans', '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif'),
+        fontDisplay: readFont('--g-font-display', '"Cormorant Garamond", Garamond, serif'),
+        fontMono: readFont('--g-font-mono', '"IBM Plex Mono", ui-monospace, monospace')
     };
 }
 
@@ -374,17 +341,13 @@ class Particle {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
         ctx.fillStyle = this.color;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
         ctx.restore();
     }
 }
 
 function createParticles(x, y, count, isSuccess) {
-    const particleColors = isSuccess ? ['#00ff88', '#33ffa3', '#66ffbb', '#fbbf24', '#00d9ff'] : ['#ff6b35', '#ff8c5a', '#ffad80', '#ff4444'];
+    const particleColors = isSuccess ? colors.particleSuccess : colors.particleFailure;
 
     for (let i = 0; i < count; i++) {
         const color = particleColors[Math.floor(Math.random() * particleColors.length)];
@@ -593,11 +556,11 @@ function getMeaningFontSize() {
 }
 
 function getWordFont() {
-    return `700 ${getWordFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    return `600 ${getWordFontSize()}px ${colors.fontSans}`;
 }
 
 function getMeaningFont() {
-    return `600 ${getMeaningFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    return `400 ${getMeaningFontSize()}px ${colors.fontSans}`;
 }
 
 function getHintFontSize() {
@@ -605,7 +568,7 @@ function getHintFontSize() {
 }
 
 function getHintFont() {
-    return `600 ${getHintFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    return `500 ${getHintFontSize()}px ${colors.fontMono}`;
 }
 
 function getMeaningForWord(wordText) {
@@ -1093,69 +1056,37 @@ function checkCollisions() {
 }
 
 function drawBackground() {
-
-    const gradient = ctx.createLinearGradient(0, 0, gameWidth * 0.3, gameHeight);
-    gradient.addColorStop(0, colors.bgGradientStart);
-    gradient.addColorStop(0.5, colors.bgGradientMid);
-    gradient.addColorStop(1, colors.bgGradientEnd);
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
 
     ctx.strokeStyle = colors.gridColor;
     ctx.lineWidth = 1;
-    const gridSize = 50;
-    for (let x = 0; x < gameWidth; x += gridSize) {
+    const gridSize = 48;
+    for (let x = gridSize; x < gameWidth; x += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, gameHeight);
+        ctx.moveTo(Math.round(x) + 0.5, 0);
+        ctx.lineTo(Math.round(x) + 0.5, gameHeight);
         ctx.stroke();
     }
-    for (let y = 0; y < gameHeight; y += gridSize) {
+    for (let y = gridSize; y < gameHeight; y += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(gameWidth, y);
+        ctx.moveTo(0, Math.round(y) + 0.5);
+        ctx.lineTo(gameWidth, Math.round(y) + 0.5);
         ctx.stroke();
     }
+}
 
-
-    const time = Date.now() * 0.001;
-    ctx.save();
-
-
-    const orb1X = gameWidth * 0.15 + Math.sin(time * 0.5) * 20;
-    const orb1Y = gameHeight * 0.2 + Math.cos(time * 0.3) * 15;
-    const orb1Gradient = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, 80);
-    orb1Gradient.addColorStop(0, colors.orbColors[0]);
-    orb1Gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = orb1Gradient;
+function drawClasp(x, y, w, h, size, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(orb1X, orb1Y, 80, 0, Math.PI * 2);
-    ctx.fill();
-
-
-    const orb2X = gameWidth * 0.85 + Math.cos(time * 0.4) * 25;
-    const orb2Y = gameHeight * 0.6 + Math.sin(time * 0.6) * 20;
-    const orb2Gradient = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, 100);
-    orb2Gradient.addColorStop(0, colors.orbColors[1]);
-    orb2Gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = orb2Gradient;
-    ctx.beginPath();
-    ctx.arc(orb2X, orb2Y, 100, 0, Math.PI * 2);
-    ctx.fill();
-
-
-    const orb3X = gameWidth * 0.5 + Math.sin(time * 0.7) * 30;
-    const orb3Y = gameHeight * 0.35 + Math.cos(time * 0.5) * 25;
-    const orb3Gradient = ctx.createRadialGradient(orb3X, orb3Y, 0, orb3X, orb3Y, 60);
-    orb3Gradient.addColorStop(0, colors.orbColors[2]);
-    orb3Gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = orb3Gradient;
-    ctx.beginPath();
-    ctx.arc(orb3X, orb3Y, 60, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
+    ctx.moveTo(x + 0.5, y + size);
+    ctx.lineTo(x + 0.5, y + 0.5);
+    ctx.lineTo(x + size, y + 0.5);
+    ctx.moveTo(x + w - 0.5, y + h - size);
+    ctx.lineTo(x + w - 0.5, y + h - 0.5);
+    ctx.lineTo(x + w - size, y + h - 0.5);
+    ctx.stroke();
 }
 
 function drawWord() {
@@ -1168,12 +1099,6 @@ function drawWord() {
     ctx.translate(currentWord.x, currentWord.y);
     ctx.scale(currentWord.scale, currentWord.scale);
     ctx.translate(-currentWord.x, -currentWord.y);
-
-
-    ctx.shadowColor = 'rgba(99, 102, 241, 0.4)';
-    ctx.shadowBlur = 30;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 8;
 
 
     const wordFont = getWordFont();
@@ -1207,48 +1132,14 @@ function drawWord() {
     const cardY = currentWord.y - pillHeight / 2;
 
 
-    const glowGradient = ctx.createRadialGradient(
-        currentWord.x, currentWord.y, pillWidth * 0.3,
-        currentWord.x, currentWord.y, pillWidth * 0.8
-    );
-    glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
-    glowGradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.arc(currentWord.x, currentWord.y, pillWidth * 0.8, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = colors.panel;
+    ctx.fillRect(cardX, cardY, pillWidth, pillHeight);
+    ctx.strokeStyle = colors.ruleStrong;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 0.5, cardY + 0.5, pillWidth - 1, pillHeight - 1);
+    drawClasp(cardX - 4, cardY - 4, pillWidth + 8, pillHeight + 8, 14, colors.gold);
 
-
-    const cardGradient = ctx.createLinearGradient(cardX, cardY, cardX, cardY + pillHeight);
-    cardGradient.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
-    cardGradient.addColorStop(1, 'rgba(248, 250, 252, 0.95)');
-    ctx.fillStyle = cardGradient;
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, pillWidth, pillHeight, 24);
-    ctx.fill();
-
-
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, pillWidth, pillHeight / 2, [24, 24, 0, 0]);
-    ctx.clip();
-    const shineGradient = ctx.createLinearGradient(cardX, cardY, cardX, cardY + pillHeight / 2);
-    shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = shineGradient;
-    ctx.fillRect(cardX, cardY, pillWidth, pillHeight / 2);
-    ctx.restore();
-
-
-    ctx.shadowColor = 'transparent';
-
-
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = colors.ink;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = wordFont;
@@ -1259,7 +1150,7 @@ function drawWord() {
 
     if (meaningText) {
         ctx.font = meaningFont;
-        ctx.fillStyle = meaningRevealActive ? '#374151' : 'rgba(55, 65, 81, 0.6)';
+        ctx.fillStyle = meaningRevealActive ? colors.ink2 : colors.ink3;
         ctx.globalAlpha = Math.min(1, currentWord.opacity);
         ctx.fillText(meaningText, currentWord.x, textTop + wordFontSize + lineGap);
     }
@@ -1269,7 +1160,7 @@ function drawWord() {
         const hintY = textTop + wordFontSize +
             (meaningText ? meaningFontSize + lineGap : 0) + hintGap;
         ctx.font = hintFont;
-        ctx.fillStyle = '#6366f1';
+        ctx.fillStyle = colors.moon;
         ctx.fillText(hintText, currentWord.x, hintY);
     }
 
@@ -1353,6 +1244,43 @@ function getContainerOverlapInfo(word) {
     };
 }
 
+function drawContainerPattern(index, x, y, w, h, color) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.globalAlpha = 0.28;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1;
+
+    if (index === 0) {
+        for (let i = 8; i < w; i += 10) {
+            ctx.beginPath();
+            ctx.moveTo(x + i + 0.5, y);
+            ctx.lineTo(x + i + 0.5, y + h);
+            ctx.stroke();
+        }
+    } else if (index === 1) {
+        const spacing = 12;
+        for (let dy = spacing / 2; dy < h; dy += spacing) {
+            for (let dx = spacing / 2; dx < w; dx += spacing) {
+                ctx.beginPath();
+                ctx.arc(x + dx, y + dy, 1.6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    } else {
+        for (let i = -h; i < w + h; i += 12) {
+            ctx.beginPath();
+            ctx.moveTo(x + i, y);
+            ctx.lineTo(x + i + h, y + h);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+
 function drawContainers() {
     const {
         containerWidth,
@@ -1362,17 +1290,10 @@ function drawContainers() {
     } = getContainerLayout();
     const labels = ['der', 'die', 'das'];
     const sublabels = ['MASC', 'FEM', 'NEUT'];
-    const icons = ['♂', '♀', '◆'];
     const isCompact = isCompactLayout();
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
-
-    const containerGradients = colors.containerColors.map((baseColor, index) => [
-        baseColor,
-        colors.containerHover[index] || baseColor
-    ]);
 
     labels.forEach((label, index) => {
         const x = index * containerWidth;
@@ -1381,7 +1302,6 @@ function drawContainers() {
             containerAnimations[index] -= 0.04;
         }
 
-
         let isHighlighted = index === highlightContainerIndex;
         const elapsedTime = isHighlighted ? Date.now() - highlightStartTime : 0;
         if (isHighlighted && elapsedTime >= highlightDuration) {
@@ -1389,184 +1309,46 @@ function drawContainers() {
             isHighlighted = false;
         }
 
-        ctx.save();
-
-        const animScale = 1 + containerAnimations[index] * 0.08;
+        const showFeedback = isHighlighted && lastAnswerCorrect !== null;
+        const identity = colors.containerColors[index];
+        const accent = showFeedback ? (lastAnswerCorrect ? colors.highlightCorrect : colors.highlightIncorrect) : identity;
+        const boxX = x + padding;
+        const boxY = containerY + padding / 2;
+        const boxW = containerWidth - padding * 2;
+        const boxH = containerHeight - padding;
         const centerX = x + containerWidth / 2;
         const centerY = containerY + containerHeight / 2;
 
-        ctx.translate(centerX, centerY);
-        ctx.scale(animScale, animScale);
-        ctx.translate(-centerX, -centerY);
-
-
-        if (isHighlighted) {
-            ctx.shadowColor = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.65)' : 'rgba(239, 68, 68, 0.65)';
-            ctx.shadowBlur = 25;
-        } else {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-            ctx.shadowBlur = 15;
-        }
-        ctx.shadowOffsetY = 4;
-
-
-        const gradientColors = containerGradients[index];
-        const containerGradient = ctx.createLinearGradient(
-            x + padding, containerY,
-            x + padding, containerY + containerHeight
-        );
-
-        if (isHighlighted) {
-            const highlightBaseColor = lastAnswerCorrect ? '#10b981' : '#ef4444';
-            containerGradient.addColorStop(0, highlightBaseColor);
-            containerGradient.addColorStop(1, lastAnswerCorrect ? '#059669' : '#dc2626');
-        } else {
-            containerGradient.addColorStop(0, gradientColors[0]);
-            containerGradient.addColorStop(1, gradientColors[1]);
-        }
-
-
-        ctx.fillStyle = containerGradient;
-        ctx.beginPath();
-        ctx.roundRect(
-            x + padding,
-            containerY + padding / 2,
-            containerWidth - padding * 2,
-            containerHeight - padding,
-            [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
-        );
-        ctx.fill();
-
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-
-        if (isColorlessMode && !isHighlighted) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(
-                x + padding,
-                containerY + padding / 2,
-                containerWidth - padding * 2,
-                containerHeight - padding,
-                [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
-            );
-            ctx.clip();
-
-            ctx.globalAlpha = 0.3;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.lineWidth = 3;
-
-            const patternX = x + padding;
-            const patternY = containerY + padding / 2;
-            const patternW = containerWidth - padding * 2;
-            const patternH = containerHeight - padding;
-
-            if (index === 0) {
-                for (let i = 0; i < patternW; i += 12) {
-                    ctx.beginPath();
-                    ctx.moveTo(patternX + i, patternY);
-                    ctx.lineTo(patternX + i, patternY + patternH);
-                    ctx.stroke();
-                }
-            } else if (index === 1) {
-                const dotSize = 4;
-                const spacing = 14;
-                for (let dy = 0; dy < patternH; dy += spacing) {
-                    for (let dx = 0; dx < patternW; dx += spacing) {
-                        ctx.beginPath();
-                        ctx.arc(patternX + dx + spacing / 2, patternY + dy + spacing / 2, dotSize, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            } else if (index === 2) {
-                for (let i = -patternH; i < patternW + patternH; i += 15) {
-                    ctx.beginPath();
-                    ctx.moveTo(patternX + i, patternY);
-                    ctx.lineTo(patternX + i + patternH, patternY + patternH);
-                    ctx.stroke();
-                }
-            }
-            ctx.restore();
-        }
-
-
         ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(
-            x + padding,
-            containerY + padding / 2,
-            containerWidth - padding * 2,
-            (containerHeight - padding) * 0.4,
-            [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
-        );
-        ctx.clip();
-        const shineGradient = ctx.createLinearGradient(
-            x + padding, containerY + padding / 2,
-            x + padding, containerY + containerHeight * 0.4
-        );
-        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = shineGradient;
-        ctx.fillRect(x + padding, containerY + padding / 2, containerWidth - padding * 2, containerHeight * 0.4);
-        ctx.restore();
 
-        if (isHighlighted && lastAnswerCorrect !== null) {
-            const feedbackFill = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
-            const feedbackBorder = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)';
-            ctx.fillStyle = feedbackFill;
-            ctx.beginPath();
-            ctx.roundRect(
-                x + padding,
-                containerY + padding / 2,
-                containerWidth - padding * 2,
-                containerHeight - padding,
-                [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
-            );
-            ctx.fill();
-            ctx.strokeStyle = feedbackBorder;
-            ctx.lineWidth = 3;
-            ctx.stroke();
+        ctx.fillStyle = colors.panel;
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.globalAlpha = showFeedback ? 0.22 : 0.1;
+        ctx.fillStyle = accent;
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.globalAlpha = 1;
+
+        if (isColorlessMode && !showFeedback) {
+            drawContainerPattern(index, boxX, boxY, boxW, boxH, identity);
         }
 
+        ctx.strokeStyle = showFeedback ? accent : colors.rule;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+        ctx.fillStyle = accent;
+        ctx.fillRect(boxX, boxY, boxW, showFeedback ? 3 : 2);
 
-        ctx.shadowColor = 'transparent';
+        ctx.font = `600 ${isCompact ? 28 : 36}px ${colors.fontDisplay}`;
+        ctx.fillStyle = showFeedback ? accent : colors.ink;
+        ctx.fillText(label, centerX, centerY - (isCompact ? 8 : 10));
 
-        const iconOffset = isCompact ? 22 : 28;
-        const sublabelOffset = isCompact ? 18 : 22;
-
-
-        ctx.font = `700 ${isCompact ? 16 : 20}px "Segoe UI Symbol", Arial, sans-serif`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillText(icons[index], centerX, centerY - iconOffset);
-
-
-        ctx.font = `bold ${isCompact ? 22 : 28}px "Segoe UI", Arial, sans-serif`;
-        ctx.fillStyle = colors.labelColor;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
-        ctx.fillText(label, centerX, centerY - 4);
-        ctx.shadowColor = 'transparent';
-
-
-        ctx.font = `700 ${isCompact ? 11 : 13}px "Segoe UI", Arial, sans-serif`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillText(sublabels[index], centerX, centerY + sublabelOffset);
-
-
-        if (isHighlighted && lastAnswerCorrect !== null) {
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-            ctx.shadowBlur = 8;
-            ctx.font = `800 ${isCompact ? 22 : 28}px "Segoe UI Symbol", Arial, sans-serif`;
-            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX, centerY - (isCompact ? 8 : 10));
-            ctx.font = `800 ${isCompact ? 15 : 18}px "Segoe UI", Arial, sans-serif`;
-            ctx.fillText(lastAnswerCorrect ? 'CORRECT' : 'WRONG', centerX, centerY + (isCompact ? 12 : 14));
-            ctx.shadowColor = 'transparent';
+        ctx.font = `500 ${isCompact ? 10 : 12}px ${colors.fontMono}`;
+        if (showFeedback) {
+            ctx.fillStyle = accent;
+            ctx.fillText(lastAnswerCorrect ? 'CORRECT' : 'WRONG', centerX, centerY + (isCompact ? 18 : 22));
+        } else {
+            ctx.fillStyle = identity;
+            ctx.fillText(sublabels[index], centerX, centerY + (isCompact ? 18 : 22));
         }
 
         ctx.restore();
@@ -1755,67 +1537,70 @@ function exportSessionToPDF() {
 }
 
 function drawGameOver() {
+    const cx = gameWidth / 2;
+    const cy = gameHeight / 2;
+    const compact = isCompactLayout();
 
-    const overlayGradient = ctx.createRadialGradient(
-        gameWidth / 2, gameHeight / 2, 0,
-        gameWidth / 2, gameHeight / 2, gameWidth * 0.8
-    );
-    overlayGradient.addColorStop(0, 'rgba(10, 10, 26, 0.92)');
-    overlayGradient.addColorStop(1, 'rgba(10, 10, 26, 0.98)');
-    ctx.fillStyle = overlayGradient;
+    ctx.save();
+    ctx.globalAlpha = 0.94;
+    ctx.fillStyle = colors.overlay;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
-
-    const glowGradient = ctx.createRadialGradient(
-        gameWidth / 2, gameHeight / 2 - 60, 0,
-        gameWidth / 2, gameHeight / 2 - 60, 200
-    );
-    glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
-    glowGradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.arc(gameWidth / 2, gameHeight / 2 - 60, 200, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.restore();
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    ctx.font = `600 ${compact ? 40 : 52}px ${colors.fontDisplay}`;
+    ctx.fillStyle = colors.ink;
+    ctx.fillText(gameEndMessage || 'Game Over!', cx, cy - 100);
 
-    ctx.shadowColor = 'rgba(251, 191, 36, 0.5)';
-    ctx.shadowBlur = 30;
-    ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillText(gameEndMessage || 'Game Over!', gameWidth / 2, gameHeight / 2 - 100);
-    ctx.shadowColor = 'transparent';
-
-
-    ctx.font = '600 26px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-
-    ctx.fillText(`⭐ Final Score: ${score}`, gameWidth / 2, gameHeight / 2 - 30);
-    ctx.fillText(`📈 Level: ${level}`, gameWidth / 2, gameHeight / 2 + 15);
-    ctx.fillText(`🔥 Best Streak: ${maxStreak}`, gameWidth / 2, gameHeight / 2 + 60);
+    ctx.strokeStyle = colors.gold;
+    ctx.fillStyle = colors.gold;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 100, cy - 60.5);
+    ctx.lineTo(cx - 10, cy - 60.5);
+    ctx.moveTo(cx + 10, cy - 60.5);
+    ctx.lineTo(cx + 100, cy - 60.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 65);
+    ctx.lineTo(cx + 4.5, cy - 60.5);
+    ctx.lineTo(cx, cy - 56);
+    ctx.lineTo(cx - 4.5, cy - 60.5);
+    ctx.closePath();
+    ctx.fill();
 
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
-    ctx.fillText(`🎯 Accuracy: ${accuracy}%`, gameWidth / 2, gameHeight / 2 + 105);
+    const rows = [
+        ['FINAL SCORE', String(score)],
+        ['LEVEL', String(level)],
+        ['BEST STREAK', String(maxStreak)],
+        ['ACCURACY', `${accuracy}%`]
+    ];
+    const half = compact ? 110 : 140;
+    rows.forEach(([label, value], i) => {
+        const y = cy - 30 + i * 45;
+        ctx.font = `500 ${compact ? 11 : 12}px ${colors.fontMono}`;
+        ctx.fillStyle = colors.ink3;
+        ctx.textAlign = 'left';
+        ctx.fillText(label, cx - half, y);
+        ctx.font = `500 ${compact ? 20 : 24}px ${colors.fontMono}`;
+        ctx.fillStyle = i === 0 ? colors.gold : colors.ink;
+        ctx.textAlign = 'right';
+        ctx.fillText(value, cx + half, y);
+    });
+    ctx.textAlign = 'center';
 
+    ctx.strokeStyle = colors.moon;
+    ctx.strokeRect(cx - 100 + 0.5, cy + 145 - 15 + 0.5, 199, 29);
+    ctx.font = `500 ${compact ? 14 : 15}px ${colors.fontSans}`;
+    ctx.fillStyle = colors.moon;
+    ctx.fillText('Export to PDF', cx, cy + 145);
 
-    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = 'rgba(99, 102, 241, 0.9)';
-    ctx.fillText('📄 Export to PDF', gameWidth / 2, gameHeight / 2 + 145);
-
-
-    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 180);
-
-
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(gameWidth / 2 - 100, gameHeight / 2 - 60);
-    ctx.lineTo(gameWidth / 2 + 100, gameHeight / 2 - 60);
-    ctx.stroke();
+    ctx.font = `400 ${compact ? 15 : 17}px ${colors.fontSans}`;
+    ctx.fillStyle = colors.ink2;
+    ctx.fillText('Press R or tap to restart', cx, cy + 190);
 }
 
 function updateCanvas() {
@@ -2116,7 +1901,7 @@ startBtn.addEventListener('click', startGame);
 soundToggle.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
     if (soundToggleIcon) {
-        soundToggleIcon.textContent = soundEnabled ? '🔊' : '🔇';
+        soundToggleIcon.textContent = '';
     }
     if (soundToggleLabel) {
         soundToggleLabel.textContent = soundEnabled ? 'Sound' : 'Muted';
@@ -2149,7 +1934,6 @@ if (pluralInput) {
 }
 
 const colorlessToggle = document.getElementById('colorlessToggle');
-const darkModeButton = document.getElementById('dark-mode-button');
 const resetGameButton = document.getElementById('resetGameButton');
 if (colorlessToggle) {
     colorlessToggle.addEventListener('change', () => {
@@ -2159,23 +1943,16 @@ if (colorlessToggle) {
         drawContainers();
     });
 }
-if (darkModeButton) {
-    darkModeButton.addEventListener('click', () => {
-
-        const checkAndUpdate = () => {
-            colors = getColors();
-            if (isGameStarted) {
-                updateCanvas();
-            } else {
-                drawBackground();
-                drawContainers();
-            }
-        };
-
-
-        setTimeout(checkAndUpdate, 50);
-    });
-}
+const refreshThemeColors = () => {
+    colors = getColors();
+    if (isGameStarted) {
+        updateCanvas();
+    } else {
+        drawBackground();
+        drawContainers();
+    }
+};
+ToolShared.onThemeChange(refreshThemeColors);
 if (resetGameButton) {
     resetGameButton.addEventListener('click', () => {
         const wasGameOver = isGameOver;

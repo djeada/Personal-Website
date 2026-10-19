@@ -5,6 +5,8 @@
         W = window.OpticsModels.waveguides;
     const $ = (id) => document.getElementById(id);
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const DEG = 180 / Math.PI;
     const C0 = core.constants.c;
 
@@ -403,7 +405,7 @@
             });
 
             ctx.save();
-            ctx.strokeStyle = "rgba(236, 233, 248, 0.75)";
+            ctx.strokeStyle = tint(PAL.text, 0.75);
             ctx.setLineDash([6, 4]);
             ctx.lineWidth = 1.2;
             for (const xb of [profile.aum, -profile.aum]) {
@@ -462,7 +464,7 @@
         ctx.save();
         ctx.font = fs + "px " + PAL.font;
         const tw = ctx.measureText(text).width;
-        ctx.fillStyle = "rgba(7, 7, 13, 0.78)";
+        ctx.fillStyle = tint(PAL.background, 0.78);
         ctx.fillRect(x - 3, y - 2, tw + 6, fs + 6);
         ctx.fillStyle = color || PAL.text;
         ctx.textAlign = "left";
@@ -473,7 +475,7 @@
 
     function arrow(ctx, x0, y0, x1, y1, color) {
         ctx.save();
-        ctx.strokeStyle = "rgba(7, 7, 13, 0.85)";
+        ctx.strokeStyle = tint(PAL.background, 0.85);
         ctx.lineWidth = 5;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
@@ -547,12 +549,12 @@
             ctx.clip();
 
             const z0 = map.xToPx(0);
-            ctx.fillStyle = "rgba(105, 245, 231, 0.10)";
+            ctx.fillStyle = tint(PAL.series[1], 0.10);
             ctx.fillRect(z0, map.yToPx(aum), P.x + P.w - z0, map.yToPx(-aum) - map.yToPx(aum));
-            ctx.fillStyle = "rgba(167, 139, 250, 0.08)";
+            ctx.fillStyle = tint(PAL.series[2], 0.08);
             ctx.fillRect(z0, P.y, P.x + P.w - z0, map.yToPx(aum) - P.y);
             ctx.fillRect(z0, map.yToPx(-aum), P.x + P.w - z0, P.y + P.h - map.yToPx(-aum));
-            ctx.strokeStyle = "rgba(236, 233, 248, 0.6)";
+            ctx.strokeStyle = tint(PAL.text, 0.6);
             ctx.lineWidth = 1;
             for (const xb of [aum, -aum]) {
                 ctx.beginPath();
@@ -566,7 +568,7 @@
             ctx.stroke();
 
             const tMax = Math.acos(sel.n2 / sel.n1);
-            drawZigZag(ctx, map, U, tMax, zMax, "rgba(248, 212, 119, 0.55)", [6, 5], 1.3, aum);
+            drawZigZag(ctx, map, U, tMax, zMax, tint(PAL.marker, 0.55), [6, 5], 1.3, aum);
 
             drawZigZag(ctx, map, U, sel.theta, zMax, PAL.series[0], [], 2.2, aum);
 
@@ -576,7 +578,7 @@
             const slopeAir = Math.tan(Math.asin(Math.min(1, sinAir)));
             const slopeAcc = Math.tan(Math.asin(Math.min(0.999, sinAcc)));
 
-            ctx.fillStyle = "rgba(248, 212, 119, 0.10)";
+            ctx.fillStyle = tint(PAL.marker, 0.10);
             ctx.beginPath();
             ctx.moveTo(z0, map.yToPx(0));
             ctx.lineTo(map.xToPx(zAir * U.s), map.yToPx(Math.max(-Y, slopeAcc * zAir * 1e6)));
@@ -659,10 +661,10 @@
                     }],
                     hlines: [{
                         y: aum,
-                        color: "rgba(236,233,248,0.5)"
+                        color: tint(PAL.text, 0.5)
                     }, {
                         y: -aum,
-                        color: "rgba(236,233,248,0.5)"
+                        color: tint(PAL.text, 0.5)
                     }],
                     fontSize: fs,
                     margin: {
@@ -926,7 +928,7 @@
             smooth: true
         });
         ctx.save();
-        ctx.strokeStyle = "rgba(236, 233, 248, 0.8)";
+        ctx.strokeStyle = tint(PAL.text, 0.8);
         ctx.setLineDash([5, 4]);
         const c = map.toPx(0, 0),
             rpx = map.xToPx(sel.a * 1e6) - c.x;
@@ -1039,7 +1041,7 @@
             const markers = S.geo === "slab" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => ({
                 x: k * Math.PI / 2,
                 label: k === 1 ? "π/2" : undefined,
-                color: "rgba(248,212,119,0.55)"
+                color: tint(PAL.marker, 0.55)
             })) : [{
                 x: W.SINGLE_MODE_FIBRE_V,
                 label: "2.405",
@@ -1190,7 +1192,7 @@
             if (x + tw > map.plot.x + map.plot.w - 2) x = p.x - tw - 4;
             if (used.some((q) => Math.abs(q[0] - x) < tw && Math.abs(q[1] - y) < fs)) return;
             used.push([x, y]);
-            ctx.fillStyle = "rgba(7, 7, 13, 0.75)";
+            ctx.fillStyle = tint(PAL.background, 0.75);
             ctx.fillRect(x - 2, y - fs / 2 - 1, tw + 4, fs + 2);
             ctx.fillStyle = colorOf(i);
             ctx.fillText(lab, x, y);
@@ -1736,7 +1738,7 @@
         fieldCv.redraw();
     }, {
         onChange: (running) => {
-            playBtn.textContent = running ? "⏸ Pause" : "▶ Start";
+            playBtn.textContent = running ? "Pause" : "Start";
             playBtn.setAttribute("aria-pressed", String(running));
         }
     });

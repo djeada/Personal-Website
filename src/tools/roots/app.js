@@ -14,10 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
         Array.from(rootsMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     };
 
-    const getColorForMode = (colorLight, colorDark) => {
-        const darkModeValue = getCookie("darkMode");
-        return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
+    const plotColor = (key, fallback) => {
+        const colors = window.ToolShared ? window.ToolShared.palette() : {};
+        return colors[key] || fallback;
     };
+    let lastPlot = null;
 
     class Complex {
         constructor(real, imag) {
@@ -176,8 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawAxis = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = getColorForMode("#000000", "#FFFFFF");
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = plotColor("ink3", "#6c6557");
+        ctx.lineWidth = 1.5;
 
         const x0 = mapXToCanvas(0, xMin, xMax);
         const y0 = mapYToCanvas(0, yMin, yMax);
@@ -197,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawGrid = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = getColorForMode("#e0e0e0", "#555555");
+        ctx.strokeStyle = plotColor("rule", "#d8d0bf");
         ctx.lineWidth = 1;
 
         const numXTicks = 10;
@@ -221,10 +222,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const drawScale = (xMin, xMax, yMin, yMax) => {
-        ctx.font = "10px Arial";
+        ctx.font = "15px 'IBM Plex Mono', ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = getColorForMode("#000000", "#FFFFFF");
+        ctx.fillStyle = plotColor("ink3", "#6c6557");
 
         const numXTicks = 10;
         for (let i = 0; i <= numXTicks; i++) {
@@ -248,8 +249,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawFunction = (coefficients, xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = getColorForMode("#FF0000", "#FF5555");
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = plotColor("gold", "#8a6620");
+        ctx.lineWidth = 3;
         const numPoints = canvas.width;
 
         for (let i = 0; i <= numPoints; i++) {
@@ -269,12 +270,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const drawRoots = (roots, xMin, xMax, yMin, yMax) => {
         roots.forEach((root) => {
             if (Math.abs(root.imag) < 1e-6) {
-                ctx.fillStyle = getColorForMode("#0000FF", "#00FFFF");
+                ctx.fillStyle = plotColor("verdigris", "#2e6e62");
+                ctx.strokeStyle = plotColor("canvas", "#fbf8f1");
+                ctx.lineWidth = 3;
                 const xPos = mapXToCanvas(root.real, xMin, xMax);
                 const yPos = mapYToCanvas(0, yMin, yMax);
                 ctx.beginPath();
-                ctx.arc(xPos, yPos, 5, 0, 2 * Math.PI);
+                ctx.arc(xPos, yPos, 7, 0, 2 * Math.PI);
                 ctx.fill();
+                ctx.stroke();
             }
         });
     };
@@ -311,19 +315,47 @@ document.addEventListener("DOMContentLoaded", () => {
             yMax
         } = getMinMax(coefficients);
 
+        lastPlot = {
+            coefficients,
+            roots,
+            xMin,
+            xMax,
+            yMin,
+            yMax
+        };
+        renderPlot();
+    });
+
+    function renderPlot() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = plotColor("canvas", "#fbf8f1");
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (!lastPlot) {
+            drawAxis(-10, 10, -10, 10);
+            return;
+        }
+        const {
+            coefficients,
+            roots,
+            xMin,
+            xMax,
+            yMin,
+            yMax
+        } = lastPlot;
         drawGrid(xMin, xMax, yMin, yMax);
         drawAxis(xMin, xMax, yMin, yMax);
         drawScale(xMin, xMax, yMin, yMax);
         drawFunction(coefficients, xMin, xMax, yMin, yMax);
         drawRoots(roots, xMin, xMax, yMin, yMax);
-    });
+    }
+
+    if (window.ToolShared && window.ToolShared.onThemeChange) window.ToolShared.onThemeChange(renderPlot);
 
     clearButton.addEventListener("click", () => {
         coefficientsInput.value = "";
         outputRoots.value = "";
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawAxis(-10, 10, -10, 10);
+        lastPlot = null;
+        renderPlot();
         status.textContent = "Cleared. Ready for coefficients.";
         status.className = "status-message";
         coefficientsInput.removeAttribute("aria-invalid");

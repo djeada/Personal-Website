@@ -1,20 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
 
-    function getCookie(name) {
-        if (typeof window.getCookie === 'function') {
-            return window.getCookie(name);
-        }
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
-    }
-
-
     const inputCanvas = document.getElementById('inputCanvas');
     const filteredCanvas = document.getElementById('filteredCanvas');
     const spectrumCanvas = document.getElementById('spectrumCanvas');
@@ -65,7 +50,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const screenshotBtn = document.getElementById('screenshot-btn');
     const resetDefaults = document.getElementById('reset-defaults');
     const presetButtons = document.querySelectorAll('.preset-option');
-    const toastContainer = document.getElementById('toast-container');
 
 
     let amplitude = parseFloat(amplitudeSlider.value);
@@ -269,33 +253,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     function showToast(message, type) {
-        type = type || "info";
-        const toast = document.createElement("div");
-        toast.className = "toast " + type;
-
-        const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
-        };
-
-        toast.innerHTML =
-            '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
-            '<span class="toast-message">' + message + '</span>';
-
-        toastContainer.appendChild(toast);
-
-        setTimeout(function() {
-            toast.remove();
-        }, 3000);
+        window.ToolShared.showToast(message, type || "info");
     }
 
 
-    function getColorForMode(colorLight, colorDark) {
-        const darkModeValue = getCookie("darkMode");
-        return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
-    }
+    var pal = window.ToolShared.palette();
+    var SANS = '"IBM Plex Sans", system-ui, sans-serif';
+    var MONO = '"IBM Plex Mono", ui-monospace, monospace';
+
+    window.ToolShared.onThemeChange(function(next) {
+        pal = next;
+        drawFrame();
+    });
 
 
     function generateSignal(t, dt) {
@@ -472,8 +441,8 @@ document.addEventListener("DOMContentLoaded", function() {
             top: 18,
             bottom: 28
         });
-        var axisColor = getColorForMode('#e2e8f0', '#475569');
-        var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var axisColor = pal.ruleStrong;
+        var labelColor = pal.ink3;
         var fonts = getChartFontSizes(metrics.width);
 
         ctx.save();
@@ -489,7 +458,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.stroke();
 
         ctx.fillStyle = labelColor;
-        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.axis + 'px ' + SANS;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText('Time', metrics.right, metrics.height - 8);
@@ -510,8 +479,8 @@ document.addEventListener("DOMContentLoaded", function() {
             top: 18,
             bottom: 34
         });
-        var axisColor = getColorForMode('#e2e8f0', '#475569');
-        var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var axisColor = pal.ruleStrong;
+        var labelColor = pal.ink3;
         var fonts = getChartFontSizes(metrics.width);
 
         ctx.save();
@@ -527,7 +496,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.stroke();
 
         ctx.fillStyle = labelColor;
-        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.axis + 'px ' + SANS;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText('Frequency', metrics.right, metrics.height - 8);
@@ -570,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function() {
             else ctx.lineTo(px, py);
         }
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2;
         ctx.stroke();
         ctx.restore();
     }
@@ -596,8 +565,8 @@ document.addEventListener("DOMContentLoaded", function() {
             if (filteredMag[i] > maxMag) maxMag = filteredMag[i];
         }
 
-        var inputColor = getColorForMode('#10b981', '#4ade80');
-        var filteredColor = getColorForMode('#ea8400', '#fbbf24');
+        var inputColor = pal.verdigris;
+        var filteredColor = pal.gold;
         var groupWidth = metrics.plotWidth / maxFreqBin;
         var barWidth = Math.max(2, groupWidth * 0.32);
 
@@ -622,9 +591,9 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.globalAlpha = 1.0;
 
 
-        var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var labelColor = pal.ink3;
         ctx.fillStyle = labelColor;
-        ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.tick + 'px ' + MONO;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         var binHz = fs / (2 * n);
@@ -650,10 +619,11 @@ document.addEventListener("DOMContentLoaded", function() {
         var maxFreq = 6;
         var numPoints = Math.round(metrics.plotWidth);
 
-        var responseColor = getColorForMode('#8b5cf6', '#a78bfa');
-        var markerColor = getColorForMode('#ea8400', '#fbbf24');
-        var axisColor = getColorForMode('#e2e8f0', '#475569');
-        var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var responseColor = pal.moon;
+        var markerColor = pal.gold;
+        var axisColor = pal.ruleStrong;
+        var gridColor = pal.rule;
+        var labelColor = pal.ink3;
 
         ctx.save();
 
@@ -670,7 +640,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         ctx.fillStyle = labelColor;
-        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.axis + 'px ' + SANS;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText('Gain (dB)', metrics.left, 14);
@@ -679,7 +649,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.fillText('Frequency', metrics.right, metrics.height - 8);
 
 
-        ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.tick + 'px ' + MONO;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (var f = 1; f <= 5; f++) {
@@ -693,8 +663,8 @@ document.addEventListener("DOMContentLoaded", function() {
         var dbRange = dbMax - dbMin;
 
 
-        ctx.strokeStyle = axisColor;
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
         for (var db = 0; db >= dbMin; db -= 10) {
             var gy = metrics.top + (1 - (db - dbMin) / dbRange) * metrics.plotHeight;
             ctx.beginPath();
@@ -708,6 +678,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         if (filter.type !== 'none') {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(metrics.left, metrics.top, metrics.plotWidth, metrics.plotHeight);
+            ctx.clip();
             ctx.beginPath();
             for (var i = 0; i < numPoints; i++) {
                 var f = (i / numPoints) * maxFreq + 0.001;
@@ -719,8 +693,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 else ctx.lineTo(px, py);
             }
             ctx.strokeStyle = responseColor;
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;
             ctx.stroke();
+            ctx.restore();
 
 
             var markerFreq = filter.cutoffFrequency;
@@ -730,7 +705,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var my = metrics.top + (1 - (markerDb - dbMin) / dbRange) * metrics.plotHeight;
 
             ctx.beginPath();
-            ctx.arc(mx, my, 5, 0, 2 * Math.PI);
+            ctx.arc(mx, my, 4, 0, 2 * Math.PI);
             ctx.fillStyle = markerColor;
             ctx.fill();
             ctx.strokeStyle = markerColor;
@@ -743,7 +718,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.setLineDash([]);
 
             ctx.fillStyle = labelColor;
-            ctx.font = 'bold ' + fonts.marker + 'px system-ui, -apple-system, sans-serif';
+            ctx.font = '500 ' + fonts.marker + 'px ' + MONO;
             var labelLine1 = 'fc=' + markerFreq.toFixed(1) + ' Hz';
             var labelLine2 = formatDbLabel(markerDb);
             var lineGap = 14;
@@ -757,13 +732,13 @@ document.addEventListener("DOMContentLoaded", function() {
             markerLabelX = clamp(markerLabelX, metrics.left + 6, metrics.right - labelBoxWidth - 4);
             var markerLabelY = clamp(my - labelBoxHeight - 8, metrics.top + 6, metrics.bottom - labelBoxHeight - 4);
 
-            ctx.fillStyle = getColorForMode('rgba(248, 250, 252, 0.92)', 'rgba(30, 41, 59, 0.92)');
+            ctx.fillStyle = pal.panel;
             ctx.fillRect(markerLabelX, markerLabelY, labelBoxWidth, labelBoxHeight);
-            ctx.strokeStyle = getColorForMode('rgba(148, 163, 184, 0.35)', 'rgba(148, 163, 184, 0.45)');
+            ctx.strokeStyle = pal.rule;
             ctx.lineWidth = 1;
             ctx.strokeRect(markerLabelX, markerLabelY, labelBoxWidth, labelBoxHeight);
 
-            ctx.fillStyle = labelColor;
+            ctx.fillStyle = pal.ink2;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillText(labelLine1, markerLabelX + labelPaddingX, markerLabelY + labelPaddingY + 5);
@@ -775,11 +750,11 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.moveTo(metrics.left, py0);
             ctx.lineTo(metrics.right, py0);
             ctx.strokeStyle = responseColor;
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.fillStyle = labelColor;
-            ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+            ctx.font = fonts.tick + 'px ' + MONO;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('No filter active (flat 0 dB)', metrics.left + metrics.plotWidth / 2, py0 - 12);
@@ -794,6 +769,13 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        drawFrame();
+
+        time -= (velocity / 60);
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function drawFrame() {
         resizeAllCanvases();
 
 
@@ -817,10 +799,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         drawAxes(inputCtx, inputCanvas);
-        drawTimeDomain(inputCtx, inputCanvas, bufs.input, getColorForMode('#10b981', '#4ade80'));
+        drawTimeDomain(inputCtx, inputCanvas, bufs.input, pal.verdigris);
 
         drawAxes(filteredCtx, filteredCanvas);
-        drawTimeDomain(filteredCtx, filteredCanvas, bufs.filtered, getColorForMode('#ea8400', '#fbbf24'));
+        drawTimeDomain(filteredCtx, filteredCanvas, bufs.filtered, pal.gold);
 
 
         drawSpectrumAxes(spectrumCtx, spectrumCanvas);
@@ -830,10 +812,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         drawFilterResponse(responseCtx, responseCanvas);
-
-
-        time -= (velocity / 60);
-        animationId = requestAnimationFrame(animate);
     }
 
 
@@ -1060,8 +1038,8 @@ document.addEventListener("DOMContentLoaded", function() {
     pauseBtn.addEventListener('click', function() {
         isPaused = !isPaused;
         pauseBtn.innerHTML = isPaused ?
-            '<span class="btn-icon">▶️</span><span class="btn-text">Resume</span>' :
-            '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
+            '<span class="btn-text">Resume</span>' :
+            '<span class="btn-text">Pause</span>';
         showToast(isPaused ? 'Animation paused' : 'Animation resumed', 'info');
     });
 
@@ -1081,7 +1059,7 @@ document.addEventListener("DOMContentLoaded", function() {
         combinedCanvas.height = singleH * 4 + gap * 3;
         var ctx = combinedCanvas.getContext('2d');
 
-        ctx.fillStyle = getColorForMode('#ffffff', '#1e293b');
+        ctx.fillStyle = pal.canvas;
         ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
 
         ctx.drawImage(inputCanvas, 0, 0);
@@ -1089,8 +1067,8 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.drawImage(spectrumCanvas, 0, (singleH + gap) * 2);
         ctx.drawImage(responseCanvas, 0, (singleH + gap) * 3);
 
-        ctx.fillStyle = getColorForMode('#1e293b', '#f1f5f9');
-        ctx.font = 'bold ' + Math.round(14 * dpr) + 'px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = pal.ink;
+        ctx.font = '600 ' + Math.round(14 * dpr) + 'px ' + SANS;
         ctx.fillText('Input Signal', 10 * dpr, 20 * dpr);
         ctx.fillText('Filtered Output', 10 * dpr, singleH + gap + 20 * dpr);
         ctx.fillText('Frequency Spectrum', 10 * dpr, (singleH + gap) * 2 + 20 * dpr);
@@ -1101,7 +1079,7 @@ document.addEventListener("DOMContentLoaded", function() {
         link.href = combinedCanvas.toDataURL();
         link.click();
 
-        showToast('Screenshot saved! 📷', 'success');
+        showToast('Screenshot saved', 'success');
     });
 
     document.addEventListener('keydown', function(e) {

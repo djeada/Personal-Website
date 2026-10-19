@@ -32,7 +32,7 @@
 
 
     document.documentElement.classList.add('pj-motion');
-    const cards = [...document.querySelectorAll('.pj-chapter .pj-card, .pj-old, .pj-gallery figure, .pj-rows li, .pj-stack li, .hm-topics li')];
+    const cards = [...document.querySelectorAll('.pj-chapter .pj-card, .pj-old, .pj-gallery figure, .pj-rows li, .pj-stack li')];
     cards.forEach(card => {
         card.classList.add('pj-rise');
         card.style.setProperty('--i', [...card.parentElement.children].indexOf(card) % 6);
@@ -62,18 +62,4 @@
         };
         requestAnimationFrame(step);
     });
-
-
-    const hero = document.querySelector('.pj-hero'),
-        stage = hero?.querySelector('.pj-collage, .hm-stage');
-    if (stage) hero.addEventListener('pointermove', event => {
-        const box = hero.getBoundingClientRect();
-        stage.style.setProperty('--px', ((event.clientX - box.left) / box.width - .5).toFixed(3));
-        stage.style.setProperty('--py', ((event.clientY - box.top) / box.height - .5).toFixed(3));
-    });
-    document.querySelectorAll('.pj-ai .pj-card').forEach(card => card.addEventListener('pointermove', event => {
-        const box = card.getBoundingClientRect();
-        card.style.setProperty('--mx', event.clientX - box.left + 'px');
-        card.style.setProperty('--my', event.clientY - box.top + 'px');
-    }));
 })();

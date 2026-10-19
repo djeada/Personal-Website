@@ -3,6 +3,8 @@
     const UI = window.OpticsUI;
     const GO = window.OpticsModels.geometricOptics;
     const TH = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const MM = 1e-3,
         NM = 1e-9,
         DEG = Math.PI / 180;
@@ -10,19 +12,19 @@
 
 
     const COL = {
-        lens: "#8ab4ff",
-        lensFill: "rgba(138, 180, 255, 0.16)",
-        mirror: "#d6dbe4",
-        stop: "#b8b2cf",
-        detector: "#7ee787",
-        object: "#7ee787",
-        image: "#f187c8",
-        paraxial: "rgba(255, 255, 255, 0.85)",
-        construct: "#f8d477",
-        cardinal: "#69f5e7",
-        pupil: "#a78bfa",
-        tir: "#ff9f6b",
-        select: "#ffffff"
+        lens: TH.series[2],
+        lensFill: tint(TH.series[2], 0.16),
+        mirror: TH.text,
+        stop: TH.textMuted,
+        detector: TH.series[6],
+        object: TH.series[6],
+        image: TH.series[3],
+        paraxial: tint(TH.text, 0.85),
+        construct: TH.marker,
+        cardinal: TH.series[1],
+        pupil: TH.series[5],
+        tir: TH.warning,
+        select: TH.cursor
     };
     const TYPE_NAMES = {
         thin: "Thin lens",
@@ -816,7 +818,7 @@
                 h: 16
             });
         }
-        ctx.fillStyle = "rgba(7, 7, 13, 0.72)";
+        ctx.fillStyle = tint(TH.background, 0.72);
         ctx.fillRect(lx - 3, y - 12, w + 6, 16);
         ctx.fillStyle = color;
         ctx.fillText(text, x, y);
@@ -831,7 +833,7 @@
         const wMax = Math.max(...items.map((i) => ctx.measureText(i[1]).width)) + 36;
         const x = P.x + 6,
             y = P.y + 6;
-        ctx.fillStyle = "rgba(7, 7, 13, 0.82)";
+        ctx.fillStyle = tint(TH.background, 0.82);
         ctx.fillRect(x, y, wMax, items.length * rowH + 6);
         items.forEach(([c, t, dash], i) => {
             const yy = y + 3 + rowH * i + rowH / 2;
@@ -869,7 +871,7 @@
         lines.push(line);
         const h = lines.length * 18 + 12;
         const wMax = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 20;
-        ctx.fillStyle = "rgba(7, 7, 13, 0.85)";
+        ctx.fillStyle = tint(TH.background, 0.85);
         ctx.fillRect(P.x + P.w / 2 - wMax / 2, P.y + P.h / 2 - h / 2, wMax, h);
         ctx.fillStyle = TH.text;
         lines.forEach((l, i) => ctx.fillText(l, P.x + P.w / 2, P.y + P.h / 2 - h / 2 + 15 + i * 18));
@@ -1658,7 +1660,7 @@
             if (t.status === "tir") tir++;
             else if (t.status !== "ok") vig++;
         }));
-        if (tir) warn.push(tir + " of " + total + " fan rays are totally internally reflected (orange). The sequential trace stops them.");
+        if (tir) warn.push(tir + " of " + total + " fan rays are totally internally reflected (copper). The sequential trace stops them.");
         if (vig > total / 3) warn.push(vig + " of " + total + " fan rays are vignetted by an aperture or miss a surface.");
         if (s.vignetted > 0.3) warn.push(Math.round(s.vignetted * 100) + " % of the spot-diagram rays are lost (vignetted, missed or TIR).");
         if (sp.naImage > 0.5) warn.push("NA′ > 0.5: paraxial pupil quantities are only indicative at this aperture.");

@@ -5,22 +5,31 @@
     const $ = id => document.getElementById(id);
     const controls = ["shape", "mass", "radius", "length", "width", "height", "hollow", "tilt", "offset", "resolution"];
 
-    const C = {
-        panel: "#07070d",
-        grid: "rgba(184, 178, 207, .09)",
-        text: "#ece9f8",
-        muted: "#b8b2cf",
-        faint: "rgba(184, 178, 207, .2)",
-        outline: "#c9c3e6",
-        axis: "#ff8d7c",
-        violet: "#a78bfa",
-        cyan: "#69f5e7",
-        gold: "#f8d477",
-        rose: "#f187c8",
-        white: "#ffffff"
+    const PAL = UI.CANVAS_PALETTE;
+    const rgbOf = color => {
+        const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+        if (!hex) return (String(color).match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+        const h = hex[1].length === 3 ? hex[1].replace(/./g, "$&$&") : hex[1];
+        const n = parseInt(h, 16);
+        return [n >> 16, (n >> 8) & 255, n & 255];
     };
-    const COOL = [105, 245, 231],
-        WARM = [248, 212, 119];
+    const tint = UI.withAlpha;
+    const C = {
+        panel: PAL.background,
+        grid: tint(PAL.textMuted, 0.09),
+        text: PAL.text,
+        muted: PAL.textMuted,
+        faint: tint(PAL.textMuted, 0.2),
+        outline: PAL.text,
+        axis: PAL.warning,
+        violet: PAL.series[2],
+        cyan: PAL.series[1],
+        gold: PAL.marker,
+        rose: PAL.series[3],
+        white: PAL.text
+    };
+    const COOL = rgbOf(C.cyan),
+        WARM = rgbOf(C.gold);
     let data = M.evaluate(M.DEFAULTS);
     let reference = M.evaluate({
         ...M.DEFAULTS,
@@ -399,8 +408,8 @@
     }
 
     function outline(s, c, angle = 0, ghost = false) {
-        const color = ghost ? "rgba(143, 137, 168, .35)" : C.outline;
-        const fill = ghost ? null : "rgba(167, 139, 250, .07)";
+        const color = ghost ? tint(PAL.axis, 0.35) : C.outline;
+        const fill = ghost ? null : tint(C.violet, 0.07);
         const p = (x, y, z = 0) => M.rotate({
             x,
             y,
@@ -425,7 +434,7 @@
             s.ctx.strokeStyle = color;
             s.ctx.lineWidth = 1.5;
             s.ctx.stroke();
-            const faint = ghost ? color : "rgba(201, 195, 230, .35)";
+            const faint = ghost ? color : tint(C.outline, 0.35);
             s.line(circle(c.radius), faint, 1);
             s.line(circle(c.radius, 0, "xz"), faint, 1);
             s.line(circle(c.radius, 0, "yz"), faint, 1);
@@ -494,19 +503,19 @@
                 x: a[0],
                 y: 0,
                 z: a[2]
-            }], "rgba(255, 141, 124, .6)", 1, null, [4, 5]);
+            }], tint(C.axis, 0.6), 1, null, [4, 5]);
             const mid = project({
                 x: (cm.x + a[0]) / 2,
                 y: cm.y / 2,
                 z: (cm.z + a[2]) / 2
             });
             ctx.font = "12px ui-monospace, monospace";
-            ctx.fillStyle = "#ffb1a5";
+            ctx.fillStyle = C.axis;
             ctx.fillText(`d = ${num(Math.abs(c.offset), 2)} m`, mid.x + 6, mid.y + 16);
         }
         if (!labels) return;
         ctx.font = "12px ui-monospace, monospace";
-        ctx.fillStyle = "#ffb1a5";
+        ctx.fillStyle = C.axis;
         ctx.fillText(`axis: tilt ${c.tilt}°, d ${num(c.offset, 2)} m`, 12, 20);
         const scaleSize = Math.min(1, bound(c)),
             len = scaleSize * s.scale;
@@ -609,7 +618,7 @@
             tw = s.ctx.measureText(text).width;
         const lx = clamp((q.x + f.x) / 2 + 10, 12, s.w - tw - 12),
             ly = clamp((q.y + f.y) / 2 - 12, 40, s.h - 30);
-        s.ctx.fillStyle = "rgba(7, 7, 13, .85)";
+        s.ctx.fillStyle = tint(C.panel, 0.85);
         s.ctx.fillRect(lx - 5, ly - 15, tw + 10, 22);
         s.ctx.fillStyle = C.white;
         s.ctx.fillText(text, lx, ly);
@@ -754,25 +763,25 @@
             rx = ax + rr * Math.cos(refAngle),
             ry = ay + rr * Math.sin(refAngle);
         ctx.setLineDash([3, 5]);
-        ctx.strokeStyle = "rgba(184, 178, 207, .35)";
+        ctx.strokeStyle = tint(C.muted, 0.35);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(ax, ay, rr, 0, 2 * Math.PI);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.strokeStyle = "rgba(184, 178, 207, .45)";
+        ctx.strokeStyle = tint(C.muted, 0.45);
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(ax, ay);
         ctx.lineTo(rx, ry);
         ctx.stroke();
-        ctx.fillStyle = "rgba(184, 178, 207, .45)";
+        ctx.fillStyle = tint(C.muted, 0.45);
         ctx.beginPath();
         ctx.arc(rx, ry, 9, 0, 2 * Math.PI);
         ctx.fill();
 
         ctx.setLineDash([4, 6]);
-        ctx.strokeStyle = "rgba(105, 245, 231, .35)";
+        ctx.strokeStyle = tint(C.cyan, 0.35);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(ax, ay, R, 0, 2 * Math.PI);
@@ -781,7 +790,7 @@
         ctx.save();
         ctx.translate(ax, ay);
         ctx.rotate(angle);
-        ctx.fillStyle = "rgba(248, 212, 119, .14)";
+        ctx.fillStyle = tint(C.gold, 0.14);
         ctx.strokeStyle = C.gold;
         ctx.lineWidth = 1.5;
         ctx.fillRect(0, -R, R, R);
@@ -803,10 +812,7 @@
         ctx.textAlign = "center";
         ctx.fillStyle = C.gold;
         ctx.fillText(`r² = ${num(r * r, 2)} m²`, sq.x, sq.y + 5);
-        const glow = ctx.createRadialGradient(bx - ball / 3, by - ball / 3, 1, bx, by, ball);
-        glow.addColorStop(0, "#c9fff9");
-        glow.addColorStop(1, C.cyan);
-        ctx.fillStyle = glow;
+        ctx.fillStyle = C.cyan;
         ctx.beginPath();
         ctx.arc(bx, by, ball, 0, 2 * Math.PI);
         ctx.fill();
@@ -832,14 +838,14 @@
         ctx.fill();
         ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
         ctx.fillText("axis (seen end-on)", 12, 20);
-        ctx.fillStyle = "rgba(184, 178, 207, .8)";
+        ctx.fillStyle = tint(C.muted, 0.8);
         ctx.fillText("faint: starting ball, 1 kg at 0.50 m", 12, h - 14);
 
         const top = 34,
             height = h - 76,
             x = w - 40,
             fillH = height * Math.min(1, I / 5.76);
-        ctx.fillStyle = "rgba(184, 178, 207, .12)";
+        ctx.fillStyle = tint(C.muted, 0.12);
         ctx.fillRect(x, top, 18, height);
         ctx.fillStyle = C.cyan;
         ctx.fillRect(x, top + height - fillH, 18, fillH);
@@ -1129,7 +1135,7 @@
             const group = [];
             for (let i = g0; i < N && starts[L - 1][i] === g0; i++) group.push(B[i]);
             if (group.length > 2 && effectiveShape(c) !== "plate") group.push(group[0]);
-            s.line(group, "rgba(248, 212, 119, .55)", 1.5, null, [4, 4]);
+            s.line(group, tint(C.gold, 0.55), 1.5, null, [4, 4]);
         }
         const projected = B.map((p, i) => ({
             ...s.project(p),
@@ -1337,7 +1343,7 @@
         if (c.offset !== 0) {
             s.line(Array.from({
                 length: 65
-            }, (_, i) => M.rotate(origin, c, i * Math.PI / 32)), "rgba(201, 195, 230, .6)", 1.5, null, [3, 5]);
+            }, (_, i) => M.rotate(origin, c, i * Math.PI / 32)), tint(C.outline, 0.6), 1.5, null, [3, 5]);
         }
         const {
             x,
@@ -1352,7 +1358,7 @@
             q = s.project(marker);
         if (angle > 0) s.line(Array.from({
             length: 50
-        }, (_, i) => M.rotate(p, c, angle * Math.max(0, 1 - 2 * Math.PI / angle) + Math.min(angle, 2 * Math.PI) * i / 49)), "rgba(248, 212, 119, .4)", 2);
+        }, (_, i) => M.rotate(p, c, angle * Math.max(0, 1 - 2 * Math.PI / angle) + Math.min(angle, 2 * Math.PI) * i / 49)), tint(C.gold, 0.4), 2);
         const along = p.x * s.n[0] + p.z * s.n[2];
         s.line([{
             x: s.a[0] + along * s.n[0],
@@ -1574,7 +1580,7 @@
         if (c.offset !== 0) {
             s.line(Array.from({
                 length: 65
-            }, (_, i) => M.rotate(origin, c, i * Math.PI / 32)), "rgba(201, 195, 230, .6)", 1.5, null, [3, 5]);
+            }, (_, i) => M.rotate(origin, c, i * Math.PI / 32)), tint(C.outline, 0.6), 1.5, null, [3, 5]);
             s.line([{
                 x: a[0],
                 y: 0,
@@ -1835,7 +1841,7 @@
             mass: 0,
             inertia: 0
         });
-        $("distribution-description").textContent = total === 0 ? "All the mass lies on the axis, so it adds no inertia." : `Cyan: share of the mass. Gold: share of the inertia. The outer half of the distances holds ${num(100 * outer.mass, 1)}% of the mass but ${num(100 * outer.inertia, 1)}% of the inertia, because each piece counts with r⊥².`;
+        $("distribution-description").textContent = total === 0 ? "All the mass lies on the axis, so it adds no inertia." : `Blue-green: share of the mass. Gold: share of the inertia. The outer half of the distances holds ${num(100 * outer.mass, 1)}% of the mass but ${num(100 * outer.inertia, 1)}% of the inertia, because each piece counts with r⊥².`;
         if (views.distribution) views.distribution.redraw();
     }
 
@@ -1869,7 +1875,7 @@
         $("inertia-value").textContent = num(data.exact.total);
         $("centered-value").textContent = num(data.exact.centered);
         $("shift-value").textContent = num(data.exact.shift);
-        $("scene-description").textContent = `${M.SHAPES[c.shape].name}, ${num(c.mass, 2)} kg, split into ${data.points.length} pieces. The white CM target marks the body’s center of mass; changing the axis does not move it. Coral: the axis, tilted ${c.tilt}° from z and moved ${num(c.offset, 2)} m off-center. Warmer dots add more r⊥²Δm. The white line is the selected piece’s distance r⊥.`;
+        $("scene-description").textContent = `${M.SHAPES[c.shape].name}, ${num(c.mass, 2)} kg, split into ${data.points.length} pieces. The white CM target marks the body’s center of mass; changing the axis does not move it. Copper: the axis, tilted ${c.tilt}° from z and moved ${num(c.offset, 2)} m off-center. Warmer dots add more r⊥²Δm. The white line is the selected piece’s distance r⊥.`;
         renderExplanation();
         renderDerivation();
         renderDistributionText();

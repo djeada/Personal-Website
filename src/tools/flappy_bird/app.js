@@ -11,7 +11,35 @@
     const backgroundCtx = backgroundLayer.getContext('2d', {
         alpha: false
     });
-    background.onload = () => backgroundCtx.drawImage(background, 0, 0, 960, 600);
+    const night = (() => {
+        const probe = document.createElement('div');
+        probe.className = 'dark-mode';
+        probe.hidden = true;
+        document.body.appendChild(probe);
+        const style = getComputedStyle(probe);
+        const read = key => style.getPropertyValue(`--g-${key}`).trim();
+        const colors = {
+            bg: read('bg'),
+            canvas: read('canvas'),
+            panel2: read('panel-2'),
+            ruleStrong: read('rule-strong'),
+            ink: read('ink'),
+            ink2: read('ink-2'),
+            ink3: read('ink-3'),
+            gold: read('gold'),
+            verdigris: read('verdigris'),
+            moon: read('moon'),
+            ember: read('ember'),
+            rose: read('rose')
+        };
+        probe.remove();
+        return colors;
+    })();
+    background.onload = () => {
+        backgroundCtx.filter = 'saturate(0.5) brightness(0.88)';
+        backgroundCtx.drawImage(background, 0, 0, 960, 600);
+        backgroundCtx.filter = 'none';
+    };
     background.src = 'assets/moonveil-background.webp';
     const $ = s => document.querySelector(s),
         ui = {
@@ -166,7 +194,7 @@
         if (state.mode !== 'playing') return;
         state.bird.vy = config().flap;
         state.bird.wing = 1;
-        burst(state.bird.x - 12, state.bird.y, 7, '#e8ca79', .7);
+        burst(state.bird.x - 12, state.bird.y, 7, night.gold, .7);
         sound('flap')
     }
 
@@ -223,7 +251,7 @@
                     ui.best.textContent = state.best;
                     localStorage.setItem('flappy_highscore', state.best)
                 }
-                burst(g.x + g.w / 2, g.gapY, 12, '#f3d37e', .8);
+                burst(g.x + g.w / 2, g.gapY, 12, night.gold, .8);
                 state.flash = .12;
                 sound('score')
             }
@@ -250,7 +278,7 @@
         if (state.mode !== 'playing') return;
         state.mode = 'over';
         sound('hit');
-        burst(state.bird.x, state.bird.y, 14, '#e3b965', .8);
+        burst(state.bird.x, state.bird.y, 14, night.ember, .8);
         endTimer = setTimeout(() => {
             endTimer = 0;
             if (state.mode === 'over') showOverlay(state.score >= state.best && state.score > 0 ? 'A NEW LEGEND' : 'THE FOREST REMEMBERS', state.score ? `${state.score} gate${state.score===1?'':'s'} crossed` : 'The first gate awaits', `Best flight: ${state.best} gates. The moonwing is ready to try again.`, 'Fly again')
@@ -261,11 +289,11 @@
         if (state.mode === 'playing') {
             state.mode = 'paused';
             showOverlay('A QUIET MOMENT', 'Flight paused', 'The forest will wait for you.', 'Continue');
-            ui.pause.textContent = '▶'
+            ui.pause.textContent = 'Resume'
         } else if (state.mode === 'paused') {
             state.mode = 'playing';
             hideOverlay();
-            ui.pause.textContent = 'Ⅱ'
+            ui.pause.textContent = 'Pause'
         }
     }
 
@@ -279,7 +307,7 @@
 
     function hideOverlay() {
         ui.overlay.classList.remove('is-visible');
-        ui.pause.textContent = 'Ⅱ';
+        ui.pause.textContent = 'Pause';
         canvas.focus({
             preventScroll: true
         })
@@ -301,8 +329,10 @@
         drawBird();
         drawForeground();
         if (state.flash) {
-            ctx.fillStyle = `rgba(255,224,112,${state.flash*.45})`;
-            ctx.fillRect(0, 0, W, H)
+            ctx.globalAlpha = state.flash * .35;
+            ctx.fillStyle = night.gold;
+            ctx.fillRect(0, 0, W, H);
+            ctx.globalAlpha = 1
         }
         ctx.setTransform(1, 0, 0, 1, 0, 0)
     }
@@ -310,13 +340,14 @@
     function drawWorld() {
         if (background.complete && background.naturalWidth) ctx.drawImage(backgroundLayer, 0, 0);
         else {
-            ctx.fillStyle = '#25235f';
+            ctx.fillStyle = night.canvas;
             ctx.fillRect(0, 0, W, H)
         }
-        const tint = theme() === 'day' ? 'rgba(255,190,115,.09)' : theme() === 'night' ? 'rgba(8,12,48,.2)' : 'rgba(42,30,95,.05)';
-        ctx.fillStyle = tint;
+        ctx.globalAlpha = theme() === 'day' ? .1 : theme() === 'night' ? .24 : .08;
+        ctx.fillStyle = theme() === 'day' ? night.ember : night.bg;
         ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#ffd76a';
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = night.gold;
         for (const f of state.fireflies) {
             let x = (f.x - state.distance * .07) % W;
             if (x < 0) x += W;
@@ -334,15 +365,17 @@
                 r = g.gap * .32;
             ctx.save();
             ctx.translate(g.x + g.w / 2, g.gapY);
-            ctx.strokeStyle = `rgba(109,246,255,${.34+pulse*.22})`;
-            ctx.lineWidth = 3;
+            ctx.globalAlpha = .45 + pulse * .3;
+            ctx.strokeStyle = night.gold;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.arc(0, 0, r + pulse * 2, 0, TAU);
             ctx.stroke();
+            ctx.globalAlpha = 1;
             ctx.rotate(state.time * .18 + g.seed);
             for (let i = 0; i < 8; i++) {
                 ctx.rotate(TAU / 8);
-                ctx.fillStyle = '#bdfaff';
+                ctx.fillStyle = night.gold;
                 ctx.beginPath();
                 ctx.moveTo(-3, r + 5);
                 ctx.lineTo(0, r + 12);
@@ -359,25 +392,34 @@
             edge = top ? end : y,
             x = g.x,
             w = g.w;
-        ctx.fillStyle = '#191737';
+        ctx.fillStyle = night.bg;
         ctx.fillRect(x - 5, y, w + 10, h);
-        ctx.fillStyle = '#d9cbaa';
+        ctx.fillStyle = night.ink2;
         ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = '#fff0c9';
+        ctx.fillStyle = night.ink;
         ctx.fillRect(x + 18, y, w - 36, h);
-        ctx.strokeStyle = '#6d6685';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = night.ruleStrong;
+        ctx.lineWidth = 2;
         ctx.strokeRect(x + 7, y, w - 14, h);
-        ctx.fillStyle = '#29234c';
+        ctx.fillStyle = night.panel2;
         ctx.fillRect(x - 13, top ? edge - 25 : edge, w + 26, 25);
-        ctx.fillStyle = '#f3ce72';
-        ctx.fillRect(x - 13, top ? edge - 5 : edge, w + 26, 5);
-        ctx.fillStyle = '#78eff5';
-        for (let i = 0; i < 3; i++) ctx.fillRect(x + 14 + i * 21, top ? edge - 17 : edge + 10, 7, 7)
+        ctx.fillStyle = night.gold;
+        ctx.fillRect(x - 13, top ? edge - 3 : edge, w + 26, 3);
+        for (let i = 0; i < 3; i++) {
+            const cx = x + 17.5 + i * 21,
+                cy = top ? edge - 13.5 : edge + 13.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 4);
+            ctx.lineTo(cx + 4, cy);
+            ctx.lineTo(cx, cy + 4);
+            ctx.lineTo(cx - 4, cy);
+            ctx.closePath();
+            ctx.fill()
+        }
     }
 
     function drawTrail() {
-        ctx.fillStyle = '#f6d77c';
+        ctx.fillStyle = night.gold;
         for (const t of state.trail) {
             ctx.globalAlpha = t.life * .4;
             ctx.fillRect(t.x, t.y, t.r * t.life, t.r * t.life)
@@ -388,16 +430,16 @@
     function drawBird() {
         const b = state.bird,
             colors = {
-                ember: ['#ffbd3e', '#ed5b3a'],
-                frost: ['#baf5ff', '#248cc5'],
-                moss: ['#d9f57a', '#4a9c55'],
-                spirit: ['#ffffff', '#a97cff']
-            } [ui.skin.value] || ['#ffbd3e', '#ed5b3a'];
+                ember: [night.gold, night.ember],
+                frost: [night.moon, night.ink3],
+                moss: [night.verdigris, night.ruleStrong],
+                spirit: [night.ink, night.moon]
+            } [ui.skin.value] || [night.gold, night.ember];
         ctx.save();
         ctx.translate(b.x, b.y);
         ctx.rotate(b.rot);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = night.bg;
+        ctx.lineWidth = 3;
         ctx.lineJoin = 'round';
         ctx.fillStyle = colors[1];
         ctx.beginPath();
@@ -421,30 +463,32 @@
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = night.ink;
         ctx.beginPath();
         ctx.arc(9, -6, 7, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = '#14152f';
+        ctx.fillStyle = night.bg;
         ctx.beginPath();
         ctx.arc(12, -7, 3, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = '#ff8a35';
+        ctx.fillStyle = night.ember;
         ctx.beginPath();
         ctx.moveTo(18, -3);
         ctx.lineTo(33, 1);
         ctx.lineTo(18, 6);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = night.bg;
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.restore()
     }
 
     function drawForeground() {
-        ctx.fillStyle = 'rgba(12,14,47,.22)';
-        ctx.fillRect(0, H - 45, W, 45)
+        ctx.globalAlpha = .22;
+        ctx.fillStyle = night.bg;
+        ctx.fillRect(0, H - 45, W, 45);
+        ctx.globalAlpha = 1
     }
 
     function burst(x, y, n, color, life) {
@@ -495,7 +539,7 @@
     }
 
     function updateMute() {
-        ui.mute.textContent = muted ? '♩' : '♫';
+        ui.mute.textContent = muted ? 'Sound off' : 'Sound on';
         ui.mute.setAttribute('aria-pressed', String(muted))
     }
 

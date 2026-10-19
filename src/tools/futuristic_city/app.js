@@ -10,15 +10,28 @@ const CONFIG = {
     extent: 92
 };
 const palette = {
-    void: new THREE.Color(0x05070d),
-    dusk: new THREE.Color(0x17152a),
-    dawn: new THREE.Color(0x806a78),
-    day: new THREE.Color(0x526b79),
-    cyan: new THREE.Color(0x65f2df),
-    violet: new THREE.Color(0x9b7cff),
-    gold: new THREE.Color(0xffc875),
-    stone: new THREE.Color(0x141a25)
+    void: new THREE.Color(0x0c0d10),
+    dusk: new THREE.Color(0x1c1f2a),
+    day: new THREE.Color(0x6f6a5c),
+    cyan: new THREE.Color(0x6fb3a3),
+    violet: new THREE.Color(0x9fb4d4),
+    gold: new THREE.Color(0xc8a55a),
+    ember: new THREE.Color(0xd0843c),
+    rose: new THREE.Color(0xc9716a),
+    ink: new THREE.Color(0xe9e4d8)
 };
+
+function applyTheme(colors) {
+    if (colors.isDark) {
+        palette.void.set(colors.canvas);
+        palette.dusk.set(colors.panel2);
+        palette.day.set(colors.ink3);
+    } else {
+        palette.void.set(colors.ink);
+        palette.dusk.set(colors.ink2);
+        palette.day.set(colors.rule);
+    }
+}
 
 let scene, camera, renderer, controls, clock, sun, ambient, city, windowMaterial, facadeMaterial, groundMaterial;
 let currentTime = 20.5,
@@ -54,7 +67,7 @@ function init() {
     const width = host.clientWidth || 900,
         height = host.clientHeight || 650;
     scene = new THREE.Scene();
-    scene.background = palette.void;
+    scene.background = palette.void.clone();
     scene.fog = new THREE.FogExp2(palette.void, .0045);
     camera = new THREE.PerspectiveCamera(48, width / height, .5, 420);
     camera.position.set(118, 78, 118);
@@ -82,6 +95,13 @@ function init() {
     controls.maxPolarAngle = 1.47;
     controls.target.set(0, 25, 0);
     clock = new THREE.Clock();
+    if (window.ToolShared) {
+        applyTheme(window.ToolShared.palette());
+        window.ToolShared.onThemeChange(colors => {
+            applyTheme(colors);
+            updateEnvironment(currentTime);
+        });
+    }
     city = new THREE.Group();
     scene.add(city);
     createWorld();
@@ -94,9 +114,9 @@ function init() {
 }
 
 function createWorld() {
-    ambient = new THREE.HemisphereLight(0x8092c7, 0x080811, .72);
+    ambient = new THREE.HemisphereLight(palette.violet, 0x0c0d10, .72);
     scene.add(ambient);
-    sun = new THREE.DirectionalLight(0xffd8ad, 1.6);
+    sun = new THREE.DirectionalLight(0xf0dcb4, 1.6);
     sun.position.set(-80, 110, 45);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -109,13 +129,13 @@ function createWorld() {
         far: 270
     });
     scene.add(sun);
-    const cityGlow = new THREE.PointLight(0x55d9d0, 48, 155, 1.55);
+    const cityGlow = new THREE.PointLight(palette.gold, 40, 155, 1.55);
     cityGlow.position.set(0, 38, 0);
     scene.add(cityGlow);
-    const violetFill = new THREE.DirectionalLight(0x7867c8, 1.15);
+    const violetFill = new THREE.DirectionalLight(palette.violet, .9);
     violetFill.position.set(85, 55, -90);
     scene.add(violetFill);
-    groundMaterial = material(0x101923, 0x071820, .34);
+    groundMaterial = material(0x15151a, 0x0e0f13, .34);
     const ground = new THREE.Mesh(new THREE.CircleGeometry(138, 64), groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -130,7 +150,7 @@ function createWorld() {
 
 function createRoads() {
     const roadMat = new THREE.MeshStandardMaterial({
-        color: 0x090d14,
+        color: 0x0e0f13,
         roughness: .82,
         metalness: .25
     });
@@ -165,7 +185,7 @@ function createRoads() {
 
 function createBuildings() {
     const geo = new THREE.BoxGeometry(1, 1, 1);
-    facadeMaterial = material(0x273449, 0x13233e, .8);
+    facadeMaterial = material(0x34322e, 0x15161c, .8);
     const towers = new THREE.InstancedMesh(geo, facadeMaterial, CONFIG.buildings);
     towers.castShadow = towers.receiveShadow = true;
     windowMaterial = new THREE.MeshBasicMaterial({
@@ -195,7 +215,7 @@ function createBuildings() {
         dummy.rotation.y = Math.round(rand(0, 4)) * Math.PI / 2;
         dummy.updateMatrix();
         towers.setMatrixAt(i, dummy.matrix);
-        const c = new THREE.Color().setHSL(rand(.55, .69), rand(.16, .36), rand(.09, .18));
+        const c = new THREE.Color().setHSL(rand(.08, .13), rand(.06, .16), rand(.1, .2));
         towers.setColorAt(i, c);
 
 
@@ -220,7 +240,7 @@ function createBuildings() {
 
 function createSanctum() {
     const group = new THREE.Group();
-    const dark = material(0x111827, 0x241b42, .65);
+    const dark = material(0x17171c, 0x1c2230, .65);
     const tower = new THREE.Mesh(new THREE.CylinderGeometry(5, 9, 76, 6), dark);
     tower.position.y = 38;
     tower.castShadow = true;
@@ -285,7 +305,7 @@ function createSkyways() {
         opacity: .46,
         blending: THREE.AdditiveBlending
     });
-    const supportMaterial = material(0x17212c, 0x12342f, .32);
+    const supportMaterial = material(0x1c1c20, 0x15161c, .32);
     [39, 68].forEach((radius, level) => {
         const height = 10 + level * 8;
         const rail = new THREE.Mesh(new THREE.TorusGeometry(radius, .24, 6, 128), railMaterial.clone());
@@ -302,7 +322,7 @@ function createSkyways() {
         for (let i = 0; i < count; i++) {
             const drone = new THREE.Group();
             const body = new THREE.Mesh(new THREE.CapsuleGeometry(.45, 1.8, 3, 7), new THREE.MeshStandardMaterial({
-                color: level ? 0x6d75a2 : 0x638b87,
+                color: level ? 0x7d8aa0 : 0x6f8a82,
                 metalness: .9,
                 roughness: .22
             }));
@@ -346,8 +366,8 @@ function createSkyways() {
 function createPatrolCraft() {
     const craft = new THREE.Group();
     const hullMaterial = new THREE.MeshStandardMaterial({
-        color: 0x687b91,
-        emissive: 0x122740,
+        color: 0x7a7466,
+        emissive: 0x1c1f2a,
         emissiveIntensity: .7,
         metalness: .9,
         roughness: .2,
@@ -365,7 +385,7 @@ function createPatrolCraft() {
     wings.rotation.x = -Math.PI / 2;
     wings.position.set(-.4, 0, -2);
     const engineMaterial = new THREE.MeshBasicMaterial({
-        color: 0x6fffea,
+        color: palette.cyan,
         transparent: true,
         opacity: .85,
         blending: THREE.AdditiveBlending,
@@ -375,7 +395,7 @@ function createPatrolCraft() {
     engine.rotation.z = Math.PI / 2;
     engine.position.x = -4;
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(.17, 6, 6), new THREE.MeshBasicMaterial({
-        color: 0xffb55f
+        color: palette.ember
     }));
     beacon.position.set(.2, .45, 0);
     craft.add(hull, wings, engine, beacon);
@@ -430,7 +450,7 @@ function firePatrolLaser(craft, t) {
     const direction = target.clone().sub(origin),
         length = direction.length();
     const beamMaterial = new THREE.MeshBasicMaterial({
-        color: 0xff315f,
+        color: palette.rose,
         transparent: true,
         opacity: .95,
         blending: THREE.AdditiveBlending,
@@ -440,7 +460,7 @@ function firePatrolLaser(craft, t) {
     beam.position.copy(origin).add(target).multiplyScalar(.5);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
     const impactMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffb06b,
+        color: palette.ember,
         transparent: true,
         opacity: 1,
         blending: THREE.AdditiveBlending,
@@ -452,7 +472,7 @@ function firePatrolLaser(craft, t) {
     ring.rotation.x = -Math.PI / 2;
     ring.position.copy(target);
     ring.position.y = 1.05;
-    const flash = new THREE.PointLight(0xff365f, 85, 46, 2);
+    const flash = new THREE.PointLight(palette.rose, 85, 46, 2);
     flash.position.copy(target).setY(5);
     scene.add(beam, impact, ring, flash);
     animated.lasers.push({
@@ -475,7 +495,7 @@ function createAtmosphere() {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const dust = new THREE.Points(geo, new THREE.PointsMaterial({
-        color: 0x94eadf,
+        color: palette.gold,
         size: .28,
         transparent: true,
         opacity: .42,
@@ -485,7 +505,7 @@ function createAtmosphere() {
     city.add(dust);
     animated.wisps.push(dust);
     const moon = new THREE.Mesh(new THREE.SphereGeometry(7, 24, 24), new THREE.MeshBasicMaterial({
-        color: 0xd5d4ff
+        color: palette.ink
     }));
     moon.position.set(-88, 92, -110);
     scene.add(moon);
@@ -500,7 +520,7 @@ function updateEnvironment(value) {
     scene.fog.color.copy(sky);
     ambient.intensity = .62 + daylight * .9;
     sun.intensity = .42 + daylight * 1.8;
-    sun.color.set(daylight < .25 ? 0xb99cff : 0xffdfbd);
+    sun.color.set(daylight < .25 ? palette.violet : 0xf0dcb4);
     windowMaterial.opacity = .92 - daylight * .62;
     facadeMaterial.emissiveIntensity = .92 - daylight * .38;
     groundMaterial.emissiveIntensity = .42 - daylight * .12;

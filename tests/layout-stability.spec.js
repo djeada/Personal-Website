@@ -1,5 +1,4 @@
 const { test, expect } = require('@playwright/test');
-const path = require('node:path');
 
 const article = '/articles/parallel_and_concurrent_programming/08_designing_parallel_programs.html';
 
@@ -21,24 +20,19 @@ async function expectStable(page) {
 
 for (const width of [390, 1280]) {
   for (const url of ['/', '/articles/blog_1.html', article, '/tools/eigenvalues/index.html']) {
-    test(`delayed logo keeps layout stable: ${url} at ${width}px`, async ({ page }) => {
+    test(`logo and nav stay put while the page settles: ${url} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1'
         ? route.continue() : route.abort());
-      let release;
-      const ready = new Promise(resolve => { release = resolve; });
-      await page.route('**/resources/brand/logo*.webp', async route => {
-        await ready;
-        await route.fulfill({ path: path.join(__dirname, '../src/resources/brand/logo.webp') });
-      });
       await page.goto(url, { waitUntil: 'domcontentloaded' });
-      const logo = page.locator('#logo-image');
+      const logo = page.locator('nav .logo').first();
+      await expect(logo.locator('.logo-name')).toBeVisible();
       const before = await logo.boundingBox();
-      const navBefore = await page.locator('nav').boundingBox();
-      release();
-      await expect.poll(() => logo.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
+      const navBefore = await page.locator('nav').first().boundingBox();
+      await page.waitForLoadState('load');
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       expect(await logo.boundingBox()).toEqual(before);
-      expect(await page.locator('nav').boundingBox()).toEqual(navBefore);
+      expect(await page.locator('nav').first().boundingBox()).toEqual(navBefore);
       await expectStable(page);
     });
   }

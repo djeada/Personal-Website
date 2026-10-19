@@ -742,7 +742,7 @@ function algorithmFor(key, operation) {
 function showIdleResult() {
     lastOutcome = null;
     resultBanner.className = "result-banner is-idle";
-    resultIcon.innerHTML = '<i class="fa fa-terminal" aria-hidden="true"></i>';
+    resultIcon.innerHTML = '<span aria-hidden="true">&gt;_</span>';
     resultState.textContent = "No operation run yet";
     resultTitle.textContent = "Select an operation and provide its input.";
     resultDetail.textContent = "The output and cost will appear here.";
@@ -944,7 +944,7 @@ function showInputError(field, input, title, detail) {
     field.classList.add("is-invalid");
     input.setAttribute("aria-invalid", "true");
     resultBanner.className = "result-banner is-failure";
-    resultIcon.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+    resultIcon.innerHTML = '<span aria-hidden="true">&times;</span>';
     resultState.textContent = "Input required";
     resultTitle.textContent = title;
     resultDetail.textContent = detail;
@@ -992,7 +992,7 @@ function buildOutcome(operation, requestedValue, beforeSize) {
 
 function showRunningResult(outcome) {
     resultBanner.className = "result-banner is-running";
-    resultIcon.innerHTML = '<i class="fa fa-play" aria-hidden="true"></i>';
+    resultIcon.innerHTML = '<span aria-hidden="true">&hellip;</span>';
     resultState.textContent = "Operation running";
     resultTitle.textContent = outcome.title;
     resultDetail.textContent = "Follow the highlighted path in the visualization.";
@@ -1003,7 +1003,7 @@ function showRunningResult(outcome) {
 function showCompletedResult(outcome) {
     if (!outcome) return;
     resultBanner.className = `result-banner ${outcome.success ? "is-success" : "is-failure"}`;
-    resultIcon.innerHTML = `<i class="fa ${outcome.success ? "fa-check" : "fa-times"}" aria-hidden="true"></i>`;
+    resultIcon.innerHTML = `<span aria-hidden="true">${outcome.success ? "&check;" : "&times;"}</span>`;
     resultState.textContent = outcome.status;
     resultTitle.textContent = outcome.title;
     resultDetail.textContent = outcome.detail;

@@ -57,6 +57,7 @@ function onMenuClick(e) {
 
 function checkLogo() {
     let logoImage = document.getElementById("logo-image");
+    if (!logoImage) return;
     if (document.body.classList.contains("dark-mode")) {
         logoImage.src =
             "/resources/brand/logo-dark.webp";

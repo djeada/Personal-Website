@@ -9,6 +9,7 @@
         DEG = Math.PI / 180;
     const NPIX = 2048;
     const pal = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const $ = (id) => document.getElementById(id);
     const fmt = (v, digits = 3, unit = "") => core.formatSI(v, unit, digits);
     const fixed = (v, n) => (Number.isFinite(v) ? v.toFixed(n) : "—");
@@ -923,7 +924,7 @@
         ctx.stroke();
 
         const drawLens = (c, n, half) => {
-            ctx.strokeStyle = "#8ab4ff";
+            ctx.strokeStyle = pal.series[6];
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(c[0] - n[0] * half, c[1] - n[1] * half);
@@ -980,7 +981,7 @@
         for (const m of M.orders) {
             if (m === 0 || m === st.m || Math.abs(m) > 3) continue;
             const th = G.orderAngle(m, M.lamC, M.d, ti);
-            ray(th, 0.2 * L, "rgba(184,178,207,0.45)", [2, 3]);
+            ray(th, 0.2 * L, tint(pal.textMuted, 0.45), [2, 3]);
             lbl(th, 0.21 * L, "m=" + m, pal.textMuted);
         }
 

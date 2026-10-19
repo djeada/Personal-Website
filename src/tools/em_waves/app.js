@@ -5,19 +5,28 @@
     const core = window.OpticsModels.core;
     const em = window.OpticsModels.emWaves;
     const pal = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
     const fmt = (v, u, d) => core.formatSI(v, u, d);
     const $ = (id) => document.getElementById(id);
 
     const COL = {
-        Ex: "#69f5e7",
-        Ey: "#8ab4ff",
-        Hx: "#ff9f6b",
-        Hy: "#f8d477",
-        E: "#69f5e7",
-        H: "#f8d477",
-        S: "#f187c8",
-        tot: "#ece9f8"
+        Ex: pal.series[0],
+        Ey: pal.series[6],
+        Hx: pal.series[5],
+        Hy: pal.series[1],
+        E: pal.series[0],
+        H: pal.series[1],
+        S: pal.series[2],
+        tot: pal.text
     };
+    const legendEl = document.querySelector(".emw-legend");
+    if (legendEl) {
+        legendEl.style.setProperty("--emw-chip", pal.background);
+        legendEl.style.setProperty("--emw-e", COL.E);
+        legendEl.style.setProperty("--emw-h", COL.H);
+        legendEl.style.setProperty("--emw-s", COL.S);
+        legendEl.style.setProperty("--emw-aux", pal.textMuted);
+    }
     const Z_MIN = -2.5,
         Z_MAX = 1.0;
     const NZ = 481,
@@ -381,7 +390,7 @@
 
         if (cfg.boundary !== "none") {
             const x0 = P(0, 0, 0)[0];
-            ctx.fillStyle = cfg.boundary === "pec" ? "rgba(184,178,207,0.16)" : "rgba(138,180,255,0.08)";
+            ctx.fillStyle = cfg.boundary === "pec" ? tint(pal.textMuted, 0.16) : tint(pal.series[6], 0.08);
             ctx.fillRect(x0, M.y, right + 12 - x0, M.h - 4);
 
             const e = ranges.f * 1.08;
@@ -389,8 +398,8 @@
                 c2 = P(0, e, e),
                 c3 = P(0, -e, e),
                 c4 = P(0, -e, -e);
-            ctx.fillStyle = "rgba(167,139,250,0.10)";
-            ctx.strokeStyle = "rgba(167,139,250,0.55)";
+            ctx.fillStyle = tint(pal.series[3], 0.1);
+            ctx.strokeStyle = tint(pal.series[3], 0.55);
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(...c1);
@@ -671,7 +680,7 @@
         if (cfg.boundary === "none") return;
         const x0 = map.xToPx(0),
             x1 = map.plot.x + map.plot.w;
-        ctx.fillStyle = cfg.boundary === "pec" ? "rgba(184,178,207,0.14)" : "rgba(138,180,255,0.08)";
+        ctx.fillStyle = cfg.boundary === "pec" ? tint(pal.textMuted, 0.14) : tint(pal.series[6], 0.08);
         ctx.fillRect(x0, map.plot.y, x1 - x0, map.plot.h);
     }
 
@@ -1202,7 +1211,7 @@
         if (++frameCount % 30 === 0) updateDescriptions();
     }, {
         onChange: (running) => {
-            playBtn.innerHTML = running ? "<span>⏸</span> Pause" : "<span>▶</span> Play";
+            playBtn.innerHTML = running ? "Pause" : "Play";
             playBtn.setAttribute("aria-pressed", running ? "true" : "false");
             if (!running) {
                 state = ctl.get();

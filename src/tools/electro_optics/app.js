@@ -6,6 +6,7 @@
     const $ = (id) => document.getElementById(id);
     const PAL = UI.CANVAS_PALETTE;
     const SER = PAL.series;
+    const tint = UI.withAlpha;
     const fmtSI = (v, u, d = 3) => core.formatSI(v, u, d);
     const fx = (v, n = 3) => (Number.isFinite(v) ? v.toFixed(n) : "—");
     const fp = (v, n = 4) => (Number.isFinite(v) ? Number(v.toPrecision(n)).toString() : "—");
@@ -1251,7 +1252,7 @@
         ctx.lineTo(bw - 4, y0);
         ctx.stroke();
         const box = (x, lab, sub, col) => {
-            ctx.fillStyle = "rgba(167,139,250,0.14)";
+            ctx.fillStyle = tint(SER[3], 0.14);
             ctx.strokeStyle = col;
             ctx.lineWidth = 1.5;
             ctx.fillRect(x - 14, y0 - 36, 28, 72);
@@ -1323,13 +1324,13 @@
             cellY = h * 0.12,
             cellH = h * 0.7;
 
-        ctx.fillStyle = "rgba(105,245,231,0.07)";
+        ctx.fillStyle = tint(SER[0], 0.07);
         ctx.fillRect(cellX, cellY, cellW, cellH);
         ctx.strokeStyle = PAL.axis;
         ctx.lineWidth = 1.2;
         ctx.strokeRect(cellX, cellY, cellW, cellH);
         const nWave = 9;
-        ctx.strokeStyle = "rgba(105,245,231,0.35)";
+        ctx.strokeStyle = tint(SER[0], 0.35);
         for (let i = 1; i < nWave; i++) {
             const y = cellY + cellH * i / nWave;
             ctx.beginPath();
@@ -1337,7 +1338,7 @@
             ctx.lineTo(cellX + cellW, y);
             ctx.stroke();
         }
-        ctx.fillStyle = "#6b7280";
+        ctx.fillStyle = PAL.axis;
         ctx.fillRect(cellX, cellY + cellH, cellW, 8);
         text(ctx, "transducer " + fp(S.fa, 3) + " MHz", cellX + cellW / 2, cellY + cellH + 18, {
             align: "center",
@@ -1804,7 +1805,7 @@
                 setText("mzLevels", fx(e.P1, 4) + " / " + fx(e.P0, 4) + (e.inverted ? " (inverted: bit 1 → low power)" : ""));
                 setText("mzDynER", Number.isFinite(e.erDb) ? fx(e.erDb, 1) + " dB" : "∞");
                 setText("mzEyeOpen", fx(e.opening, 3) + " of P_in");
-                st3 = ["👁", fx(e.opening, 3), "Eye opening"];
+                st3 = ["E", fx(e.opening, 3), "Eye opening"];
                 desc.mzmEyeCanvas.update(`Eye of a ${S.br} Gb/s PRBS7: high level ${fx(e.P1, 3)}, low ${fx(e.P0, 3)}, vertical opening ${fx(e.opening, 3)}, dynamic extinction ${fx(e.erDb, 1)} dB.`);
                 desc.mzmTimeCanvas.update(`First 24 bits of the NRZ drive (±${fp(S.sw * q.Vpi / 2, 3)} V) and the detected power.`);
             }
@@ -1899,7 +1900,7 @@
     function setPlay(running) {
         ["playBtn", "playBtn2"].forEach((id) => {
             const b = $(id);
-            b.textContent = running ? "⏸ Pause" : "▶ Start";
+            b.textContent = running ? "Pause" : "Start";
             b.setAttribute("aria-pressed", String(running));
         });
     }

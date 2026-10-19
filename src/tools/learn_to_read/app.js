@@ -93,15 +93,15 @@ document.addEventListener("DOMContentLoaded", () => {
             "loading": "Loading activities...",
             "nav.back": "Back",
             "nav.next": "Next",
-            "help.title": "👨‍👩‍👧 Parent Info",
+            "help.title": "Parent Info",
             "help.currentPhaseLabel": "Current Phase:",
             "help.progressLabel": "Progress:",
             "help.phaseInfo": "Children progress through phases: Sounds → Words → Stories",
             "help.masteryInfo": "Each phase must be mastered before moving on",
             "help.autoSaveInfo": "Progress is saved automatically in this browser",
-            "help.audioHint": "Tap the 🔊 button to hear sounds and words",
+            "help.audioHint": "Tap the Listen button to hear sounds and words",
             "help.resetHint": "Use the Reset button below to start over",
-            "help.resetButton": "🔄 Reset Progress",
+            "help.resetButton": "Reset Progress",
             "help.soundsSummary": "Letters tried/right:",
             "help.wordsSummary": "Words tried/right:",
             "help.storiesSummary": "Stories tried/right:",
@@ -113,28 +113,30 @@ document.addEventListener("DOMContentLoaded", () => {
             "sounds.letterTitle": "Letter",
             "sounds.dragToFace": "Drag to a face!",
             "sounds.dragToLetter": "Drag to the letter!",
-            "sounds.matchToast": "You matched \"{letter}\"! ⭐",
-            "sounds.matchAgain": "Nice! \"{letter}\" again. 🌟",
+            "sounds.matchToast": "You matched \"{letter}\"!",
+            "sounds.matchAgain": "Nice! \"{letter}\" again.",
             "sounds.tryAnotherFace": "Try another face!",
             "words.prompt": "Listen to the sound and build the word.",
             "words.speak": "Listen carefully.",
             "words.instructions": "Drag the letters into the boxes to match the sound.",
             "words.tryAgain": "Try again!",
-            "words.builtToast": "You built \"{word}\"! 🎉",
+            "words.listen": "Listen",
+            "reaction.tryAgain": "Try again",
+            "words.builtToast": "You built \"{word}\"!",
             "stories.prompt": "Let's read a story together!",
             "stories.speak": "Let's read a story together!",
-            "stories.readButton": "🔊 Read Story",
-            "stories.greatReading": "Great reading! 📚",
+            "stories.readButton": "Read Story",
+            "stories.greatReading": "Great reading!",
             "stories.instructions": "Fill the missing word to continue the story.",
             "confirm.reset": "Are you sure you want to reset all progress?",
             "toast.saveFail": "Could not save progress",
             "toast.reset": "Progress reset!",
-            "toast.newPhase": "🎊 New phase unlocked!",
+            "toast.newPhase": "New phase unlocked!",
             "toast.unlockSpeak": "Great job! You unlocked a new level!",
             "toast.unlockMore": "Complete more activities to unlock!",
-            "toast.welcome": "Welcome to Phonics Adventure! 🎈",
-            "toast.achievement": "🏆 Achievement Unlocked: {name}!",
-            "streak.day": "Day {count} Streak! 🔥",
+            "toast.welcome": "Welcome to Phonics Adventure!",
+            "toast.achievement": "Achievement unlocked: {name}!",
+            "streak.day": "Day {count} streak",
             "fullscreen.enter": "Fullscreen",
             "fullscreen.exit": "Exit",
             "achievement.firstLetter.label": "First Letter",
@@ -164,15 +166,15 @@ document.addEventListener("DOMContentLoaded", () => {
             "loading": "Aktivitäten werden geladen...",
             "nav.back": "Zurück",
             "nav.next": "Weiter",
-            "help.title": "👨‍👩‍👧 Elterninfo",
+            "help.title": "Elterninfo",
             "help.currentPhaseLabel": "Aktuelle Phase:",
             "help.progressLabel": "Fortschritt:",
             "help.phaseInfo": "Kinder durchlaufen Phasen: Laute → Wörter → Geschichten",
             "help.masteryInfo": "Jede Phase muss gemeistert werden, bevor es weitergeht",
             "help.autoSaveInfo": "Fortschritt wird automatisch in diesem Browser gespeichert",
-            "help.audioHint": "Tippe auf 🔊, um Laute und Wörter zu hören",
+            "help.audioHint": "Tippe auf Hören, um Laute und Wörter zu hören",
             "help.resetHint": "Nutze den Reset-Button unten, um neu zu starten",
-            "help.resetButton": "🔄 Fortschritt zurücksetzen",
+            "help.resetButton": "Fortschritt zurücksetzen",
             "help.soundsSummary": "Buchstaben versucht/richtig:",
             "help.wordsSummary": "Wörter versucht/richtig:",
             "help.storiesSummary": "Geschichten versucht/richtig:",
@@ -191,21 +193,23 @@ document.addEventListener("DOMContentLoaded", () => {
             "words.speak": "Hör genau zu.",
             "words.instructions": "Ziehe die Buchstaben in die Kästchen passend zum Laut.",
             "words.tryAgain": "Versuch es nochmal!",
+            "words.listen": "Hören",
+            "reaction.tryAgain": "Nochmal",
             "words.builtToast": "Du hast \"{word}\" gebaut!",
             "stories.prompt": "Lass uns zusammen eine Geschichte lesen!",
             "stories.speak": "Lass uns zusammen eine Geschichte lesen!",
-            "stories.readButton": "🔊 Geschichte vorlesen",
-            "stories.greatReading": "Super gelesen! 📚",
+            "stories.readButton": "Geschichte vorlesen",
+            "stories.greatReading": "Super gelesen!",
             "stories.instructions": "Setze das fehlende Wort ein, um weiterzulesen.",
             "confirm.reset": "Möchtest du den gesamten Fortschritt wirklich zurücksetzen?",
             "toast.saveFail": "Fortschritt konnte nicht gespeichert werden",
             "toast.reset": "Fortschritt zurückgesetzt!",
-            "toast.newPhase": "🎊 Neue Phase freigeschaltet!",
+            "toast.newPhase": "Neue Phase freigeschaltet!",
             "toast.unlockSpeak": "Super gemacht! Du hast ein neues Level freigeschaltet!",
             "toast.unlockMore": "Mache mehr Aktivitäten, um freizuschalten!",
-            "toast.welcome": "Willkommen im Lese-Abenteuer! 🎈",
-            "toast.achievement": "🏆 Erfolg freigeschaltet: {name}!",
-            "streak.day": "Tag {count} in Folge! 🔥",
+            "toast.welcome": "Willkommen im Lese-Abenteuer!",
+            "toast.achievement": "Erfolg freigeschaltet: {name}!",
+            "streak.day": "Tag {count} in Folge",
             "fullscreen.enter": "Vollbild",
             "fullscreen.exit": "Beenden",
             "achievement.firstLetter.label": "Erster Buchstabe",
@@ -237,28 +241,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const ENCOURAGEMENTS = {
         en: [
-            "Great job! 🌟",
-            "You did it! 🎉",
-            "Wonderful! ✨",
-            "Amazing! 🏆",
-            "Keep going! 💪",
-            "You're a star! ⭐",
-            "Fantastic! 🚀",
-            "Well done! 👏",
-            "Super! 🦸",
-            "Brilliant! 💎"
+            "Great job!",
+            "You did it!",
+            "Wonderful!",
+            "Amazing!",
+            "Keep going!",
+            "You're a star!",
+            "Fantastic!",
+            "Well done!",
+            "Super!",
+            "Brilliant!"
         ],
         de: [
-            "Toll gemacht! 🌟",
-            "Du hast es geschafft! 🎉",
-            "Wunderbar! ✨",
-            "Großartig! 🏆",
-            "Mach weiter so! 💪",
-            "Du bist ein Star! ⭐",
-            "Fantastisch! 🚀",
-            "Super gemacht! 👏",
-            "Klasse! 🦸",
-            "Brillant! 💎"
+            "Toll gemacht!",
+            "Du hast es geschafft!",
+            "Wunderbar!",
+            "Großartig!",
+            "Mach weiter so!",
+            "Du bist ein Star!",
+            "Fantastisch!",
+            "Super gemacht!",
+            "Klasse!",
+            "Brillant!"
         ]
     };
 
@@ -1117,171 +1121,152 @@ document.addEventListener("DOMContentLoaded", () => {
         nextBlinkAt = now + 2000 + Math.random() * 3500;
     }
 
+    const FALLBACK_PALETTE = {
+        panel: "#fbf8f1",
+        ink: "#1c1a17",
+        ink2: "#4f4a40",
+        gold: "#8a6620",
+        verdigris: "#2e6e62",
+        moon: "#3d5a85",
+        ember: "#a4511f",
+        rose: "#9e3b36",
+        grid: "rgba(28, 26, 23, 0.08)"
+    };
+
+    function readPalette() {
+        if (window.ToolShared && typeof window.ToolShared.palette === "function") {
+            const colors = window.ToolShared.palette();
+            if (colors.gold) return colors;
+        }
+        return FALLBACK_PALETTE;
+    }
+
+    let palette = readPalette();
+
+    if (window.ToolShared && typeof window.ToolShared.onThemeChange === "function") {
+        window.ToolShared.onThemeChange((colors) => {
+            palette = colors && colors.gold ? colors : readPalette();
+        });
+    }
+
+    function drawSparkle(x, y, size) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+
     function drawCharacter(time = 0) {
         ctx.clearRect(0, 0, 200, 200);
 
         const t = time / 1000;
-        const bob = Math.sin(t * 2.2) * 4;
+        const bob = Math.sin(t * 2.2) * 3;
         const sway = Math.sin(t * 1.4) * 2;
-        const breathe = 1 + Math.sin(t * 1.6) * 0.015;
-
+        const pal = palette;
 
         ctx.save();
-        ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
+        ctx.fillStyle = pal.grid;
         ctx.beginPath();
-        ctx.ellipse(100, 178, 60 - bob * 1.4, 14 - bob * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(100, 180, 54 - bob, 8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
         ctx.save();
-        ctx.translate(100, 102 + bob);
-        ctx.scale(breathe, breathe);
+        ctx.translate(100, 100 + bob);
 
-
-        const halo = ctx.createRadialGradient(0, -10, 40, 0, -10, 110);
-        halo.addColorStop(0, "rgba(250, 204, 21, 0.35)");
-        halo.addColorStop(1, "rgba(250, 204, 21, 0)");
-        ctx.fillStyle = halo;
+        ctx.fillStyle = pal.gold;
+        ctx.globalAlpha = 0.35;
         ctx.beginPath();
-        ctx.arc(0, -10, 110, 0, Math.PI * 2);
+        ctx.ellipse(-70, 8 + sway, 13, 18, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(70, 8 - sway, 13, 18, 0.4, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1;
 
-
-        const bodyGradient = ctx.createRadialGradient(-20, -30, 10, 0, 0, 85);
-        bodyGradient.addColorStop(0, "#FFF2A6");
-        bodyGradient.addColorStop(0.55, "#FFD54A");
-        bodyGradient.addColorStop(1, "#F59E0B");
-        ctx.fillStyle = bodyGradient;
+        ctx.fillStyle = pal.panel;
         ctx.beginPath();
-        ctx.arc(0, 0, 74, 0, Math.PI * 2);
+        ctx.arc(0, 0, 70, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = "#E88B0C";
+        ctx.fillStyle = pal.gold;
+        ctx.globalAlpha = 0.2;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = pal.gold;
         ctx.stroke();
 
-
-        const bellyGradient = ctx.createRadialGradient(-10, 8, 8, 0, 15, 52);
-        bellyGradient.addColorStop(0, "#FFF6C2");
-        bellyGradient.addColorStop(1, "#FDE68A");
-        ctx.fillStyle = bellyGradient;
+        ctx.fillStyle = pal.gold;
         ctx.beginPath();
-        ctx.ellipse(0, 18, 38, 30, 0, 0, Math.PI * 2);
+        ctx.ellipse(-26, 72, 16, 7, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(26, 72, 16, 7, -0.15, 0, Math.PI * 2);
         ctx.fill();
 
-
-        ctx.fillStyle = "#FDBA4D";
-        ctx.beginPath();
-        ctx.ellipse(-68, 6 + sway, 16, 20, -0.4, 0, Math.PI * 2);
-        ctx.ellipse(68, 6 - sway, 16, 20, 0.4, 0, Math.PI * 2);
-        ctx.fill();
-
-
-        ctx.fillStyle = "#F59E0B";
-        ctx.beginPath();
-        ctx.ellipse(-28, 74, 18, 10, 0.2, 0, Math.PI * 2);
-        ctx.ellipse(28, 74, 18, 10, -0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-
-        const eyeYOffset = characterState.eyesBlink ? 0 : -2;
-        const eyeOpenHeight = characterState.eyesBlink ? 4 : 24;
         const pupilOffsetX = Math.sin(t * 1.7) * 2;
         const pupilOffsetY = Math.cos(t * 1.3) * 1.5;
 
         function drawEye(x) {
-            ctx.fillStyle = "#FFFFFF";
-            ctx.beginPath();
-            ctx.ellipse(x, -22 + eyeYOffset, 18, eyeOpenHeight, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "#1F2937";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            if (!characterState.eyesBlink) {
-                const iris = ctx.createRadialGradient(x, -20, 0, x, -20, 12);
-                iris.addColorStop(0, "#60A5FA");
-                iris.addColorStop(1, "#1E3A8A");
-                ctx.fillStyle = iris;
+            if (characterState.eyesBlink) {
+                ctx.strokeStyle = pal.ink;
+                ctx.lineWidth = 3;
+                ctx.lineCap = "round";
                 ctx.beginPath();
-                ctx.arc(x + pupilOffsetX, -20 + pupilOffsetY, 8, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = "white";
-                ctx.beginPath();
-                ctx.arc(x + 3, -25, 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x - 5, -16, 2, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(x - 10, -18);
+                ctx.lineTo(x + 10, -18);
+                ctx.stroke();
+                return;
             }
+            ctx.fillStyle = pal.ink;
+            ctx.beginPath();
+            ctx.arc(x + pupilOffsetX, -18 + pupilOffsetY, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = pal.panel;
+            ctx.beginPath();
+            ctx.arc(x + pupilOffsetX + 3, -22 + pupilOffsetY, 3, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         drawEye(-26);
         drawEye(26);
 
-
-        ctx.strokeStyle = "#7C5A2E";
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = pal.ink2;
+        ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(-42, -46);
-        ctx.quadraticCurveTo(-26, -52, -10, -46);
+        ctx.moveTo(-40, -42);
+        ctx.quadraticCurveTo(-26, -48, -12, -42);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(10, -46);
-        ctx.quadraticCurveTo(26, -52, 42, -46);
+        ctx.moveTo(12, -42);
+        ctx.quadraticCurveTo(26, -48, 40, -42);
         ctx.stroke();
 
-
         if (characterState.mouthOpen) {
-            const mouthGradient = ctx.createRadialGradient(0, 36, 0, 0, 36, 26);
-            mouthGradient.addColorStop(0, "#FF9AA2");
-            mouthGradient.addColorStop(1, "#E85D75");
-            ctx.fillStyle = mouthGradient;
+            ctx.fillStyle = pal.rose;
             ctx.beginPath();
-            ctx.ellipse(0, 36, 24, 18, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "#C2415C";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.fillStyle = "#FFB4BD";
-            ctx.beginPath();
-            ctx.ellipse(0, 42, 11, 7, 0, 0, Math.PI);
+            ctx.ellipse(0, 30, 18, 13, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            ctx.strokeStyle = "#E85D75";
-            ctx.lineWidth = 5;
+            ctx.strokeStyle = pal.rose;
+            ctx.lineWidth = 4;
             ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.arc(0, 34, 20, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.arc(0, 22, 18, 0.15 * Math.PI, 0.85 * Math.PI);
             ctx.stroke();
         }
 
-
-        const blush1 = ctx.createRadialGradient(-50, 16, 0, -50, 16, 20);
-        blush1.addColorStop(0, "rgba(251, 113, 133, 0.6)");
-        blush1.addColorStop(1, "rgba(251, 113, 133, 0)");
-        ctx.fillStyle = blush1;
+        ctx.fillStyle = pal.rose;
+        ctx.globalAlpha = 0.22;
         ctx.beginPath();
-        ctx.arc(-50, 16, 20, 0, Math.PI * 2);
+        ctx.arc(-46, 12, 11, 0, Math.PI * 2);
+        ctx.arc(46, 12, 11, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1;
 
-        const blush2 = ctx.createRadialGradient(50, 16, 0, 50, 16, 20);
-        blush2.addColorStop(0, "rgba(251, 113, 133, 0.6)");
-        blush2.addColorStop(1, "rgba(251, 113, 133, 0)");
-        ctx.fillStyle = blush2;
-        ctx.beginPath();
-        ctx.arc(50, 16, 20, 0, Math.PI * 2);
-        ctx.fill();
-
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-        ctx.beginPath();
-        ctx.arc(-70, -60 + Math.sin(t * 3) * 2, 4, 0, Math.PI * 2);
-        ctx.arc(70, -52 + Math.cos(t * 2.7) * 2, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = pal.gold;
+        drawSparkle(-74, -62 + Math.sin(t * 3) * 2, 5);
+        drawSparkle(74, -54 + Math.cos(t * 2.7) * 2, 4);
 
         ctx.restore();
     }
@@ -1327,14 +1312,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let reactionTimeoutId = null;
-    const reactionEmojis = ["😝", "😜", "🙃", "😅", "😬"];
 
     function showReaction() {
         if (!reactionFace) return;
-        const emoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         const emojiNode = reactionFace.querySelector(".reaction-emoji");
         if (emojiNode) {
-            emojiNode.textContent = emoji;
+            emojiNode.textContent = t("reaction.tryAgain");
         }
         reactionFace.classList.add("show");
         if (reactionTimeoutId) {
@@ -1350,16 +1333,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
 
-        const icons = {
-            success: "🎉",
-            error: "😕",
-            info: "💡",
-            warning: "⚠️",
-            achievement: "🏆"
-        };
-
         toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-icon" aria-hidden="true"></span>
             <span class="toast-message">${message}</span>
         `;
 
@@ -1377,13 +1352,11 @@ document.addEventListener("DOMContentLoaded", () => {
         celebration.className = useCardOverlay ? "celebration in-card" : "celebration";
         (useCardOverlay ? activityCard : document.body).appendChild(celebration);
 
-        const emojis = ["⭐", "🌟", "✨", "🎉", "🎊", "💫", "🌈", "💜", "💖"];
         const count = Math.floor(25 * intensity);
 
         for (let i = 0; i < count; i++) {
             const star = document.createElement("span");
             star.className = "star-burst";
-            star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
             star.style.left = Math.random() * 100 + "%";
             star.style.top = Math.random() * 100 + "%";
             star.style.animationDelay = Math.random() * 0.6 + "s";
@@ -1392,7 +1365,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        const confettiColors = ["#8b5cf6", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+        const confettiColors = [palette.gold, palette.verdigris, palette.moon, palette.ember, palette.rose];
         for (let i = 0; i < count; i++) {
             const confetti = document.createElement("div");
             confetti.className = "confetti";
@@ -1503,9 +1476,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (state.streak >= 7) {
-                streakIndicator.style.background = "linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24)";
+                streakIndicator.dataset.level = "hot";
             } else if (state.streak >= 3) {
-                streakIndicator.style.background = "linear-gradient(135deg, #fef3c7, #fed7aa)";
+                streakIndicator.dataset.level = "warm";
             }
         }
     }
@@ -1927,7 +1900,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function renderSoundsActivity() {
-        activityIcon.textContent = "🔤";
         activityTitle.textContent = t("activity.soundsTitle");
 
         showCharacterSpeech(t("sounds.prompt"));
@@ -2304,7 +2276,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function renderWordsActivity() {
-        activityIcon.textContent = "🔡";
         activityTitle.textContent = t("activity.wordsTitle");
 
         const shortWords = getShortWords();
@@ -2317,7 +2288,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let html = `
             <div class="word-builder word-dragger">
                 <div class="target-word">
-                    <button class="sound-btn" id="play-word-btn">🔊</button>
+                    <button class="sound-btn" id="play-word-btn" type="button"><span class="btn-icon" aria-hidden="true"></span><span class="btn-text">${t("words.listen")}</span></button>
                 </div>
                 <p class="blend-instructions">${t("words.instructions")}</p>
                 <div class="word-slots drag-slots" id="drag-slots">
@@ -2541,7 +2512,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function renderStoriesActivity() {
-        activityIcon.textContent = "📖";
         activityTitle.textContent = t("activity.storiesTitle");
 
         const stories = getStories();
@@ -2564,10 +2534,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let html = `
                 <div class="story-container">
-                    <h3 class="story-title">📖 ${story.title}</h3>
+                    <h3 class="story-title">${story.title}</h3>
                     <p class="story-instructions">${t("stories.instructions")}</p>
                     <button class="nav-btn primary story-speech-btn" id="story-speech-btn" type="button">
-                        <span class="btn-icon">🔊</span>
+                        <span class="btn-icon" aria-hidden="true"></span>
                         <span class="btn-text">${t("stories.readButton")}</span>
                     </button>
                     <div class="story-sentence">

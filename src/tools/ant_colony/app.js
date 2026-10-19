@@ -51,7 +51,7 @@
         rows = Math.ceil(H / GRID);
     let home = new Float32Array(cols * rows),
         nectar = new Float32Array(cols * rows);
-    let canvas, ctx, drawing = false,
+    let canvas, ctx, colors, drawing = false,
         lastPoint = null,
         frame = 0,
         delivered = 0;
@@ -208,7 +208,7 @@
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
             const leg = Math.sin(frame * .18 + this.seed) * 1.8;
-            ctx.strokeStyle = this.carrying ? "rgba(255,214,92,.95)" : "rgba(44,31,25,.95)";
+            ctx.strokeStyle = this.carrying ? colors.gold : colors.ink2;
             ctx.lineWidth = 1.05;
             [
                 [-1, -1],
@@ -220,11 +220,9 @@
                 ctx.lineTo(px - 1 + leg * (i % 2 ? -1 : 1), side * 4);
                 ctx.stroke();
             });
-            ctx.shadowBlur = this.carrying ? 9 : 2;
-            ctx.shadowColor = this.carrying ? "#ffd36e" : "#f4b46d";
-            ctx.fillStyle = this.carrying ? "#ffd268" : "#d9894f";
-            ctx.strokeStyle = "#281914";
-            ctx.lineWidth = .8;
+            ctx.fillStyle = this.carrying ? colors.gold : colors.ink2;
+            ctx.strokeStyle = colors.canvas;
+            ctx.lineWidth = .6;
             ctx.beginPath();
             ctx.ellipse(-2.5, 0, 2.6, 1.9, 0, 0, TAU);
             ctx.ellipse(1, 0, 1.9, 1.55, 0, 0, TAU);
@@ -232,14 +230,15 @@
             ctx.fill();
             ctx.stroke();
             if (this.carrying) {
-                ctx.fillStyle = "#dfff92";
+                ctx.fillStyle = colors.verdigris;
                 ctx.beginPath();
                 ctx.arc(6.2, 0, 1.8, 0, TAU);
                 ctx.fill();
             }
             ctx.restore();
             if (settings.sensors) {
-                ctx.strokeStyle = "rgba(214,255,174,.055)";
+                ctx.strokeStyle = colors.moon;
+                ctx.globalAlpha = .25;
                 ctx.lineWidth = .6;
                 [-.62, 0, .62].forEach(o => {
                     ctx.beginPath();
@@ -247,6 +246,7 @@
                     ctx.lineTo(this.x + Math.cos(this.angle + o) * 28, this.y + Math.sin(this.angle + o) * 28);
                     ctx.stroke();
                 });
+                ctx.globalAlpha = 1;
             }
         }
     }
@@ -266,15 +266,10 @@
     }
 
     function drawGround() {
-        const bg = ctx.createRadialGradient(410, 300, 20, 400, 300, 520);
-        bg.addColorStop(0, "#22352f");
-        bg.addColorStop(.48, "#142421");
-        bg.addColorStop(1, "#0a1115");
-        ctx.fillStyle = bg;
+        ctx.fillStyle = colors.canvas;
         ctx.fillRect(0, 0, W, H);
         ctx.save();
-        ctx.globalAlpha = .18;
-        ctx.strokeStyle = "#61715c";
+        ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         for (let i = 0; i < 32; i++) {
             const y = (i * 83) % H,
@@ -285,32 +280,28 @@
             ctx.stroke();
         }
         ctx.restore();
-        const edge = ctx.createRadialGradient(400, 300, 190, 400, 300, 510);
-        edge.addColorStop(0, "rgba(0,0,0,0)");
-        edge.addColorStop(1, "rgba(0,0,0,.72)");
-        ctx.fillStyle = edge;
-        ctx.fillRect(0, 0, W, H);
     }
 
     function drawTrails() {
         if (!settings.trails) return;
         ctx.save();
-        ctx.globalCompositeOperation = "lighter";
         for (let r = 0; r < rows; r++)
             for (let c = 0; c < cols; c++) {
                 const i = r * cols + c,
                     a = nectar[i],
                     b = home[i];
-                if (a > 8) {
-                    ctx.fillStyle = `rgba(177,255,91,${Math.min(.24, a / 850)})`;
+                if (b > 12) {
+                    ctx.globalAlpha = Math.min(.28, b / 420);
+                    ctx.fillStyle = colors.moon;
                     ctx.beginPath();
-                    ctx.arc(c * GRID + 4, r * GRID + 4, 3.1, 0, TAU);
+                    ctx.arc(c * GRID + 4, r * GRID + 4, 1.6, 0, TAU);
                     ctx.fill();
                 }
-                if (b > 12) {
-                    ctx.fillStyle = `rgba(139,122,255,${Math.min(.13, b / 1350)})`;
+                if (a > 8) {
+                    ctx.globalAlpha = Math.min(.7, a / 30);
+                    ctx.fillStyle = colors.gold;
                     ctx.beginPath();
-                    ctx.arc(c * GRID + 4, r * GRID + 4, 2.6, 0, TAU);
+                    ctx.arc(c * GRID + 4, r * GRID + 4, 2.8, 0, TAU);
                     ctx.fill();
                 }
             }
@@ -319,7 +310,7 @@
 
     function drawMotes() {
         ctx.save();
-        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = colors.gold;
         motes.forEach(m => {
             m.y -= m.drift;
             m.x += Math.sin(frame * m.speed + m.phase) * .12;
@@ -327,13 +318,8 @@
                 m.y = H + 5;
                 m.x = Math.random() * W;
             }
-            const pulse = .25 + .45 * (1 + Math.sin(frame * .025 + m.phase)) / 2;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = m.gold ? "#ffc966" : "#91eecb";
-            ctx.fillStyle = m.gold ? `rgba(255,207,104,${pulse})` : `rgba(151,231,201,${pulse})`;
-            ctx.beginPath();
-            ctx.arc(m.x, m.y, m.r, 0, TAU);
-            ctx.fill();
+            ctx.globalAlpha = (m.gold ? .35 : .18) * (.4 + .6 * (1 + Math.sin(frame * .025 + m.phase)) / 2);
+            ctx.fillRect(m.x - m.r / 2, m.y - m.r / 2, m.r, m.r);
         });
         ctx.restore();
     }
@@ -341,33 +327,28 @@
     function drawNest() {
         ctx.save();
         ctx.translate(nest.x, nest.y);
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = "rgba(151,112,255,.55)";
+        ctx.lineWidth = 1;
         roundedPolygon(0, 0, Array.from({
             length: 12
-        }, (_, i) => [i / 12 * TAU, i % 2 ? 43 : 48]), "#17201d", "#66558b");
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "rgba(168,131,255,.55)";
+        }, (_, i) => [i / 12 * TAU, i % 2 ? 43 : 48]), colors.panel2, colors.ruleStrong);
+        ctx.strokeStyle = colors.ruleStrong;
         for (let i = 0; i < 8; i++) {
             const a = i / 8 * TAU;
             ctx.beginPath();
-            ctx.moveTo(Math.cos(a) * 27, Math.sin(a) * 27);
-            ctx.lineTo(Math.cos(a) * 40, Math.sin(a) * 40);
+            ctx.moveTo(Math.cos(a) * 31, Math.sin(a) * 31);
+            ctx.lineTo(Math.cos(a) * 39, Math.sin(a) * 39);
             ctx.stroke();
         }
-        const hole = ctx.createRadialGradient(-8, -7, 2, 0, 0, 29);
-        hole.addColorStop(0, "#000305");
-        hole.addColorStop(.72, "#080b0d");
-        hole.addColorStop(1, "#392d4b");
-        ctx.fillStyle = hole;
+        ctx.fillStyle = colors.canvas;
+        ctx.strokeStyle = colors.gold;
         ctx.beginPath();
         ctx.arc(0, 0, 29, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = "rgba(204,184,255,.75)";
-        ctx.font = "600 9px Georgia";
+        ctx.stroke();
+        ctx.fillStyle = colors.ink2;
+        ctx.font = "500 8px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText("GLOAMROOT", 0, 4);
+        ctx.fillText("GLOAMROOT", 0, 3);
         ctx.restore();
     }
 
@@ -381,13 +362,11 @@
             ctx.save();
             ctx.translate(f.x, f.y);
             ctx.scale(scale * pulse, scale * pulse);
-            ctx.globalCompositeOperation = "lighter";
-            ctx.shadowBlur = 24;
-            ctx.shadowColor = `hsla(${f.hue},90%,65%,.75)`;
+            ctx.fillStyle = colors.verdigris;
             for (let i = 0; i < shardCount; i++) {
                 const a = i / shardCount * TAU + fi,
                     h = 12 + (i % 3) * 6;
-                ctx.fillStyle = `hsla(${f.hue + i * 4},75%,${52 + i * 3}%,.72)`;
+                ctx.globalAlpha = .55 + (i % 3) * .15;
                 ctx.beginPath();
                 ctx.moveTo(Math.cos(a) * 5, Math.sin(a) * 5);
                 ctx.lineTo(Math.cos(a - .2) * h, Math.sin(a - .2) * h);
@@ -395,24 +374,30 @@
                 ctx.closePath();
                 ctx.fill();
             }
-            ctx.fillStyle = "rgba(235,255,203,.85)";
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = colors.canvas;
+            ctx.strokeStyle = colors.verdigris;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, TAU);
+            ctx.moveTo(0, -6);
+            ctx.lineTo(6, 0);
+            ctx.lineTo(0, 6);
+            ctx.lineTo(-6, 0);
+            ctx.closePath();
             ctx.fill();
+            ctx.stroke();
             ctx.restore();
         });
     }
 
     function drawObstacles() {
-        obstacles.forEach((o, i) => {
+        obstacles.forEach(o => {
             ctx.save();
             ctx.translate(o.x, o.y);
             ctx.rotate(o.angle);
-            ctx.shadowBlur = 9;
-            ctx.shadowColor = "rgba(99,212,180,.25)";
-            roundedPolygon(0, 0, o.points, "#202a28", "#55746b");
-            ctx.strokeStyle = "rgba(125,214,181,.45)";
             ctx.lineWidth = 1;
+            roundedPolygon(0, 0, o.points, colors.panel2, colors.ruleStrong);
+            ctx.strokeStyle = colors.ink3;
             ctx.beginPath();
             ctx.moveTo(-o.r * .35, o.r * .25);
             ctx.lineTo(0, -o.r * .35);
@@ -524,6 +509,8 @@
         canvas = document.getElementById("canvas");
         if (!canvas) return;
         ctx = canvas.getContext("2d");
+        colors = window.ToolShared.palette();
+        window.ToolShared.onThemeChange(p => colors = p);
         settings.antCount = +document.getElementById("ant-count").value;
         makeMotes();
         seedHomeTrail();

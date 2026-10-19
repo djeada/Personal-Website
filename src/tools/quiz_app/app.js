@@ -214,7 +214,7 @@
         state.quizStartTime = null;
         state.quizEndTime = null;
         if (elements.timerDisplay) {
-            elements.timerDisplay.textContent = '\u23F1\uFE0F --:--';
+            elements.timerDisplay.textContent = '--:--';
             elements.timerDisplay.classList.remove('warning', 'critical');
         }
     }
@@ -222,7 +222,7 @@
     function updateTimerDisplay() {
         if (!elements.timerDisplay) return;
 
-        elements.timerDisplay.textContent = '\u23F1\uFE0F ' + formatTime(state.timerSecondsLeft);
+        elements.timerDisplay.textContent = formatTime(state.timerSecondsLeft);
         elements.timerDisplay.classList.remove('warning', 'critical');
 
         if (state.timerSecondsLeft <= CONFIG.TIMER_CRITICAL_THRESHOLD) {
@@ -400,14 +400,14 @@
     }
 
     function getResultsMessage(percentage) {
-        if (percentage === 100) return '\uD83C\uDFC6 Perfect score! Absolutely flawless!';
-        if (percentage >= 90) return '\uD83C\uDF89 Outstanding! You\u2019ve mastered this topic!';
-        if (percentage >= 80) return '\uD83C\uDF1F Excellent work! You really know your stuff!';
-        if (percentage >= 70) return '\uD83D\uDC4F Great job! Keep up the excellent work!';
-        if (percentage >= 60) return '\uD83D\uDCAA Good effort! You\u2019re getting there!';
-        if (percentage >= 50) return '\uD83D\uDE80 Halfway there! A bit more practice will help.';
-        if (percentage >= 30) return '\uD83D\uDCD6 Keep studying! You\u2019re building a foundation.';
-        return '\uD83D\uDCDA Keep learning! Review the material and try again.';
+        if (percentage === 100) return 'Perfect score! Absolutely flawless!';
+        if (percentage >= 90) return 'Outstanding! You\u2019ve mastered this topic!';
+        if (percentage >= 80) return 'Excellent work! You really know your stuff!';
+        if (percentage >= 70) return 'Great job! Keep up the excellent work!';
+        if (percentage >= 60) return 'Good effort! You\u2019re getting there!';
+        if (percentage >= 50) return 'Halfway there! A bit more practice will help.';
+        if (percentage >= 30) return 'Keep studying! You\u2019re building a foundation.';
+        return 'Keep learning! Review the material and try again.';
     }
 
     function showResultsModal(results) {
@@ -425,7 +425,7 @@
         var message = getResultsMessage(percentage);
         var timeTaken = getTimeTaken();
         if (timeTaken !== null) {
-            message += ' \u23F1\uFE0F Time: ' + formatTime(timeTaken);
+            message += ' Time: ' + formatTime(timeTaken);
         }
         elements.resultsMessage.textContent = message;
 
@@ -804,7 +804,7 @@
     function showEmptyState(message) {
         elements.quizContainer.innerHTML =
             '<div class="empty-state">' +
-            '<div class="empty-state-icon" aria-hidden="true">\uD83D\uDCED</div>' +
+            '<div class="empty-state-icon" aria-hidden="true"></div>' +
             '<p class="empty-state-text">' + escapeHtml(message) + '</p>' +
             '</div>';
     }

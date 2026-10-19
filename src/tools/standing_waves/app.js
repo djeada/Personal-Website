@@ -5,6 +5,8 @@
     const SW = window.OpticsModels.standingWaves;
     const UI = window.OpticsUI;
     const PAL = UI.CANVAS_PALETTE;
+    const tint = UI.withAlpha;
+
     const TWO_PI = 2 * Math.PI;
     const $ = (id) => document.getElementById(id);
 
@@ -165,18 +167,18 @@
     };
 
     const COLORS = {
-        e: "#ff9f6b",
-        envE: "rgba(255, 159, 107, 0.7)",
-        h: "#69f5e7",
-        envH: "rgba(105, 245, 231, 0.6)",
-        inc: "#8ab4ff",
-        ref: "#f187c8",
+        e: PAL.series[4],
+        envE: tint(PAL.series[4], 0.7),
+        h: PAL.series[1],
+        envH: tint(PAL.series[1], 0.6),
+        inc: PAL.series[2],
+        ref: PAL.series[3],
         sum: PAL.textMuted,
-        node: "#ff6b8b",
-        antinode: "#7ee787",
-        wall: "#e4e0f5",
-        airy: "#f8d477",
-        mode: "#a78bfa",
+        node: PAL.text,
+        antinode: PAL.series[6],
+        wall: PAL.text,
+        airy: PAL.marker,
+        mode: PAL.series[2],
     };
     const DASH = {
         env: [5, 4],
@@ -507,11 +509,11 @@
 
         if (single) {
             const fills = {
-                pec: "rgba(228, 224, 245, 0.22)",
-                pmc: "rgba(105, 245, 231, 0.12)",
-                absorber: "rgba(0, 0, 0, 0.45)",
-                dielectric: "rgba(167, 139, 250, " + Math.min(0.32, 0.06 + 0.1 * ((state.n2 || 1) - 1)) + ")",
-                custom: "rgba(184, 178, 207, 0.14)",
+                pec: tint(PAL.text, 0.22),
+                pmc: tint(PAL.series[1], 0.12),
+                absorber: tint(PAL.background, 0.6),
+                dielectric: tint(PAL.series[2], Math.min(0.32, 0.06 + 0.1 * ((state.n2 || 1) - 1))),
+                custom: tint(PAL.textMuted, 0.14),
             };
             const names = {
                 pec: "PEC",
@@ -606,7 +608,7 @@
             const tw = ctx.measureText(label).width;
             const lx = Math.min(P.x + P.w - tw - 6, Math.max(P.x + 4, pxp + 6));
             const ly = Y(-2.47);
-            ctx.fillStyle = "rgba(7, 7, 13, 0.9)";
+            ctx.fillStyle = tint(PAL.background, 0.9);
             ctx.fillRect(lx - 3, ly - 9, tw + 6, 18);
             ctx.fillStyle = PAL.cursor;
             ctx.textBaseline = "middle";
@@ -621,7 +623,7 @@
             if (shape === "circle") sw = '<svg width="16" height="12" viewBox="0 0 16 12"><circle cx="8" cy="6" r="4.5" fill="' + color + '"/></svg>';
             else if (shape === "diamond") sw = '<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 1 L13 6 L8 11 L3 6 Z" fill="' + color + '"/></svg>';
             else sw = '<svg width="26" height="12" viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="' + color + '" stroke-width="2.5"' + (dash && dash.length ? ' stroke-dasharray="' + dash.join(" ") + '"' : "") + "/></svg>";
-            return '<span class="sw-legend-item">' + sw + "<span>" + label + "</span></span>";
+            return '<span class="sw-legend-item" style="background:' + PAL.background + ";color:" + PAL.text + '">' + sw + "<span>" + label + "</span></span>";
         }).join("");
     }
 
@@ -856,7 +858,7 @@
         const markers = sd.modes.map((md) => ({
             x: md.nu / 1e12,
             label: md.m === state.modeNumber ? "m = " + md.m : "",
-            color: md.m === state.modeNumber ? PAL.marker : "rgba(167, 139, 250, 0.7)",
+            color: md.m === state.modeNumber ? PAL.marker : tint(PAL.series[2], 0.7),
             dash: md.m === state.modeNumber ? [] : [3, 4],
         }));
         let cursor = null;
@@ -906,7 +908,7 @@
         });
         drawMiniLegend(ctx, specMap.plot, [
             [COLORS.airy, [], "Airy T(ν), R = " + state.R.toFixed(3)],
-            ["rgba(167, 139, 250, 0.9)", [3, 4], "ideal modes"]
+            [tint(PAL.series[2], 0.9), [3, 4], "ideal modes"]
         ]);
     }
 
@@ -1318,7 +1320,7 @@
         drawDynamic();
     }, {
         onChange: (running) => {
-            startStopBtn.innerHTML = running ? '<span aria-hidden="true">⏸️</span> Pause' : '<span aria-hidden="true">▶️</span> Start Animation';
+            startStopBtn.innerHTML = running ? 'Pause' : 'Start Animation';
             startStopBtn.setAttribute("aria-pressed", running ? "true" : "false");
         },
     });

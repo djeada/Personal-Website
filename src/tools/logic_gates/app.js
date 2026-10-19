@@ -1,10 +1,9 @@
-function getColorForMode(colorLight, colorDark) {
-
-    const darkModeValue = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
-    if (darkModeValue) {
-        return darkModeValue.split('=')[1].toLowerCase() === 'true' ? colorDark : colorLight;
-    }
-    return colorLight;
+function gateColors() {
+    const colors = window.ToolShared ? window.ToolShared.palette() : {};
+    return {
+        ink: colors.ink || "#1c1a17",
+        fill: colors.panel2 || "#efe9dc"
+    };
 }
 
 function updateInputs() {
@@ -314,8 +313,8 @@ function drawANDGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -360,8 +359,8 @@ function drawORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -408,8 +407,8 @@ function drawNOTGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -458,8 +457,8 @@ function drawNANDGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -512,8 +511,8 @@ function drawNORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -564,8 +563,8 @@ function drawXORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -618,8 +617,8 @@ function drawXNORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = gateColors().ink;
+    ctx.fillStyle = gateColors().fill;
 
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -688,6 +687,8 @@ window.addEventListener('load', handleGateChange);
 
 
 window.addEventListener('resize', handleGateChange);
+
+if (window.ToolShared && window.ToolShared.onThemeChange) window.ToolShared.onThemeChange(updateGateDrawing);
 
 
 handleGateChange();

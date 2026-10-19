@@ -754,7 +754,9 @@
 
 
     const PAL = UI.CANVAS_PALETTE;
-    const stageColor = (k) => (k === 0 ? "#ffffff" : PAL.series[(k - 1) % PAL.series.length]);
+    const tint = UI.withAlpha;
+
+    const stageColor = (k) => (k === 0 ? PAL.text : PAL.series[(k - 1) % PAL.series.length]);
     const font = (px, weight = "") => `${weight ? weight + " " : ""}${px}px ${PAL.font}`;
     let tNow = 0;
     const phaseNow = () => -OMEGA_DISPLAY * tNow;
@@ -804,7 +806,7 @@
         const lines = [];
         if (before) lines.push([sel === 0 ? "- - input (before element 1)" : `- - after element ${sel}`, PAL.textMuted]);
         lines.push([hasSel ? `— after element ${sel + 1}` : "— input (no element inspected)", afterColor]);
-        lines.push(["→ instantaneous E (polarized part)", "#ff8f8f"]);
+        lines.push(["→ instantaneous E (polarized part)", PAL.series[3]]);
         if (after.S.S0 - Math.hypot(after.S.S1, after.S.S2, after.S.S3) > 1e-6) lines.push(["◯ unpolarized part, radius √I_u", PAL.textMuted]);
 
         const cx = w / 2;
@@ -894,9 +896,9 @@
                 const lx = clamp(cx + c * L + (c >= 0 ? 3 : -3), c >= 0 ? 4 : tw + 4, c >= 0 ? w - tw - 4 : w - 4);
                 ctx.fillText(label, lx, cy - s * L - 3);
             };
-            if (el.type === "polarizer") axisLine(el.a * DEG, "#7ee787", [9, 5], "transmission");
+            if (el.type === "polarizer") axisLine(el.a * DEG, PAL.series[6], [9, 5], "transmission");
             else if (par) {
-                axisLine(par.fast, "#7ee787", [9, 5], "fast");
+                axisLine(par.fast, PAL.series[6], [9, 5], "fast");
                 if (el.type === "plate") axisLine(el.a * DEG, PAL.marker, [2, 4], "c");
             }
         }
@@ -906,8 +908,8 @@
             const Sp = Math.hypot(st.S.S1, st.S.S2, st.S.S3);
             const Iu = Math.max(0, st.S.S0 - Sp);
             if (!dashed && Iu > 1e-6) {
-                ctx.fillStyle = "rgba(184, 178, 207, 0.12)";
-                ctx.strokeStyle = "rgba(184, 178, 207, 0.35)";
+                ctx.fillStyle = tint(PAL.textMuted, 0.12);
+                ctx.strokeStyle = tint(PAL.textMuted, 0.35);
                 ctx.lineWidth = 1;
                 ctx.setLineDash([2, 3]);
                 ctx.beginPath();
@@ -949,17 +951,17 @@
                 ctx.fill();
             }
         };
-        if (before) drawStage(before, "rgba(236, 233, 248, 0.6)", true, 1.8);
+        if (before) drawStage(before, tint(PAL.text, 0.6), true, 1.8);
         drawStage(after, afterColor, false, 2.8);
 
         const ph = phaseNow();
         if (before && Math.hypot(before.S.S1, before.S.S2, before.S.S3) > 1e-9) {
             const e = Pol.fieldAt(stageJones(before), ph);
-            arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, "rgba(236, 233, 248, 0.55)", 1.6, 8);
+            arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, tint(PAL.text, 0.55), 1.6, 8);
         }
         if (Math.hypot(after.S.S1, after.S.S2, after.S.S3) > 1e-9) {
             const e = Pol.fieldAt(stageJones(after), ph);
-            arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, "#ff6b6b", 2.6, 10);
+            arrow(ctx, cx, cy, cx + e.x * R, cy - e.y * R, PAL.series[3], 2.6, 10);
         }
 
         textBox(ctx, lines, 10, fs + 6, fs);
@@ -1009,8 +1011,8 @@
         const R = Math.min(w, h) * 0.36;
 
         const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R);
-        grad.addColorStop(0, "rgba(167, 139, 250, 0.16)");
-        grad.addColorStop(1, "rgba(167, 139, 250, 0.03)");
+        grad.addColorStop(0, tint(PAL.series[2], 0.16));
+        grad.addColorStop(1, tint(PAL.series[2], 0.03));
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(cx, cy, R, 0, 2 * Math.PI);
@@ -1025,7 +1027,7 @@
                 const a = sphereProject(fn(2 * Math.PI * i / n), cx, cy, R),
                     b = sphereProject(fn(2 * Math.PI * (i + 1) / n), cx, cy, R);
                 const front = a.depth + b.depth >= 0;
-                ctx.strokeStyle = front ? color : "rgba(184, 178, 207, 0.12)";
+                ctx.strokeStyle = front ? color : tint(PAL.textMuted, 0.12);
                 ctx.lineWidth = front ? 1.1 : 1;
                 ctx.setLineDash(front ? [] : [2, 3]);
                 ctx.beginPath();
@@ -1035,7 +1037,7 @@
             }
             ctx.setLineDash([]);
         };
-        circle((t) => [Math.cos(t), Math.sin(t), 0], "rgba(184, 178, 207, 0.45)");
+        circle((t) => [Math.cos(t), Math.sin(t), 0], tint(PAL.textMuted, 0.45));
         circle((t) => [Math.cos(t), 0, Math.sin(t)], PAL.grid);
         circle((t) => [0, Math.cos(t), Math.sin(t)], PAL.grid);
 
@@ -1064,7 +1066,7 @@
         for (const [v, lab, axisName] of axes) {
             const p = sphereProject(v, cx, cy, R),
                 q = sphereProject(v.map((x) => x * 1.2), cx, cy, R);
-            ctx.strokeStyle = p.depth >= 0 ? PAL.axis : "rgba(143, 137, 168, 0.35)";
+            ctx.strokeStyle = p.depth >= 0 ? PAL.axis : tint(PAL.axis, 0.35);
             ctx.lineWidth = 1;
             ctx.setLineDash(p.depth >= 0 ? [] : [3, 3]);
             ctx.beginPath();
@@ -1106,7 +1108,7 @@
             ctx.beginPath();
             ctx.arc(p.x, p.y, k === 0 ? 6 : 5, 0, 2 * Math.PI);
             if (k === 0) {
-                ctx.strokeStyle = "#ffffff";
+                ctx.strokeStyle = PAL.text;
                 ctx.lineWidth = 2;
                 ctx.stroke();
             } else {
@@ -1116,7 +1118,7 @@
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
-            ctx.fillStyle = k === 0 ? "#ffffff" : stageColor(k);
+            ctx.fillStyle = k === 0 ? PAL.text : stageColor(k);
             ctx.font = font(fs, "600");
             ctx.textAlign = "left";
             ctx.fillText(k === 0 ? "in" : String(k), p.x + 8, p.y - 6);
@@ -1227,8 +1229,8 @@
                     [-S, S]
                 ].map(([x, y]) => proj(x, y, z1));
                 const selected = k === state.sel;
-                ctx.fillStyle = selected ? "rgba(248, 212, 119, 0.12)" : "rgba(126, 231, 135, 0.07)";
-                ctx.strokeStyle = selected ? PAL.marker : "rgba(126, 231, 135, 0.55)";
+                ctx.fillStyle = selected ? tint(PAL.marker, 0.12) : tint(PAL.series[6], 0.07);
+                ctx.strokeStyle = selected ? PAL.marker : tint(PAL.series[6], 0.55);
                 ctx.lineWidth = selected ? 1.8 : 1.2;
                 ctx.beginPath();
                 corners.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
@@ -1240,7 +1242,7 @@
                 if (ang != null) {
                     const a = proj(-Math.cos(ang) * S, -Math.sin(ang) * S, z1),
                         b = proj(Math.cos(ang) * S, Math.sin(ang) * S, z1);
-                    ctx.strokeStyle = "#7ee787";
+                    ctx.strokeStyle = PAL.series[6];
                     ctx.setLineDash([6, 4]);
                     ctx.lineWidth = 1.5;
                     ctx.beginPath();
@@ -1250,7 +1252,7 @@
                     ctx.setLineDash([]);
                 } else if (el.type === "rotator") {
                     const c = proj(0, 0, z1);
-                    ctx.strokeStyle = "#7ee787";
+                    ctx.strokeStyle = PAL.series[6];
                     ctx.lineWidth = 1.5;
                     ctx.beginPath();
                     ctx.ellipse(c.x, c.y, A * 0.35, A * 0.5, 0, -0.5, Math.PI * 1.3);
@@ -1338,7 +1340,7 @@
         const fcx = stacked ? w / 2 : sq / 2 + 10,
             fcy = stacked ? sq / 2 + 8 : h / 2;
         const R = sq * 0.36;
-        ctx.fillStyle = "rgba(105, 245, 231, 0.05)";
+        ctx.fillStyle = tint(PAL.series[1], 0.05);
         ctx.strokeStyle = PAL.gridStrong;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -1372,7 +1374,7 @@
                 const e = Pol.fieldAt(Jin, 2 * Math.PI * i / 120);
                 i ? ctx.lineTo(fcx + e.x * R, fcy - e.y * R) : ctx.moveTo(fcx + e.x * R, fcy - e.y * R);
             }
-            ctx.strokeStyle = "rgba(236, 233, 248, 0.6)";
+            ctx.strokeStyle = tint(PAL.text, 0.6);
             ctx.lineWidth = 1.5;
             ctx.setLineDash([5, 4]);
             ctx.stroke();
@@ -1450,9 +1452,9 @@
         const laneTop = top + 2,
             laneH = (rh - plotH - 8) / 2;
 
-        ctx.fillStyle = "rgba(167, 139, 250, 0.10)";
+        ctx.fillStyle = tint(PAL.series[2], 0.10);
         ctx.fillRect(px0, laneTop, px1 - px0, laneH * 2);
-        ctx.strokeStyle = "rgba(167, 139, 250, 0.5)";
+        ctx.strokeStyle = tint(PAL.series[2], 0.5);
         ctx.lineWidth = 1;
         ctx.strokeRect(px0, laneTop, px1 - px0, laneH * 2);
         const M = 5;
@@ -1488,7 +1490,7 @@
         ctx.font = font(fs);
         const tw = ctx.measureText(text).width;
         const x0 = align === "right" ? x - tw : x;
-        ctx.fillStyle = "rgba(7, 7, 13, 0.78)";
+        ctx.fillStyle = tint(PAL.background, 0.78);
         ctx.fillRect(x0 - 3, y - fs, tw + 6, fs + 5);
         ctx.fillStyle = color;
         ctx.textAlign = align;
@@ -1891,7 +1893,7 @@
         redrawAnimated();
     }, {
         onChange: (running) => {
-            startBtn.textContent = running ? "⏸ Pause animation" : "▶ Start animation";
+            startBtn.textContent = running ? "Pause animation" : "Start animation";
             startBtn.setAttribute("aria-pressed", String(running));
         },
     });

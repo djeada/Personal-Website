@@ -50,6 +50,7 @@ LOWERCASE_WORDS = [
     "wraz",
     "w",
 ]
+LANGUAGE_CODES = {"🇺🇸": "EN", "🇬🇧": "EN", "🇵🇱": "PL", "🇩🇪": "DE"}
 
 
 def get_subdirs(dir_path: Path) -> list:
@@ -76,8 +77,10 @@ def get_article_title(file_path: Path) -> str:
         word = match.group(0)
         return word.lower() if word.lower() in LOWERCASE_WORDS else word
 
-    title = re.sub(r"\b[A-Za-z]+\b", lowercase_match, title)
+    return re.sub(r"\b[A-Za-z]+\b", lowercase_match, title)
 
+
+def get_article_language(file_path: Path) -> str:
     try:
         with file_path.open() as file:
             soup = BeautifulSoup(file, "html.parser")
@@ -90,11 +93,11 @@ def get_article_title(file_path: Path) -> str:
                     language = ""
             else:
                 language = ""
-    except Exception as e:
+    except Exception:
         logging.exception("Error opening or parsing file: %s", file_path)
         language = ""
 
-    return f"{title} {language}" if language else title
+    return LANGUAGE_CODES.get(language, language.upper())
 
 
 def get_article_description(file_path: Path) -> str:
@@ -239,15 +242,22 @@ def _process_article(article_info: Tuple[str, str]) -> str:
     article, current_date = article_info
     formatted_date = current_date.strftime("%B %d, %Y")
     title = get_article_title(article)
+    language = get_article_language(article)
     description = get_article_description(article)
     category = get_article_category(article)
     url = "../articles" + str(article).split("/articles")[-1]
     category_url = get_category_url(article)
+    language_html = (
+        f'<div class="article-lang" title="Language">{language}</div>'
+        if language
+        else ""
+    )
     return f"""
         <div class="article-list-element">
             <h2><a href="{url}">{title}</a></h2>
             <div class="article-date">{formatted_date}</div>
-            <div class="article-category">Category: <a href="{category_url}">{category}</a></div>
+            <div class="article-category"><a href="{category_url}">{category}</a></div>
+            {language_html}
             <p><a href="{url}">{description}...</a></p>
         </div>
         """
