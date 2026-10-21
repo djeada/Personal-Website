@@ -532,6 +532,21 @@ function applyTheme(isDark) {
     document.body.classList.toggle("dark-mode", isDark);
     root.style.colorScheme = isDark ? "dark" : "";
     root.style.backgroundColor = isDark ? "#0d1117" : "";
+
+    const flagCounter = document.querySelector("#flag-counter img");
+    if (flagCounter) {
+        const styles = getComputedStyle(document.body);
+        const tokens = {
+            bg: "--surface-0",
+            txt: "--text-primary",
+            border: "--border-default"
+        };
+        const src = flagCounter.src.replace(/\/(bg|txt|border)_[^/]+/g, (_, key) => {
+            const color = styles.getPropertyValue(tokens[key]).trim().replace(/^#/, "");
+            return `/${key}_${color}`;
+        });
+        if (flagCounter.src !== src) flagCounter.src = src;
+    }
 }
 
 function main() {
