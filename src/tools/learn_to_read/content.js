@@ -51,8 +51,8 @@ window.PhonicsContent = (() => {
         ],
         de: [
             { id: "first", title: "Erste kleine Wörter", hint: "Entdecke m, a, s, i, o, p und l.", items: [
-                word("am", "📍"), word("im", "📦"), word("Mama", "👩"), word("Oma", "👵"),
-                word("Papa", "👨"), word("Opa", "👴"), word("Lama", "🦙"), word("Salami", "🥪")
+                word("Mama", "👩"), word("Oma", "👵"), word("Papa", "👨"), word("Opa", "👴"),
+                word("Lama", "🦙"), word("am", "📍"), word("im", "📦"), word("Salami", "🥪")
             ] },
             { id: "vowels", title: "Die Wörterwiese", hint: "Höre zu und setze die Buchstaben zusammen.", items: [
                 word("Hut", "🎩"), word("Bus", "🚌"), word("Rose", "🌹"), word("Nase", "👃"),

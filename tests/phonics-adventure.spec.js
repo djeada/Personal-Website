@@ -93,9 +93,6 @@ test("duplicate letter tiles remain independent in German words", async ({ page 
   await start(page);
   await page.locator('[data-language="de"]').click();
   await page.locator("#tab-words").click();
-  // First two words are am and im; the next word is Mama.
-  await page.locator("#next-activity").click();
-  await page.locator("#next-activity").click();
   await page.locator("#show-word").click();
   await expect(page.locator("#word-model")).toHaveText("Mama");
   await build(page, ["m", "a", "m", "a"]);
@@ -212,10 +209,10 @@ test("speech highlights stop on navigation and stale speech events are ignored",
   await start(page);
   await page.locator("#tab-stories").click();
   await page.locator("#read-story").click();
-  await page.evaluate(() => window.testUtterances.at(-1).onboundary({ charIndex: 4 }));
+  await page.evaluate(() => { window.oldStoryUtterance = window.testUtterances.at(-1); window.oldStoryUtterance.onboundary({ charIndex: 4 }); });
   await expect(page.locator('[data-word="cat"]')).toHaveClass(/pa-speaking/);
   await page.locator("#tab-words").click();
-  await page.evaluate(() => window.testUtterances.at(-1).onboundary({ charIndex: 4 }));
+  await page.evaluate(() => window.oldStoryUtterance.onboundary({ charIndex: 4 }));
   await expect(page.locator(".pa-speaking")).toHaveCount(0);
   expect(await page.evaluate(() => window.testCancelCount)).toBeGreaterThan(0);
   await page.locator("#audio-toggle").click();
@@ -263,6 +260,53 @@ for (const dark of [false, true]) {
           expect(bounds.page).toBeLessThanOrEqual(bounds.viewport + 1);
         }
       }
+      await page.locator("#start-adventure").click();
+      await expect(page.locator("#next-activity")).toBeInViewport();
+      await expect(page.locator("#replay-guide")).toBeInViewport();
+      const focusedWidth = await page.locator("#activity-area").evaluate((element) => ({ content: element.scrollWidth, width: element.clientWidth }));
+      expect(focusedWidth.content).toBeLessThanOrEqual(focusedWidth.width + 1);
+      await page.keyboard.press("Escape");
     }
   });
 }
+
+test("picture-led play narrates instructions, letter clues, rewards and the next task", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.testUtterances = [];
+    Object.defineProperty(window, "SpeechSynthesisUtterance", { value: class { constructor(text) { this.text = text; } } });
+    Object.defineProperty(window, "speechSynthesis", { value: {
+      getVoices: () => [{ lang: "en-US", name: "Google US English" }], cancel: () => {},
+      speak: (utterance) => window.testUtterances.push(utterance)
+    } });
+  });
+  await start(page);
+  expect(await page.evaluate(() => window.testUtterances.length)).toBe(0);
+  await page.getByRole("button", { name: "Let’s play!", exact: true }).click();
+  await expect(page.locator("body")).toHaveClass(/pa-focus-mode/);
+  expect(await page.evaluate(() => window.testUtterances.at(-1).text)).toContain("Which letter does sun start with");
+  await page.locator('[data-hear-letter="s"]').click();
+  expect(await page.evaluate(() => window.testUtterances.at(-1).text)).toBe("S, as in sun.");
+  await expect(page.locator("#total-stars")).toHaveText("0");
+  await page.locator('[data-letter="s"]').click();
+  expect(await page.evaluate(() => window.testUtterances.at(-1).text)).toContain("Yes!");
+  await expect(page.locator("#guide-message")).toHaveText("Hooray! You did it!");
+  await page.locator("#next-activity").click();
+  expect(await page.evaluate(() => window.testUtterances.at(-1).text)).toContain("apple");
+  await page.locator('[data-play-mode="words"]').click();
+  expect(await page.evaluate(() => window.testUtterances.at(-1).text)).toContain("Let’s build sat");
+  const images = await page.locator(".pa-finn-button img").evaluate((image) => ({ loaded: image.complete, width: image.naturalWidth }));
+  expect(images.loaded).toBe(true);
+  expect(images.width).toBeGreaterThan(0);
+});
+
+test("children can choose storybooks using illustrated covers", async ({ page }) => {
+  await start(page);
+  await page.locator("#tab-stories").click();
+  await page.locator(".pa-story-library summary").click();
+  await expect(page.locator("[data-book]")).toHaveCount(9);
+  await page.locator('[data-book="dog"]').click();
+  await expect(page.locator("#activity-title")).toHaveText("The dog and the log");
+  await expect(page.locator(".pa-book-illustration .pa-atlas-letter")).toBeVisible();
+  await page.locator('[data-word="dog"]').click();
+  await expect(page.locator("#feedback")).toContainText("You found dog");
+});

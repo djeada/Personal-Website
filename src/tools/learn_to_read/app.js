@@ -16,6 +16,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const normalize = (value) => value.toLocaleLowerCase(state.language).replace(/[^\p{L}]/gu, "");
     const shuffle = (items) => [...items].map((value) => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ value }) => value);
+    // Picture atlases keep the same friendly illustration style throughout the game.
+    const pictureMap = {};
+    [
+        ["sun", "sonne"], ["apple", "apfel", "äpfel"], ["tiger"], ["pig", "schwein"],
+        ["insect", "käfer"], ["net", "netz"], ["moon", "mond"], ["dog", "hund"],
+        ["goat", "ziege"], ["octopus", "oktopus"], ["cat", "katze"], ["kite", "drachen"],
+        ["egg", "ei"], ["umbrella", "regenschirm"], ["rabbit", "hase"], ["hat", "hut"]
+    ].forEach((names, index) => names.forEach((name) => { pictureMap[name] = ["letter", index]; }));
+    [
+        ["sat", "sit"], ["mat", "matte"], ["tap"], ["pan"], ["pin"], ["tin", "dose"],
+        ["nap", "pause"], ["map"], ["pat"], ["sip"], ["ant"], ["mouse", "maus"],
+        ["oma"], ["mama"], ["papa"], ["lampe"]
+    ].forEach((names, index) => names.forEach((name) => { pictureMap[name] = ["word", index]; }));
+    function picture(name, fallback = "🌟", className = "") {
+        const entry = pictureMap[name.toLowerCase()];
+        if (!entry) return `<span class="pa-picture pa-picture-emoji ${className}" aria-hidden="true">${fallback}</span>`;
+        const [atlas, index] = entry;
+        const x = (index % 4) * 100 / 3;
+        const y = Math.floor(index / 4) * 100 / 3;
+        return `<span class="pa-picture pa-atlas-${atlas} ${className}" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+    }
     const dateKey = () => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -24,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const strings = {
         en: {
             eyebrow: "LITTLE SOUNDS. BIG ADVENTURES.", title: "Phonics Adventure",
+            worldInvite: "Come and play with Finn!", start: "Let’s play!", friendHint: "You can do it, little explorer!", replayGuide: "Hear Finn’s instructions", hearLetter: "Hear letter {letter}", letterVoice: "{letter}, as in {word}.", wordGuide: "Let’s build {word}. Listen: {word}. Tap the letters to build the word.", storyGuide: "Let’s read together. Then find {word}.", chooseGame: "Choose an adventure", guideReady: "Tap Finn to hear what to do.", pictureHint: "Tap the picture to listen.", chooseBook: "Pick a story", celebration: "Hooray! You did it!", tryTogether: "Let’s try together!", soundCaption: "What starts {word}?", wordCaption: "Let’s build {word}!", storyCaption: "Can you find {word}?",
             intro: "A little listening. A little reading. A whole world to discover.",
             guideName: "FINN THE FOX", welcome: "Every great reader starts with a little curiosity. Let’s go!",
             sounds: "Letter Meadow", soundsSub: "Listen & discover", words: "Word Workshop", wordsSub: "Build & blend", stories: "Story Woods", storiesSub: "Read & explore",
@@ -54,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         de: {
             eyebrow: "KLEINE LAUTE. GROSSE ABENTEUER.", title: "Lese-Abenteuer",
+            worldInvite: "Komm und spiel mit Finn!", start: "Los geht’s!", friendHint: "Du schaffst das, kleiner Lesefuchs!", replayGuide: "Finns Anleitung hören", hearLetter: "Buchstabe {letter} hören", letterVoice: "{letter}, wie {word}.", wordGuide: "Wir bauen {word}. Hör zu: {word}. Tippe auf die Buchstaben und baue das Wort.", storyGuide: "Wir lesen zusammen. Finde danach {word}.", chooseGame: "Ein Abenteuer auswählen", guideReady: "Tippe auf Finn und höre, was zu tun ist.", pictureHint: "Tippe auf das Bild und höre zu.", chooseBook: "Geschichte aussuchen", celebration: "Hurra! Du hast es geschafft!", tryTogether: "Wir versuchen es zusammen!", soundCaption: "Wie beginnt {word}?", wordCaption: "Wir bauen {word}!", storyCaption: "Findest du {word}?",
             intro: "Ein bisschen hören. Ein bisschen lesen. Eine ganze Welt entdecken.",
             guideName: "FINN DER FUCHS", welcome: "Jedes Lese-Abenteuer beginnt mit ein wenig Neugier. Los geht’s!",
             sounds: "Buchstabenwiese", soundsSub: "Hören & entdecken", words: "Wörterwerkstatt", wordsSub: "Bauen & verbinden", stories: "Geschichtenwald", storiesSub: "Lesen & entdecken",
@@ -162,6 +185,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let speechToken = 0;
     let speechTimer = null;
     let speaking = false;
+    let audioStarted = false;
+    let audioContext = null;
+    const activeTones = new Set();
     const speechSupported = Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
 
     function save() {
@@ -175,32 +201,40 @@ document.addEventListener("DOMContentLoaded", () => {
     function stopSpeech() {
         speechToken += 1;
         clearTimeout(speechTimer);
+        activeTones.forEach((tone) => { try { tone.stop(); } catch { /* Already ended. */ } });
+        activeTones.clear();
         if (speechSupported) window.speechSynthesis.cancel();
         speaking = false;
         document.querySelectorAll(".pa-speaking").forEach((element) => element.classList.remove("pa-speaking"));
+        $("replay-guide").classList.remove("pa-talking");
         syncReadButton();
     }
     function syncReadButton() {
         const button = $("read-story");
         if (button) {
-            button.textContent = t(speaking ? "stop" : "readTogether");
+            button.innerHTML = `${speaking ? '<span aria-hidden="true">■</span>' : speakerIcon}<span>${t(speaking ? "stop" : "readTogether")}</span>`;
             button.setAttribute("aria-pressed", String(speaking));
         }
     }
-    function speak(text, { slow = false, track = false } = {}) {
+    function speak(text, { slow = false, track = false, onDone = null } = {}) {
         stopSpeech();
         if (!state.audio || !speechSupported) return;
+        audioStarted = true;
         const token = speechToken;
         const utterance = new window.SpeechSynthesisUtterance(text);
         utterance.lang = state.language === "de" ? "de-DE" : "en-US";
         utterance.rate = slow ? 0.5 : state.rate;
-        const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(state.language));
+        utterance.pitch = 1.08;
+        const voices = window.speechSynthesis.getVoices().filter((item) => item.lang.toLowerCase().startsWith(state.language));
+        const preferred = state.language === "de" ? ["Google Deutsch", "Anna", "Microsoft Katja"] : ["Google US English", "Samantha", "Microsoft Jenny"];
+        const voice = preferred.map((name) => voices.find((item) => item.name.includes(name))).find(Boolean) || voices[0];
         if (voice) utterance.voice = voice;
         const finish = () => {
             if (token !== speechToken) return;
             clearTimeout(speechTimer);
             speaking = false;
             area.querySelectorAll(".pa-speaking").forEach((element) => element.classList.remove("pa-speaking"));
+            $("replay-guide").classList.remove("pa-talking");
             syncReadButton();
         };
         utterance.onboundary = (event) => {
@@ -210,20 +244,78 @@ document.addEventListener("DOMContentLoaded", () => {
                 element.classList.toggle("pa-speaking", event.charIndex >= start && event.charIndex < start + Number(element.dataset.charLength));
             });
         };
-        utterance.onend = finish;
+        utterance.onend = () => {
+            if (token !== speechToken) return;
+            finish();
+            if (onDone) onDone();
+        };
         utterance.onerror = (event) => {
             if (token !== speechToken) return;
             finish();
             if (event.error !== "canceled" && event.error !== "interrupted") {
                 $("audio-status").textContent = t("audioError");
-                if (!solved) announce(t("audioError"));
+                if (!solved && !feedback.textContent) announce(t("audioError"));
             }
         };
         // Some browser voices omit lifecycle events. Never leave the UI stuck reading.
         speaking = true;
+        $("replay-guide").classList.add("pa-talking");
         syncReadButton();
         speechTimer = setTimeout(finish, Math.max(10000, text.length * 350));
         window.speechSynthesis.speak(utterance);
+    }
+    function soundEffect(success = false) {
+        if (!state.audio) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        try {
+            audioContext ||= new AudioContext();
+            audioContext.resume().catch(() => {});
+            const notes = success ? [523.25, 659.25, 783.99] : [440];
+            notes.forEach((frequency, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                const start = audioContext.currentTime + index * 0.09;
+                oscillator.type = "sine";
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(success ? 0.065 : 0.025, start + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+                activeTones.add(oscillator);
+                oscillator.onended = () => { activeTones.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
+                oscillator.start(start);
+                oscillator.stop(start + 0.18);
+            });
+        } catch { /* Visual feedback remains available when sound output is blocked. */ }
+    }
+    function guidePrompt() {
+        if (!active) return t("guideReady");
+        if (journey().mode === "sounds") return t(state.language === "en" && active[0] === "x" ? "endPrompt" : "soundPrompt", { word: active[1] });
+        if (journey().mode === "words") return t("wordGuide", { word: active.text });
+        return t("storyGuide", { word: active.pages[storyPage].target });
+    }
+    function speakGuide() {
+        if (journey().mode === "stories") {
+            const page = active.pages[storyPage];
+            speak(page.text, { track: true, onDone: () => speak(t("storyListen", { word: page.target })) });
+        } else speak(guidePrompt());
+    }
+    function cheer(message) {
+        speak(message);
+        soundEffect(true);
+        $("guide-message").textContent = t("celebration");
+    }
+    function retry(message) {
+        announce(message, "retry");
+        speak(message);
+        $("guide-message").textContent = t("tryTogether");
+    }
+    function guideCaption() {
+        if (journey().mode === "sounds") return state.language === "en" && active[0] === "x" ? t("endHint") : t("soundCaption", { word: active[1] });
+        if (journey().mode === "words") return t("wordCaption", { word: active.text });
+        return t("storyCaption", { word: active.pages[storyPage].target });
     }
     function announce(message, kind = "hint") {
         feedback.className = `pa-feedback pa-${kind}`;
@@ -260,7 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
         $("goal-stars").innerHTML = Array.from({ length: 5 }, (_, index) => `<span class="${index < current.daily.count ? "is-collected" : ""}">★</span>`).join("");
         $("daily-progress").value = current.daily.count;
         $("goal-caption").textContent = current.daily.count >= 5 ? t("goalDone") : t("dailyCount", { n: current.daily.count });
-        $("guide-message").textContent = t(current.daily.count >= 5 ? "goalDone" : "welcome");
         $("journey-stats").innerHTML = [["statLetters", current.sounds.length, letters().length], ["statWords", current.words.length, groups().reduce((sum, group) => sum + group.items.length, 0)], ["statStories", current.stories.length, stories().length]].map(([label, count, total]) => `<div><span>${t(label)}</span><strong>${count}<small> / ${total}</small></strong><span class="pa-meter" aria-hidden="true"><i style="width:${count / total * 100}%"></i></span></div>`).join("");
         const badges = [["✦", "badgeFirst", current.sounds.length + current.words.length + current.pages.length > 0], ["Aa", "badgeLetters", current.sounds.length >= 10], ["abc", "badgeWords", current.words.length >= 5], ["▤", "badgeStory", current.stories.length > 0], ["★", "badgeGoal", current.daily.count >= 5]];
         $("badge-list").innerHTML = badges.map(([icon, label, earned]) => `<span class="pa-badge ${earned ? "is-earned" : ""}" title="${t(label)}: ${t(earned ? "badgeEarned" : "badgeLocked")}"><span aria-hidden="true">${icon}</span><small>${t(label)}</small><span class="pa-sr">: ${t(earned ? "badgeEarned" : "badgeLocked")}</span></span>`).join("");
@@ -287,6 +378,10 @@ document.addEventListener("DOMContentLoaded", () => {
         $("voice-speed").value = state.rate;
         $("focus-toggle").textContent = t(focusMode ? "exitFocus" : "focus");
         $("audio-status").textContent = t(speechSupported ? "available" : "unavailable");
+        $("replay-guide").setAttribute("aria-label", t("replayGuide"));
+        $("replay-guide").disabled = !state.audio || !speechSupported;
+        app.querySelector(".pa-play-modes").setAttribute("aria-label", t("chooseGame"));
+        app.querySelectorAll("[data-play-mode]").forEach((button) => button.setAttribute("aria-label", t(button.dataset.playMode)));
         updateAudioButton();
         updateSummary();
     }
@@ -315,6 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selection = [];
         tileBuffer = "";
         clearFeedback();
+        area.scrollTop = 0;
         next.classList.remove("pa-ready");
         next.disabled = false;
         const mode = journey().mode;
@@ -335,9 +431,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mode === "sounds") renderSounds(last, preferred);
         else if (mode === "words") renderWords(last, preferred);
         else renderStory(last, preferred);
+        $("guide-message").textContent = guideCaption();
+        $("replay-guide").disabled = !state.audio || !speechSupported;
+        app.querySelectorAll("[data-play-mode]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.playMode === mode)));
         save();
+        if (audioStarted) speakGuide();
     }
-    const listenButton = (id, label = "listen") => `<button type="button" class="pa-button pa-listen" id="${id}" ${!state.audio || !speechSupported ? "disabled" : ""}><span aria-hidden="true">♪</span> ${t(label)}</button>`;
+    const speakerIcon = '<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 5 9H2v6h3l6 5z" fill="currentColor" stroke="none"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg>';
+    const listenButton = (id, label = "listen") => `<button type="button" class="pa-button pa-listen" id="${id}" ${!state.audio || !speechSupported ? "disabled" : ""}>${speakerIcon}<span>${t(label)}</span></button>`;
 
     function renderSounds(last, preferred) {
         active = pick(letters(), journey().sounds, last, preferred);
@@ -346,12 +447,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const isEnd = state.language === "en" && letter === "x";
         const choices = shuffle([letter, ...shuffle(letters().filter(([item]) => item !== letter)).slice(0, 2).map(([item]) => item)]);
         area.innerHTML = `<div class="pa-activity-heading"><h2 tabindex="-1" id="activity-title">${t("soundTitle")}</h2><p>${t(isEnd ? "endHint" : "soundHint")}</p></div>
-            <div class="pa-letter-scene"><span class="pa-scene-dot pa-dot-one" aria-hidden="true"></span><span class="pa-scene-dot pa-dot-two" aria-hidden="true"></span><span class="pa-example-emoji" aria-hidden="true">${emoji}</span><span class="pa-example-word">${escape(word)}</span>${listenButton("listen-letter")}</div>
-            <div class="pa-letter-choices" aria-label="${t("letterHint")}">${choices.map((item) => `<button type="button" class="pa-letter-choice" data-letter="${item}" aria-label="${item}"><span>${item}</span><small aria-hidden="true">${item.toUpperCase()}</small><span class="pa-choice-result" aria-hidden="true"></span></button>`).join("")}</div>
+            <div class="pa-letter-scene"><span class="pa-scene-dot pa-dot-one" aria-hidden="true"></span><span class="pa-scene-dot pa-dot-two" aria-hidden="true"></span><button type="button" class="pa-picture-button pa-listen" id="listen-picture" aria-label="${t("listen")}: ${escape(word)}" ${!state.audio || !speechSupported ? "disabled" : ""}>${picture(word, emoji)}<span class="pa-picture-speaker" aria-hidden="true">${speakerIcon}</span></button><span class="pa-example-word">${escape(word)}</span>${listenButton("listen-letter")}</div>
+            <div class="pa-letter-choices" aria-label="${t("letterHint")}">${choices.map((item) => `<div class="pa-choice-house"><button type="button" class="pa-letter-choice" data-letter="${item}" aria-label="${item}"><span class="pa-letter-creature" aria-hidden="true"><i></i><i></i><b></b></span><span class="pa-choice-letter">${item}</span><small aria-hidden="true">${item.toUpperCase()}</small><span class="pa-choice-result" aria-hidden="true"></span></button><button type="button" class="pa-hear-letter pa-listen" data-hear-letter="${item}" aria-label="${t("hearLetter", { letter: item })}" ${!state.audio || !speechSupported ? "disabled" : ""}>${speakerIcon}</button></div>`).join("")}</div>
             <details class="pa-letter-library"><summary>${t("pickLetter")} <span>${t("letterCount", { n: journey().sounds.length, total: letters().length })}</span></summary><div class="pa-alphabet">${letters().map(([item]) => `<button type="button" data-explore="${item}" class="${journey().sounds.includes(item) ? "is-discovered" : ""}" aria-label="${t("chooseLetter", { letter: item })}; ${t(journey().sounds.includes(item) ? "mastered" : "newDiscovery")}" ${item === letter ? 'aria-current="true"' : ""}>${item}</button>`).join("")}</div></details>`;
         $("activity-tip").textContent = t("letterHint");
         next.textContent = t("skip");
         $("listen-letter").onclick = () => speak(t(isEnd ? "endPrompt" : "soundPrompt", { word }));
+        $("listen-picture").onclick = () => speak(word);
+        area.querySelectorAll("[data-hear-letter]").forEach((button) => {
+            button.onclick = () => {
+                const [name, example] = letters().find(([name]) => name === button.dataset.hearLetter);
+                speak(t("letterVoice", { letter: name.toUpperCase(), word: example }));
+            };
+        });
         area.querySelectorAll("[data-letter]").forEach((button) => {
             button.onclick = () => {
                 if (solved || button.disabled) return;
@@ -361,13 +469,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     reward("sounds", letter);
                     area.querySelectorAll("[data-letter]").forEach((choice) => { choice.disabled = true; });
                     announce(t(isEnd ? "correctEnd" : "correctLetter", { letter, word }), "success");
+                    cheer(t(isEnd ? "correctEnd" : "correctLetter", { letter, word }));
                     next.textContent = t("anotherLetter");
                 } else {
                     recordAttempt(false);
                     button.classList.add("is-wrong");
                     button.querySelector(".pa-choice-result").textContent = "↻";
                     button.disabled = true;
-                    announce(t("wrongLetter"), "retry");
+                    retry(t("wrongLetter"));
                     save();
                     updateSummary();
                 }
@@ -383,14 +492,15 @@ document.addEventListener("DOMContentLoaded", () => {
         selection = Array(active.tiles.length).fill(null);
         area.innerHTML = `<div class="pa-trail-picker"><label for="word-trail" class="pa-sr">${t("wordSet")}</label><select id="word-trail">${groups().map((item) => `<option value="${item.id}" ${item.id === group.id ? "selected" : ""}>${item.title}</option>`).join("")}</select><span>${t("trailCount", { n: group.items.filter((item) => journey().words.includes(item.id)).length, total: group.items.length })}</span></div>
             <div class="pa-activity-heading"><h2 tabindex="-1" id="activity-title">${t("wordTitle")}</h2><p>${t("buildHint")}</p></div>
-            <div class="pa-word-clue"><span aria-hidden="true">${active.emoji}</span><div class="pa-listen-row">${listenButton("listen-word")}${listenButton("listen-slow", "slower")}</div><button type="button" id="show-word" class="pa-text-button" aria-expanded="false" aria-controls="word-model">${t("showWord")}</button><p id="word-model" class="pa-word-model" hidden>${escape(active.text)}</p></div>
+            <div class="pa-word-clue"><button type="button" class="pa-picture-button pa-listen" id="word-picture" aria-label="${t("listen")}: ${escape(active.text)}" ${!state.audio || !speechSupported ? "disabled" : ""}>${picture(active.text, active.emoji)}<span class="pa-picture-speaker" aria-hidden="true">${speakerIcon}</span></button><div class="pa-listen-row">${listenButton("listen-word")}${listenButton("listen-slow", "slower")}</div><button type="button" id="show-word" class="pa-text-button" aria-expanded="false" aria-controls="word-model">${t("showWord")}</button><p id="word-model" class="pa-word-model" hidden>${escape(active.text)}</p></div>
             <div class="pa-word-slots" id="word-slots" role="group" aria-label="${t("wordTitle")}"></div>
             <div class="pa-letter-bank" id="letter-bank" role="group" aria-label="${t("buildHint")}">${bank.map((tile) => `<button type="button" class="pa-tile" data-tile="${tile.id}" aria-label="${t("tile", { letter: tile.text })}">${tile.text}</button>`).join("")}</div>
-            <div class="pa-builder-actions"><button type="button" class="pa-text-button" id="undo-letter">↶ ${t("undo")}</button><button type="button" class="pa-button pa-primary" id="check-word" disabled>${t("check")}</button><button type="button" class="pa-text-button" id="clear-word">${t("clear")}</button></div><p class="pa-trail-hint">${group.hint}${group.id === "teams" ? ` ${t("soundTeam")}` : ""}</p>`;
+            <div class="pa-builder-actions"><button type="button" class="pa-text-button" id="undo-letter"><span aria-hidden="true">↶</span> ${t("undo")}</button><button type="button" class="pa-button pa-primary" id="check-word" disabled><span aria-hidden="true">✓</span> ${t("check")}</button><button type="button" class="pa-text-button" id="clear-word"><span aria-hidden="true">↻</span> ${t("clear")}</button></div><p class="pa-trail-hint">${group.hint}${group.id === "teams" ? ` ${t("soundTeam")}` : ""}</p>`;
         next.textContent = t("skip");
         $("activity-tip").textContent = t("keyboardTip");
         $("word-trail").onchange = (event) => { journey().group = event.target.value; journey().selected.words = null; renderActivity(); };
         $("listen-word").onclick = () => speak(active.text);
+        $("word-picture").onclick = () => speak(active.text);
         $("listen-slow").onclick = () => speak(active.text, { slow: true });
         $("show-word").onclick = () => {
             clueVisible = !clueVisible;
@@ -409,6 +519,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const index = selection.indexOf(null);
         if (index < 0) return;
         selection[index] = id;
+        soundEffect();
         clearFeedback();
         syncBuilder();
     }
@@ -439,10 +550,10 @@ document.addEventListener("DOMContentLoaded", () => {
             syncBuilder();
             announce(t("correctWord", { word: active.text }), "success");
             next.textContent = t("nextWord");
-            speak(active.text);
+            cheer(t("correctWord", { word: active.text }));
         } else {
             recordAttempt(false);
-            announce(t("wrongWord"), "retry");
+            retry(t("wrongWord"));
             save();
             updateSummary();
         }
@@ -465,12 +576,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return `<button type="button" class="pa-story-word" data-word="${escape(normalize(token))}" data-char-start="${start}" data-char-length="${token.length}">${escape(token)}</button>`;
         }).join("");
         area.innerHTML = `<div class="pa-story-picker"><label class="pa-sr" for="story-select">${t("chooseStory")}</label><select id="story-select">${stories().map((story) => `<option value="${story.id}" ${story.id === active.id ? "selected" : ""}>${story.emoji} ${story.title}${journey().stories.includes(story.id) ? " ✓" : ""}</option>`).join("")}</select><span>${t("page", { n: storyPage + 1, total: active.pages.length })}</span></div>
-            <div class="pa-book"><div class="pa-book-heading"><h2 id="activity-title" tabindex="-1">${active.title}</h2><div class="pa-book-dots" aria-hidden="true">${active.pages.map((_, index) => `<span class="${index === storyPage ? "is-current" : ""} ${journey().pages.includes(`${active.id}:${index}`) ? "is-read" : ""}"></span>`).join("")}</div></div><span class="pa-book-picture" aria-hidden="true">${page.emoji}</span><p class="pa-story-sentence" id="story-sentence">${tokens}</p><button type="button" class="pa-button pa-listen" id="read-story" aria-pressed="false" ${!state.audio || !speechSupported ? "disabled" : ""}>${t("readTogether")}</button></div>
+            <details class="pa-story-library"><summary><span aria-hidden="true">📚</span> ${t("chooseBook")}</summary><div class="pa-book-shelf">${stories().map((story) => `<button type="button" data-book="${story.id}" aria-label="${escape(story.title)}" ${story.id === active.id ? 'aria-current="true"' : ""}>${story.id === "fox" ? '<img alt="" aria-hidden="true" src="assets/finn.webp" width="70" height="70"/>' : picture(story.id, story.emoji)}<span>${story.title}</span>${journey().stories.includes(story.id) ? '<b aria-hidden="true">✓</b>' : ""}</button>`).join("")}</div></details>
+            <div class="pa-book"><div class="pa-book-heading"><h2 id="activity-title" tabindex="-1">${active.title}</h2><div class="pa-book-dots" aria-hidden="true">${active.pages.map((_, index) => `<span class="${index === storyPage ? "is-current" : ""} ${journey().pages.includes(`${active.id}:${index}`) ? "is-read" : ""}"></span>`).join("")}</div></div><div class="pa-book-illustration"><span class="pa-book-cloud" aria-hidden="true">☁</span>${active.id === "fox" ? '<img src="assets/finn.webp" alt="" aria-hidden="true" width="170" height="170"/>' : picture(active.id, active.emoji)}<span class="pa-book-flower" aria-hidden="true">🌼</span></div><p class="pa-story-sentence" id="story-sentence">${tokens}</p><button type="button" class="pa-button pa-listen" id="read-story" aria-pressed="false" ${!state.audio || !speechSupported ? "disabled" : ""}>${speakerIcon}<span>${t("readTogether")}</span></button></div>
             <div class="pa-story-challenge"><div><span>${t("findWord")}</span><strong>${page.target}</strong></div>${listenButton("listen-target")}<p>${t("storyHint")}</p></div>`;
         $("activity-tip").textContent = t("storyTip");
         next.textContent = t(storyPage === active.pages.length - 1 ? "nextBook" : "nextPage");
         next.disabled = true;
         $("story-select").onchange = (event) => { storyPage = 0; renderActivity({ specific: event.target.value }); };
+        area.querySelectorAll("[data-book]").forEach((button) => { button.onclick = () => { storyPage = 0; renderActivity({ specific: button.dataset.book }); focusTitle(); }; });
         $("read-story").onclick = () => { if (speaking) stopSpeech(); else speak(page.text, { track: true }); };
         $("listen-target").onclick = () => speak(t("storyListen", { word: page.target }));
         area.querySelectorAll("[data-word]").forEach((button) => {
@@ -486,12 +599,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         updateSummary();
                     }
                     announce(t(storyPage === active.pages.length - 1 && finishedBook ? "storyDone" : "correctStory", { word: page.target, title: active.title }), "success");
+                    cheer(t(storyPage === active.pages.length - 1 && finishedBook ? "storyDone" : "correctStory", { word: page.target, title: active.title }));
                     area.querySelectorAll("[data-word]").forEach((word) => { word.disabled = true; });
                 } else {
                     recordAttempt(false);
                     button.classList.add("is-wrong");
                     button.disabled = true;
-                    announce(t("wrongStory"), "retry");
+                    retry(t("wrongStory"));
                     save();
                     updateSummary();
                 }
@@ -500,7 +614,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function focusTitle() { $("activity-title")?.focus({ preventScroll: true }); }
     function changeMode(mode) {
-        if (!MODES.includes(mode) || journey().mode === mode) return;
+        if (!MODES.includes(mode)) return;
+        if (journey().mode === mode) { if (audioStarted) speakGuide(); return; }
         journey().mode = mode;
         storyPage = 0;
         renderActivity();
@@ -519,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
         focusTitle();
     };
     document.querySelectorAll("[data-mode]").forEach((button, index) => {
-        button.onclick = () => changeMode(button.dataset.mode);
+        button.onclick = () => { audioStarted = true; changeMode(button.dataset.mode); };
         button.onkeydown = (event) => {
             let newIndex;
             if (event.key === "ArrowRight") newIndex = (index + 1) % MODES.length;
@@ -549,6 +664,8 @@ document.addEventListener("DOMContentLoaded", () => {
         state.audio = !state.audio;
         updateAudioButton();
         area.querySelectorAll(".pa-listen").forEach((button) => { button.disabled = !state.audio; });
+        $("replay-guide").disabled = !state.audio;
+        if (state.audio) { audioStarted = true; speakGuide(); }
         save();
     };
     $("voice-speed").onchange = (event) => { stopSpeech(); state.rate = Number(event.target.value) === 0.9 ? 0.9 : 0.7; save(); };
@@ -560,6 +677,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (enabled) $("activity-panel").scrollIntoView({ block: "start" });
     }
     $("focus-toggle").onclick = () => setFocus(!focusMode);
+    $("start-adventure").onclick = () => {
+        audioStarted = true;
+        setFocus(true);
+        $("replay-guide").focus({ preventScroll: true });
+        speakGuide();
+    };
+    $("replay-guide").onclick = speakGuide;
+    document.querySelectorAll("[data-play-mode]").forEach((button) => {
+        button.onclick = () => { audioStarted = true; changeMode(button.dataset.playMode); };
+    });
     $("reset-progress").onclick = () => {
         if (!window.confirm(t("resetConfirm"))) return;
         stopSpeech();
@@ -589,6 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeech(); else { refreshDay(); updateSummary(); save(); } });
     window.addEventListener("pagehide", stopSpeech);
     translate();
+    $("replay-guide").querySelector(".pa-guide-speaker").innerHTML = speakerIcon;
     renderActivity();
     if (migrated) announce(t("legacy"));
 });
