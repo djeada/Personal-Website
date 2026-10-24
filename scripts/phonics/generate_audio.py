@@ -1,5 +1,7 @@
 """Record every spoken clip of Phonics Adventure with neural voices.
 
+Letters are spoken by their names ("em", "ess"; German "Em", "Es").
+
 English uses Kokoro-82M (voice af_heart, Apache-2.0). German uses the
 Kokoro-compatible kikiri-tts "Victoria" fine-tune (Apache-2.0). Whisper
 large-v3 checks that each clip says what it should and supplies word timings
@@ -35,10 +37,9 @@ OUT = TOOL / "audio"
 CACHE = Path(__file__).with_name("audio_cache.json")
 SR = 24000
 FRAME = 600  # Kokoro predicts durations in frames of 600 samples.
-VOWELS = set("aeiouyæɛɪɑʌɒɔøœəɜɐAEIOUWY")
+OVERRIDE = re.compile(r"\[([^\]]+)\]\(/([^/]+)/\)")
 # espeak-ng cannot transcribe these words for the German voice.
 GERMAN_PRONUNCIATION = {"Gurke": "ɡˈʊɾkə."}
-CONTINUANTS = {"s", "z", "ʃ", "f", "v", "θ", "m", "n", "ŋ", "l", "ɹ", "r", "x", "ks"}
 
 
 def use_system_espeak():
@@ -107,7 +108,21 @@ class Voice:
             self.pipe = KPipeline(lang_code="d", model=self.model)
             self.voice = torch.load(german / "voices/victoria.pt", map_location="cpu")
 
+    def german_phonemes(self, text):
+        """espeak has no inline pronunciations, so splice the [Name](/ipa/) parts in by hand."""
+        out, pos = [], 0
+        for match in OVERRIDE.finditer(text):
+            if text[pos:match.start()].strip(" "):
+                out.append(self.pipe.g2p(text[pos:match.start()])[0].strip())
+            out.append(match.group(2))
+            pos = match.end()
+        if text[pos:].strip(" "):
+            out.append(self.pipe.g2p(text[pos:])[0].strip())
+        return " ".join(part for part in out if part)
+
     def say(self, text, speed=0.88):
+        if self.code != "en" and OVERRIDE.search(text):
+            return self.KPipeline.infer(self.model, self.german_phonemes(text), self.voice, speed).audio.cpu().numpy()
         chunks = [audio.numpy() for _, _, audio in self.pipe(text, voice=self.voice, speed=speed)]
         return np.concatenate(chunks)
 
@@ -116,7 +131,7 @@ class Voice:
         if self.code != "en":
             # The German front end has no word timings, so locate the word by its predicted phoneme lengths.
             carrier = self.pipe.g2p("Okay.")[0] + " "
-            word = GERMAN_PRONUNCIATION.get(text) or self.pipe.g2p(text + ".")[0]
+            word = GERMAN_PRONUNCIATION.get(text) or (self.german_phonemes(text) + "." if OVERRIDE.search(text) else self.pipe.g2p(text + ".")[0])
             out = self.KPipeline.infer(self.model, carrier + word, self.voice, speed)
             start = np.cumsum(out.pred_dur.cpu().numpy())[len(carrier)] * FRAME
             return out.audio.cpu().numpy()[max(0, start - int(0.05 * SR)):]
@@ -127,31 +142,6 @@ class Voice:
         stop = next(i for i, t in enumerate(tokens) if t.text == ".")
         span = [t for t in tokens[stop + 1:] if re.search(r"\w", t.text)]
         return audio[int(max(0, span[0].start_ts - 0.05) * SR):int((span[-1].end_ts + 0.12) * SR)]
-
-    def held(self, ps, lengths, speed=0.85):
-        """Synthesise phonemes with chosen symbols held for a set number of 25ms frames."""
-        import torch
-        m = self.model
-        with torch.no_grad():
-            ids = torch.LongTensor([[0, *[m.vocab[c] for c in ps], 0]]).to(m.device)
-            ref = self.voice[len(ps) - 1].to(m.device)
-            size = torch.full((1,), ids.shape[-1], device=m.device, dtype=torch.long)
-            mask = torch.zeros_like(ids, dtype=torch.bool)
-            d_en = m.bert_encoder(m.bert(ids, attention_mask=(~mask).int())).transpose(-1, -2)
-            style = ref[:, 128:]
-            d = m.predictor.text_encoder(d_en, style, size, mask)
-            x, _ = m.predictor.lstm(d)
-            durations = torch.round(torch.sigmoid(m.predictor.duration_proj(x)).sum(-1).squeeze() / speed).clamp(min=1).long()
-            durations[0] = 4
-            for index, count in lengths.items():
-                durations[index] = count  # Index 0 is the start token, so symbol k sits at k + 1.
-            index = torch.repeat_interleave(torch.arange(ids.shape[1], device=m.device), durations)
-            align = torch.zeros((ids.shape[1], index.shape[0]), device=m.device)
-            align[index, torch.arange(index.shape[0])] = 1
-            align = align.unsqueeze(0)
-            f0, noise = m.predictor.F0Ntrain(d.transpose(-1, -2) @ align, style)
-            audio = m.decoder(m.text_encoder(ids, size, mask) @ align, f0, noise, ref[:, :128]).squeeze()
-        return audio.cpu().numpy(), durations.cpu().numpy()
 
 
 def trim(audio, pad=0.04, floor=0.012, rel=0.04):
@@ -174,86 +164,6 @@ def fade(audio, ms=25):
     return audio
 
 
-def stretch(audio, factor):
-    """Slow a steady sound down without changing its pitch (ffmpeg WSOLA)."""
-    chain = []
-    while factor > 2:
-        chain.append("atempo=0.5")
-        factor /= 2
-    chain.append(f"atempo={1 / factor:.4f}")
-    with tempfile.TemporaryDirectory() as tmp:
-        src, dst = Path(tmp, "in.wav"), Path(tmp, "out.wav")
-        sf.write(src, audio, SR)
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", src, "-af", ",".join(chain), dst], check=True)
-        return sf.read(dst, dtype="float32")[0]
-
-
-def frames(audio, size=240):
-    """Per-10ms loudness (dB) and spectral centroid (Hz)."""
-    out = []
-    for i in range(0, len(audio) - size, size):
-        x = audio[i:i + size]
-        spectrum = np.abs(np.fft.rfft(x * np.hanning(size)))
-        freqs = np.fft.rfftfreq(size, 1 / SR)
-        out.append((20 * np.log10(np.sqrt((x ** 2).mean()) + 1e-7), (spectrum * freqs).sum() / (spectrum.sum() + 1e-9)))
-    return np.array(out)
-
-
-def vowel_span(audio):
-    """First and last 10ms frame of the carrier vowel: loud and low-pitched in spectrum."""
-    f = frames(audio)
-    loud = f[:, 0] > f[:, 0].max() - 7
-    vowel = np.where(loud & (f[:, 1] < 2500))[0]
-    sound = np.where(f[:, 0] > f[:, 0].max() - 45)[0]
-    return vowel[0], vowel[-1], sound[0], sound[-1]
-
-
-def phoneme_clip(voice, ph, code):
-    """An isolated letter sound: held for continuants, clipped for stops, plain for vowels.
-
-    The consonant is spoken next to a vowel with its duration stretched inside the
-    model, then cut where the vowel begins (or ends, for sounds heard at the end).
-    """
-    hop = 240
-    if ph[0] in VOWELS:
-        audio, _ = voice.held("ˈ" + ph, {i + 2: 14 // len(ph) for i in range(len(ph))})
-        return fade(trim(audio, pad=0.02), 40)
-    if ph in CONTINUANTS:
-        if ph in ("ŋ", "x", "ks"):
-            audio, d = voice.held("ˈɑ" + ph, {i + 3: 9 for i in range(len(ph))})
-            start = d[:3].sum() * FRAME
-            part = audio[start:start + d[3:3 + len(ph)].sum() * FRAME + int(0.05 * SR)]
-        else:
-            audio, d = voice.held(ph + "ˈɑ", {1: 18})
-            part = audio[d[0] * FRAME:(d[0] + d[1]) * FRAME - int(0.02 * SR)]
-        part = trim(part, pad=0.01, floor=0)
-        if len(part) < 0.38 * SR:
-            part = stretch(part, 0.42 * SR / len(part))
-        return fade(part, 45)
-    # Stops and glides need a breath of vowel to be heard; keep it as short as possible.
-    keep = 9 if ph in ("h", "w", "j", "kw", "kv") else 6
-    if voice.code == "en":
-        # The English voice barely releases a stop at the very start, so take it from between two vowels.
-        audio, d = voice.held("ə" + ph + "ˈɑ", {})
-        f = frames(audio)
-        lo = max(0, d[:2].sum() * FRAME // hop - 6)
-        hi = (d[:2 + len(ph)].sum() * FRAME) // hop + 6
-        dip = lo + int(np.argmin(f[lo:hi, 0]))
-        vowel = next(i for i in range(dip + 1, len(f)) if f[i, 0] > f[:, 0].max() - 7 and f[i, 1] < 2500)
-        return fade(audio[dip * hop:(vowel + keep) * hop], 20)
-    audio, _ = voice.held(ph + "ˈɑ", {})
-    first, _, _, _ = vowel_span(audio)
-    return fade(trim(audio[max(0, first - 12) * hop:(first + keep) * hop], pad=0.01, floor=0, rel=0.012), 20)
-
-
-def concat(parts, gap=0.28):
-    silence = np.zeros(int(SR * gap), dtype=np.float32)
-    out = []
-    for part in parts:
-        out += [part.astype(np.float32), silence]
-    return np.concatenate(out[:-1])
-
-
 def encode(audio, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     peak = np.abs(audio).max() or 1
@@ -271,26 +181,40 @@ def plan(code, lang):
     clips = []
     words = set(lang["pictures"]) | {example for example, _ in lang["sounds"].values()}
     tokens = {}
+    texts = [page["text"] for story in lang["stories"].values() for page in story["pages"]] + [s["text"] for s in lang["sentences"]]
+    for text in texts:
+        for token in re.findall(r"[\w']+", text):
+            tokens.setdefault(word_key(token), token)
     for story in lang["stories"].values():
-        for page in story["pages"]:
-            for token in re.findall(r"[\w']+", page["text"]):
-                tokens.setdefault(word_key(token), token)
+        for question in story["questions"]:
+            words.update([question["answer"], *question["others"]])
     spelled = lang.get("spelling", {})
     for word in sorted(words):
         clips.append((f"w:{word_key(word)}", "word", spelled.get(word, word)))
     for key, token in sorted(tokens.items()):
         if f"w:{key}" not in {c[0] for c in clips}:
             clips.append((f"w:{key}", "word", token))
-    for grapheme, ph in lang["phonemes"].items():
-        clips.append((f"ph:{grapheme}", "phoneme", ph))
+    # Letters are spoken by their names ("em", "ess"); teams are spelled letter by letter.
+    for grapheme, name in lang["names"].items():
+        clips.append((f"ph:{grapheme}", "name", name))
     for grapheme, (example, _) in lang["sounds"].items():
-        clips.append((f"in:{grapheme}", "intro", [lang["phonemes"][grapheme], spelled.get(example, example)]))
+        text = lang["introTemplate"].replace("{name}", lang["names"][grapheme]).replace("{word}", spelled.get(example, example))
+        clips.append((f"in:{grapheme}", "intro", text))
     for name, text in lang["lines"].items():
         clips.append((f"line:{name}", "line", text))
     for story_id, story in lang["stories"].items():
         for i, page in enumerate(story["pages"]):
             clips.append((f"st:{story_id}:{i}", "story", page["text"]))
+        for i, question in enumerate(story["questions"]):
+            clips.append((f"q:{story_id}:{i}", "line", question["text"]))
+    # Sentence clips also yield a copy with the answer word silenced, for "which word is missing?".
+    for i, item in enumerate(lang["sentences"]):
+        clips.append((f"sn:{i}", "sentence", [item["text"], item["answer"]]))
     return clips
+
+
+def i_slug(clip_id):
+    return slug(clip_id.partition(":")[2].replace(":", "-"))
 
 
 def similar(heard, expected):
@@ -344,20 +268,49 @@ def main():
             key = f"{code}/{clip_id}"
             if not args.force and cache.get(key) == digest and path.exists() and clip_id in old.get(code, {}):
                 manifest[code][clip_id] = old[code][clip_id]
-                continue
+                if kind == "sentence" and f"cz:{clip_id[3:]}" in old.get(code, {}):
+                    manifest[code][f"cz:{clip_id[3:]}"] = old[code][f"cz:{clip_id[3:]}"]
+                    continue
+                if kind != "sentence":
+                    continue
             entry = None
-            if kind == "phoneme":
-                audio = phoneme_clip(voice, payload, code)
-            elif kind == "intro":
-                ph, example = payload
-                sound = phoneme_clip(voice, ph, code)
-                audio = concat([trim(voice.say(lang["lines"]["listen"])), sound, sound, trim(voice.say(example + "!"))], 0.35)
+            if kind == "name":
+                audio = fade(trim(voice.word(payload)), 15)
+                print("name", code, clip_id, "heard", listen(audio, code)[0])
+            elif kind == "sentence":
+                text, answer = payload
+                tokens = re.findall(r"\S+", text)
+                for attempt in range(3):
+                    audio = trim(voice.say(text, 0.88 - 0.04 * attempt))
+                    heard, words = listen(audio, code, words=True)
+                    if similar(heard, text) and len(words) == len(tokens):
+                        break
+                else:
+                    problems.append(f"{code} {clip_id}: expected {text!r}, heard {heard!r} ({len(words)} words)")
+                starts = [round(w.start, 2) for w in words] if len(words) == len(tokens) else None
+                if starts is None:
+                    total, lengths = len(audio) / SR, [len(t) + 2 for t in tokens]
+                    starts = [round(total * sum(lengths[:i]) / sum(lengths), 2) for i in range(len(tokens))]
+                entry = starts
+                # Silence the answer word from its start to the next word, with short fades either side.
+                index = next(i for i, token in enumerate(tokens) if word_key(token) == word_key(answer))
+                gap = audio.copy()
+                lo = int(max(0, starts[index] - 0.02) * SR)
+                hi = int((starts[index + 1] - 0.03) * SR) if index + 1 < len(tokens) else len(audio)
+                gap[lo:hi] = 0
+                gap[max(0, lo - 240):lo] *= np.linspace(1, 0, len(gap[max(0, lo - 240):lo]))
+                cloze_name = f"cz-{i_slug(clip_id)}.mp3"
+                manifest[code][f"cz:{clip_id[3:]}"] = [cloze_name, encode(gap, OUT / code / cloze_name)]
             else:
                 for attempt in range(3):
                     speed = 0.88 - 0.04 * attempt
                     audio = trim(voice.word(payload, speed) if kind == "word" else voice.say(payload, speed))
                     heard, words = listen(audio, code, words=(kind == "story"))
-                    # Whisper cannot tell one-syllable homophones apart (bee/B, see/C), so only longer words are checked strictly.
+                    # Whisper cannot tell one-syllable homophones apart (bee/B, see/C), and intros contain
+                    # letter names written as phonemes, so those are only printed for a listen-through.
+                    if kind == "intro":
+                        print("intro", code, clip_id, "heard", heard)
+                        break
                     if similar(heard, payload) or (kind == "word" and len(payload) <= 3):
                         break
                 else:
