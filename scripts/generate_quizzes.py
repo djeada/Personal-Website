@@ -1,407 +1,442 @@
 """
-Quiz Generator Script
+Quiz generator.
 
-Fetches quiz questions from markdown files in various repositories and generates
-JSON files for the quiz application.
+Reads the multiple-choice quizzes kept in the notes repositories
+(``quizzes/*.md``) and writes the JSON the quiz app loads from
+``src/tools/quiz_app``. The source format is::
 
-Features:
-- Concurrent downloads for faster processing
-- Robust markdown parsing with validation
-- Atomic file writes to prevent data corruption
-- Comprehensive error handling and logging
-- Support for multiple question formats
+    # Processes Quiz
+
+    Notes: [Processes](../notes/processes.md)
+
+    #### Q. Which signal cannot be caught or ignored?
+
+    * [ ] `SIGTERM`
+    * [x] `SIGKILL`
+    * [ ] `SIGINT`
+
+    > **Explanation:** The kernel handles SIGKILL itself.
+
+Every question is validated. Broken questions (no or several correct
+answers, duplicate options) are left out and reported; questions that only
+fall short of the style rules produce warnings, which ``--strict`` turns
+into failures.
+
+Usage:
+    python3 generate_quizzes.py                       # fetch from GitHub
+    python3 generate_quizzes.py --local-root ~/my_repos
+    python3 generate_quizzes.py --check --strict      # validate only
 """
 
-import json
+import argparse
 import logging
 import re
 import sys
-import tempfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.append(str(SCRIPT_DIR))
 
+from learning_sources import (  # noqa: E402
+    DATABASES,
+    DEVOPS,
+    FRONTEND,
+    LINUX,
+    PARALLEL,
+    SCHEMA_VERSION,
+    STATISTICS,
+    Category,
+    Source,
+    SourceFile,
+    SourceLoader,
+    document_title,
+    normalise_text,
+    remove_stale_json,
+    render_markdown,
+    slugify,
+    stable_id,
+    write_json,
+)
+import requests  # noqa: E402
 
-URL_TO_CATEGORY: Dict[str, str] = {
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/01_basic_terminology.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/02_threading.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/03_processes.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/04_async.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/05_distributed.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/06_hardware.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/07_performance.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/08_parallel_design.md": "parallel_programming",
-    "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/html.md": "frontend",
-    "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/css.md": "frontend",
-    "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/js.md": "frontend",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/partitions_and_logical_volumes.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/files.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/file_systems.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/networking.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/tools.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/users.md": "linux",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/correlation_and_regression.md": "statistics",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/descriptive_statistics.md": "statistics",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/intro_probability.md": "statistics",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/probability_distributions.md": "statistics",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/statistical_inference.md": "statistics",
-    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/time_series.md": "statistics",
-}
+OUTPUT_DIR = SCRIPT_DIR.parent / "src" / "tools" / "quiz_app"
 
+CATEGORIES: Tuple[Category, ...] = (
+    Category(
+        slug="linux",
+        name="Linux",
+        description="Files, permissions, users, processes, the shell, networking, storage and package managers.",
+        sources=(Source(LINUX, "quizzes"),),
+    ),
+    Category(
+        slug="frontend",
+        name="Frontend",
+        description="HTML semantics and forms, CSS layout and preprocessors, and modern JavaScript.",
+        sources=(Source(FRONTEND, "quizzes"),),
+    ),
+    Category(
+        slug="databases",
+        name="Databases",
+        description="SQL, schema design, indexing, transactions and how databases scale.",
+        sources=(Source(DATABASES, "quizzes"),),
+    ),
+    Category(
+        slug="devops",
+        name="DevOps and Google Cloud",
+        description="Delivery pipelines, infrastructure as code, containers and operations, plus Google Cloud architecture in the style of the Professional Cloud Architect exam.",
+        sources=(Source(DEVOPS, "quizzes"),),
+    ),
+    Category(
+        slug="parallel_programming",
+        name="Parallel Programming",
+        description="Threads, processes, async I/O, synchronisation, hardware and distributed systems.",
+        sources=(Source(PARALLEL, "quizzes"),),
+    ),
+    Category(
+        slug="statistics",
+        name="Statistics",
+        description="Probability, distributions, descriptive statistics, inference, regression and time series.",
+        sources=(Source(STATISTICS, "quizzes"),),
+        math=True,
+    ),
+)
 
-OUTPUT_DIR: Path = Path(__file__).parent.parent / "src" / "tools" / "quiz_app"
-CATEGORIES_FILE: Path = OUTPUT_DIR / "categories.json"
+QUESTION_HEADING = re.compile(r"^#{2,6}\s*Q\.\s*", re.M)
+OPTION = re.compile(r"^\s*[*-]\s*\[([ xX])\]\s?(.*)$")
+FENCE = re.compile(r"^\s*(```|~~~)")
+NOTES_LINE = re.compile(r"^Notes:\s*(.+)$", re.M | re.I)
+MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+EXPLANATION_PREFIX = re.compile(r"^\*\*Explanation:?\*\*:?\s*", re.I)
+POSITIONAL_OPTION = re.compile(
+    r"\b(all|none|both|neither) of the (above|options|answers)\b|^(both|neither) [a-e]\b|^[a-e] and [a-e]$",
+    re.I,
+)
 
-
-MAX_WORKERS = 8
-REQUEST_TIMEOUT = 30
-MAX_RETRIES = 3
-
-
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+MIN_OPTIONS = 3
 
 
 @dataclass
-class Question:
-    """Represents a single quiz question."""
+class Problem:
+    level: str  # "error" drops the question, "warning" only reports it
+    location: str
+    message: str
 
+    def __str__(self) -> str:
+        return f"{self.location}: {self.message}"
+
+
+@dataclass
+class ParsedQuestion:
     text: str
-    options: List[str]
-    correct_option_index: int
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "text": self.text,
-            "options": self.options,
-            "correctOptionIndex": self.correct_option_index,
-        }
+    options: List[Tuple[bool, str]]
+    explanation: str
+    line: int
 
 
 @dataclass
-class ProcessingResult:
-    """Result of processing a URL."""
+class Report:
+    problems: List[Problem] = field(default_factory=list)
 
-    url: str
-    category: str
-    questions: List[Question] = field(default_factory=list)
-    success: bool = True
-    error_message: Optional[str] = None
+    def add(self, level: str, location: str, message: str) -> None:
+        self.problems.append(Problem(level, location, message))
 
+    @property
+    def errors(self) -> List[Problem]:
+        return [p for p in self.problems if p.level == "error"]
 
-def setup_logging(verbose: bool = False) -> logging.Logger:
-    """Configure logging for the application."""
-    level = logging.DEBUG if verbose else logging.INFO
-
-    logging.basicConfig(level=level, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
-
-    logger = logging.getLogger(__name__)
-    return logger
+    @property
+    def warnings(self) -> List[Problem]:
+        return [p for p in self.problems if p.level == "warning"]
 
 
-logger = setup_logging()
+def split_questions(text: str) -> List[Tuple[int, str]]:
+    """Return ``(line number, block)`` for every ``#### Q.`` heading."""
+    matches = list(QUESTION_HEADING.finditer(text))
+    blocks = []
+    for i, match in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        line = text.count("\n", 0, match.start()) + 1
+        blocks.append((line, text[match.end() : end]))
+    return blocks
 
 
-def create_session() -> requests.Session:
-    """Create a requests session with retry logic."""
-    session = requests.Session()
+def parse_block(block: str, line: int) -> ParsedQuestion:
+    question: List[str] = []
+    options: List[List] = []
+    explanation: List[str] = []
+    in_fence = False
+    stage = "question"
 
-    retry_strategy = Retry(
-        total=MAX_RETRIES,
-        backoff_factor=0.5,
-        status_forcelist=[429, 500, 502, 503, 504],
+    for raw in block.split("\n"):
+        if stage == "question":
+            if FENCE.match(raw):
+                in_fence = not in_fence
+            option = None if in_fence else OPTION.match(raw)
+            if option:
+                stage = "options"
+            else:
+                question.append(raw)
+                continue
+        if stage == "options":
+            option = OPTION.match(raw)
+            if option:
+                options.append(
+                    [option.group(1).lower() == "x", option.group(2).strip()]
+                )
+            elif raw.startswith((" ", "\t")) and raw.strip() and options:
+                options[-1][1] += " " + raw.strip()
+            elif raw.lstrip().startswith(">"):
+                stage = "explanation"
+            elif raw.strip():
+                break
+        if stage == "explanation":
+            stripped = raw.strip()
+            if stripped.startswith(">"):
+                explanation.append(stripped[1:].strip())
+            elif stripped:
+                break
+
+    explanation_text = EXPLANATION_PREFIX.sub(
+        "", " ".join(e for e in explanation if e).strip()
     )
-
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
-    return session
-
-
-def download_markdown(url: str, session: requests.Session) -> str:
-    """
-    Download raw markdown text from the given URL.
-
-    Args:
-        url: The URL to download from
-        session: The requests session to use
-
-    Returns:
-        The downloaded markdown content
-
-    Raises:
-        requests.HTTPError: If the download fails
-    """
-    response = session.get(url, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    logger.debug(f"Downloaded {len(response.text)} bytes from {url}")
-    return response.text
-
-
-def parse_markdown_question(block: str) -> Optional[Question]:
-    """
-    Parse a single question block from markdown.
-
-    Expected format:
-    Q. Question text here?
-    * [ ] Option A
-    * [x] Option B (correct)
-    * [ ] Option C
-
-    Args:
-        block: The markdown block containing the question
-
-    Returns:
-        A Question object if parsing succeeds, None otherwise
-    """
-
-    question_match = re.search(
-        r"Q\.\s*(.+?)(?=\n[\*\-]\s*\[)",
-        block,
-        re.IGNORECASE | re.DOTALL,
-    )
-
-    if not question_match:
-        logger.debug("Skipping block: no question text found")
-        return None
-
-    question_text = question_match.group(1).strip()
-
-    if len(question_text) < 5:
-        logger.debug(f"Skipping block: question text too short: '{question_text}'")
-        return None
-
-    options: List[str] = []
-    correct_index: int = -1
-
-    option_pattern = re.compile(
-        r"^[\*\-]\s*\[([ xX])\]\s*(.+)$",
-        re.MULTILINE,
-    )
-
-    for idx, match in enumerate(option_pattern.finditer(block)):
-        marker, option_text = match.groups()
-        option_text = option_text.strip()
-
-        if option_text:
-            options.append(option_text)
-
-            if marker.lower() == "x" and correct_index == -1:
-                correct_index = idx
-
-    if len(options) < 2:
-        logger.debug(f"Skipping question: too few options ({len(options)})")
-        return None
-
-    if correct_index == -1:
-        logger.warning(f"No correct option marked for: '{question_text[:50]}...'")
-        return None
-
-    return Question(
-        text=question_text,
-        options=options,
-        correct_option_index=correct_index,
+    return ParsedQuestion(
+        text="\n".join(question).strip(),
+        options=[(correct, text) for correct, text in options],
+        explanation=explanation_text,
+        line=line,
     )
 
 
-def parse_questions_from_markdown(markdown_content: str) -> List[Question]:
-    """
-    Parse all questions from a markdown file.
+def parse_notes(source: SourceFile) -> List[Dict[str, str]]:
+    match = NOTES_LINE.search(source.text)
+    if not match:
+        return []
+    notes = []
+    for title, href in MARKDOWN_LINK.findall(match.group(1)):
+        html = render_markdown(f"[{title}]({href})", source, inline=True)
+        url = re.search(r'href="([^"]+)"', html)
+        notes.append({"title": title, "url": url.group(1) if url else href})
+    return notes
 
-    Args:
-        markdown_content: The full markdown content
 
-    Returns:
-        A list of parsed Question objects
-    """
+def topic_slug(source: SourceFile) -> str:
+    return slugify(re.sub(r"^\d+[_-]", "", source.stem))
 
-    blocks = [
-        block.strip() for block in markdown_content.split("\n#### ") if block.strip()
-    ]
 
-    questions: List[Question] = []
-    for block in blocks:
-        question = parse_markdown_question(block)
-        if question:
+def build_question(
+    parsed: ParsedQuestion,
+    source: SourceFile,
+    category: Category,
+    topic: str,
+    report: Report,
+) -> Optional[Dict]:
+    location = f"{source.repo.name}/{source.path}:{parsed.line}"
+    label = parsed.text.split("\n")[0][:70]
+
+    if len(parsed.text) < 5:
+        report.add("error", location, "question text is missing")
+        return None
+    correct = [i for i, (is_correct, _) in enumerate(parsed.options) if is_correct]
+    if len(correct) != 1:
+        report.add("error", location, f"{len(correct)} options marked correct: {label}")
+        return None
+    texts = [text for _, text in parsed.options]
+    if any(not t for t in texts):
+        report.add("error", location, f"empty option: {label}")
+        return None
+    if len({t.strip() for t in texts}) != len(texts):
+        report.add("error", location, f"duplicate options: {label}")
+        return None
+    if len(texts) < MIN_OPTIONS:
+        report.add("warning", location, f"only {len(texts)} options: {label}")
+    fixed_order = any(POSITIONAL_OPTION.search(t) for t in texts)
+    if fixed_order:
+        report.add(
+            "warning", location, f"positional option, shuffling disabled: {label}"
+        )
+    if not parsed.explanation:
+        report.add("warning", location, f"no explanation: {label}")
+
+    question = {
+        "id": stable_id(category.slug, topic, normalise_text(parsed.text)),
+        "topic": topic,
+        "text": render_markdown(parsed.text, source, math=category.math),
+        "options": [
+            render_markdown(t, source, math=category.math, inline=True) for t in texts
+        ],
+        "correctOptionIndex": correct[0],
+        "explanation": (
+            render_markdown(parsed.explanation, source, math=category.math)
+            if parsed.explanation
+            else ""
+        ),
+        "source": f"{source.url}#L{parsed.line}",
+    }
+    if fixed_order:
+        question["fixedOrder"] = True
+    return question
+
+
+def build_category(category: Category, files: List[SourceFile], report: Report) -> Dict:
+    topics: List[Dict] = []
+    questions: List[Dict] = []
+    seen: Dict[str, str] = {}
+
+    for source in files:
+        blocks = split_questions(source.text)
+        if not blocks:
+            report.add(
+                "warning", f"{source.repo.name}/{source.path}", "no questions found"
+            )
+            continue
+        topic = topic_slug(source)
+        kept = 0
+        for line, block in blocks:
+            parsed = parse_block(block, line)
+            question = build_question(parsed, source, category, topic, report)
+            if not question:
+                continue
+            key = normalise_text(parsed.text)
+            if key in seen:
+                report.add(
+                    "warning",
+                    f"{source.repo.name}/{source.path}:{line}",
+                    f"duplicate of {seen[key]}, skipped",
+                )
+                continue
+            seen[key] = f"{source.path}:{line}"
             questions.append(question)
+            kept += 1
+        if kept:
+            topics.append(
+                {
+                    "slug": topic,
+                    "name": document_title(
+                        source, strip_words=(r"\bquiz(zes)?\b", r"^quizzes on\b")
+                    ),
+                    "source": source.url,
+                    "notes": parse_notes(source),
+                    "questionCount": kept,
+                }
+            )
 
-    logger.info(f"Parsed {len(questions)} questions from {len(blocks)} blocks")
-    return questions
-
-
-def write_json(data: Any, path: Path) -> None:
-    """
-    Atomically write JSON data to a file.
-
-    Uses a temporary file and rename for atomicity to prevent
-    data corruption if the write is interrupted.
-
-    Args:
-        data: The data to serialize to JSON
-        path: The target file path
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        delete=False,
-        dir=path.parent,
-        suffix=".tmp",
-        encoding="utf-8",
-    ) as tmp_file:
-        json.dump(data, tmp_file, indent=4, sort_keys=True, ensure_ascii=False)
-        temp_path = Path(tmp_file.name)
-
-    temp_path.replace(path)
-    logger.info(f"Wrote JSON to {path}")
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "category": category.to_dict(
+            questionCount=len(questions), topicCount=len(topics)
+        ),
+        "topics": topics,
+        "questions": questions,
+    }
 
 
-def process_url(url: str, session: requests.Session) -> ProcessingResult:
-    """
-    Download and parse a single URL.
+def load_files(
+    loader: SourceLoader, category: Category, report: Report
+) -> List[SourceFile]:
+    files: List[SourceFile] = []
+    for source in category.sources:
+        try:
+            files.extend(loader.load(source))
+        except FileNotFoundError as exc:
+            report.add("warning", category.slug, f"source not found, skipped: {exc}")
+        except requests.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code == 404:
+                report.add(
+                    "warning",
+                    category.slug,
+                    f"source not published yet, skipped: {source.repo.name}/{source.path}",
+                )
+            else:
+                raise
+    return files
 
-    Args:
-        url: The URL to process
-        session: The requests session to use
 
-    Returns:
-        A ProcessingResult with the parsed questions or error info
-    """
-    category = URL_TO_CATEGORY.get(url, "unknown")
+def generate(
+    loader: SourceLoader, output_dir: Path, write: bool = True
+) -> Tuple[Dict[str, Dict], Report]:
+    report = Report()
+    built: Dict[str, Dict] = {}
+    for category in CATEGORIES:
+        data = build_category(category, load_files(loader, category, report), report)
+        if data["questions"]:
+            built[category.slug] = data
 
+    if write:
+        index = {
+            "schemaVersion": SCHEMA_VERSION,
+            "categories": [data["category"] for data in built.values()],
+        }
+        for slug, data in built.items():
+            if write_json(data, output_dir / f"{slug}.json"):
+                logging.info("Updated %s.json", slug)
+        write_json(index, output_dir / "categories.json")
+        for path in remove_stale_json(
+            output_dir, [f"{slug}.json" for slug in built] + ["categories.json"]
+        ):
+            logging.info("Removed stale %s", path.name)
+    return built, report
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "--local-root",
+        type=Path,
+        help="read the notes repositories from this directory instead of GitHub",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_DIR,
+        help="directory for the generated JSON",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate the sources without writing anything",
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="treat warnings as failures"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="list every warning"
+    )
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     try:
-        markdown_content = download_markdown(url, session)
-        questions = parse_questions_from_markdown(markdown_content)
-
-        return ProcessingResult(
-            url=url,
-            category=category,
-            questions=questions,
-            success=True,
+        built, report = generate(
+            SourceLoader(args.local_root), args.output, write=not args.check
         )
-
-    except requests.RequestException as e:
-        error_msg = f"Network error: {e}"
-        logger.error(f"Failed to process {url}: {error_msg}")
-        return ProcessingResult(
-            url=url,
-            category=category,
-            success=False,
-            error_message=error_msg,
-        )
-
-    except Exception as e:
-        error_msg = f"Unexpected error: {e}"
-        logger.exception(f"Failed to process {url}")
-        return ProcessingResult(
-            url=url,
-            category=category,
-            success=False,
-            error_message=error_msg,
-        )
-
-
-def process_all_urls(urls: List[str]) -> List[ProcessingResult]:
-    """
-    Process all URLs concurrently.
-
-    Args:
-        urls: List of URLs to process
-
-    Returns:
-        List of ProcessingResults in the same order as input URLs
-    """
-    results: Dict[str, ProcessingResult] = {}
-
-    with create_session() as session:
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-
-            future_to_url = {
-                executor.submit(process_url, url, session): url for url in urls
-            }
-
-            for future in as_completed(future_to_url):
-                url = future_to_url[future]
-                try:
-                    result = future.result()
-                    results[url] = result
-                except Exception as e:
-                    logger.exception(f"Unexpected error processing {url}")
-                    results[url] = ProcessingResult(
-                        url=url,
-                        category=URL_TO_CATEGORY.get(url, "unknown"),
-                        success=False,
-                        error_message=str(e),
-                    )
-
-    return [results[url] for url in urls]
-
-
-def main() -> int:
-    """
-    Main entry point for the quiz generator.
-
-    Returns:
-        Exit code (0 for success, 1 for errors)
-    """
-    logger.info("Starting quiz generation...")
-    logger.info(f"Output directory: {OUTPUT_DIR}")
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    urls = list(URL_TO_CATEGORY.keys())
-    logger.info(
-        f"Processing {len(urls)} URLs across {len(set(URL_TO_CATEGORY.values()))} categories"
-    )
-
-    results = process_all_urls(urls)
-
-    aggregated: Dict[str, List[Dict[str, Any]]] = {}
-    errors: List[str] = []
-
-    for result in results:
-        if result.success:
-            category = result.category
-            questions_dicts = [q.to_dict() for q in result.questions]
-            aggregated.setdefault(category, []).extend(questions_dicts)
-        else:
-            errors.append(f"{result.url}: {result.error_message}")
-
-    for category in aggregated:
-        aggregated[category] = sorted(
-            aggregated[category],
-            key=lambda q: q["text"],
-        )
-
-    for category in sorted(aggregated):
-        questions = aggregated[category]
-        output_path = OUTPUT_DIR / f"{category}.json"
-        write_json({"questions": questions}, output_path)
-        logger.info(f"Category '{category}': {len(questions)} questions")
-
-    categories_list = [
-        {"name": category.replace("_", " ").title()} for category in sorted(aggregated)
-    ]
-    write_json(categories_list, CATEGORIES_FILE)
-
-    total_questions = sum(len(q) for q in aggregated.values())
-    logger.info(
-        f"Generation complete: {total_questions} questions in {len(aggregated)} categories"
-    )
-
-    if errors:
-        logger.warning(f"{len(errors)} URLs failed to process:")
-        for error in errors:
-            logger.warning(f"  - {error}")
+    except requests.RequestException as exc:
+        logging.error("Could not download quiz sources: %s", exc)
         return 1
 
+    for problem in report.errors:
+        logging.error("%s", problem)
+    if args.verbose or args.strict:
+        for problem in report.warnings:
+            logging.warning("%s", problem)
+    elif report.warnings:
+        logging.info("%d warnings (run with -v to list them)", len(report.warnings))
+
+    for slug, data in built.items():
+        logging.info(
+            "%-22s %4d questions in %d topics",
+            slug,
+            len(data["questions"]),
+            len(data["topics"]),
+        )
+
+    # A normal build publishes the valid questions and only logs the broken
+    # ones, so one upstream typo cannot block a deploy; --check and --strict
+    # are for CI and for authors fixing the sources.
+    if (args.check or args.strict) and report.errors:
+        return 1
+    if args.strict and report.warnings:
+        return 1
     return 0
 
 

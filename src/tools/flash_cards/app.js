@@ -1,755 +1,469 @@
 (function() {
     'use strict';
 
+    // A card rated "Still learning" comes back after this many other cards.
+    const REQUEUE_GAP = 4;
 
-
-
-
-    const CONFIG = {
-        categoriesUrl: 'categories.json',
-        categoryDataUrl: (category) => `${category}.json`,
-        animationDuration: 300,
-        autoFlipDelay: 0,
-        timerSecondsPerCard: 90,
-        timerWarningThreshold: 60,
-        timerCriticalThreshold: 15,
-    };
-
-
-
-
+    const progressStore = Learning.store('flashcards');
+    const categoryCache = new Map();
 
     const state = {
-        currentCategory: null,
-        currentSubcategories: new Set(),
-        cards: [],
-        currentCardIndex: 0,
-        cardStatus: [],
-        isFlipped: false,
-        isLoading: false,
-
-        timerInterval: null,
-        timerSecondsLeft: 0,
-
-        currentStreak: 0,
+        categories: [],
+        data: null,
+        topics: new Set(),
+        hideKnown: true,
+        shuffled: false,
+        known: new Set(),
+        deck: [],
+        queue: [],
+        history: [],
+        learning: new Set(),
+        revealed: false,
+        sessionSize: 0
     };
 
-
-
-
-
-    const elements = {
-        categorySelect: null,
-        subcategoriesDiv: null,
-        flashcard: null,
-        flashcardFront: null,
-        flashcardBack: null,
-        flipButton: null,
-        knowButton: null,
-        nextButton: null,
-        shuffleAllButton: null,
-        resetButton: null,
-        questionsTableBody: null,
-        loadingSpinner: null,
-        progressBar: null,
-        progressStats: null,
-        totalCards: null,
-        remainingCards: null,
-        completedCards: null,
-        errorDiv: null,
-
-        timerDisplay: null,
-        timerToggle: null,
-        cardNav: null,
-        streakBadge: null,
-        streakText: null,
-    };
-
-
-
-
-
-    function displayError(msg) {
-        if (!elements.errorDiv) {
-            elements.errorDiv = document.createElement('div');
-            elements.errorDiv.id = 'errorMessage';
-            elements.errorDiv.setAttribute('role', 'alert');
-            elements.errorDiv.setAttribute('aria-live', 'assertive');
-            elements.errorDiv.className = 'flash-error';
-            elements.errorDiv.style.display = 'none';
-            document.body.prepend(elements.errorDiv);
-        }
-        elements.errorDiv.textContent = msg;
-        elements.errorDiv.style.display = 'block';
-
-        setTimeout(() => {
-            elements.errorDiv.style.display = 'none';
-        }, 5000);
-    }
-
-    function clearError() {
-        if (elements.errorDiv) {
-            elements.errorDiv.style.display = 'none';
-        }
-    }
-
-    function setLoading(isLoading) {
-        state.isLoading = isLoading;
-        if (elements.loadingSpinner) {
-            elements.loadingSpinner.style.display = isLoading ? 'flex' : 'none';
-        }
-    }
-
-    function shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
-    function formatCategoryName(name) {
-        return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function formatTime(totalSeconds) {
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = totalSeconds % 60;
-        return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
-    }
-
-    function resizeText(elementId) {
-        const container = document.getElementById(elementId);
-        if (!container) return;
-
-        const textElements = container.querySelectorAll('p');
-        if (textElements.length === 0) return;
-
-        textElements.forEach(el => el.style.fontSize = '');
-
-        let fontSize = parseFloat(window.getComputedStyle(textElements[0]).fontSize);
-        const minFontSize = 12;
-
-        const checkOverflow = () => {
-            const totalHeight = Array.from(textElements).reduce((sum, el) => sum + el.scrollHeight, 0);
-            return totalHeight > container.clientHeight * 0.85;
-        };
-
-        while (checkOverflow() && fontSize > minFontSize) {
-            fontSize -= 1;
-            textElements.forEach(el => el.style.fontSize = `${fontSize}px`);
-        }
-    }
-
-
-
-
-
-    async function fetchJson(url) {
-        clearError();
-        setLoading(true);
-
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            return data;
-        } catch (err) {
-            console.error('Error fetching JSON:', err);
-            displayError(`Failed to load data: ${err.message}`);
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function loadCategories() {
-        const categories = await fetchJson(CONFIG.categoriesUrl);
-
-        if (categories && Array.isArray(categories) && categories.length > 0) {
-            elements.categorySelect.innerHTML = '';
-
-            categories.forEach((cat, i) => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = formatCategoryName(cat);
-                elements.categorySelect.appendChild(opt);
-                if (i === 0) opt.selected = true;
-            });
-
-            await loadCategoryData(elements.categorySelect.value);
-        } else {
-            displayError('No categories available. Please check your data files.');
-        }
-    }
-
-    async function loadCategoryData(category) {
-        const data = await fetchJson(CONFIG.categoryDataUrl(category));
-
-        if (data && data.subcategories) {
-            state.currentCategory = data;
-            populateSubcategories();
-            selectAllSubcategories();
-            filterCards();
-        } else {
-            displayError('Failed to load category data.');
-        }
-    }
-
-
-
-
-
-    function populateSubcategories() {
-        elements.subcategoriesDiv.innerHTML = '';
-        state.currentSubcategories.clear();
-
-        state.currentCategory.subcategories.forEach(sc => {
-            const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-
-            checkbox.type = 'checkbox';
-            checkbox.value = sc.name;
-            checkbox.checked = true;
-            checkbox.id = `subcategory-${sc.name.replace(/\s+/g, '-').toLowerCase()}`;
-            checkbox.addEventListener('change', handleSubcategoryChange);
-
-            label.htmlFor = checkbox.id;
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(sc.name));
-
-            elements.subcategoriesDiv.appendChild(label);
-            state.currentSubcategories.add(sc.name);
-        });
-    }
-
-    function selectAllSubcategories() {
-        state.currentSubcategories = new Set(
-            state.currentCategory.subcategories.map(sc => sc.name)
-        );
-        elements.subcategoriesDiv.querySelectorAll('input').forEach(cb => {
-            cb.checked = true;
-        });
-    }
-
-    function filterCards() {
-        state.cards = [];
-
-        state.currentCategory.subcategories.forEach(sc => {
-            if (state.currentSubcategories.has(sc.name)) {
-                state.cards.push(...sc.cards.map(card => ({
-                    ...card,
-                    subcategory: sc.name
-                })));
-            }
-        });
-
-        state.cardStatus = Array(state.cards.length).fill(true);
-        state.currentCardIndex = 0;
-        state.isFlipped = false;
-
-        resetStreak();
-        showCard();
-        populateQuestionsTable();
-        buildCardNav();
-        updateProgress();
-        restartTimerIfEnabled();
-    }
-
-
-
-
-
-    function populateQuestionsTable() {
-        elements.questionsTableBody.innerHTML = '';
-
-        state.cards.forEach((card, idx) => {
-            const row = document.createElement('tr');
-            row.id = `question-row-${idx}`;
-
-            const idxCell = document.createElement('td');
-            idxCell.textContent = idx + 1;
-
-            const questionCell = document.createElement('td');
-            questionCell.innerHTML = card.front;
-
-            const subcategoryCell = document.createElement('td');
-            const badge = document.createElement('span');
-            badge.className = 'subcategory-badge';
-            badge.textContent = card.subcategory;
-            subcategoryCell.appendChild(badge);
-
-            const statusCell = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'status-checkbox';
-            checkbox.checked = state.cardStatus[idx];
-            checkbox.setAttribute('aria-label', `Mark question ${idx + 1} as ${state.cardStatus[idx] ? 'known' : 'unknown'}`);
-            checkbox.addEventListener('change', () => {
-                state.cardStatus[idx] = checkbox.checked;
-                row.classList.toggle('completed', !checkbox.checked);
-                updateProgress();
-                updateCardNavStates();
-
-                if (idx === state.currentCardIndex && !checkbox.checked) {
-                    showCard();
-                }
-            });
-            statusCell.appendChild(checkbox);
-
-            row.appendChild(idxCell);
-            row.appendChild(questionCell);
-            row.appendChild(subcategoryCell);
-            row.appendChild(statusCell);
-
-            if (!state.cardStatus[idx]) {
-                row.classList.add('completed');
-            }
-
-            elements.questionsTableBody.appendChild(row);
-        });
-    }
-
-
-
-
-
-    function showCard() {
-        if (state.cards.length === 0) {
-            elements.flashcardFront.innerHTML = `
-                <div class="empty-state">
-                    <span class="empty-state-mark" aria-hidden="true"></span>
-                    <p class="empty-state-title">No cards available</p>
-                    <p class="empty-state-description">Select subcategories to begin studying</p>
-                </div>
-            `;
-            elements.flashcardBack.innerHTML = '';
-            updateCardNavStates();
-            return;
-        }
-
-        let start = state.currentCardIndex;
-        let found = false;
-
-        do {
-            if (state.cardStatus[state.currentCardIndex]) {
-                found = true;
-                break;
-            }
-            state.currentCardIndex = (state.currentCardIndex + 1) % state.cards.length;
-        } while (state.currentCardIndex !== start);
-
-        if (!found) {
-            elements.flashcardFront.innerHTML = `
-                <div class="empty-state">
-                    <span class="empty-state-mark" aria-hidden="true"></span>
-                    <p class="empty-state-title">Congratulations!</p>
-                    <p class="empty-state-description">You've completed all flashcards. Click Reset to study again.</p>
-                </div>
-            `;
-            elements.flashcardBack.innerHTML = '';
-            stopTimer();
-        } else {
-            const card = state.cards[state.currentCardIndex];
-            elements.flashcardFront.innerHTML = `
-                <p>${card.front}</p>
-                <span class="card-indicator">Question ${state.currentCardIndex + 1} of ${state.cards.length}</span>
-            `;
-            elements.flashcardBack.innerHTML = `
-                <p>${card.back}</p>
-                <span class="card-indicator">Answer</span>
-            `;
-        }
-
-        elements.flashcard.classList.remove('flipped');
-        state.isFlipped = false;
-
-        requestAnimationFrame(() => {
-            resizeText('flashcardFront');
-            resizeText('flashcardBack');
-
-            if (window.MathJax && window.MathJax.typesetPromise) {
-                MathJax.typesetPromise().catch(err => {
-                    console.error('MathJax error:', err);
-                });
-            }
-        });
-
-        highlightCurrentRow();
-        updateCardNavStates();
-    }
-
-    function highlightCurrentRow() {
-        const rows = elements.questionsTableBody.querySelectorAll('tr');
-        rows.forEach((row, idx) => {
-            row.classList.toggle('current-card-row', idx === state.currentCardIndex);
-        });
-    }
-
-    function updateProgress() {
-        const total = state.cards.length;
-        const completed = state.cardStatus.filter(s => !s).length;
-        const remaining = total - completed;
-        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-        if (elements.totalCards) elements.totalCards.textContent = total;
-        if (elements.remainingCards) elements.remainingCards.textContent = remaining;
-        if (elements.completedCards) elements.completedCards.textContent = completed;
-
-        if (elements.progressBar) {
-            elements.progressBar.style.width = `${percentage}%`;
-        }
-        if (elements.progressStats) {
-            elements.progressStats.textContent = `${percentage}% complete`;
-        }
-    }
-
-
-
-
-
-    function startTimer() {
-        stopTimer();
-        const remaining = state.cardStatus.filter(s => s).length;
-        if (remaining === 0) return;
-
-        state.timerSecondsLeft = remaining * CONFIG.timerSecondsPerCard;
-        updateTimerDisplay();
-
-        state.timerInterval = setInterval(() => {
-            state.timerSecondsLeft--;
-            if (state.timerSecondsLeft <= 0) {
-                state.timerSecondsLeft = 0;
-                updateTimerDisplay();
-                stopTimer();
-                handleReset();
-            } else {
-                updateTimerDisplay();
-            }
-        }, 1000);
-    }
-
-    function stopTimer() {
-        if (state.timerInterval) {
-            clearInterval(state.timerInterval);
-            state.timerInterval = null;
-        }
-    }
-
-    function resetTimerDisplay() {
-        stopTimer();
-        state.timerSecondsLeft = 0;
-        if (elements.timerDisplay) {
-            elements.timerDisplay.textContent = '--:--';
-            elements.timerDisplay.classList.remove('warning', 'critical');
-        }
-    }
-
-    function updateTimerDisplay() {
-        if (!elements.timerDisplay) return;
-
-        elements.timerDisplay.textContent = formatTime(state.timerSecondsLeft);
-        elements.timerDisplay.classList.remove('warning', 'critical');
-
-        if (state.timerSecondsLeft <= CONFIG.timerCriticalThreshold) {
-            elements.timerDisplay.classList.add('critical');
-        } else if (state.timerSecondsLeft <= CONFIG.timerWarningThreshold) {
-            elements.timerDisplay.classList.add('warning');
-        }
-    }
-
-    function restartTimerIfEnabled() {
-        if (elements.timerToggle && elements.timerToggle.checked) {
-            startTimer();
-        } else {
-            resetTimerDisplay();
-        }
-    }
-
-
-
-
-
-    function buildCardNav() {
-        if (!elements.cardNav) return;
-        elements.cardNav.innerHTML = '';
-
-        state.cards.forEach((_card, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'card-nav-btn';
-            btn.textContent = index + 1;
-            btn.setAttribute('aria-label', 'Go to card ' + (index + 1));
-            btn.addEventListener('click', () => {
-                navigateToCard(index);
-            });
-            elements.cardNav.appendChild(btn);
-        });
-
-        updateCardNavStates();
-    }
-
-    function navigateToCard(index) {
-        if (index < 0 || index >= state.cards.length) return;
-        state.currentCardIndex = index;
-        showCard();
-    }
-
-    function updateCardNavStates() {
-        if (!elements.cardNav) return;
-        const buttons = elements.cardNav.querySelectorAll('.card-nav-btn');
-        buttons.forEach((btn, i) => {
-            btn.classList.toggle('current', i === state.currentCardIndex);
-            btn.classList.toggle('known', !state.cardStatus[i]);
-        });
-    }
-
-
-
-
-
-    function incrementStreak() {
-        state.currentStreak++;
-        updateStreakDisplay();
-    }
-
-    function resetStreak() {
-        state.currentStreak = 0;
-        updateStreakDisplay();
-    }
-
-    function updateStreakDisplay() {
-        if (!elements.streakBadge) return;
-
-        if (state.currentStreak >= 2) {
-            elements.streakBadge.style.display = '';
-            if (elements.streakText) {
-                elements.streakText.textContent = state.currentStreak + ' streak';
-            }
-        } else {
-            elements.streakBadge.style.display = 'none';
-        }
-    }
-
-
-
-
-
-    function handleSubcategoryChange(e) {
-        if (e.target.checked) {
-            state.currentSubcategories.add(e.target.value);
-        } else {
-            state.currentSubcategories.delete(e.target.value);
-        }
-        filterCards();
-    }
-
-    function handleCategoryChange(e) {
-        loadCategoryData(e.target.value);
-    }
-
-    function handleFlip() {
-        elements.flashcard.classList.toggle('flipped');
-        state.isFlipped = !state.isFlipped;
-
-        requestAnimationFrame(() => {
-            resizeText('flashcardFront');
-            resizeText('flashcardBack');
-        });
-    }
-
-    function handleKnowIt() {
-        if (state.cards.length === 0) return;
-
-        state.cardStatus[state.currentCardIndex] = false;
-
-        const row = document.getElementById(`question-row-${state.currentCardIndex}`);
-        if (row) {
-            const checkbox = row.querySelector('.status-checkbox');
-            if (checkbox) checkbox.checked = false;
-            row.classList.add('completed');
-        }
-
-        incrementStreak();
-        updateProgress();
-        updateCardNavStates();
-        moveToNextCard();
-    }
-
-    function handleNext() {
-        if (state.cards.length === 0) return;
-        resetStreak();
-        moveToNextCard();
-    }
-
-    function handlePrevious() {
-        if (state.cards.length === 0) return;
-        moveToPreviousCard();
-    }
-
-    function moveToNextCard() {
-        const start = state.currentCardIndex;
-
-        do {
-            state.currentCardIndex = (state.currentCardIndex + 1) % state.cards.length;
-        } while (!state.cardStatus[state.currentCardIndex] && state.currentCardIndex !== start);
-
-        showCard();
-    }
-
-    function moveToPreviousCard() {
-        const start = state.currentCardIndex;
-
-        do {
-            state.currentCardIndex = (state.currentCardIndex - 1 + state.cards.length) % state.cards.length;
-        } while (!state.cardStatus[state.currentCardIndex] && state.currentCardIndex !== start);
-
-        showCard();
-    }
-
-    function handleShuffle() {
-        state.currentCategory.subcategories.forEach(sc => {
-            if (state.currentSubcategories.has(sc.name)) {
-                sc.cards = shuffleArray(sc.cards);
-            }
-        });
-        resetStreak();
-        filterCards();
-    }
-
-    function handleReset() {
-        state.cardStatus = Array(state.cards.length).fill(true);
-        state.currentCardIndex = 0;
-        resetStreak();
-        showCard();
-        populateQuestionsTable();
-        buildCardNav();
-        updateProgress();
-        restartTimerIfEnabled();
-    }
-
-    function handleTimerToggle() {
-        if (elements.timerToggle.checked) {
-            startTimer();
-        } else {
-            resetTimerDisplay();
-        }
-    }
-
-    function handleKeydown(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-
-        if (e.key >= '1' && e.key <= '9') {
-            const cardIndex = parseInt(e.key, 10) - 1;
-            if (cardIndex < state.cards.length) {
-                e.preventDefault();
-                navigateToCard(cardIndex);
-            }
-            return;
-        }
-
-        switch (e.key) {
-            case ' ':
-            case 'f':
-            case 'F':
-                e.preventDefault();
-                handleFlip();
-                break;
-            case 'ArrowRight':
-            case 'n':
-            case 'N':
-                e.preventDefault();
-                handleNext();
-                break;
-            case 'ArrowLeft':
-            case 'p':
-            case 'P':
-                e.preventDefault();
-                handlePrevious();
-                break;
-            case 'Enter':
-            case 'k':
-            case 'K':
-                e.preventDefault();
-                handleKnowIt();
-                break;
-            case 'r':
-            case 'R':
-                e.preventDefault();
-                handleReset();
-                break;
-            case 's':
-            case 'S':
-                e.preventDefault();
-                handleShuffle();
-                break;
-        }
-    }
-
-    function handleFlashcardClick() {
-        handleFlip();
-    }
-
-
-
-
+    const $ = (id) => document.getElementById(id);
+    let elements = {};
 
     function cacheElements() {
-        elements.categorySelect = document.getElementById('categorySelect');
-        elements.subcategoriesDiv = document.getElementById('subcategories');
-        elements.flashcard = document.getElementById('flashcard');
-        elements.flashcardFront = document.getElementById('flashcardFront');
-        elements.flashcardBack = document.getElementById('flashcardBack');
-        elements.flipButton = document.getElementById('flipButton');
-        elements.knowButton = document.getElementById('knowButton');
-        elements.nextButton = document.getElementById('nextButton');
-        elements.shuffleAllButton = document.getElementById('shuffleAllButton');
-        elements.resetButton = document.getElementById('resetButton');
-        elements.questionsTableBody = document.getElementById('questionsTable')?.querySelector('tbody');
-        elements.loadingSpinner = document.getElementById('loadingSpinner');
-        elements.progressBar = document.getElementById('progressBar');
-        elements.progressStats = document.getElementById('progressStats');
-        elements.totalCards = document.getElementById('totalCards');
-        elements.remainingCards = document.getElementById('remainingCards');
-        elements.completedCards = document.getElementById('completedCards');
-
-        elements.timerDisplay = document.getElementById('timerDisplay');
-        elements.timerToggle = document.getElementById('timerToggle');
-        elements.cardNav = document.getElementById('cardNav');
-        elements.streakBadge = document.getElementById('streakBadge');
-        elements.streakText = elements.streakBadge?.querySelector('.streak-text');
+        elements = {
+            settings: $('deckSettings'),
+            categorySelect: $('categorySelect'),
+            shuffle: $('shuffleButton'),
+            hideKnown: $('hideKnownToggle'),
+            categoryMeta: $('categoryMeta'),
+            topicFilter: $('topicFilter'),
+            statRemaining: $('statRemaining'),
+            statLearning: $('statLearning'),
+            statKnown: $('statKnown'),
+            progressBar: $('progressBar'),
+            progressBarContainer: $('progressBarContainer'),
+            card: $('studyCard'),
+            cardTopic: $('cardTopic'),
+            cardPosition: $('cardPosition'),
+            cardFront: $('cardFront'),
+            cardBack: $('cardBack'),
+            cardAnswer: $('cardAnswer'),
+            cardLinks: $('cardLinks'),
+            back: $('backButton'),
+            reveal: $('revealButton'),
+            learningButton: $('learningButton'),
+            knownButton: $('knownButton'),
+            skip: $('skipButton'),
+            browser: $('cardBrowser'),
+            browseCount: $('browseCount'),
+            list: $('cardList'),
+            reset: $('resetProgressButton')
+        };
     }
 
-    function attachEventListeners() {
-        elements.categorySelect?.addEventListener('change', handleCategoryChange);
+    // ---------------------------------------------------------------------
+    // Persistence
+    // ---------------------------------------------------------------------
 
-        elements.flipButton?.addEventListener('click', handleFlip);
-        elements.knowButton?.addEventListener('click', handleKnowIt);
-        elements.nextButton?.addEventListener('click', handleNext);
-        elements.shuffleAllButton?.addEventListener('click', handleShuffle);
-        elements.resetButton?.addEventListener('click', handleReset);
+    function loadKnown() {
+        state.known = new Set(progressStore.get(state.data.category.slug, {
+            known: []
+        }).known);
+    }
 
-        elements.flashcard?.addEventListener('click', handleFlashcardClick);
-
-        elements.timerToggle?.addEventListener('change', handleTimerToggle);
-
-        document.addEventListener('keydown', handleKeydown);
-
-        elements.flashcard?.addEventListener('keydown', (e) => {
-            if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault();
-                handleFlip();
-            }
+    function saveKnown() {
+        progressStore.set(state.data.category.slug, {
+            known: Array.from(state.known)
         });
+    }
+
+    // ---------------------------------------------------------------------
+    // Loading decks
+    // ---------------------------------------------------------------------
+
+    async function loadIndex() {
+        try {
+            state.categories = (await Learning.fetchJson('categories.json')).categories || [];
+        } catch (error) {
+            console.error(error);
+            showEmpty('The flashcard index could not be loaded. Please refresh the page.');
+            return;
+        }
+        if (!state.categories.length) {
+            showEmpty('No flashcards are available yet.');
+            return;
+        }
+        elements.categorySelect.innerHTML = '';
+        state.categories.forEach((category) => {
+            const option = document.createElement('option');
+            option.value = category.slug;
+            option.textContent = `${category.name} (${category.cardCount})`;
+            elements.categorySelect.appendChild(option);
+        });
+        const params = Learning.readParams();
+        const requested = params.get('category');
+        const slug = state.categories.some((c) => c.slug === requested) ? requested : state.categories[0].slug;
+        elements.categorySelect.value = slug;
+        await loadCategory(slug, (params.get('topics') || '').split(',').filter(Boolean));
+    }
+
+    async function loadCategory(slug, topics) {
+        showEmpty('Loading cards…');
+        try {
+            if (!categoryCache.has(slug)) categoryCache.set(slug, await Learning.fetchJson(`${slug}.json`));
+        } catch (error) {
+            console.error(error);
+            showEmpty('These cards could not be loaded. Please try another subject or refresh.');
+            return;
+        }
+        state.data = categoryCache.get(slug);
+        const known = new Set(state.data.topics.map((t) => t.slug));
+        state.topics = new Set((topics || []).filter((t) => known.has(t)));
+        loadKnown();
+        renderTopicFilter();
+        buildDeck();
+    }
+
+    function topicFor(slug) {
+        return state.data.topics.find((t) => t.slug === slug);
+    }
+
+    function renderMeta() {
+        const meta = elements.categoryMeta;
+        const category = state.data.category;
+        meta.innerHTML = '';
+        meta.appendChild(document.createTextNode(`${category.description} `));
+        const known = state.data.cards.filter((card) => state.known.has(card.id)).length;
+        meta.appendChild(Learning.el('span', 'meta-facts', `${category.cardCount} cards · ${category.topicCount} topics · ${known} known`));
+        (category.repositories || []).forEach((url) => {
+            meta.appendChild(document.createTextNode(' · '));
+            meta.appendChild(Learning.link(url, 'Source notes'));
+        });
+    }
+
+    function renderTopicFilter() {
+        const filter = elements.topicFilter;
+        filter.innerHTML = '';
+        const chip = (parent, label, slug, count) => {
+            const button = Learning.el('button', 'topic-chip');
+            button.type = 'button';
+            button.dataset.topic = slug;
+            button.appendChild(document.createTextNode(label));
+            button.appendChild(Learning.el('span', 'chip-count', String(count)));
+            parent.appendChild(button);
+        };
+        chip(filter, 'All topics', '', state.data.category.cardCount);
+
+        const groups = new Map();
+        state.data.topics.forEach((topic) => {
+            if (!groups.has(topic.group)) groups.set(topic.group, []);
+            groups.get(topic.group).push(topic);
+        });
+        groups.forEach((topics, group) => {
+            const row = groups.size > 1 ? Learning.el('div', 'topic-group') : filter;
+            if (groups.size > 1) {
+                row.appendChild(Learning.el('span', 'topic-group-name', group));
+                filter.appendChild(row);
+            }
+            topics.forEach((topic) => chip(row, topic.name, topic.slug, topic.cardCount));
+        });
+        syncTopicChips();
+    }
+
+    function syncTopicChips() {
+        elements.topicFilter.querySelectorAll('.topic-chip').forEach((button) => {
+            const slug = button.dataset.topic;
+            button.setAttribute('aria-pressed', String(slug ? state.topics.has(slug) : state.topics.size === 0));
+        });
+    }
+
+    function toggleTopic(slug) {
+        if (!slug) {
+            state.topics.clear();
+        } else if (state.topics.has(slug)) {
+            state.topics.delete(slug);
+        } else {
+            state.topics.add(slug);
+            if (state.topics.size === state.data.topics.length) state.topics.clear();
+        }
+        syncTopicChips();
+        buildDeck();
+    }
+
+    // ---------------------------------------------------------------------
+    // Session
+    // ---------------------------------------------------------------------
+
+    function selectedCards() {
+        const cards = state.data.cards;
+        return state.topics.size ? cards.filter((card) => state.topics.has(card.topic)) : cards;
+    }
+
+    function buildDeck() {
+        state.deck = selectedCards();
+        const pending = state.deck.filter((card) => !(state.hideKnown && state.known.has(card.id)));
+        state.queue = state.shuffled ? Learning.shuffle(pending) : pending.slice();
+        state.sessionSize = state.queue.length;
+        state.history = [];
+        state.learning = new Set();
+        Learning.writeParams({
+            category: state.data.category.slug,
+            topics: Array.from(state.topics).join(',')
+        });
+        renderMeta();
+        renderList();
+        showCard();
+    }
+
+    function current() {
+        return state.queue[0];
+    }
+
+    function rate(known) {
+        const card = current();
+        if (!card || !state.revealed) return;
+        if (known) {
+            state.known.add(card.id);
+            state.learning.delete(card.id);
+            state.queue.shift();
+        } else {
+            state.known.delete(card.id);
+            state.learning.add(card.id);
+            state.queue.shift();
+            state.queue.splice(Math.min(REQUEUE_GAP, state.queue.length), 0, card);
+        }
+        state.history.push(card);
+        saveKnown();
+        renderMeta();
+        updateListItem(card);
+        showCard();
+    }
+
+    function skip() {
+        const card = state.queue.shift();
+        if (!card) return;
+        state.queue.push(card);
+        state.history.push(card);
+        showCard();
+    }
+
+    function back() {
+        const card = state.history.pop();
+        if (!card) return;
+        const index = state.queue.indexOf(card);
+        if (index !== -1) state.queue.splice(index, 1);
+        state.queue.unshift(card);
+        showCard();
+    }
+
+    function jumpTo(card) {
+        const index = state.queue.indexOf(card);
+        if (index !== -1) state.queue.splice(index, 1);
+        if (current()) state.history.push(current());
+        state.queue.unshift(card);
+        showCard();
+        elements.card.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+
+    function shuffleQueue() {
+        state.shuffled = true;
+        elements.shuffle.textContent = 'Reshuffle';
+        state.queue = Learning.shuffle(state.queue);
+        state.history = [];
+        showCard();
+    }
+
+    // ---------------------------------------------------------------------
+    // Rendering
+    // ---------------------------------------------------------------------
+
+    function showEmpty(text, actions) {
+        elements.cardTopic.textContent = '';
+        elements.cardPosition.textContent = '';
+        elements.cardFront.innerHTML = '';
+        elements.cardFront.appendChild(Learning.el('p', 'card-empty', text));
+        if (actions) elements.cardFront.appendChild(actions);
+        elements.cardBack.hidden = true;
+        [elements.reveal, elements.learningButton, elements.knownButton].forEach((b) => {
+            b.hidden = true;
+        });
+        elements.back.disabled = !state.history.length;
+        elements.skip.disabled = true;
+    }
+
+    function finishedActions() {
+        const box = Learning.el('div', 'card-empty-actions');
+        const again = Learning.el('button', 'btn primary', 'Review every card again');
+        again.type = 'button';
+        again.addEventListener('click', () => {
+            state.hideKnown = false;
+            elements.hideKnown.checked = false;
+            buildDeck();
+        });
+        box.appendChild(again);
+        return box;
+    }
+
+    function showCard() {
+        updateStats();
+        const card = current();
+        state.revealed = false;
+        if (!state.data) return;
+        if (!state.deck.length) {
+            showEmpty('No cards in this selection.');
+            return;
+        }
+        if (!card) {
+            const message = state.hideKnown ?
+                'You know every card in this selection. Pick other topics, or review them all again.' :
+                'Session complete.';
+            showEmpty(message, finishedActions());
+            return;
+        }
+
+        const topic = topicFor(card.topic);
+        elements.cardTopic.textContent = topic ? (topic.group && state.data.topics.some((t) => t.group !== topic.group) ? `${topic.group} · ${topic.name}` : topic.name) : '';
+        const done = state.sessionSize - state.queue.length;
+        elements.cardPosition.textContent = state.learning.has(card.id) ? 'Again' : `${done + 1} / ${state.sessionSize}`;
+        elements.cardFront.innerHTML = `<p class="card-question">${card.front}</p>`;
+        elements.cardAnswer.innerHTML = card.back;
+        elements.cardLinks.innerHTML = '';
+        elements.cardLinks.appendChild(Learning.link(card.source, 'Source'));
+        if (topic && topic.source) elements.cardLinks.appendChild(Learning.link(topic.source, `All ${topic.group} cards`));
+        elements.cardBack.hidden = true;
+        elements.card.classList.remove('revealed');
+
+        elements.reveal.hidden = false;
+        elements.learningButton.hidden = true;
+        elements.knownButton.hidden = true;
+        elements.back.disabled = !state.history.length;
+        elements.skip.disabled = state.queue.length < 2;
+        markCurrentInList(card);
+
+        if (state.data.category.math) Learning.typeset([elements.cardFront, elements.cardAnswer]);
+    }
+
+    function revealAnswer() {
+        if (!current() || state.revealed) return;
+        state.revealed = true;
+        elements.cardBack.hidden = false;
+        elements.card.classList.add('revealed');
+        elements.reveal.hidden = true;
+        elements.learningButton.hidden = false;
+        elements.knownButton.hidden = false;
+        elements.knownButton.focus({
+            preventScroll: true
+        });
+    }
+
+    function updateStats() {
+        const total = state.deck.length;
+        const knownInDeck = state.deck.filter((card) => state.known.has(card.id)).length;
+        elements.statRemaining.textContent = state.queue.length;
+        elements.statLearning.textContent = state.learning.size;
+        elements.statKnown.textContent = `${knownInDeck} / ${total}`;
+        const percentage = total ? Math.round((knownInDeck / total) * 100) : 0;
+        elements.progressBar.style.width = `${percentage}%`;
+        elements.progressBarContainer.setAttribute('aria-valuenow', String(percentage));
+    }
+
+    function renderList() {
+        elements.list.innerHTML = '';
+        elements.browseCount.textContent = state.deck.length;
+        state.deck.forEach((card) => {
+            const item = Learning.el('li', 'card-list-item');
+            item.dataset.id = card.id;
+            const button = Learning.el('button', 'card-list-button');
+            button.type = 'button';
+            button.innerHTML = card.front;
+            button.addEventListener('click', () => jumpTo(card));
+            item.appendChild(button);
+            item.appendChild(Learning.el('span', 'card-list-status'));
+            elements.list.appendChild(item);
+            updateListItem(card);
+        });
+        if (state.data.category.math && elements.browser.open) Learning.typeset(elements.list);
+    }
+
+    function updateListItem(card) {
+        const item = elements.list.querySelector(`[data-id="${card.id}"]`);
+        if (!item) return;
+        const known = state.known.has(card.id);
+        item.classList.toggle('known', known);
+        item.querySelector('.card-list-status').textContent = known ? 'Known' : state.learning.has(card.id) ? 'Learning' : '';
+    }
+
+    function markCurrentInList(card) {
+        elements.list.querySelectorAll('.card-list-item').forEach((item) => {
+            item.classList.toggle('current', item.dataset.id === card.id);
+        });
+    }
+
+    // ---------------------------------------------------------------------
+    // Events
+    // ---------------------------------------------------------------------
+
+    function handleKeydown(event) {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        const target = event.target;
+        if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+        if (target && target.tagName === 'BUTTON' && (event.key === ' ' || event.key === 'Enter')) return;
+        if (target && target.tagName === 'SUMMARY') return;
+
+        const key = event.key;
+        if (key === ' ' || key === 'Enter') {
+            revealAnswer();
+        } else if (key === '1') {
+            rate(false);
+        } else if (key === '2') {
+            rate(true);
+        } else if (key === 'ArrowRight') {
+            skip();
+        } else if (key === 'ArrowLeft') {
+            back();
+        } else if (key === 's' || key === 'S') {
+            shuffleQueue();
+        } else {
+            return;
+        }
+        event.preventDefault();
+    }
+
+    function attachEvents() {
+        elements.settings.addEventListener('submit', (event) => event.preventDefault());
+        elements.categorySelect.addEventListener('change', (event) => loadCategory(event.target.value, []));
+        elements.shuffle.addEventListener('click', shuffleQueue);
+        elements.hideKnown.addEventListener('change', () => {
+            state.hideKnown = elements.hideKnown.checked;
+            buildDeck();
+        });
+        elements.topicFilter.addEventListener('click', (event) => {
+            const chip = event.target.closest('.topic-chip');
+            if (chip) toggleTopic(chip.dataset.topic);
+        });
+        elements.card.addEventListener('click', (event) => {
+            if (!event.target.closest('a') && !state.revealed) revealAnswer();
+        });
+        elements.reveal.addEventListener('click', revealAnswer);
+        elements.learningButton.addEventListener('click', () => rate(false));
+        elements.knownButton.addEventListener('click', () => rate(true));
+        elements.skip.addEventListener('click', skip);
+        elements.back.addEventListener('click', back);
+        elements.browser.addEventListener('toggle', () => {
+            if (elements.browser.open && state.data && state.data.category.math) Learning.typeset(elements.list);
+        });
+        elements.reset.addEventListener('click', () => {
+            if (!window.confirm(`Forget which ${state.data.category.name} cards you know?`)) return;
+            state.known.clear();
+            saveKnown();
+            buildDeck();
+        });
+        document.addEventListener('keydown', handleKeydown);
     }
 
     function init() {
         cacheElements();
-        attachEventListeners();
-        loadCategories();
+        attachEvents();
+        loadIndex();
     }
 
     if (document.readyState === 'loading') {
