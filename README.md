@@ -157,6 +157,7 @@ This directory contains a set of Python scripts designed to build and maintain t
 | **`format.sh`** | A shell script to format and lint code, maintaining code quality and consistency throughout the project. |
 | **`generate_article_list.py`** | Compiles a list of all articles or blog posts rendered on a specific section of the website (blog). |
 | **`generate_from_markdown.py`** | Converts Markdown files, primarily used for the blog section, into HTML format for web presentation. |
+| **`generate_quizzes.py`** / **`generate_flashcards.py`** | Validate the quizzes and flashcards kept in the notes repositories and build the JSON for the quiz and flashcard tools (`--local-root`, `--check`, `--strict`). |
 | **`generate_related_articles_section.py`** | Creates a section on each article page that suggests related articles, enhancing user engagement. |
 | **`generate_table_of_contents.py`** | Produces a table of contents for articles, making longer content more navigable. |
 | **`get_markdown_urls.py`** | Extracts and lists URLs from Markdown files, which are sources from which the articles will be generated. |

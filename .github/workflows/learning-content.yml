@@ -1,0 +1,37 @@
+name: Quizzes and flashcards
+
+on:
+  pull_request:
+    paths:
+      - "scripts/learning_sources.py"
+      - "scripts/generate_quizzes.py"
+      - "scripts/generate_flashcards.py"
+      - "tests/test_learning_generators.py"
+      - ".github/workflows/learning-content.yml"
+  push:
+    branches: [master]
+    paths:
+      - "scripts/learning_sources.py"
+      - "scripts/generate_quizzes.py"
+      - "scripts/generate_flashcards.py"
+      - "tests/test_learning_generators.py"
+  workflow_dispatch:
+
+jobs:
+  generators:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install Markdown==3.8.1 requests==2.33.0
+      - name: Parser and renderer tests
+        run: python3 -m unittest tests.test_learning_generators -v
+      - name: Upstream quiz and flashcard sources are valid
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/generate_quizzes.py --check
+          python3 scripts/generate_flashcards.py --check

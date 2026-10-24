@@ -1,450 +1,268 @@
 """
-Flashcard Generator Script
+Flashcard generator.
 
-This script fetches markdown files from remote URLs, extracts flashcard data
-from <details>/<summary> HTML elements, and generates JSON files for the
-flashcard web application.
+Reads the question/answer cards kept in the notes repositories and writes
+the JSON the flashcard app loads from ``src/tools/flash_cards``. A card is a
+``<details>`` element; the heading above it names its topic::
 
-Features:
-- Concurrent URL fetching with retry logic
-- Markdown to HTML conversion
-- Duplicate detection and removal
-- Atomic file writes for data integrity
-- Structured logging
+    ## Bayes' Theorem
 
-Author: Adam Djellouli
+    <details>
+    <summary>What is Bayes' Theorem?</summary>
+
+    Answer in Markdown, with $\\TeX$ on maths decks.
+
+    </details>
+
+Usage:
+    python3 generate_flashcards.py                       # fetch from GitHub
+    python3 generate_flashcards.py --local-root ~/my_repos
+    python3 generate_flashcards.py --check --strict      # validate only
 """
 
-import json
+import argparse
 import logging
 import re
-import tempfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
 from pathlib import Path
-from time import sleep
-from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import unquote, urlparse
+from typing import Dict, List, Optional, Tuple
 
-import markdown
-import requests
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.append(str(SCRIPT_DIR))
 
-
-URLS_INFO: List[Dict[str, str]] = [
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
-        "category": "Web Development",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/probability.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/correlation_and_regression.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/descriptive_statistics.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/statistical_inference.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/time_series_analysis.md",
-        "category": "Statistics",
-    },
-]
-
-
-OUTPUT_DIR: Path = Path("../src/tools/flash_cards")
-CATEGORIES_FILE: Path = OUTPUT_DIR / "categories.json"
-
-
-RETRY_LIMIT: int = 3
-TIMEOUT: int = 15
-MAX_WORKERS: int = 8
-
-
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=LOG_FORMAT,
-    datefmt=LOG_DATE_FORMAT,
+from generate_quizzes import Report, load_files  # noqa: E402
+from learning_sources import (  # noqa: E402
+    DATABASES,
+    DEVOPS,
+    FRONTEND,
+    SCHEMA_VERSION,
+    STATISTICS,
+    Category,
+    Source,
+    SourceFile,
+    SourceLoader,
+    document_title,
+    normalise_text,
+    remove_stale_json,
+    render_markdown,
+    slugify,
+    stable_id,
+    write_json,
 )
-logger = logging.getLogger(__name__)
+import requests  # noqa: E402
 
+OUTPUT_DIR = SCRIPT_DIR.parent / "src" / "tools" / "flash_cards"
 
-FLASHCARD_PATTERN = re.compile(
-    r"<details>\s*<summary>(.*?)</summary>\s*(?:<br\s*/?>)?\s*(.*?)\s*</details>",
-    re.DOTALL | re.IGNORECASE,
+CATEGORIES: Tuple[Category, ...] = (
+    Category(
+        slug="frontend",
+        name="Frontend",
+        description="Applied HTML, CSS, JavaScript, protocol and hosting questions to explain in your own words.",
+        sources=(Source(FRONTEND, "notes/12_quizes.md"),),
+    ),
+    Category(
+        slug="databases",
+        name="Databases",
+        description="Core database concepts: SQL objects, keys, normalisation, indexing, transactions and scaling.",
+        sources=(Source(DATABASES, "notes/quizes.md"),),
+    ),
+    Category(
+        slug="devops",
+        name="DevOps and Google Cloud",
+        description="DevOps practices and Google Cloud architecture decisions: what each service is for and when to choose it.",
+        sources=(Source(DEVOPS, "flashcards"),),
+    ),
+    Category(
+        slug="statistics",
+        name="Statistics",
+        description="Definitions and worked reasoning for probability, inference, regression and time series.",
+        sources=(Source(STATISTICS, "flashcards"),),
+        math=True,
+    ),
 )
 
-
-HEADER_PATTERN = re.compile(r"^(#{2,6})\s*(.+)$", re.MULTILINE)
-
-
-def atomic_write_json(data: Any, path: Path) -> None:
-    """
-    Atomically write JSON data to a file.
-
-    This function writes to a temporary file first, then atomically replaces
-    the target file. This prevents data corruption if the write is interrupted.
-
-    Args:
-        data: The data to serialize to JSON
-        path: The target file path
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            delete=False,
-            dir=path.parent,
-            suffix=".tmp",
-            encoding="utf-8",
-        ) as tmp:
-            json.dump(data, tmp, indent=4, sort_keys=True, ensure_ascii=False)
-            temp_path = Path(tmp.name)
-
-        temp_path.replace(path)
-        logger.info("Successfully wrote JSON to %s", path)
-
-    except (OSError, IOError) as e:
-        logger.error("Failed to write JSON to %s: %s", path, e)
-        raise
+TITLE_WORDS = (r"^quizzes on\b", r"\bquiz(zes)?\b", r"\bflashcards?\b", r"\breview\b")
+HEADING = re.compile(r"^(#{2,6})\s+(.+?)\s*#*\s*$", re.M)
+DETAILS = re.compile(r"<details[^>]*>(.*?)</details>", re.S | re.I)
+SUMMARY = re.compile(r"^\s*<summary[^>]*>(.*?)</summary>\s*(?:<br\s*/?>)?", re.S | re.I)
+FENCED_BLOCK = re.compile(r"^\s*(```|~~~).*?^\s*\1", re.S | re.M)
+LEADING_NUMBER = re.compile(r"^\s*\d+[.)]\s+")
 
 
-def retry_get(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
-    """
-    Download content from a URL with exponential backoff retry logic.
-
-    Args:
-        url: The URL to fetch
-        retries: Maximum number of retry attempts
-
-    Returns:
-        The response text content, or None if all retries failed
-    """
-    for attempt in range(1, retries + 1):
-        try:
-            logger.info("Fetching %s (attempt %d/%d)", url, attempt, retries)
-            response = requests.get(url, timeout=TIMEOUT)
-            response.raise_for_status()
-            logger.debug("Successfully fetched %s (%d bytes)", url, len(response.text))
-            return response.text
-
-        except requests.Timeout:
-            logger.warning("Timeout fetching %s (attempt %d)", url, attempt)
-        except requests.HTTPError as e:
-            logger.warning("HTTP error fetching %s: %s (attempt %d)", url, e, attempt)
-        except requests.RequestException as e:
-            logger.warning(
-                "Request error fetching %s: %s (attempt %d)", url, e, attempt
-            )
-
-        if attempt < retries:
-            wait_time = 2 ** (attempt - 1)
-            logger.info("Retrying in %d seconds...", wait_time)
-            sleep(wait_time)
-
-    logger.error("Failed to fetch %s after %d attempts", url, retries)
-    return None
+def _blank_fences(text: str) -> str:
+    """Hide fenced code so headings or tags inside examples are not parsed."""
+    return FENCED_BLOCK.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
 
 
-def markdown_to_html(md_text: str) -> str:
-    """
-    Convert markdown text to HTML.
+def parse_cards(source: SourceFile, report: Report) -> List[Tuple[str, str, str, int]]:
+    """Return ``(topic, front, back, line)`` for every card in ``source``."""
+    scan = _blank_fences(source.text)
+    headings = [
+        (m.start(), len(m.group(1)), m.group(2).strip()) for m in HEADING.finditer(scan)
+    ]
+    fallback = document_title(source, TITLE_WORDS)
+    cards = []
 
-    Args:
-        md_text: The markdown text to convert
+    for match in DETAILS.finditer(scan):
+        line = source.text.count("\n", 0, match.start()) + 1
+        location = f"{source.repo.name}/{source.path}:{line}"
+        body = source.text[match.start(1) : match.end(1)]
+        summary = SUMMARY.match(body)
+        if not summary:
+            report.add("error", location, "card has no <summary>")
+            continue
+        front = LEADING_NUMBER.sub("", " ".join(summary.group(1).split()))
+        back = body[summary.end() :].strip()
+        if not front or not back:
+            report.add("error", location, "card has an empty question or answer")
+            continue
 
-    Returns:
-        The HTML representation of the markdown
-    """
-    return markdown.markdown(
-        md_text,
-        extensions=["extra", "codehilite", "tables", "fenced_code"],
-    )
-
-
-def extract_subcategories_and_sections(content: str) -> List[Tuple[str, str]]:
-    """
-    Split markdown content into sections based on headers.
-
-    Args:
-        content: The markdown content to parse
-
-    Returns:
-        A list of (header_name, section_content) tuples
-    """
-    headers = list(HEADER_PATTERN.finditer(content))
-
-    if not headers:
-        return [("Default", content)]
-
-    sections: List[Tuple[str, str]] = []
-    for i, match in enumerate(headers):
-        name = match.group(2).strip()
-        start = match.end()
-        end = headers[i + 1].start() if i + 1 < len(headers) else len(content)
-        section_content = content[start:end].strip()
-        if section_content:
-            sections.append((name, section_content))
-
-    return sections if sections else [("Default", content)]
+        above = [h for h in headings if h[0] < match.start()]
+        # Cards are grouped by their nearest level-2 heading, so sub-headings
+        # inside a section do not splinter it into tiny topics.
+        section = next(
+            (h for h in reversed(above) if h[1] == 2), above[-1] if above else None
+        )
+        if section is None:
+            report.add("warning", location, "card is not under a heading")
+        cards.append((section[2] if section else fallback, front, back, line))
+    return cards
 
 
-def parse_flashcards(section: str) -> List[Dict[str, str]]:
-    """
-    Extract flashcards from a markdown section.
+def build_category(category: Category, files: List[SourceFile], report: Report) -> Dict:
+    topics: Dict[str, Dict] = {}
+    cards: List[Dict] = []
+    seen: Dict[str, str] = {}
 
-    Flashcards are expected to be in the format:
-    <details><summary>Question</summary>Answer</details>
+    for source in files:
+        group = document_title(source, TITLE_WORDS)
+        parsed = parse_cards(source, report)
+        if not parsed:
+            report.add("warning", f"{source.repo.name}/{source.path}", "no cards found")
+        for topic_name, front, back, line in parsed:
+            key = normalise_text(front)
+            if key in seen:
+                report.add(
+                    "warning",
+                    f"{source.repo.name}/{source.path}:{line}",
+                    f"duplicate of {seen[key]}, skipped",
+                )
+                continue
+            seen[key] = f"{source.path}:{line}"
 
-    Args:
-        section: The markdown section to parse
-
-    Returns:
-        A list of flashcard dictionaries with 'front' and 'back' keys
-    """
-    cards: List[Dict[str, str]] = []
-
-    for match in FLASHCARD_PATTERN.finditer(section):
-        front_raw = match.group(1).strip()
-        back_raw = match.group(2).strip()
-
-        front_html = markdown_to_html(front_raw)
-        back_html = markdown_to_html(back_raw)
-
-        if front_html and back_html:
+            topic = slugify(f"{source.stem} {topic_name}")
+            if topic not in topics:
+                topics[topic] = {
+                    "slug": topic,
+                    "name": topic_name,
+                    "group": group,
+                    "source": source.url,
+                    "cardCount": 0,
+                }
+            topics[topic]["cardCount"] += 1
             cards.append(
                 {
-                    "front": front_html,
-                    "back": back_html,
+                    "id": stable_id(category.slug, key),
+                    "topic": topic,
+                    "front": render_markdown(
+                        front, source, math=category.math, inline=True
+                    ),
+                    "back": render_markdown(back, source, math=category.math),
+                    "source": f"{source.url}#L{line}",
                 }
             )
 
-    return dedupe_cards(cards)
-
-
-def dedupe_cards(cards: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    """
-    Remove duplicate flashcards based on front and back content.
-
-    Args:
-        cards: List of flashcard dictionaries
-
-    Returns:
-        A deduplicated list of flashcards
-    """
-    seen: Set[Tuple[str, str]] = set()
-    unique: List[Dict[str, str]] = []
-
-    for card in cards:
-        key = (card["front"], card["back"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(card)
-
-    if len(cards) != len(unique):
-        logger.debug("Removed %d duplicate cards", len(cards) - len(unique))
-
-    return unique
-
-
-def group_cards_by_subcategory(
-    content: str, fallback_name: str
-) -> Dict[str, List[Dict[str, str]]]:
-    """
-    Organize flashcards by subcategory based on markdown headers.
-
-    Args:
-        content: The markdown content to parse
-        fallback_name: Name to use if no headers are found
-
-    Returns:
-        A dictionary mapping subcategory names to lists of flashcards
-    """
-    sections = extract_subcategories_and_sections(content)
-    cards_by_subcategory: Dict[str, List[Dict[str, str]]] = {}
-
-    for name, section_content in sections:
-        cards = parse_flashcards(section_content)
-        if cards:
-            cards_by_subcategory[name] = cards
-            logger.debug("Found %d cards in subcategory '%s'", len(cards), name)
-
-    if not cards_by_subcategory:
-        logger.debug("No cards found, using fallback subcategory '%s'", fallback_name)
-        cards_by_subcategory[fallback_name] = []
-
-    return cards_by_subcategory
-
-
-def merge_flashcards(
-    existing: Dict[str, List[Dict[str, str]]],
-    new: Dict[str, List[Dict[str, str]]],
-) -> Dict[str, List[Dict[str, str]]]:
-    """
-    Merge new flashcards into existing subcategories, removing duplicates.
-
-    Args:
-        existing: Existing flashcards by subcategory
-        new: New flashcards to merge
-
-    Returns:
-        The merged flashcard dictionary
-    """
-    for subcategory, new_cards in new.items():
-        combined = existing.get(subcategory, []) + new_cards
-        existing[subcategory] = dedupe_cards(combined)
-
-    return existing
-
-
-def save_category_to_json(
-    cards_by_subcategory: Dict[str, List[Dict[str, str]]],
-    category: str,
-    output_path: Path,
-) -> int:
-    """
-    Save flashcards for a category to a JSON file.
-
-    If the output file already exists, the new cards are merged with existing ones.
-
-    Args:
-        cards_by_subcategory: Flashcards organized by subcategory
-        category: The category name
-        output_path: The output file path
-
-    Returns:
-        The total number of flashcards saved
-    """
-
-    if output_path.exists():
-        logger.info("Merging with existing data from %s", output_path)
-        try:
-            existing_data = json.loads(output_path.read_text(encoding="utf-8"))
-            existing_subcategories = {
-                s["name"]: s["cards"] for s in existing_data.get("subcategories", [])
-            }
-            cards_by_subcategory = merge_flashcards(
-                existing_subcategories, cards_by_subcategory
-            )
-        except (json.JSONDecodeError, KeyError) as e:
-            logger.warning("Could not parse existing file, overwriting: %s", e)
-
-    data = {
-        "category": category,
-        "subcategories": [
-            {"name": name, "cards": cards}
-            for name, cards in sorted(cards_by_subcategory.items())
-        ],
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "category": category.to_dict(cardCount=len(cards), topicCount=len(topics)),
+        "topics": list(topics.values()),
+        "cards": cards,
     }
 
-    atomic_write_json(data, output_path)
 
-    total_cards = sum(len(cards) for cards in cards_by_subcategory.values())
-    return total_cards
+def generate(
+    loader: SourceLoader, output_dir: Path, write: bool = True
+) -> Tuple[Dict[str, Dict], Report]:
+    report = Report()
+    built: Dict[str, Dict] = {}
+    for category in CATEGORIES:
+        data = build_category(category, load_files(loader, category, report), report)
+        if data["cards"]:
+            built[category.slug] = data
 
-
-def process_category(category: str, urls: List[str]) -> int:
-    """
-    Process all URLs for a single category.
-
-    Args:
-        category: The category name
-        urls: List of URLs to fetch flashcards from
-
-    Returns:
-        The total number of flashcards processed
-    """
-    logger.info("Processing category '%s' with %d URL(s)", category, len(urls))
-
-    all_cards: Dict[str, List[Dict[str, str]]] = {}
-
-    for url in urls:
-        content = retry_get(url)
-        if not content:
-            continue
-
-        path = unquote(urlparse(url).path)
-        fallback_name = Path(path).stem.replace("_", " ").title()
-
-        grouped = group_cards_by_subcategory(content, fallback_name)
-        all_cards = merge_flashcards(all_cards, grouped)
-
-    output_filename = category.replace(" ", "_").lower() + ".json"
-    output_path = OUTPUT_DIR / output_filename
-
-    total_cards = save_category_to_json(all_cards, category, output_path)
-    logger.info("Category '%s': saved %d flashcards", category, total_cards)
-
-    return total_cards
-
-
-def update_categories_index(categories: Set[str]) -> None:
-    """
-    Update the categories.json index file.
-
-    Args:
-        categories: Set of category names
-    """
-
-    def to_snake_case(s: str) -> str:
-        return re.sub(r"\W+", "_", s).strip("_").lower()
-
-    category_list = sorted(to_snake_case(cat) for cat in categories)
-    atomic_write_json(category_list, CATEGORIES_FILE)
-    logger.info("Updated categories index with %d categories", len(category_list))
-
-
-def main() -> None:
-    """Main entry point for the flashcard generator."""
-    logger.info("Starting flashcard generation...")
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    category_urls: Dict[str, List[str]] = {}
-    categories: Set[str] = set()
-
-    for info in URLS_INFO:
-        category = info["category"]
-        url = info["url"]
-        category_urls.setdefault(category, []).append(url)
-        categories.add(category)
-
-    logger.info("Found %d categories to process", len(categories))
-
-    total_cards = 0
-    num_workers = min(MAX_WORKERS, len(category_urls))
-
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {
-            executor.submit(process_category, cat, urls): cat
-            for cat, urls in category_urls.items()
+    if write:
+        for slug, data in built.items():
+            if write_json(data, output_dir / f"{slug}.json"):
+                logging.info("Updated %s.json", slug)
+        index = {
+            "schemaVersion": SCHEMA_VERSION,
+            "categories": [d["category"] for d in built.values()],
         }
+        write_json(index, output_dir / "categories.json")
+        for path in remove_stale_json(
+            output_dir, [f"{slug}.json" for slug in built] + ["categories.json"]
+        ):
+            logging.info("Removed stale %s", path.name)
+    return built, report
 
-        for future in as_completed(futures):
-            category = futures[future]
-            try:
-                count = future.result()
-                total_cards += count
-            except Exception as e:
-                logger.error("Error processing category '%s': %s", category, e)
 
-    update_categories_index(categories)
-
-    logger.info(
-        "Flashcard generation complete: %d total cards across %d categories",
-        total_cards,
-        len(categories),
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "--local-root",
+        type=Path,
+        help="read the notes repositories from this directory instead of GitHub",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_DIR,
+        help="directory for the generated JSON",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate the sources without writing anything",
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="treat warnings as failures"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="list every warning"
+    )
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    try:
+        built, report = generate(
+            SourceLoader(args.local_root), args.output, write=not args.check
+        )
+    except requests.RequestException as exc:
+        logging.error("Could not download flashcard sources: %s", exc)
+        return 1
+
+    for problem in report.errors:
+        logging.error("%s", problem)
+    if args.verbose or args.strict:
+        for problem in report.warnings:
+            logging.warning("%s", problem)
+    elif report.warnings:
+        logging.info("%d warnings (run with -v to list them)", len(report.warnings))
+
+    for slug, data in built.items():
+        logging.info(
+            "%-12s %4d cards in %d topics",
+            slug,
+            len(data["cards"]),
+            len(data["topics"]),
+        )
+
+    if (args.check or args.strict) and report.errors:
+        return 1
+    if args.strict and report.warnings:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -1,945 +1,781 @@
 (function() {
     'use strict';
 
-
-
-
-
     const CONFIG = {
-        PROXY_URL: 'https://api.allorigins.win/get?url=',
-        BASE_URL: 'https://adamdjellouli.com/tools/quiz_app',
-        DEFAULT_MAX_QUESTIONS: 12,
-        ANIMATION_DURATION: 300,
-        PROGRESS_CIRCLE_CIRCUMFERENCE: 283,
-        TIMER_SECONDS_PER_QUESTION: 120,
-        TIMER_WARNING_THRESHOLD: 60,
-        TIMER_CRITICAL_THRESHOLD: 15,
-        STAGGER_DELAY_MS: 60,
-        SCORE_ANIMATION_DURATION: 1200,
-        INTERSECTION_THRESHOLD: 0.5
+        DEFAULT_QUESTIONS: 10,
+        MAX_QUESTIONS: 100,
+        TIMER_SECONDS_PER_QUESTION: 75,
+        TIMER_WARNING_SECONDS: 60,
+        TIMER_CRITICAL_SECONDS: 15,
+        PROGRESS_CIRCUMFERENCE: 2 * Math.PI * 45,
+        MAX_OPTION_KEYS: 9
     };
 
+    const MODE_HINTS = {
+        practice: 'Practice mode: each answer is checked as soon as you pick it. Keys: 1–5 answer the current question, ↑/↓ move between questions, Enter shows results.',
+        exam: 'Exam mode: answers stay hidden until you submit. Keys: 1–5 answer the current question, ↑/↓ move between questions, Enter submits.'
+    };
 
-
-
+    const progressStore = Learning.store('quiz');
+    const categoryCache = new Map();
 
     const state = {
         categories: [],
-        currentCategoryData: null,
-        displayedQuestions: [],
-        userAnswers: new Map(),
-        categoryCache: new Map(),
-        isSubmitted: false,
-
-        timerInterval: null,
-        timerSecondsLeft: 0,
-        quizStartTime: null,
-        quizEndTime: null,
-
-        activeQuestionIndex: 0,
-        questionObserver: null,
-
-        currentStreak: 0,
-        bestStreak: 0
+        data: null,
+        topics: new Set(),
+        mode: 'practice',
+        onlyMissed: false,
+        items: [],
+        submitted: false,
+        active: 0,
+        observer: null,
+        timer: null,
+        secondsLeft: 0,
+        startedAt: 0,
+        lastFocus: null
     };
 
-
-
-
-
+    const $ = (id) => document.getElementById(id);
     let elements = {};
 
-    function initializeElements() {
+    function cacheElements() {
         elements = {
-
-            categorySelect: document.getElementById('categorySelect'),
-            maxQuestionsInput: document.getElementById('maxQuestionsInput'),
-            reloadBtn: document.getElementById('reloadQuestionsButton'),
-            submitBtn: document.getElementById('submitButton'),
-
-            quizContainer: document.getElementById('quizContainer'),
-
-            progressText: document.getElementById('progressText'),
-            progressPercentage: document.getElementById('progressPercentage'),
-            progressBar: document.getElementById('progressBar'),
-
-            loadingOverlay: document.getElementById('loadingOverlay'),
-
-            resultsModal: document.getElementById('resultsModal'),
-            modalBackdrop: document.getElementById('modalBackdrop'),
-            modalClose: document.getElementById('modalClose'),
-            resultsProgress: document.getElementById('resultsProgress'),
-            resultsScore: document.getElementById('resultsScore'),
-            correctCount: document.getElementById('correctCount'),
-            incorrectCount: document.getElementById('incorrectCount'),
-            unansweredCount: document.getElementById('unansweredCount'),
-            resultsMessage: document.getElementById('resultsMessage'),
-            reviewAnswersButton: document.getElementById('reviewAnswersButton'),
-            tryAgainButton: document.getElementById('tryAgainButton'),
-
-            timerDisplay: document.getElementById('timerDisplay'),
-            timerToggle: document.getElementById('timerToggle'),
-
-            questionNav: document.getElementById('questionNav'),
-
-            streakBadge: document.getElementById('streakBadge')
+            settings: $('quizSettings'),
+            categorySelect: $('categorySelect'),
+            maxQuestions: $('maxQuestionsInput'),
+            timerToggle: $('timerToggle'),
+            timerDisplay: $('timerDisplay'),
+            categoryMeta: $('categoryMeta'),
+            topicFilter: $('topicFilter'),
+            missedToggle: $('missedToggle'),
+            missedToggleLabel: $('missedToggleLabel'),
+            missedToggleText: $('missedToggleText'),
+            modeHint: $('modeHint'),
+            tallyValue: $('tallyValue'),
+            questionNav: $('questionNav'),
+            progressText: $('progressText'),
+            progressPercentage: $('progressPercentage'),
+            progressBar: $('progressBar'),
+            progressBarContainer: $('progressBarContainer'),
+            container: $('quizContainer'),
+            submit: $('submitButton'),
+            modal: $('resultsModal'),
+            resultsProgress: $('resultsProgress'),
+            resultsScore: $('resultsScore'),
+            correctCount: $('correctCount'),
+            incorrectCount: $('incorrectCount'),
+            unansweredCount: $('unansweredCount'),
+            resultsMessage: $('resultsMessage'),
+            breakdown: $('topicBreakdown'),
+            review: $('reviewAnswersButton'),
+            retryMissed: $('retryMissedButton'),
+            tryAgain: $('tryAgainButton')
         };
     }
 
+    // ---------------------------------------------------------------------
+    // Persistence: which questions were missed, best score per subject
+    // ---------------------------------------------------------------------
 
+    function categoryProgress(slug) {
+        return progressStore.get(slug || state.data.category.slug, {
+            missed: [],
+            best: null,
+            attempts: 0
+        });
+    }
 
-
-
-    async function fetchJson(url) {
-        try {
-            const response = await fetch(CONFIG.PROXY_URL + encodeURIComponent(url));
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    function saveProgress(results) {
+        const slug = state.data.category.slug;
+        const progress = categoryProgress(slug);
+        const missed = new Set(progress.missed);
+        state.items.forEach((item) => {
+            if (item.answer === item.question.correctOptionIndex) {
+                missed.delete(item.question.id);
+            } else if (item.answer !== undefined) {
+                missed.add(item.question.id);
             }
-            const {
-                contents
-            } = await response.json();
-            return JSON.parse(contents);
-        } catch (proxyError) {
-            console.warn('Proxy fetch failed, trying local fallback:', proxyError.message);
-        }
+        });
+        progress.missed = Array.from(missed);
+        progress.attempts += 1;
+        progress.best = Math.max(progress.best || 0, results.percentage);
+        progressStore.set(slug, progress);
+        updateMissedToggle();
+    }
 
+    // ---------------------------------------------------------------------
+    // Loading subjects
+    // ---------------------------------------------------------------------
+
+    async function loadIndex() {
         try {
-            const filename = url.split('/').pop();
-            const response = await fetch(filename);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const index = await Learning.fetchJson('categories.json');
+            state.categories = index.categories || [];
+        } catch (error) {
+            console.error(error);
+            showMessage('The quiz index could not be loaded. Please refresh the page.');
+            return;
+        }
+        if (!state.categories.length) {
+            showMessage('No quizzes are available yet.');
+            return;
+        }
+
+        elements.categorySelect.innerHTML = '';
+        state.categories.forEach((category) => {
+            const option = document.createElement('option');
+            option.value = category.slug;
+            option.textContent = `${category.name} (${category.questionCount})`;
+            elements.categorySelect.appendChild(option);
+        });
+
+        const params = Learning.readParams();
+        const requested = params.get('category');
+        const slug = state.categories.some((c) => c.slug === requested) ? requested : state.categories[0].slug;
+        elements.categorySelect.value = slug;
+
+        const mode = params.get('mode');
+        if (mode === 'exam' || mode === 'practice') setMode(mode);
+        const count = parseInt(params.get('n'), 10);
+        if (count > 0) elements.maxQuestions.value = Math.min(count, CONFIG.MAX_QUESTIONS);
+
+        const topics = (params.get('topics') || '').split(',').filter(Boolean);
+        await loadCategory(slug, topics);
+    }
+
+    async function loadCategory(slug, topics) {
+        showMessage('Loading questions…');
+        try {
+            if (!categoryCache.has(slug)) {
+                categoryCache.set(slug, await Learning.fetchJson(`${slug}.json`));
             }
-            return await response.json();
-        } catch (localError) {
-            console.error('Both proxy and local fetch failed:', localError);
-            return null;
+        } catch (error) {
+            console.error(error);
+            showMessage('These questions could not be loaded. Please try another subject or refresh.');
+            return;
+        }
+        state.data = categoryCache.get(slug);
+        const known = new Set(state.data.topics.map((t) => t.slug));
+        state.topics = new Set((topics || []).filter((t) => known.has(t)));
+        state.onlyMissed = false;
+        elements.missedToggle.checked = false;
+        renderCategoryMeta();
+        renderTopicFilter();
+        updateMissedToggle();
+        startQuiz();
+    }
+
+    function renderCategoryMeta() {
+        const meta = elements.categoryMeta;
+        const category = state.data.category;
+        meta.innerHTML = '';
+        meta.appendChild(document.createTextNode(`${category.description} `));
+        const progress = categoryProgress();
+        const facts = [`${category.questionCount} questions`, `${category.topicCount} topics`];
+        if (progress.best !== null) facts.push(`your best: ${progress.best}%`);
+        meta.appendChild(Learning.el('span', 'meta-facts', facts.join(' · ')));
+        (category.repositories || []).forEach((url) => {
+            meta.appendChild(document.createTextNode(' · '));
+            meta.appendChild(Learning.link(url, 'Source notes'));
+        });
+    }
+
+    function renderTopicFilter() {
+        const filter = elements.topicFilter;
+        filter.innerHTML = '';
+        const chip = (label, slug, count) => {
+            const button = Learning.el('button', 'topic-chip');
+            button.type = 'button';
+            button.dataset.topic = slug;
+            button.appendChild(document.createTextNode(label));
+            if (count !== undefined) button.appendChild(Learning.el('span', 'chip-count', String(count)));
+            filter.appendChild(button);
+        };
+        chip('All topics', '', state.data.category.questionCount);
+        state.data.topics.forEach((topic) => chip(topic.name, topic.slug, topic.questionCount));
+        syncTopicChips();
+    }
+
+    function syncTopicChips() {
+        elements.topicFilter.querySelectorAll('.topic-chip').forEach((button) => {
+            const slug = button.dataset.topic;
+            const pressed = slug ? state.topics.has(slug) : state.topics.size === 0;
+            button.setAttribute('aria-pressed', String(pressed));
+        });
+    }
+
+    function toggleTopic(slug) {
+        if (!slug) {
+            state.topics.clear();
+        } else if (state.topics.has(slug)) {
+            state.topics.delete(slug);
+        } else {
+            state.topics.add(slug);
+            if (state.topics.size === state.data.topics.length) state.topics.clear();
+        }
+        syncTopicChips();
+        updateMissedToggle();
+        startQuiz();
+    }
+
+    function updateMissedToggle() {
+        if (!state.data) return;
+        const missed = missedPool().length;
+        elements.missedToggleLabel.hidden = missed === 0;
+        elements.missedToggleText.textContent = `Only questions I missed (${missed})`;
+        if (missed === 0 && state.onlyMissed) {
+            state.onlyMissed = false;
+            elements.missedToggle.checked = false;
         }
     }
 
-    function toSlug(str) {
-        return str.trim().toLowerCase().replace(/\W+/g, '_');
+    // ---------------------------------------------------------------------
+    // Building a quiz
+    // ---------------------------------------------------------------------
+
+    function topicPool() {
+        const questions = state.data.questions;
+        return state.topics.size ? questions.filter((q) => state.topics.has(q.topic)) : questions;
     }
 
-    function shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    function missedPool() {
+        const missed = new Set(categoryProgress().missed);
+        return topicPool().filter((q) => missed.has(q.id));
+    }
+
+    function questionCount() {
+        const value = parseInt(elements.maxQuestions.value, 10);
+        if (!value || value < 1) return CONFIG.DEFAULT_QUESTIONS;
+        return Math.min(value, CONFIG.MAX_QUESTIONS);
+    }
+
+    function startQuiz(questions) {
+        if (!state.data) return;
+        hideResults();
+        const pool = questions || (state.onlyMissed ? missedPool() : topicPool());
+        const picked = questions ? Learning.shuffle(questions) : Learning.shuffle(pool).slice(0, questionCount());
+
+        state.items = picked.map((question) => ({
+            question,
+            order: question.fixedOrder ? question.options.map((_, i) => i) : Learning.shuffle(question.options.map((_, i) => i)),
+            answer: undefined,
+            revealed: false
+        }));
+        state.submitted = false;
+        state.active = 0;
+
+        renderQuiz();
+        resetTimer();
+        if (elements.timerToggle.checked) startTimer();
+        syncUrl();
+    }
+
+    function syncUrl() {
+        Learning.writeParams({
+            category: state.data.category.slug,
+            topics: Array.from(state.topics).join(','),
+            mode: state.mode === 'practice' ? '' : state.mode,
+            n: questionCount() === CONFIG.DEFAULT_QUESTIONS ? '' : questionCount()
+        });
+    }
+
+    function topicFor(slug) {
+        return state.data.topics.find((t) => t.slug === slug);
+    }
+
+    // ---------------------------------------------------------------------
+    // Rendering
+    // ---------------------------------------------------------------------
+
+    function showMessage(text) {
+        elements.container.innerHTML = '';
+        const box = Learning.el('div', 'empty-state');
+        box.appendChild(Learning.el('p', 'empty-state-text', text));
+        elements.container.appendChild(box);
+        elements.questionNav.innerHTML = '';
+        elements.submit.disabled = true;
+    }
+
+    function renderQuiz() {
+        if (!state.items.length) {
+            showMessage(state.onlyMissed ? 'No missed questions left in these topics. Nice work.' : 'No questions match these topics.');
+            updateProgress();
+            return;
         }
-        return shuffled;
+        elements.container.innerHTML = '';
+        state.items.forEach((item, index) => elements.container.appendChild(renderCard(item, index)));
+        renderNav();
+        observeCards();
+        updateProgress();
+        updateSubmitButton();
+        if (state.data.category.math) Learning.typeset(elements.container);
     }
 
-    function pickRandom(array, n) {
-        return shuffleArray(array).slice(0, Math.min(n, array.length));
+    function renderCard(item, index) {
+        const question = item.question;
+        const card = Learning.el('article', 'question-card');
+        card.dataset.index = index;
+        card.tabIndex = -1;
+
+        const header = Learning.el('div', 'question-header');
+        header.appendChild(Learning.el('span', 'question-number', String(index + 1)));
+        const topic = topicFor(question.topic);
+        header.appendChild(Learning.el('span', 'question-topic', topic ? topic.name : ''));
+        card.appendChild(header);
+
+        const text = Learning.el('div', 'question-content');
+        text.id = `q${index}-text`;
+        text.innerHTML = question.text;
+        card.appendChild(text);
+
+        const list = Learning.el('ul', 'options-list');
+        list.setAttribute('role', 'radiogroup');
+        list.setAttribute('aria-labelledby', text.id);
+        item.order.forEach((optionIndex, position) => {
+            const li = Learning.el('li', 'option-item');
+            li.dataset.option = optionIndex;
+            const id = `q${index}-opt${optionIndex}`;
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.className = 'option-input';
+            input.name = `q${index}`;
+            input.id = id;
+            input.value = optionIndex;
+            input.addEventListener('change', () => selectAnswer(index, optionIndex));
+            const label = document.createElement('label');
+            label.className = 'option-label';
+            label.htmlFor = id;
+            label.appendChild(Learning.el('span', 'option-key', position < CONFIG.MAX_OPTION_KEYS ? String(position + 1) : ''));
+            const optionText = Learning.el('span', 'option-text');
+            optionText.innerHTML = question.options[optionIndex];
+            label.appendChild(optionText);
+            li.appendChild(input);
+            li.appendChild(label);
+            list.appendChild(li);
+        });
+        card.appendChild(list);
+
+        const feedback = Learning.el('div', 'question-feedback');
+        feedback.hidden = true;
+        feedback.setAttribute('aria-live', 'polite');
+        feedback.appendChild(Learning.el('p', 'feedback-verdict'));
+        if (question.explanation) {
+            const explanation = Learning.el('div', 'feedback-explanation');
+            explanation.innerHTML = question.explanation;
+            feedback.appendChild(explanation);
+        }
+        const links = Learning.el('p', 'feedback-links');
+        ((topic && topic.notes) || []).forEach((note) => {
+            links.appendChild(Learning.link(note.url, `Notes: ${note.title}`));
+        });
+        links.appendChild(Learning.link(question.source, 'Question source'));
+        feedback.appendChild(links);
+        card.appendChild(feedback);
+        return card;
     }
 
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+    function cardAt(index) {
+        return elements.container.querySelector(`.question-card[data-index="${index}"]`);
     }
 
-    function parseMarkdown(text) {
-        let result = escapeHtml(text);
-        result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
-        result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        return result;
+    function renderNav() {
+        const nav = elements.questionNav;
+        nav.innerHTML = '';
+        state.items.forEach((_, index) => {
+            const button = Learning.el('button', 'question-nav-btn', String(index + 1));
+            button.type = 'button';
+            button.setAttribute('aria-label', `Question ${index + 1}`);
+            button.addEventListener('click', () => focusQuestion(index));
+            nav.appendChild(button);
+        });
+        updateNav();
     }
 
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
+    function updateNav() {
+        const buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
+        state.items.forEach((item, index) => {
+            const button = buttons[index];
+            if (!button) return;
+            const shown = item.revealed;
+            button.classList.toggle('active', index === state.active);
+            button.classList.toggle('answered', item.answer !== undefined && !shown);
+            button.classList.toggle('correct', shown && item.answer === item.question.correctOptionIndex);
+            button.classList.toggle('incorrect', shown && item.answer !== item.question.correctOptionIndex);
+            if (index === state.active) button.setAttribute('aria-current', 'step');
+            else button.removeAttribute('aria-current');
+        });
+    }
+
+    function observeCards() {
+        if (state.observer) state.observer.disconnect();
+        if (typeof IntersectionObserver === 'undefined') return;
+        state.observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    state.active = Number(entry.target.dataset.index);
+                    updateNav();
+                }
+            });
+        }, {
+            rootMargin: '-40% 0px -50% 0px'
+        });
+        elements.container.querySelectorAll('.question-card').forEach((card) => state.observer.observe(card));
+    }
+
+    function focusQuestion(index) {
+        const card = cardAt(index);
+        if (!card) return;
+        state.active = index;
+        updateNav();
+        card.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+        card.focus({
+            preventScroll: true
+        });
+    }
+
+    function updateProgress() {
+        const total = state.items.length;
+        const answered = state.items.filter((item) => item.answer !== undefined).length;
+        const percentage = total ? Math.round((answered / total) * 100) : 0;
+        elements.progressText.textContent = `${answered} of ${total} answered`;
+        elements.progressPercentage.textContent = `${percentage}%`;
+        elements.progressBar.style.width = `${percentage}%`;
+        elements.progressBarContainer.setAttribute('aria-valuenow', String(percentage));
+
+        const revealed = state.items.filter((item) => item.revealed);
+        const correct = revealed.filter((item) => item.answer === item.question.correctOptionIndex).length;
+        elements.tallyValue.textContent = `${correct} / ${revealed.length}`;
+        updateNav();
+    }
+
+    function updateSubmitButton() {
+        const button = elements.submit;
+        button.disabled = !state.items.length;
+        if (state.submitted) {
+            button.textContent = 'Show results';
+        } else {
+            button.textContent = state.mode === 'practice' ? 'Finish and see results' : 'Submit answers';
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Answering
+    // ---------------------------------------------------------------------
+
+    function selectAnswer(index, optionIndex) {
+        const item = state.items[index];
+        if (!item || item.revealed || state.submitted) return;
+        item.answer = optionIndex;
+        const card = cardAt(index);
+        card.classList.add('answered');
+        const input = card.querySelector(`#q${index}-opt${optionIndex}`);
+        if (input) input.checked = true;
+        if (state.mode === 'practice') reveal(index);
+        updateProgress();
+    }
+
+    function reveal(index) {
+        const item = state.items[index];
+        const card = cardAt(index);
+        if (!item || !card) return;
+        item.revealed = true;
+        const correctIndex = item.question.correctOptionIndex;
+        const isCorrect = item.answer === correctIndex;
+
+        card.querySelectorAll('.option-item').forEach((li) => {
+            const optionIndex = Number(li.dataset.option);
+            li.classList.toggle('correct', optionIndex === correctIndex);
+            li.classList.toggle('incorrect', optionIndex === item.answer && !isCorrect);
+            li.querySelector('input').disabled = true;
+        });
+        card.classList.add('revealed', item.answer === undefined ? 'skipped' : isCorrect ? 'correct-answer' : 'incorrect-answer');
+
+        const feedback = card.querySelector('.question-feedback');
+        const verdict = feedback.querySelector('.feedback-verdict');
+        verdict.textContent = item.answer === undefined ? 'Not answered.' : isCorrect ? 'Correct.' : 'Not quite.';
+        feedback.hidden = false;
+    }
+
+    function finish() {
+        if (!state.items.length) return;
+        if (!state.submitted) {
+            state.submitted = true;
+            stopTimer();
+            state.items.forEach((item, index) => {
+                if (!item.revealed) reveal(index);
+            });
+            updateProgress();
+            updateSubmitButton();
+            const results = computeResults();
+            saveProgress(results);
+            renderCategoryMeta();
+            state.lastResults = results;
+        }
+        showResults(state.lastResults);
+    }
+
+    function computeResults() {
+        const byTopic = new Map();
+        let correct = 0;
+        let incorrect = 0;
+        let unanswered = 0;
+        state.items.forEach((item) => {
+            const topic = item.question.topic;
+            if (!byTopic.has(topic)) byTopic.set(topic, {
+                correct: 0,
+                total: 0
+            });
+            const entry = byTopic.get(topic);
+            entry.total += 1;
+            if (item.answer === undefined) {
+                unanswered += 1;
+            } else if (item.answer === item.question.correctOptionIndex) {
+                correct += 1;
+                entry.correct += 1;
+            } else {
+                incorrect += 1;
+            }
+        });
+        const total = state.items.length;
+        return {
+            correct,
+            incorrect,
+            unanswered,
+            total,
+            percentage: total ? Math.round((correct / total) * 100) : 0,
+            byTopic,
+            seconds: state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : null
         };
     }
 
-    function formatTime(totalSeconds) {
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = totalSeconds % 60;
-        return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+    function resultsMessage(percentage) {
+        if (percentage === 100) return 'Full marks. Try exam mode or a larger set next.';
+        if (percentage >= 85) return 'Excellent. You know this material well.';
+        if (percentage >= 70) return 'Solid result. Read the explanations for the questions you missed.';
+        if (percentage >= 50) return 'Getting there. The linked notes cover the topics that went wrong.';
+        return 'Start with the notes for the topics below, then retry your mistakes.';
     }
 
-    // =========================================================================
-    // Loading State Management
-    // =========================================================================
+    // ---------------------------------------------------------------------
+    // Results dialog
+    // ---------------------------------------------------------------------
 
-    function showLoading() {
-        elements.loadingOverlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+    function showResults(results) {
+        elements.correctCount.textContent = results.correct;
+        elements.incorrectCount.textContent = results.incorrect;
+        elements.unansweredCount.textContent = results.unanswered;
+        let message = resultsMessage(results.percentage);
+        if (results.seconds !== null && elements.timerToggle.checked) message += ` Time: ${formatTime(results.seconds)}.`;
+        elements.resultsMessage.textContent = message;
+
+        const body = elements.breakdown.querySelector('tbody');
+        body.innerHTML = '';
+        results.byTopic.forEach((entry, slug) => {
+            const topic = topicFor(slug);
+            const row = document.createElement('tr');
+            row.appendChild(Learning.el('td', '', topic ? topic.name : slug));
+            row.appendChild(Learning.el('td', 'numeric', `${entry.correct} / ${entry.total}`));
+            const notes = Learning.el('td');
+            if (entry.correct < entry.total && topic && topic.notes && topic.notes[0]) {
+                notes.appendChild(Learning.link(topic.notes[0].url, 'Read the notes'));
+            } else {
+                notes.textContent = entry.correct === entry.total ? 'All correct' : '';
+            }
+            row.appendChild(notes);
+            body.appendChild(row);
+        });
+        elements.breakdown.hidden = results.byTopic.size < 2 && results.correct === results.total;
+
+        const mistakes = results.incorrect + results.unanswered;
+        elements.retryMissed.hidden = mistakes === 0;
+        elements.retryMissed.textContent = `Retry mistakes (${mistakes})`;
+
+        state.lastFocus = document.activeElement;
+        elements.modal.hidden = false;
+        document.body.classList.add('modal-open');
+        animateScore(results.percentage);
+        elements.modal.querySelector('.modal-close').focus();
     }
 
-    function hideLoading() {
-        elements.loadingOverlay.style.display = 'none';
-        document.body.style.overflow = '';
+    function hideResults() {
+        if (elements.modal.hidden) return;
+        elements.modal.hidden = true;
+        document.body.classList.remove('modal-open');
+        if (state.lastFocus && document.contains(state.lastFocus)) state.lastFocus.focus();
     }
 
-    // =========================================================================
-    // Timer System
-    // =========================================================================
+    function animateScore(target) {
+        const circumference = CONFIG.PROGRESS_CIRCUMFERENCE;
+        elements.resultsProgress.style.strokeDasharray = String(circumference);
+        const draw = (value) => {
+            elements.resultsScore.textContent = `${value}%`;
+            elements.resultsProgress.style.strokeDashoffset = String(circumference - (value / 100) * circumference);
+        };
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            draw(target);
+            return;
+        }
+        const started = performance.now();
+        const step = (now) => {
+            const t = Math.min((now - started) / 700, 1);
+            draw(Math.round(target * (1 - Math.pow(1 - t, 3))));
+            if (t < 1) requestAnimationFrame(step);
+        };
+        draw(0);
+        requestAnimationFrame(step);
+    }
+
+    function reviewAnswers() {
+        hideResults();
+        const first = state.items.findIndex((item) => item.answer !== item.question.correctOptionIndex);
+        focusQuestion(first === -1 ? 0 : first);
+    }
+
+    function retryMistakes() {
+        const questions = state.items
+            .filter((item) => item.answer !== item.question.correctOptionIndex)
+            .map((item) => item.question);
+        if (questions.length) startQuiz(questions);
+        window.scrollTo({
+            top: elements.settings.offsetTop,
+            behavior: 'smooth'
+        });
+    }
+
+    // ---------------------------------------------------------------------
+    // Timer
+    // ---------------------------------------------------------------------
+
+    function formatTime(total) {
+        const minutes = Math.floor(total / 60);
+        const seconds = total % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
 
     function startTimer() {
         stopTimer();
-        const totalQuestions = state.displayedQuestions.length;
-        state.timerSecondsLeft = totalQuestions * CONFIG.TIMER_SECONDS_PER_QUESTION;
-        state.quizStartTime = Date.now();
-        state.quizEndTime = null;
-        updateTimerDisplay();
-
-        state.timerInterval = setInterval(function() {
-            state.timerSecondsLeft--;
-            if (state.timerSecondsLeft <= 0) {
-                state.timerSecondsLeft = 0;
-                updateTimerDisplay();
+        if (!state.items.length || state.submitted) return;
+        state.secondsLeft = state.items.length * CONFIG.TIMER_SECONDS_PER_QUESTION;
+        state.startedAt = Date.now();
+        renderTimer();
+        state.timer = window.setInterval(() => {
+            state.secondsLeft -= 1;
+            renderTimer();
+            if (state.secondsLeft <= 0) {
                 stopTimer();
-                submitQuiz();
-            } else {
-                updateTimerDisplay();
+                finish();
             }
         }, 1000);
     }
 
     function stopTimer() {
-        if (state.timerInterval) {
-            clearInterval(state.timerInterval);
-            state.timerInterval = null;
-        }
+        if (state.timer) window.clearInterval(state.timer);
+        state.timer = null;
     }
 
-    function resetTimerDisplay() {
+    function resetTimer() {
         stopTimer();
-        state.timerSecondsLeft = 0;
-        state.quizStartTime = null;
-        state.quizEndTime = null;
-        if (elements.timerDisplay) {
-            elements.timerDisplay.textContent = '--:--';
-            elements.timerDisplay.classList.remove('warning', 'critical');
-        }
-    }
-
-    function updateTimerDisplay() {
-        if (!elements.timerDisplay) return;
-
-        elements.timerDisplay.textContent = formatTime(state.timerSecondsLeft);
+        state.startedAt = Date.now();
+        elements.timerDisplay.textContent = '--:--';
         elements.timerDisplay.classList.remove('warning', 'critical');
-
-        if (state.timerSecondsLeft <= CONFIG.TIMER_CRITICAL_THRESHOLD) {
-            elements.timerDisplay.classList.add('critical');
-        } else if (state.timerSecondsLeft <= CONFIG.TIMER_WARNING_THRESHOLD) {
-            elements.timerDisplay.classList.add('warning');
-        }
     }
 
-    function getTimeTaken() {
-        if (!state.quizStartTime) return null;
-        const end = state.quizEndTime || Date.now();
-        return Math.round((end - state.quizStartTime) / 1000);
+    function renderTimer() {
+        const display = elements.timerDisplay;
+        display.textContent = formatTime(Math.max(state.secondsLeft, 0));
+        display.classList.toggle('critical', state.secondsLeft <= CONFIG.TIMER_CRITICAL_SECONDS);
+        display.classList.toggle('warning', state.secondsLeft > CONFIG.TIMER_CRITICAL_SECONDS && state.secondsLeft <= CONFIG.TIMER_WARNING_SECONDS);
     }
 
-    // =========================================================================
-    // Question Navigation Sidebar
-    // =========================================================================
+    // ---------------------------------------------------------------------
+    // Settings and keyboard
+    // ---------------------------------------------------------------------
 
-    function buildQuestionNav() {
-        if (!elements.questionNav) return;
-        elements.questionNav.innerHTML = '';
-
-        state.displayedQuestions.forEach(function(_question, index) {
-            var btn = document.createElement('button');
-            btn.className = 'question-nav-btn';
-            btn.textContent = index + 1;
-            btn.setAttribute('aria-label', 'Go to question ' + (index + 1));
-            btn.addEventListener('click', function() {
-                scrollToQuestion(index);
-            });
-            elements.questionNav.appendChild(btn);
-        });
+    function setMode(mode) {
+        state.mode = mode;
+        const radio = elements.settings.querySelector(`input[name="mode"][value="${mode}"]`);
+        if (radio) radio.checked = true;
+        elements.modeHint.textContent = MODE_HINTS[mode];
     }
 
-    function scrollToQuestion(index) {
-        var card = elements.quizContainer.querySelector('[data-question-index="' + index + '"]');
-        if (card) {
-            card.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
+    function isTyping(target) {
+        return target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && target.type !== 'radio');
     }
 
-    function setActiveNavButton(index) {
-        if (!elements.questionNav) return;
-        state.activeQuestionIndex = index;
-        var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        buttons.forEach(function(btn, i) {
-            btn.classList.toggle('active', i === index);
-        });
-    }
-
-    function updateNavAnsweredState() {
-        if (!elements.questionNav) return;
-        var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        buttons.forEach(function(btn, i) {
-            btn.classList.toggle('answered', state.userAnswers.has(i));
-        });
-    }
-
-    function updateNavResultStates() {
-        if (!elements.questionNav) return;
-        var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        state.displayedQuestions.forEach(function(question, index) {
-            var btn = buttons[index];
-            if (!btn) return;
-            var userAnswer = state.userAnswers.get(index);
-            if (userAnswer === undefined) return;
-            if (userAnswer === question.correctOptionIndex) {
-                btn.classList.add('correct');
-            } else {
-                btn.classList.add('incorrect');
-            }
-        });
-    }
-
-    function setupIntersectionObserver() {
-        if (state.questionObserver) {
-            state.questionObserver.disconnect();
-        }
-
-        if (typeof IntersectionObserver === 'undefined') return;
-
-        state.questionObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    var index = parseInt(entry.target.getAttribute('data-question-index'), 10);
-                    if (!isNaN(index)) {
-                        setActiveNavButton(index);
-                    }
-                }
-            });
-        }, {
-            threshold: CONFIG.INTERSECTION_THRESHOLD
-        });
-
-        var cards = elements.quizContainer.querySelectorAll('.question-card');
-        cards.forEach(function(card) {
-            state.questionObserver.observe(card);
-        });
-    }
-
-    // =========================================================================
-    // Streak Tracking
-    // =========================================================================
-
-    function calculateStreak() {
-        var streak = 0;
-        var best = 0;
-
-        for (var i = 0; i < state.displayedQuestions.length; i++) {
-            var question = state.displayedQuestions[i];
-            var userAnswer = state.userAnswers.get(i);
-            if (userAnswer !== undefined && userAnswer === question.correctOptionIndex) {
-                streak++;
-                if (streak > best) best = streak;
-            } else {
-                streak = 0;
-            }
-        }
-
-        state.currentStreak = streak;
-        state.bestStreak = best;
-    }
-
-    function updateStreakDisplay() {
-        if (!elements.streakBadge) return;
-
-        calculateStreak();
-
-        if (state.bestStreak >= 2) {
-            elements.streakBadge.style.display = '';
-            var textEl = elements.streakBadge.querySelector('.streak-text');
-            if (textEl) {
-                textEl.textContent = state.bestStreak + ' streak';
-            }
-        } else {
-            elements.streakBadge.style.display = 'none';
-        }
-    }
-
-    // =========================================================================
-    // Modal Management
-    // =========================================================================
-
-    function animateScoreCounter(targetPercentage) {
-        var start = 0;
-        var duration = CONFIG.SCORE_ANIMATION_DURATION;
-        var startTime = null;
-
-        function step(timestamp) {
-            if (!startTime) startTime = timestamp;
-            var elapsed = timestamp - startTime;
-            var progress = Math.min(elapsed / duration, 1);
-            // Ease-out curve
-            var eased = 1 - Math.pow(1 - progress, 3);
-            var current = Math.round(eased * targetPercentage);
-            elements.resultsScore.textContent = current + '%';
-
-            // Also animate the circle
-            var offset = CONFIG.PROGRESS_CIRCLE_CIRCUMFERENCE -
-                (current / 100) * CONFIG.PROGRESS_CIRCLE_CIRCUMFERENCE;
-            elements.resultsProgress.style.strokeDashoffset = offset;
-
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            }
-        }
-
-        elements.resultsScore.textContent = '0%';
-        elements.resultsProgress.style.strokeDashoffset = CONFIG.PROGRESS_CIRCLE_CIRCUMFERENCE;
-        requestAnimationFrame(step);
-    }
-
-    function getResultsMessage(percentage) {
-        if (percentage === 100) return 'Perfect score! Absolutely flawless!';
-        if (percentage >= 90) return 'Outstanding! You\u2019ve mastered this topic!';
-        if (percentage >= 80) return 'Excellent work! You really know your stuff!';
-        if (percentage >= 70) return 'Great job! Keep up the excellent work!';
-        if (percentage >= 60) return 'Good effort! You\u2019re getting there!';
-        if (percentage >= 50) return 'Halfway there! A bit more practice will help.';
-        if (percentage >= 30) return 'Keep studying! You\u2019re building a foundation.';
-        return 'Keep learning! Review the material and try again.';
-    }
-
-    function showResultsModal(results) {
-        var correct = results.correct;
-        var incorrect = results.incorrect;
-        var unanswered = results.unanswered;
-        var percentage = results.percentage;
-
-        // Update stats
-        elements.correctCount.textContent = correct;
-        elements.incorrectCount.textContent = incorrect;
-        elements.unansweredCount.textContent = unanswered;
-
-        // Build message with time taken
-        var message = getResultsMessage(percentage);
-        var timeTaken = getTimeTaken();
-        if (timeTaken !== null) {
-            message += ' Time: ' + formatTime(timeTaken);
-        }
-        elements.resultsMessage.textContent = message;
-
-        // Show modal first, then animate
-        elements.resultsModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-
-        // Animate score counter from 0 to final percentage
-        animateScoreCounter(percentage);
-
-        // Focus management for accessibility
-        elements.modalClose.focus();
-    }
-
-    function hideResultsModal() {
-        elements.resultsModal.style.display = 'none';
-        document.body.style.overflow = '';
-
-        // Reset progress circle for next time
-        elements.resultsProgress.style.strokeDashoffset = CONFIG.PROGRESS_CIRCLE_CIRCUMFERENCE;
-    }
-
-    // =========================================================================
-    // Progress Tracking
-    // =========================================================================
-
-    function updateProgress() {
-        var total = state.displayedQuestions.length;
-        var answered = state.userAnswers.size;
-        var percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
-
-        elements.progressText.textContent = 'Question ' + answered + ' of ' + total;
-        elements.progressPercentage.textContent = percentage + '%';
-        elements.progressBar.style.width = percentage + '%';
-
-        // Update progressbar ARIA attributes
-        var progressBarContainer = elements.progressBar.parentElement;
-        progressBarContainer.setAttribute('aria-valuenow', percentage);
-
-        // Keep nav sidebar in sync
-        updateNavAnsweredState();
-    }
-
-    // =========================================================================
-    // Category Management
-    // =========================================================================
-
-    async function loadCategories() {
-        showLoading();
-
-        var categories = await fetchJson(CONFIG.BASE_URL + '/categories.json');
-
-        if (!Array.isArray(categories)) {
-            hideLoading();
-            showEmptyState('Unable to load categories. Please try again later.');
+    function handleKeydown(event) {
+        if (!elements.modal.hidden) {
+            if (event.key === 'Escape') hideResults();
             return;
         }
+        if (event.altKey || event.ctrlKey || event.metaKey || isTyping(event.target)) return;
 
-        state.categories = categories;
-
-        // Populate category dropdown
-        elements.categorySelect.innerHTML = '';
-        categories.forEach(function(cat) {
-            var option = document.createElement('option');
-            option.value = cat.name;
-            option.textContent = cat.name;
-            elements.categorySelect.appendChild(option);
-        });
-
-        // Try to match URL slug to category
-        var slug = window.location.pathname.split('/').pop().replace(/\.[^/.]+$/, '');
-        var matchedCategory = categories.find(function(c) {
-            return toSlug(c.name) === toSlug(slug);
-        });
-
-        if (matchedCategory) {
-            elements.categorySelect.value = matchedCategory.name;
-        } else if (categories.length > 0) {
-            elements.categorySelect.value = categories[0].name;
-        }
-
-        await loadCategoryData(elements.categorySelect.value);
-        hideLoading();
-    }
-
-    async function loadCategoryData(categoryName) {
-        showLoading();
-
-        // Allow the browser to paint the loading state
-        await new Promise(function(resolve) {
-            requestAnimationFrame(resolve);
-        });
-
-        // Check cache first
-        if (!state.categoryCache.has(categoryName)) {
-            var slug = toSlug(categoryName);
-            var data = await fetchJson(CONFIG.BASE_URL + '/' + slug + '.json');
-
-            if (data) {
-                state.categoryCache.set(categoryName, data);
+        const item = state.items[state.active];
+        if (/^[1-9]$/.test(event.key) && item) {
+            const optionIndex = item.order[Number(event.key) - 1];
+            if (optionIndex !== undefined) {
+                selectAnswer(state.active, optionIndex);
+                event.preventDefault();
             }
-        }
-
-        state.currentCategoryData = state.categoryCache.get(categoryName) || {
-            questions: []
-        };
-        setupQuiz();
-        hideLoading();
-    }
-
-    // =========================================================================
-    // Quiz Setup and Rendering
-    // =========================================================================
-
-    function setupQuiz() {
-        var maxQuestions = parseInt(elements.maxQuestionsInput.value, 10) || CONFIG.DEFAULT_MAX_QUESTIONS;
-        var allQuestions = state.currentCategoryData.questions || [];
-
-        state.displayedQuestions = pickRandom(allQuestions, maxQuestions);
-        state.userAnswers.clear();
-        state.isSubmitted = false;
-        state.currentStreak = 0;
-        state.bestStreak = 0;
-
-        renderQuestions();
-        buildQuestionNav();
-        setupIntersectionObserver();
-        updateProgress();
-        hideStreakBadge();
-
-        // Timer handling
-        resetTimerDisplay();
-        if (elements.timerToggle && elements.timerToggle.checked) {
-            startTimer();
-        }
-    }
-
-    function hideStreakBadge() {
-        if (elements.streakBadge) {
-            elements.streakBadge.style.display = 'none';
-        }
-    }
-
-    function renderQuestions() {
-        var container = elements.quizContainer;
-        container.innerHTML = '';
-
-        if (state.displayedQuestions.length === 0) {
-            showEmptyState('No questions available for this category.');
             return;
         }
-
-        state.displayedQuestions.forEach(function(question, index) {
-            var questionCard = createQuestionCard(question, index);
-            // Stagger entrance animation
-            questionCard.style.animationDelay = (index * CONFIG.STAGGER_DELAY_MS) + 'ms';
-            container.appendChild(questionCard);
-        });
-    }
-
-    function createQuestionCard(question, index) {
-        var card = document.createElement('article');
-        card.className = 'question-card';
-        card.setAttribute('data-question-index', index);
-
-        // Question header
-        var header = document.createElement('div');
-        header.className = 'question-header';
-
-        var numberBadge = document.createElement('span');
-        numberBadge.className = 'question-number';
-        numberBadge.textContent = index + 1;
-        numberBadge.setAttribute('aria-hidden', 'true');
-
-        header.appendChild(numberBadge);
-
-        // Parse and render question text
-        var questionContent = renderQuestionContent(question.text, index);
-        header.appendChild(questionContent);
-
-        card.appendChild(header);
-
-        // Options
-        var optionsList = createOptionsList(question, index);
-        card.appendChild(optionsList);
-
-        return card;
-    }
-
-    function renderQuestionContent(text, questionIndex) {
-        var container = document.createElement('div');
-        container.className = 'question-content';
-
-        // Support multi-line code blocks with triple backticks
-        var tripleMatch = text.match(/```([\s\S]*?)```/);
-        // Single backtick inline code
-        var singleMatch = text.match(/`([^`]+)`/);
-
-        var codeBlockMatch = tripleMatch || singleMatch;
-
-        if (codeBlockMatch) {
-            var beforeCode = text.substring(0, codeBlockMatch.index);
-            var codeContent = codeBlockMatch[1];
-            var afterCode = text.substring(codeBlockMatch.index + codeBlockMatch[0].length);
-
-            if (beforeCode.trim()) {
-                var beforeP = document.createElement('p');
-                beforeP.className = 'question-text';
-                beforeP.id = 'question-' + questionIndex + '-text';
-                beforeP.innerHTML = parseMarkdown(beforeCode.trim());
-                container.appendChild(beforeP);
-            }
-
-            var pre = document.createElement('pre');
-            pre.className = 'question-code';
-            var code = document.createElement('code');
-            code.textContent = codeContent;
-            pre.appendChild(code);
-            container.appendChild(pre);
-
-            if (afterCode.trim()) {
-                var afterP = document.createElement('p');
-                afterP.innerHTML = parseMarkdown(afterCode.trim());
-                container.appendChild(afterP);
-            }
-        } else {
-            var p = document.createElement('p');
-            p.className = 'question-text';
-            p.id = 'question-' + questionIndex + '-text';
-            p.innerHTML = parseMarkdown(text);
-            container.appendChild(p);
-        }
-
-        return container;
-    }
-
-    function createOptionsList(question, questionIndex) {
-        var list = document.createElement('ul');
-        list.className = 'options-list';
-        list.setAttribute('role', 'radiogroup');
-        list.setAttribute('aria-labelledby', 'question-' + questionIndex + '-text');
-
-        question.options.forEach(function(option, optionIndex) {
-            var listItem = document.createElement('li');
-            listItem.className = 'option-item';
-            listItem.setAttribute('data-option-index', optionIndex);
-
-            var inputId = 'q' + questionIndex + '-opt' + optionIndex;
-
-            var input = document.createElement('input');
-            input.type = 'radio';
-            input.name = 'question-' + questionIndex;
-            input.id = inputId;
-            input.value = optionIndex;
-            input.className = 'option-input';
-            input.addEventListener('change', function() {
-                handleOptionSelect(questionIndex, optionIndex);
-            });
-
-            var label = document.createElement('label');
-            label.className = 'option-label';
-            label.setAttribute('for', inputId);
-
-            var radioIndicator = document.createElement('span');
-            radioIndicator.className = 'option-radio';
-            radioIndicator.setAttribute('aria-hidden', 'true');
-
-            var optionText = document.createElement('span');
-            optionText.className = 'option-text';
-            optionText.innerHTML = parseMarkdown(option);
-
-            label.appendChild(radioIndicator);
-            label.appendChild(optionText);
-
-            listItem.appendChild(input);
-            listItem.appendChild(label);
-            list.appendChild(listItem);
-        });
-
-        return list;
-    }
-
-    function handleOptionSelect(questionIndex, optionIndex) {
-        if (state.isSubmitted) return;
-
-        state.userAnswers.set(questionIndex, optionIndex);
-
-        var card = elements.quizContainer.querySelector('[data-question-index="' + questionIndex + '"]');
-        if (card) {
-            card.classList.add('answered');
-        }
-
-        updateProgress();
-    }
-
-
-
-
-
-    function submitQuiz() {
-        if (state.isSubmitted) return;
-
-        state.isSubmitted = true;
-        state.quizEndTime = Date.now();
-        stopTimer();
-
-        var correct = 0;
-        var incorrect = 0;
-        var unanswered = 0;
-
-        state.displayedQuestions.forEach(function(question, index) {
-            var correctIndex = question.correctOptionIndex;
-            var userAnswer = state.userAnswers.get(index);
-            var card = elements.quizContainer.querySelector('[data-question-index="' + index + '"]');
-            var optionItems = card.querySelectorAll('.option-item');
-
-            optionItems.forEach(function(item) {
-                item.classList.remove('correct', 'incorrect');
-            });
-            card.classList.remove('correct-answer', 'incorrect-answer');
-
-
-            optionItems[correctIndex].classList.add('correct');
-
-            if (userAnswer === undefined) {
-                unanswered++;
-            } else if (userAnswer === correctIndex) {
-                correct++;
-                card.classList.add('correct-answer');
-            } else {
-                incorrect++;
-                card.classList.add('incorrect-answer');
-                optionItems[userAnswer].classList.add('incorrect');
-            }
-
-
-            card.querySelectorAll('.option-input').forEach(function(input) {
-                input.disabled = true;
-            });
-        });
-
-        var total = state.displayedQuestions.length;
-        var percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-
-        updateNavResultStates();
-
-
-        updateStreakDisplay();
-
-        showResultsModal({
-            correct: correct,
-            incorrect: incorrect,
-            unanswered: unanswered,
-            total: total,
-            percentage: percentage
-        });
-    }
-
-    function reviewAnswers() {
-        hideResultsModal();
-
-        var firstIncorrect = elements.quizContainer.querySelector('.incorrect-answer, .question-card:not(.correct-answer)');
-        if (firstIncorrect) {
-            firstIncorrect.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
-    }
-
-
-
-
-
-    function showEmptyState(message) {
-        elements.quizContainer.innerHTML =
-            '<div class="empty-state">' +
-            '<div class="empty-state-icon" aria-hidden="true"></div>' +
-            '<p class="empty-state-text">' + escapeHtml(message) + '</p>' +
-            '</div>';
-    }
-
-
-
-
-
-    function isInputFocused() {
-        var tag = document.activeElement && document.activeElement.tagName;
-        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-    }
-
-    function handleKeyboardNavigation(event) {
-
-        if (event.key === 'Escape' && elements.resultsModal.style.display === 'flex') {
-            hideResultsModal();
-            return;
-        }
-
-
-        if (isInputFocused()) return;
-
-
-        if (state.isSubmitted) return;
-
-        var key = event.key;
-
-
-        if (key >= '1' && key <= '5') {
-            var optIndex = parseInt(key, 10) - 1;
-            var activeQ = state.activeQuestionIndex;
-            if (activeQ < 0 || activeQ >= state.displayedQuestions.length) return;
-            var question = state.displayedQuestions[activeQ];
-            if (question && optIndex < question.options.length) {
-                var radio = document.getElementById('q' + activeQ + '-opt' + optIndex);
-                if (radio && !radio.disabled) {
-                    radio.checked = true;
-                    handleOptionSelect(activeQ, optIndex);
-                }
-            }
+        if (event.key === 'ArrowDown' || event.key === 'j') {
+            focusQuestion(Math.min(state.active + 1, state.items.length - 1));
             event.preventDefault();
-            return;
-        }
-
-
-        if (key === 'Enter') {
-            submitQuiz();
+        } else if (event.key === 'ArrowUp' || event.key === 'k') {
+            focusQuestion(Math.max(state.active - 1, 0));
             event.preventDefault();
-            return;
-        }
-
-
-        if (key === 'n' || key === 'N' || key === 'ArrowRight') {
-            var next = Math.min(state.activeQuestionIndex + 1, state.displayedQuestions.length - 1);
-            scrollToQuestion(next);
+        } else if (event.key === 'Enter' && (event.target === document.body || event.target.classList.contains('question-card'))) {
+            finish();
             event.preventDefault();
-            return;
-        }
-
-
-        if (key === 'p' || key === 'P' || key === 'ArrowLeft') {
-            var prev = Math.max(state.activeQuestionIndex - 1, 0);
-            scrollToQuestion(prev);
-            event.preventDefault();
-            return;
         }
     }
 
-
-
-
-
-    function attachEventListeners() {
-
-        elements.categorySelect.addEventListener('change', function(e) {
-            loadCategoryData(e.target.value);
+    function attachEvents() {
+        elements.settings.addEventListener('submit', (event) => {
+            event.preventDefault();
+            startQuiz();
         });
-
-
-        var debouncedSetup = debounce(setupQuiz, 300);
-        elements.maxQuestionsInput.addEventListener('input', debouncedSetup);
-
-
-        elements.reloadBtn.addEventListener('click', setupQuiz);
-
-
-        elements.submitBtn.addEventListener('click', submitQuiz);
-
-
-        elements.modalClose.addEventListener('click', hideResultsModal);
-        elements.modalBackdrop.addEventListener('click', hideResultsModal);
-
-
-        elements.reviewAnswersButton.addEventListener('click', reviewAnswers);
-
-
-        elements.tryAgainButton.addEventListener('click', function() {
-            hideResultsModal();
-            setupQuiz();
-            elements.quizContainer.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
+        elements.categorySelect.addEventListener('change', (event) => loadCategory(event.target.value, []));
+        elements.maxQuestions.addEventListener('change', () => startQuiz());
+        elements.settings.querySelectorAll('input[name="mode"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                setMode(radio.value);
+                startQuiz();
             });
         });
-
-
-        if (elements.timerToggle) {
-            elements.timerToggle.addEventListener('change', function() {
-                if (elements.timerToggle.checked && !state.isSubmitted) {
-                    startTimer();
-                } else {
-                    resetTimerDisplay();
-                }
-            });
-        }
-
-
-        document.addEventListener('keydown', handleKeyboardNavigation);
+        elements.timerToggle.addEventListener('change', () => {
+            if (elements.timerToggle.checked) startTimer();
+            else resetTimer();
+        });
+        elements.topicFilter.addEventListener('click', (event) => {
+            const chip = event.target.closest('.topic-chip');
+            if (chip) toggleTopic(chip.dataset.topic);
+        });
+        elements.missedToggle.addEventListener('change', () => {
+            state.onlyMissed = elements.missedToggle.checked;
+            startQuiz();
+        });
+        elements.submit.addEventListener('click', finish);
+        elements.modal.querySelectorAll('[data-close]').forEach((node) => node.addEventListener('click', hideResults));
+        elements.review.addEventListener('click', reviewAnswers);
+        elements.retryMissed.addEventListener('click', retryMistakes);
+        elements.tryAgain.addEventListener('click', () => startQuiz());
+        document.addEventListener('keydown', handleKeydown);
     }
 
-
-
-
-
-    function initialize() {
-        initializeElements();
-        elements.maxQuestionsInput.value = CONFIG.DEFAULT_MAX_QUESTIONS;
-        attachEventListeners();
-        loadCategories();
+    function init() {
+        cacheElements();
+        setMode('practice');
+        attachEvents();
+        loadIndex();
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize);
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        initialize();
+        init();
     }
 })();
