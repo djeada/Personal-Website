@@ -22,7 +22,7 @@ async function startQuiz(page, url) {
 test("quiz setup lists every subject and narrows topics", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(`${quiz}?category=linux`);
-  await expect(page.locator(".la-tile")).toHaveCount(6);
+  await expect(page.locator(".la-tile")).toHaveCount(8);
   await expect(page.locator(".la-tile:has(input:checked) .la-tile-name")).toHaveText("Linux");
   await expect(page.locator("#topicSummary")).toHaveText(/^All \d+ topics$/);
 
@@ -81,6 +81,29 @@ test("exam mode hides answers, flags questions and confirms before submitting", 
   await page.locator("#confirmSubmit").click();
   await expect(page.locator("#resultsScreen")).toBeVisible();
   await expect(page.locator("#resultStats")).toContainText("4 skipped");
+});
+
+test("Polish subjects switch the whole interface to Polish", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(`${quiz}?category=linux`);
+  await expect(page.locator(".la-tiles-heading")).toHaveText("Po polsku");
+  await expect(page.locator("#startButton")).toHaveText("Start quiz");
+
+  await page.locator(".la-tile", { hasText: "Od C do C++" }).click();
+  await expect(page.locator("#quizApp")).toHaveAttribute("lang", "pl");
+  await expect(page.locator("#startButton")).toHaveText("Rozpocznij quiz");
+  await expect(page.locator("#startSummary")).toContainText("10 pytań");
+  await expect(page.locator(".la-tile[lang='pl'] .la-tile-facts").first()).toContainText(/pyta(nie|nia|ń)/);
+
+  await page.locator("#startButton").click();
+  await expect(page.locator("#primaryButton")).toHaveText("Sprawdź");
+  await page.keyboard.press("a");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#verdict")).toHaveText(/Dobrze|Niestety nie/);
+  await expect(page.locator("#primaryButton")).toHaveText("Następne pytanie");
+
+  await page.locator("#endButton").click({ noWaitAfter: true }).catch(() => {});
+  expect(errors).toEqual([]);
 });
 
 test("an unfinished quiz can be resumed after a reload", async ({ page }) => {

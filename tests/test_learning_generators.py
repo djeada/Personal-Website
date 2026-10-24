@@ -173,6 +173,56 @@ class QuizParsingTests(unittest.TestCase):
         self.assertEqual(len(set(ids)), len(ids))
 
 
+POLISH_QUIZ = textwrap.dedent(
+    """\
+    # Zmienne i typy danych — quiz
+
+    Notatki: [Zmienne](../notatki/03_zmienne.md)
+
+    #### Q. Co wypisze ten program?
+
+    ```python
+    x = [1, 2]
+    y = x
+    y.append(3)
+    print(len(x))
+    ```
+
+    * [ ] `2`
+    * [x] `3`
+    * [ ] `TypeError`
+
+    > **Wyjaśnienie:** `y = x` nie kopiuje listy.
+
+    #### Q. Które zdanie jest prawdziwe?
+
+    * [x] Pierwsze
+    * [ ] Drugie
+    * [ ] Wszystkie powyższe
+    """
+)
+
+
+class PolishQuizTests(unittest.TestCase):
+    def test_polish_labels_are_understood(self):
+        category = Category(
+            "kurs", "Kurs", "Opis.", (Source(LINUX, "quizzes"),), language="pl"
+        )
+        report = generate_quizzes.Report()
+        source = SourceFile(LINUX, "quizzes/01_zmienne.md", POLISH_QUIZ)
+        data = generate_quizzes.build_category(category, [source], report)
+
+        self.assertEqual(data["category"]["language"], "pl")
+        self.assertEqual(data["topics"][0]["name"], "Zmienne i typy danych")
+        self.assertEqual(data["topics"][0]["notes"][0]["title"], "Zmienne")
+        first, second = data["questions"]
+        self.assertEqual(
+            first["explanation"], "<p><code>y = x</code> nie kopiuje listy.</p>"
+        )
+        self.assertTrue(second["fixedOrder"])
+        self.assertTrue(any("positional" in p.message for p in report.warnings))
+
+
 class FlashcardParsingTests(unittest.TestCase):
     def setUp(self):
         category = Category(

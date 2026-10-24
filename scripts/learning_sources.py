@@ -69,6 +69,7 @@ class Category:
     description: str
     sources: Tuple[Source, ...]
     math: bool = False
+    language: str = "en"
 
     def to_dict(self, **extra: Any) -> Dict[str, Any]:
         repos = sorted({s.repo.web_url for s in self.sources})
@@ -77,6 +78,7 @@ class Category:
             "name": self.name,
             "description": self.description,
             "math": self.math,
+            "language": self.language,
             "repositories": repos,
             **extra,
         }
@@ -103,6 +105,8 @@ STATISTICS = Repository("Statistics-Notes", "main")
 PARALLEL = Repository("Parallel-And-Concurrent-Programming", "master")
 DATABASES = Repository("Databases-Notes", "main")
 DEVOPS = Repository("Way-Of-DevOps", "main")
+PYTHON_PL = Repository("Kurs-Podstaw-Pythona", "master")
+C_CPP_PL = Repository("Od-C-do-Cpp", "master")
 
 
 def _is_dotted(path: str) -> bool:
