@@ -70,6 +70,8 @@ class Category:
     sources: Tuple[Source, ...]
     math: bool = False
     language: str = "en"
+    # Language Prism uses for inline code when a subject is about one language.
+    code_language: Optional[str] = None
 
     def to_dict(self, **extra: Any) -> Dict[str, Any]:
         repos = sorted({s.repo.web_url for s in self.sources})
@@ -272,15 +274,34 @@ def _rewrite_links(html: str, source: SourceFile) -> str:
     return EXTERNAL_HREF.sub(r'<a \1 target="_blank" rel="noopener">', html)
 
 
+INLINE_CODE_TAG = re.compile(r"(?<!<pre>)<code>")
+
+
+def has_math(text: str) -> bool:
+    """True when ``text`` holds $...$ or $$...$$ outside code."""
+    _, stash = _protect(_loosen_lists(text), True)
+    return any(value.startswith("$") for value in stash.values())
+
+
 def render_markdown(
-    text: str, source: SourceFile, math: bool = False, inline: bool = False
+    text: str,
+    source: SourceFile,
+    math: bool = True,
+    inline: bool = False,
+    code_language: Optional[str] = None,
 ) -> str:
-    """Render a Markdown fragment from ``source`` to HTML for the apps."""
+    """Render a Markdown fragment from ``source`` to HTML for the apps.
+
+    TeX is protected from Markdown by default; MathJax renders it in the
+    browser. ``code_language`` tags inline code so Prism can highlight it.
+    """
     protected, stash = _protect(_loosen_lists(text.strip()), math)
     html = markdown.markdown(
         protected, extensions=["extra", "sane_lists"], output_format="html"
     )
     html = _rewrite_links(_restore(html, stash), source)
+    if code_language:
+        html = INLINE_CODE_TAG.sub(f'<code class="language-{code_language}">', html)
     if inline:
         single = SINGLE_PARAGRAPH.match(html)
         if single and "<p>" not in single.group(1):

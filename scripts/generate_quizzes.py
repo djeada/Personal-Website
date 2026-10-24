@@ -54,6 +54,7 @@ from learning_sources import (  # noqa: E402
     SourceFile,
     SourceLoader,
     document_title,
+    has_math,
     normalise_text,
     remove_stale_json,
     render_markdown,
@@ -71,6 +72,7 @@ CATEGORIES: Tuple[Category, ...] = (
         name="Linux",
         description="Files, permissions, users, processes, the shell, networking, storage and package managers.",
         sources=(Source(LINUX, "quizzes"),),
+        code_language="bash",
     ),
     Category(
         slug="frontend",
@@ -83,6 +85,7 @@ CATEGORIES: Tuple[Category, ...] = (
         name="Databases",
         description="SQL, schema design, indexing, transactions and how databases scale.",
         sources=(Source(DATABASES, "quizzes"),),
+        code_language="sql",
     ),
     Category(
         slug="devops",
@@ -109,6 +112,7 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Podstawy Pythona, obiekty i wyjątki, programowanie funkcyjne, współbieżność, narzędzia i praktyka.",
         sources=(Source(PYTHON_PL, "quizzes"),),
         language="pl",
+        code_language="python",
     ),
     Category(
         slug="od_c_do_cpp",
@@ -116,6 +120,7 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Kompilacja, typy, wskaźniki i pamięć, programowanie obiektowe oraz nowoczesny C++ z biblioteką STL.",
         sources=(Source(C_CPP_PL, "quizzes"),),
         language="pl",
+        code_language="cpp",
     ),
 )
 
@@ -280,13 +285,20 @@ def build_question(
     question = {
         "id": stable_id(category.slug, topic, normalise_text(parsed.text)),
         "topic": topic,
-        "text": render_markdown(parsed.text, source, math=category.math),
+        "text": render_markdown(
+            parsed.text, source, code_language=category.code_language
+        ),
         "options": [
-            render_markdown(t, source, math=category.math, inline=True) for t in texts
+            render_markdown(
+                t, source, inline=True, code_language=category.code_language
+            )
+            for t in texts
         ],
         "correctOptionIndex": correct[0],
         "explanation": (
-            render_markdown(parsed.explanation, source, math=category.math)
+            render_markdown(
+                parsed.explanation, source, code_language=category.code_language
+            )
             if parsed.explanation
             else ""
         ),
@@ -343,7 +355,10 @@ def build_category(category: Category, files: List[SourceFile], report: Report) 
     return {
         "schemaVersion": SCHEMA_VERSION,
         "category": category.to_dict(
-            questionCount=len(questions), topicCount=len(topics)
+            questionCount=len(questions),
+            topicCount=len(topics),
+            # The app loads MathJax only for subjects whose sources use TeX.
+            math=category.math or any(has_math(source.text) for source in files),
         ),
         "topics": topics,
         "questions": questions,

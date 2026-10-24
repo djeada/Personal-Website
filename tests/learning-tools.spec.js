@@ -106,6 +106,32 @@ test("Polish subjects switch the whole interface to Polish", async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test("code is syntax highlighted and maths is typeset", async ({ page }) => {
+  const errors = collectErrors(page);
+  await startQuiz(page, `${quiz}?category=od_c_do_cpp&n=50`);
+  for (let i = 0; i < 50 && !(await page.locator("#questionText pre").count()); i++) await page.keyboard.press("s");
+  await expect(page.locator("#questionText pre .token").first()).toBeVisible();
+
+  await startQuiz(page, `${quiz}?category=statistics&n=50`);
+  await page.keyboard.press("a");
+  await page.keyboard.press("Enter");
+  for (let i = 0; i < 30 && !(await page.locator("#questionView mjx-container").count()); i++) {
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("a");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(150);
+  }
+  await expect(page.locator("#questionView mjx-container").first()).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("#questionView mjx-merror")).toHaveCount(0);
+
+  await page.goto(`${cards}?category=databases`);
+  await page.locator("#browseButton").click();
+  await page.locator("#searchInput").fill("self-join");
+  await page.locator("#browseList details summary").first().click();
+  await expect(page.locator("#browseList details[open] .token").first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("an unfinished quiz can be resumed after a reload", async ({ page }) => {
   await startQuiz(page, `${quiz}?category=databases&n=5`);
   await page.keyboard.press("a");

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scripts import generate_flashcards, generate_quizzes
 from scripts.learning_sources import (
+    has_math,
     LINUX,
     STATISTICS,
     Category,
@@ -270,6 +271,23 @@ class FlashcardParsingTests(unittest.TestCase):
         self.assertEqual(
             render_markdown("$a < b$", source, math=True, inline=True), "$a &lt; b$"
         )
+
+
+class RenderingTests(unittest.TestCase):
+    def test_inline_code_is_tagged_for_highlighting_but_blocks_keep_their_language(
+        self,
+    ):
+        source = SourceFile(LINUX, "quizzes/x.md", "")
+        html = render_markdown(
+            "Run `ls -la`:\n\n```python\nprint(1)\n```", source, code_language="bash"
+        )
+        self.assertIn('<code class="language-bash">ls -la</code>', html)
+        self.assertIn('<pre><code class="language-python">', html)
+
+    def test_maths_is_detected_outside_code_only(self):
+        self.assertTrue(has_math("Speedup is $S = \\frac{1}{1-p}$."))
+        self.assertFalse(has_math("Print `echo $HOME and $PATH` in a shell."))
+        self.assertFalse(has_math("It costs 5 dollars."))
 
 
 class GenerationTests(unittest.TestCase):

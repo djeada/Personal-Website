@@ -42,6 +42,7 @@ from learning_sources import (  # noqa: E402
     SourceFile,
     SourceLoader,
     document_title,
+    has_math,
     normalise_text,
     remove_stale_json,
     render_markdown,
@@ -65,6 +66,7 @@ CATEGORIES: Tuple[Category, ...] = (
         name="Databases",
         description="Core database concepts: SQL objects, keys, normalisation, indexing, transactions and scaling.",
         sources=(Source(DATABASES, "notes/quizes.md"),),
+        code_language="sql",
     ),
     Category(
         slug="devops",
@@ -165,16 +167,22 @@ def build_category(category: Category, files: List[SourceFile], report: Report) 
                     "id": stable_id(category.slug, key),
                     "topic": topic,
                     "front": render_markdown(
-                        front, source, math=category.math, inline=True
+                        front, source, inline=True, code_language=category.code_language
                     ),
-                    "back": render_markdown(back, source, math=category.math),
+                    "back": render_markdown(
+                        back, source, code_language=category.code_language
+                    ),
                     "source": f"{source.url}#L{line}",
                 }
             )
 
     return {
         "schemaVersion": SCHEMA_VERSION,
-        "category": category.to_dict(cardCount=len(cards), topicCount=len(topics)),
+        "category": category.to_dict(
+            cardCount=len(cards),
+            topicCount=len(topics),
+            math=category.math or any(has_math(source.text) for source in files),
+        ),
         "topics": list(topics.values()),
         "cards": cards,
     }
