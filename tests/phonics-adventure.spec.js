@@ -34,6 +34,7 @@ test("letters give gentle feedback, reward once, and wait for the learner", asyn
   await expect(page.locator("[data-letter]")).toHaveCount(3);
   expect((await save(page)).journeys.en.stats.sounds).toEqual({ attempts: 2, correct: 1 });
   await expect(page.locator("#total-stars")).toHaveText("1");
+  await expect(page.locator(".pa-letter-library summary > span")).toHaveText("1 of 26 letters discovered");
   await page.locator("#next-activity").click();
   await expect(page.locator(".pa-example-word")).toHaveText("apple");
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -57,6 +58,7 @@ test("word building supports correction, clues, and a single reward", async ({ p
   await expect(page.locator("#check-word")).toBeDisabled();
   await expect(page.locator("#total-stars")).toHaveText("1");
   expect((await save(page)).journeys.en.stats.words).toEqual({ attempts: 2, correct: 1 });
+  await expect(page.locator(".pa-trail-picker > span")).toHaveText("1 of 12 words discovered");
   await page.locator("#next-activity").click();
   await page.locator("#show-word").click();
   await expect(page.locator("#word-model")).toHaveText("mat");
@@ -94,13 +96,8 @@ test("duplicate letter tiles remain independent in German words", async ({ page 
   // First two words are am and im; the next word is Mama.
   await page.locator("#next-activity").click();
   await page.locator("#next-activity").click();
-  // Skipping prioritizes the first unfinished item, so select via a saved curriculum position.
-  await page.evaluate((storageKey) => {
-    const state = JSON.parse(localStorage.getItem(storageKey));
-    state.journeys.de.selected.words = "Mama";
-    localStorage.setItem(storageKey, JSON.stringify(state));
-  }, key);
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("#show-word").click();
+  await expect(page.locator("#word-model")).toHaveText("Mama");
   await build(page, ["m", "a", "m", "a"]);
   await expect(page.locator("#feedback")).toContainText("Mama gebaut");
   expect((await save(page)).journeys.de.words).toContain("Mama");
@@ -115,6 +112,7 @@ test("a story requires finding a word on every page and resumes unfinished pages
   await page.locator('[data-word="mat"]').click();
   await expect(page.locator("#feedback")).toContainText("You found mat");
   expect((await save(page)).journeys.en.stories).toEqual([]);
+  await expect(page.locator(".pa-book-dots .is-read")).toHaveCount(1);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator(".pa-story-picker > span")).toHaveText("Page 2 of 3");
   await page.locator('[data-word="nap"]').click();

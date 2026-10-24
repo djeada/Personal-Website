@@ -265,6 +265,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const badges = [["✦", "badgeFirst", current.sounds.length + current.words.length + current.pages.length > 0], ["Aa", "badgeLetters", current.sounds.length >= 10], ["abc", "badgeWords", current.words.length >= 5], ["▤", "badgeStory", current.stories.length > 0], ["★", "badgeGoal", current.daily.count >= 5]];
         $("badge-list").innerHTML = badges.map(([icon, label, earned]) => `<span class="pa-badge ${earned ? "is-earned" : ""}" title="${t(label)}: ${t(earned ? "badgeEarned" : "badgeLocked")}"><span aria-hidden="true">${icon}</span><small>${t(label)}</small><span class="pa-sr">: ${t(earned ? "badgeEarned" : "badgeLocked")}</span></span>`).join("");
         $("practice-stats").innerHTML = `<table><thead><tr><th></th><th scope="col">${t("attempts")}</th><th scope="col">${t("correct")}</th></tr></thead><tbody>${MODES.map((mode) => `<tr><th scope="row">${t({ sounds: "lettersRow", words: "wordsRow", stories: "storiesRow" }[mode])}</th><td>${current.stats[mode].attempts}</td><td>${current.stats[mode].correct}</td></tr>`).join("")}</tbody></table>`;
+        const letterCount = area.querySelector(".pa-letter-library summary > span");
+        if (letterCount) letterCount.textContent = t("letterCount", { n: current.sounds.length, total: letters().length });
+        const trailCount = area.querySelector(".pa-trail-picker > span");
+        if (trailCount) {
+            const group = groups().find((item) => item.id === current.group);
+            trailCount.textContent = t("trailCount", { n: group.items.filter((item) => current.words.includes(item.id)).length, total: group.items.length });
+        }
+        if (current.mode === "stories" && active?.pages) {
+            area.querySelectorAll(".pa-book-dots span").forEach((dot, index) => dot.classList.toggle("is-read", current.pages.includes(`${active.id}:${index}`)));
+        }
     }
     function translate() {
         app.lang = state.language;
@@ -293,8 +303,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const match = items.find((item) => getId(item) === specific);
             if (match) return match;
         }
-        return items.find((item) => !completed.includes(getId(item)) && getId(item) !== last)
-            || items.find((item) => getId(item) !== last) || items[0];
+        const lastIndex = items.findIndex((item) => getId(item) === last);
+        const ordered = lastIndex >= 0 ? [...items.slice(lastIndex + 1), ...items.slice(0, lastIndex + 1)] : items;
+        return ordered.find((item) => !completed.includes(getId(item)) && getId(item) !== last)
+            || ordered.find((item) => getId(item) !== last) || ordered[0];
     }
     function resetActivity() {
         stopSpeech();
