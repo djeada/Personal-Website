@@ -125,7 +125,104 @@
         return anchor;
     }
 
+    // Bring an app's top edge just under the sticky navigation bar, without
+    // the site-wide smooth scrolling, once the new screen has been laid out.
+    function scrollIntoFocus(node) {
+        window.requestAnimationFrame(() => {
+            const nav = document.querySelector('nav');
+            const offset = (nav ? nav.getBoundingClientRect().height : 0) + 24;
+            const top = node.getBoundingClientRect().top + window.scrollY - offset;
+            if (Math.abs(window.scrollY - top) > 4) {
+                window.scrollTo({
+                    top: Math.max(top, 0),
+                    behavior: 'instant'
+                });
+            }
+        });
+    }
+
+    // Checkbox list of topics, grouped when topics carry a `group`. Calls
+    // onChange with the selected slugs; an empty array means "all topics".
+    function topicPicker(container, topics, selected, countOf, onChange) {
+        container.innerHTML = "";
+        const groups = new Map();
+        topics.forEach((topic) => {
+            const key = topic.group || "";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(topic);
+        });
+        const boxes = [];
+        groups.forEach((members, group) => {
+            if (groups.size > 1 && group) container.appendChild(el("p", "la-topic-group", group));
+            const list = el("div", "la-topic-list");
+            members.forEach((topic) => {
+                const row = el("label", "la-topic");
+                const input = document.createElement("input");
+                input.type = "checkbox";
+                input.value = topic.slug;
+                input.checked = !selected.size || selected.has(topic.slug);
+                input.addEventListener("change", emit);
+                boxes.push(input);
+                row.appendChild(input);
+                row.appendChild(el("span", "la-topic-name", topic.name));
+                row.appendChild(el("span", "la-topic-count", String(countOf(topic))));
+                list.appendChild(row);
+            });
+            container.appendChild(list);
+        });
+
+        function emit() {
+            const checked = boxes.filter((box) => box.checked).map((box) => box.value);
+            onChange(checked.length === boxes.length ? [] : checked.length ? checked : ["__none__"]);
+        }
+
+        return {
+            setAll(on) {
+                boxes.forEach((box) => {
+                    box.checked = on;
+                });
+                emit();
+            }
+        };
+    }
+
+    function topicSummary(topics, selected) {
+        if (!selected.size) return `All ${topics.length} topics`;
+        const chosen = topics.filter((topic) => selected.has(topic.slug));
+        if (!chosen.length) return "No topics selected";
+        const names = chosen.map((topic) => topic.name);
+        const shown = names.slice(0, 2).join(", ") + (names.length > 2 ? ` and ${names.length - 2} more` : "");
+        return `${chosen.length} of ${topics.length}: ${shown}`;
+    }
+
+    // Segmented control made of radio inputs: options are {value, label}.
+    function segmented(container, name, options, current, onChange) {
+        container.innerHTML = "";
+        options.forEach((option) => {
+            const label = el("label");
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = name;
+            input.value = String(option.value);
+            input.checked = option.value === current;
+            input.addEventListener("change", () => onChange(option.value));
+            label.appendChild(input);
+            label.appendChild(el("span", "", option.label));
+            container.appendChild(label);
+        });
+    }
+
+    // Lay out choice tiles in rows of three, or two when that leaves no orphan.
+    function balanceTiles(container, count) {
+        container.style.setProperty("--la-cols", count % 3 === 0 || count > 6 ? 3 : count === 1 ? 1 : 2);
+    }
+
     window.Learning = {
+        balanceTiles,
+        topicPicker,
+        topicSummary,
+        segmented,
+        scrollIntoFocus,
         fetchJson,
         shuffle,
         store,

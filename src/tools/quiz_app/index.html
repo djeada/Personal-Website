@@ -29,6 +29,7 @@
     <link href="/favicon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/base.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/learning.css" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -111,122 +112,118 @@
                 <h1>Technical Quizzes</h1>
                 <p class="subtitle">Multiple-choice questions on Linux, DevOps and Google Cloud architecture, frontend, databases, parallel programming and statistics, written alongside my open notes. Every answer comes with an explanation and a link to the notes it tests.</p>
             </header>
-            <div class="quiz-app-container">
-                <form aria-label="Quiz settings" class="control-panel" id="quizSettings">
-                    <div class="control-group control-category">
-                        <label class="control-label" for="categorySelect">Subject</label>
-                        <select id="categorySelect"></select>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" for="maxQuestionsInput">Questions</label>
-                        <input id="maxQuestionsInput" inputmode="numeric" max="100" min="1" type="number" value="10" />
-                    </div>
-                    <div class="control-group">
-                        <span class="control-label" id="modeLabel">Mode</span>
-                        <div aria-labelledby="modeLabel" class="segmented" role="radiogroup">
-                            <label><input checked="" name="mode" type="radio" value="practice" /><span>Practice</span></label>
-                            <label><input name="mode" type="radio" value="exam" /><span>Exam</span></label>
+            <div class="la" id="quizApp">
+                <div class="la-screen" data-screen="setup" id="setupScreen">
+                    <div class="la-banner" hidden="" id="resumeBanner">
+                        <p id="resumeText"></p>
+                        <div class="la-banner-actions">
+                            <button class="btn primary" id="resumeButton" type="button">Resume</button>
+                            <button class="btn btn-quiet" id="discardButton" type="button">Discard</button>
                         </div>
                     </div>
-                    <div class="control-group">
-                        <span class="control-label">Timer</span>
-                        <div class="timer-control">
-                            <div aria-live="off" class="timer-display" id="timerDisplay">--:--</div>
-                            <label class="toggle-label" for="timerToggle">
-                                <input id="timerToggle" type="checkbox" />
-                                <span class="toggle-text">On</span>
-                            </label>
-                        </div>
+                    <h2 class="la-step"><span class="la-step-num">01</span> Subject</h2>
+                    <div aria-label="Subject" class="la-tiles" id="subjectList" role="radiogroup">
+                        <p class="la-empty">Loading subjects…</p>
                     </div>
-                    <button class="btn primary" id="newQuizButton" type="submit">New quiz</button>
-                    <div class="control-row">
-                        <p class="category-meta" id="categoryMeta"></p>
-                        <div aria-label="Topics" class="topic-filter" id="topicFilter" role="group"></div>
-                        <label class="toggle-label missed-toggle" for="missedToggle" id="missedToggleLabel" hidden="">
-                            <input id="missedToggle" type="checkbox" />
-                            <span class="toggle-text" id="missedToggleText">Only questions I missed</span>
-                        </label>
-                    </div>
-                </form>
-                <p class="mode-hint" id="modeHint"></p>
-                <div class="quiz-layout">
-                    <aside aria-label="Question overview" class="quiz-sidebar">
-                        <div class="score-tally" id="scoreTally">
-                            <span class="tally-value" id="tallyValue">0 / 0</span>
-                            <span class="tally-label">correct so far</span>
+                    <h2 class="la-step"><span class="la-step-num">02</span> Quiz settings</h2>
+                    <div class="la-settings">
+                        <div class="la-setting-label">Topics</div>
+                        <div class="la-setting-control">
+                            <details class="la-topics" id="topicPicker">
+                                <summary id="topicSummary">All topics</summary>
+                                <div class="la-topic-tools">
+                                    <button class="la-link" data-topics="all" type="button">Select all</button>
+                                    <button class="la-link" data-topics="none" type="button">Clear</button>
+                                </div>
+                                <div id="topicList"></div>
+                            </details>
                         </div>
-                        <div aria-label="Jump to question" class="question-nav" id="questionNav" role="group"></div>
-                    </aside>
-                    <div class="quiz-main">
-                        <div class="progress-section">
-                            <div class="progress-header">
-                                <span class="progress-text" id="progressText">0 of 0 answered</span>
-                                <span class="progress-percentage" id="progressPercentage">0%</span>
+                        <div class="la-setting-label" id="lengthLabel">Length</div>
+                        <div class="la-setting-control">
+                            <div aria-labelledby="lengthLabel" class="la-segmented" id="lengthControl" role="radiogroup"></div>
+                        </div>
+                        <div class="la-setting-label" id="modeLabel">Mode</div>
+                        <div class="la-setting-control">
+                            <div aria-labelledby="modeLabel" class="la-segmented" role="radiogroup">
+                                <label><input checked="" name="mode" type="radio" value="practice" /><span>Practice</span></label>
+                                <label><input name="mode" type="radio" value="exam" /><span>Exam</span></label>
                             </div>
-                            <div aria-label="Answered questions" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="progress-bar-container" id="progressBarContainer" role="progressbar">
-                                <div class="progress-bar-fill" id="progressBar"></div>
-                            </div>
+                            <p class="la-setting-hint" id="modeHint"></p>
                         </div>
-                        <div aria-live="polite" class="quiz-container" id="quizContainer">
-                            <div class="empty-state">
-                                <p class="empty-state-text">Loading questions…</p>
-                            </div>
+                        <div class="la-setting-label">Options</div>
+                        <div class="la-setting-control">
+                            <label class="la-check"><input id="timerToggle" type="checkbox" /> Time limit (75 seconds per question)</label>
+                            <br />
+                            <label class="la-check" hidden="" id="missedOption"><input id="missedToggle" type="checkbox" /> <span id="missedText">Only questions I got wrong before</span></label>
                         </div>
-                        <div class="action-buttons">
-                            <button class="btn primary btn-large" id="submitButton" type="button">Submit answers</button>
-                        </div>
+                    </div>
+                    <div class="la-start">
+                        <p class="la-start-summary" id="startSummary"></p>
+                        <button class="btn primary" id="startButton" type="button">Start quiz</button>
                     </div>
                 </div>
-            </div>
-            <div aria-labelledby="resultsTitle" aria-modal="true" class="results-modal" hidden="" id="resultsModal" role="dialog">
-                <div class="modal-backdrop" data-close=""></div>
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 id="resultsTitle">Results</h2>
-                        <button aria-label="Close results" class="modal-close" data-close="" type="button">×</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="results-summary">
-                            <div class="results-circle">
-                                <svg aria-hidden="true" viewbox="0 0 100 100">
-                                    <circle class="results-bg" cx="50" cy="50" r="45"></circle>
-                                    <circle class="results-progress" cx="50" cy="50" id="resultsProgress" r="45"></circle>
-                                </svg>
-                                <div class="results-score" id="resultsScore">0%</div>
-                            </div>
-                            <dl class="results-stats">
-                                <div class="stat-item stat-correct">
-                                    <dt>Correct</dt>
-                                    <dd id="correctCount">0</dd>
-                                </div>
-                                <div class="stat-item stat-incorrect">
-                                    <dt>Incorrect</dt>
-                                    <dd id="incorrectCount">0</dd>
-                                </div>
-                                <div class="stat-item stat-unanswered">
-                                    <dt>Skipped</dt>
-                                    <dd id="unansweredCount">0</dd>
-                                </div>
-                            </dl>
+
+                <div class="la-screen" data-screen="play" hidden="" id="playScreen">
+                    <div class="la-topbar">
+                        <p class="la-crumb" id="playCrumb"></p>
+                        <div class="la-topbar-meta">
+                            <span class="la-timer" hidden="" id="playTimer" role="timer"></span>
+                            <span id="playCount"></span>
+                            <button class="la-link" id="endButton" type="button">End quiz</button>
                         </div>
-                        <p class="results-message" id="resultsMessage"></p>
-                        <table class="topic-breakdown" id="topicBreakdown">
-                            <caption>By topic</caption>
-                            <thead>
-                                <tr>
-                                    <th scope="col">Topic</th>
-                                    <th scope="col">Score</th>
-                                    <th scope="col">Review</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn" id="reviewAnswersButton" type="button">Review answers</button>
-                        <button class="btn" id="retryMissedButton" type="button">Retry mistakes</button>
-                        <button class="btn primary" id="tryAgainButton" type="button">New quiz</button>
+                    <div aria-label="Questions" class="la-track" id="track"></div>
+                    <article aria-labelledby="questionText" class="qz-question" id="questionView">
+                        <p class="qz-qmeta" id="questionMeta"></p>
+                        <div class="la-question-text qz-qtext" id="questionText"></div>
+                        <fieldset class="qz-options" id="optionList">
+                            <legend class="la-sr">Answers</legend>
+                        </fieldset>
+                        <div aria-live="polite" class="qz-feedback" hidden="" id="feedback">
+                            <p class="qz-verdict" id="verdict"></p>
+                            <div class="la-prose qz-explanation" id="explanation"></div>
+                            <p class="qz-sources" id="sources"></p>
+                        </div>
+                    </article>
+                    <div class="la-actions">
+                        <button class="btn btn-quiet" id="prevButton" type="button">Back</button>
+                        <button class="btn btn-quiet" id="flagButton" type="button" aria-pressed="false">Flag</button>
+                        <span class="la-actions-spacer"></span>
+                        <button class="btn btn-quiet" id="skipButton" type="button">Skip</button>
+                        <button class="btn primary" id="primaryButton" type="button">Check answer</button>
                     </div>
+                    <div class="qz-confirm" hidden="" id="submitConfirm" role="alertdialog" aria-labelledby="confirmText">
+                        <p id="confirmText"></p>
+                        <div class="la-banner-actions">
+                            <button class="btn btn-quiet" id="confirmReview" type="button">Go to the first one</button>
+                            <button class="btn primary" id="confirmSubmit" type="button">Submit anyway</button>
+                        </div>
+                    </div>
+                    <p class="la-keys" id="keyHints"></p>
+                </div>
+
+                <div class="la-screen" data-screen="results" hidden="" id="resultsScreen">
+                    <div class="la-hero">
+                        <p class="la-score" id="resultScore"></p>
+                        <div>
+                            <h2 class="la-hero-title" id="resultTitle" tabindex="-1"></h2>
+                            <p class="la-hero-text" id="resultText"></p>
+                            <p class="la-stats" id="resultStats"></p>
+                        </div>
+                    </div>
+                    <div class="la-result-actions">
+                        <button class="btn primary" id="retryButton" type="button">Retry mistakes</button>
+                        <button class="btn" id="againButton" type="button">New quiz, same settings</button>
+                        <button class="btn btn-quiet" id="setupButton" type="button">Change settings</button>
+                    </div>
+                    <h2 class="la-step" id="topicsHeading"><span class="la-step-num">01</span> By topic</h2>
+                    <div class="la-bars" id="topicBars"></div>
+                    <h2 class="la-step"><span class="la-step-num">02</span> Review</h2>
+                    <div class="la-tabs" role="tablist">
+                        <button aria-selected="true" class="la-tab" data-filter="mistakes" role="tab" type="button">Mistakes</button>
+                        <button aria-selected="false" class="la-tab" data-filter="all" role="tab" type="button">All questions</button>
+                    </div>
+                    <ol class="la-rows" id="reviewList"></ol>
                 </div>
             </div>
         </section>

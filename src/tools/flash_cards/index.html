@@ -29,6 +29,7 @@
     <link href="/favicon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/base.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/learning.css" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/grimoire.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -109,64 +110,120 @@
             <header class="tool-header learn-intro">
                 <span class="eyebrow">Study deck</span>
                 <h1>Study Flashcards</h1>
-                <p class="subtitle">Open-ended questions on DevOps and Google Cloud, frontend development, databases and statistics, taken from my notes. Answer in your own words first, then reveal the model answer and mark how well you knew it. Progress is saved in this browser.</p>
+                <p class="subtitle">Open-ended questions on DevOps and Google Cloud, frontend development, databases and statistics, taken from my notes. Answer in your own words, reveal the model answer, and rate how well you knew it. Cards you know come back less often.</p>
             </header>
-            <div class="flash-container">
-                <form aria-label="Deck settings" class="deck-panel" id="deckSettings">
-                    <div class="control-group control-category">
-                        <label class="control-label" for="categorySelect">Subject</label>
-                        <select id="categorySelect"></select>
+            <div class="la" id="cardsApp">
+                <div class="la-screen" data-screen="setup" id="setupScreen">
+                    <h2 class="la-step"><span class="la-step-num">01</span> Deck</h2>
+                    <div aria-label="Deck" class="la-tiles" id="deckList" role="radiogroup">
+                        <p class="la-empty">Loading decks…</p>
                     </div>
-                    <div class="control-group">
-                        <span class="control-label">Order</span>
-                        <button class="btn" id="shuffleButton" type="button">Shuffle</button>
+                    <h2 class="la-step"><span class="la-step-num">02</span> Study settings</h2>
+                    <div class="la-settings">
+                        <div class="la-setting-label">Topics</div>
+                        <div class="la-setting-control">
+                            <details class="la-topics" id="topicPicker">
+                                <summary id="topicSummary">All topics</summary>
+                                <div class="la-topic-tools">
+                                    <button class="la-link" data-topics="all" type="button">Select all</button>
+                                    <button class="la-link" data-topics="none" type="button">Clear</button>
+                                </div>
+                                <div id="topicList"></div>
+                            </details>
+                        </div>
+                        <div class="la-setting-label" id="scopeLabel">Cards</div>
+                        <div class="la-setting-control">
+                            <div aria-labelledby="scopeLabel" class="la-segmented" id="scopeControl" role="radiogroup"></div>
+                            <p class="la-setting-hint" id="scopeHint"></p>
+                        </div>
+                        <div class="la-setting-label" id="sizeLabel">Session</div>
+                        <div class="la-setting-control">
+                            <div aria-labelledby="sizeLabel" class="la-segmented" id="sizeControl" role="radiogroup"></div>
+                        </div>
+                        <div class="la-setting-label" id="orderLabel">Order</div>
+                        <div class="la-setting-control">
+                            <div aria-labelledby="orderLabel" class="la-segmented" id="orderControl" role="radiogroup"></div>
+                        </div>
                     </div>
-                    <div class="control-group">
-                        <span class="control-label">Known cards</span>
-                        <label class="toggle-label" for="hideKnownToggle">
-                            <input checked="" id="hideKnownToggle" type="checkbox" />
-                            <span class="toggle-text">Hide cards I know</span>
-                        </label>
+                    <div class="la-start">
+                        <p class="la-start-summary" id="startSummary"></p>
+                        <div class="la-banner-actions">
+                            <button class="btn btn-quiet" id="browseButton" type="button">Browse cards</button>
+                            <button class="btn primary" id="startButton" type="button">Start studying</button>
+                        </div>
                     </div>
-                    <div class="control-row">
-                        <p class="category-meta" id="categoryMeta"></p>
-                        <div aria-label="Topics" class="topic-filter" id="topicFilter" role="group"></div>
-                    </div>
-                </form>
-                <div class="deck-stats" id="deckStats">
-                    <div class="stat-card"><span class="stat-value" id="statRemaining">0</span><span class="stat-label">Left in session</span></div>
-                    <div class="stat-card"><span class="stat-value" id="statLearning">0</span><span class="stat-label">Still learning</span></div>
-                    <div class="stat-card"><span class="stat-value" id="statKnown">0</span><span class="stat-label">Known</span></div>
                 </div>
-                <div aria-label="Session progress" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="progress-bar-container" id="progressBarContainer" role="progressbar">
-                    <div class="progress-bar" id="progressBar"></div>
+
+                <div class="la-screen" data-screen="study" hidden="" id="studyScreen">
+                    <div class="la-topbar">
+                        <p class="la-crumb" id="studyCrumb"></p>
+                        <div class="la-topbar-meta">
+                            <button class="la-link" hidden="" id="undoButton" type="button">Undo</button>
+                            <span id="studyCount"></span>
+                            <button class="la-link" id="endButton" type="button">End session</button>
+                        </div>
+                    </div>
+                    <div aria-hidden="true" class="la-track is-bar" id="track"><span></span></div>
+                    <article class="fc-card" id="card" tabindex="-1">
+                        <p class="fc-meta"><span id="cardTopic"></span><span class="fc-tag" id="cardTag"></span></p>
+                        <div class="fc-question" id="cardFront"></div>
+                        <div class="fc-answer" hidden="" id="cardBack">
+                            <div class="la-prose" id="cardAnswer"></div>
+                            <p class="fc-source" id="cardSource"></p>
+                        </div>
+                    </article>
+                    <div class="la-actions" id="revealActions">
+                        <span class="la-actions-spacer"></span>
+                        <button class="btn primary fc-reveal" id="revealButton" type="button">Show answer</button>
+                        <span class="la-actions-spacer"></span>
+                    </div>
+                    <div aria-label="How well did you know it?" class="la-actions fc-ratings" hidden="" id="rateActions" role="group">
+                        <button class="btn fc-rate fc-again" data-rating="again" type="button"><span class="fc-rate-label">Again</span><span class="fc-rate-hint" id="hintAgain"></span></button>
+                        <button class="btn fc-rate fc-good" data-rating="good" type="button"><span class="fc-rate-label">Good</span><span class="fc-rate-hint" id="hintGood"></span></button>
+                        <button class="btn fc-rate fc-easy" data-rating="easy" type="button"><span class="fc-rate-label">Easy</span><span class="fc-rate-hint" id="hintEasy"></span></button>
+                    </div>
+                    <p class="la-keys" id="keyHints"></p>
                 </div>
-                <article aria-live="polite" class="study-card" id="studyCard">
-                    <div class="card-meta">
-                        <span class="card-topic" id="cardTopic"></span>
-                        <span class="card-position" id="cardPosition"></span>
+
+                <div class="la-screen" data-screen="summary" hidden="" id="summaryScreen">
+                    <div class="la-hero">
+                        <p class="la-score" id="summaryScore"></p>
+                        <div>
+                            <h2 class="la-hero-title" id="summaryTitle" tabindex="-1"></h2>
+                            <p class="la-hero-text" id="summaryText"></p>
+                            <p class="la-stats" id="summaryStats"></p>
+                        </div>
                     </div>
-                    <div class="card-front" id="cardFront">
-                        <p class="card-empty">Loading cards…</p>
+                    <div class="la-result-actions">
+                        <button class="btn primary" id="moreButton" type="button">Study more</button>
+                        <button class="btn" id="decksButton" type="button">Back to decks</button>
+                        <button class="btn btn-quiet" id="summaryBrowseButton" type="button">Browse cards</button>
                     </div>
-                    <div class="card-back" hidden="" id="cardBack">
-                        <div class="card-answer" id="cardAnswer"></div>
-                        <p class="card-links" id="cardLinks"></p>
-                    </div>
-                </article>
-                <div aria-label="Card actions" class="card-actions" id="cardActions" role="group">
-                    <button class="btn" id="backButton" type="button" aria-label="Previous card">Back</button>
-                    <button class="btn primary" id="revealButton" type="button">Show answer</button>
-                    <button class="btn rate-learning" hidden="" id="learningButton" type="button">Still learning</button>
-                    <button class="btn primary rate-known" hidden="" id="knownButton" type="button">Got it</button>
-                    <button class="btn" id="skipButton" type="button" aria-label="Skip to the next card">Skip</button>
+                    <h2 class="la-step" id="againHeading"><span class="la-step-num">01</span> Needed another pass</h2>
+                    <ol class="la-rows" id="againList"></ol>
                 </div>
-                <p class="mode-hint">Keys: <kbd>Space</kbd> show answer, <kbd>1</kbd> still learning, <kbd>2</kbd> got it, <kbd>←</kbd>/<kbd>→</kbd> back and skip, <kbd>S</kbd> shuffle.</p>
-                <details class="card-browser" id="cardBrowser">
-                    <summary>Browse all cards in this selection (<span id="browseCount">0</span>)</summary>
-                    <ol class="card-list" id="cardList"></ol>
-                    <button class="btn danger" id="resetProgressButton" type="button">Forget my progress for this subject</button>
-                </details>
+
+                <div class="la-screen" data-screen="browse" hidden="" id="browseScreen">
+                    <div class="la-topbar">
+                        <p class="la-crumb" id="browseCrumb"></p>
+                        <div class="la-topbar-meta">
+                            <button class="la-link" id="browseBack" type="button">Back to decks</button>
+                        </div>
+                    </div>
+                    <div class="la-search">
+                        <label class="la-sr" for="searchInput">Search cards</label>
+                        <input autocomplete="off" id="searchInput" placeholder="Search questions and answers" type="search" />
+                        <span class="la-count" id="browseCount"></span>
+                    </div>
+                    <div class="la-tabs" id="statusTabs" role="tablist">
+                        <button aria-selected="true" class="la-tab" data-status="all" role="tab" type="button">All</button>
+                        <button aria-selected="false" class="la-tab" data-status="new" role="tab" type="button">New</button>
+                        <button aria-selected="false" class="la-tab" data-status="learning" role="tab" type="button">Learning</button>
+                        <button aria-selected="false" class="la-tab" data-status="mastered" role="tab" type="button">Mastered</button>
+                    </div>
+                    <ol class="la-rows" id="browseList"></ol>
+                    <p class="fc-reset"><button class="la-link" id="resetButton" type="button">Forget my progress in this deck</button></p>
+                </div>
             </div>
         </section>
     </main>
