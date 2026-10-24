@@ -753,7 +753,7 @@
         ui.questionView.classList.toggle('is-revealed', revealed);
         updateActions();
         updateTrack();
-        if (state.data.category.math) Learning.typeset([ui.questionText, ui.optionList, ui.explanation]);
+        Learning.enhance([ui.questionText, ui.optionList, ui.explanation], state.data.category.math);
     }
 
     function paintReveal(item) {
@@ -1093,7 +1093,7 @@
             item,
             index
         }) => ui.reviewList.appendChild(reviewRow(item, index)));
-        if (state.data.category.math) Learning.typeset(ui.reviewList);
+        Learning.enhance(ui.reviewList, state.data.category.math);
     }
 
     function reviewRow(item, index) {

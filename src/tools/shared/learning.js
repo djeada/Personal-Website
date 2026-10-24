@@ -7,7 +7,10 @@
     "use strict";
 
     const MATHJAX_SRC = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-svg.js";
+    // Same Prism build the articles use; the autoloader fetches grammars on demand.
+    const PRISM_BASE = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0";
     let mathReady = null;
+    let prismReady = null;
 
     async function fetchJson(url) {
         const response = await fetch(url, {
@@ -76,7 +79,12 @@
                         ["$$", "$$"],
                         ["\\[", "\\]"]
                     ],
-                    processEscapes: true
+                    processEscapes: true,
+                    // Quiz answers put whole derivations inline; full-size
+                    // fractions keep them readable.
+                    macros: {
+                        frac: ["\\dfrac{#1}{#2}", 2]
+                    }
                 },
                 options: {
                     skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
@@ -108,6 +116,51 @@
         } catch (error) {
             console.warn("MathJax could not typeset", error);
         }
+    }
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    function loadPrism() {
+        if (prismReady) return prismReady;
+        window.Prism = window.Prism || {};
+        window.Prism.manual = true;
+        prismReady = loadScript(`${PRISM_BASE}/components/prism-core.min.js`)
+            .then(() => loadScript(`${PRISM_BASE}/plugins/autoloader/prism-autoloader.min.js`))
+            .then(() => {
+                window.Prism.plugins.autoloader.languages_path = `${PRISM_BASE}/components/`;
+                return window.Prism;
+            })
+            .catch(() => null);
+        return prismReady;
+    }
+
+    // Highlight every language-tagged code element inside the given nodes.
+    async function highlight(elements) {
+        const targets = (Array.isArray(elements) ? elements : [elements]).filter(Boolean);
+        const codes = targets.flatMap((node) => Array.from(node.querySelectorAll('code[class*="language-"]')));
+        if (!codes.length) return;
+        const prism = await loadPrism();
+        if (!prism) return;
+        codes.forEach((code) => {
+            if (code.dataset.highlighted === "true") return;
+            code.dataset.highlighted = "true";
+            prism.highlightElement(code);
+        });
+    }
+
+    // Highlight code, then typeset maths when the subject uses it.
+    function enhance(elements, math) {
+        highlight(elements);
+        if (math) typeset(elements);
     }
 
     function el(tag, className, text) {
@@ -218,6 +271,8 @@
     }
 
     window.Learning = {
+        highlight,
+        enhance,
         balanceTiles,
         topicPicker,
         topicSummary,

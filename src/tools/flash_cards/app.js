@@ -392,7 +392,7 @@
         ui.hintAgain.textContent = 'in a few cards';
         ui.hintGood.textContent = formatInterval(INTERVALS[nextBox(record, 'good')]);
         ui.hintEasy.textContent = formatInterval(INTERVALS[nextBox(record, 'easy')]);
-        if (state.data.category.math) Learning.typeset([ui.cardFront, ui.cardAnswer]);
+        Learning.enhance([ui.cardFront, ui.cardAnswer], state.data.category.math);
     }
 
     function reveal() {
@@ -549,10 +549,10 @@
         body.appendChild(source);
         details.appendChild(body);
         details.addEventListener('toggle', () => {
-            if (details.open && state.data.category.math) Learning.typeset(body);
+            if (details.open) Learning.enhance(body, state.data.category.math);
         });
         li.appendChild(details);
-        if (state.data.category.math) Learning.typeset(title);
+        Learning.enhance(title, state.data.category.math);
         return li;
     }
 
