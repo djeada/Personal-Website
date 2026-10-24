@@ -419,7 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
             button.setAttribute("aria-selected", String(selected));
             button.tabIndex = selected ? 0 : -1;
         });
-        $("activity-panel").setAttribute("aria-labelledby", `tab-${mode}`);
+        labelPanel();
         $("activity-panel").dataset.mode = mode;
         $("activity-label").textContent = t(`${mode}Label`);
     }
@@ -669,9 +669,20 @@ document.addEventListener("DOMContentLoaded", () => {
         save();
     };
     $("voice-speed").onchange = (event) => { stopSpeech(); state.rate = Number(event.target.value) === 0.9 ? 0.9 : 0.7; save(); };
+    function labelPanel() {
+        const panel = $("activity-panel");
+        if (focusMode) {
+            panel.removeAttribute("aria-labelledby");
+            panel.setAttribute("aria-label", t(journey().mode));
+        } else {
+            panel.removeAttribute("aria-label");
+            panel.setAttribute("aria-labelledby", `tab-${journey().mode}`);
+        }
+    }
     function setFocus(enabled) {
         focusMode = enabled;
         document.body.classList.toggle("pa-focus-mode", enabled);
+        labelPanel();
         $("focus-toggle").setAttribute("aria-pressed", String(enabled));
         $("focus-toggle").textContent = t(enabled ? "exitFocus" : "focus");
         if (enabled) $("activity-panel").scrollIntoView({ block: "start" });

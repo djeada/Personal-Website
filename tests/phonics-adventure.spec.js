@@ -208,7 +208,7 @@ test("speech highlights stop on navigation and stale speech events are ignored",
   });
   await start(page);
   await page.locator("#tab-stories").click();
-  await page.locator("#read-story").click();
+  await expect(page.locator("#read-story")).toHaveAttribute("aria-pressed", "true");
   await page.evaluate(() => { window.oldStoryUtterance = window.testUtterances.at(-1); window.oldStoryUtterance.onboundary({ charIndex: 4 }); });
   await expect(page.locator('[data-word="cat"]')).toHaveClass(/pa-speaking/);
   await page.locator("#tab-words").click();
@@ -263,6 +263,8 @@ for (const dark of [false, true]) {
       await page.locator("#start-adventure").click();
       await expect(page.locator("#next-activity")).toBeInViewport();
       await expect(page.locator("#replay-guide")).toBeInViewport();
+      await expect(page.locator("#start-adventure")).not.toBeVisible();
+      await expect(page.locator(".pa-sidebar")).not.toBeVisible();
       const focusedWidth = await page.locator("#activity-area").evaluate((element) => ({ content: element.scrollWidth, width: element.clientWidth }));
       expect(focusedWidth.content).toBeLessThanOrEqual(focusedWidth.width + 1);
       await page.keyboard.press("Escape");
