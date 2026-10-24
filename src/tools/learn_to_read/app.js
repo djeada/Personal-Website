@@ -1,2888 +1,582 @@
 document.addEventListener("DOMContentLoaded", () => {
+    "use strict";
 
-    const activityArea = document.getElementById("activity-area");
-    const loadingMessage = document.getElementById("loading-message");
-    const activityIcon = document.getElementById("activity-icon");
-    const activityTitle = document.getElementById("activity-title");
-    const characterCanvas = document.getElementById("character-canvas");
-    const characterSpeech = document.getElementById("character-speech");
-    const toastContainer = document.getElementById("toast-container");
-    const prevBtn = document.getElementById("prev-btn");
-    const nextBtn = document.getElementById("next-btn");
-    const resetBtn = document.getElementById("reset-btn");
-    const langButtons = document.querySelectorAll(".lang-btn");
-    const activityCard = document.getElementById("activity-card");
-    const fullscreenExitBtn = document.getElementById("fullscreen-exit-btn");
-    const fullscreenEnterBtn = document.getElementById("fullscreen-enter-btn");
-    const achievementsBadges = document.querySelectorAll(".achievement-badge");
-    const streakIndicator = document.getElementById("streak-indicator");
-    const streakText = document.getElementById("streak-text");
-    const reactionFace = document.getElementById("reaction-face");
-
-
-    const starsCount = document.getElementById("stars-count");
-    const soundsLearned = document.getElementById("sounds-learned");
-    const wordsLearned = document.getElementById("words-learned");
-    const storiesRead = document.getElementById("stories-read");
-    const parentPhase = document.getElementById("parent-phase");
-    const parentProgress = document.getElementById("parent-progress");
-
-
-    const ctx = characterCanvas.getContext("2d");
-
-
-    function shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
-
-    const PHASES = {
-        SOUNDS: "sounds",
-        WORDS: "words",
-        SENTENCES: "sentences"
+    const content = window.PhonicsContent;
+    const KEY = "phonicsAdventure.v2";
+    const MODES = ["sounds", "words", "stories"];
+    const $ = (id) => document.getElementById(id);
+    const app = $("phonics-app");
+    const area = $("activity-area");
+    const feedback = $("feedback");
+    const next = $("next-activity");
+    const letters = () => content.letters[state.language];
+    const groups = () => content.words[state.language];
+    const stories = () => content.stories[state.language];
+    const journey = () => state.journeys[state.language];
+    const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const normalize = (value) => value.toLocaleLowerCase(state.language).replace(/[^\p{L}]/gu, "");
+    const shuffle = (items) => [...items].map((value) => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ value }) => value);
+    const dateKey = () => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     };
 
-
-    const ACHIEVEMENTS = {
-        "first-letter": {
-            condition: (s) => s.masteredSounds.length >= 1,
-            labelKey: "achievement.firstLetter.label",
-            titleKey: "achievement.firstLetter.title"
-        },
-        "letter-master": {
-            condition: (s) => s.masteredSounds.length >= 10,
-            labelKey: "achievement.letterMaster.label",
-            titleKey: "achievement.letterMaster.title"
-        },
-        "word-builder": {
-            condition: (s) => s.masteredWords.length >= 5,
-            labelKey: "achievement.wordBuilder.label",
-            titleKey: "achievement.wordBuilder.title"
-        },
-        "story-reader": {
-            condition: (s) => s.completedStories.length >= 1,
-            labelKey: "achievement.storyReader.label",
-            titleKey: "achievement.storyReader.title"
-        },
-        "superstar": {
-            condition: (s) => s.stars >= 50,
-            labelKey: "achievement.superstar.label",
-            titleKey: "achievement.superstar.title"
-        }
-    };
-
-    const TRANSLATIONS = {
+    const strings = {
         en: {
-            "header.title": "Phonics Adventure",
-            "header.subtitle": "Learn to read through sounds, words, and stories! Tap letters to hear sounds, build words, and follow along with fun stories.",
-            "phase.sounds": "Letters",
-            "phase.words": "Words",
-            "phase.stories": "Stories",
-            "phase.hint": "Tap a mode to switch.",
-            "phase.tap": "Tap",
-            "stats.stars": "Stars",
-            "stats.sounds": "Letters",
-            "stats.words": "Words",
-            "stats.stories": "Stories",
-            "summary.title": "Progress Summary",
-            "loading": "Loading activities...",
-            "nav.back": "Back",
-            "nav.next": "Next",
-            "help.title": "Parent Info",
-            "help.currentPhaseLabel": "Current Phase:",
-            "help.progressLabel": "Progress:",
-            "help.phaseInfo": "Children progress through phases: Sounds → Words → Stories",
-            "help.masteryInfo": "Each phase must be mastered before moving on",
-            "help.autoSaveInfo": "Progress is saved automatically in this browser",
-            "help.audioHint": "Tap the Listen button to hear sounds and words",
-            "help.resetHint": "Use the Reset button below to start over",
-            "help.resetButton": "Reset Progress",
-            "help.soundsSummary": "Letters tried/right:",
-            "help.wordsSummary": "Words tried/right:",
-            "help.storiesSummary": "Stories tried/right:",
-            "activity.soundsTitle": "Letters",
-            "activity.wordsTitle": "Words",
-            "activity.storiesTitle": "Story Time",
-            "sounds.prompt": "Listen to each face, then connect the right sound!",
-            "sounds.instructions": "Tap each face to hear its sound, then connect the letter and face from either side.",
-            "sounds.letterTitle": "Letter",
-            "sounds.dragToFace": "Drag to a face!",
-            "sounds.dragToLetter": "Drag to the letter!",
-            "sounds.matchToast": "You matched \"{letter}\"!",
-            "sounds.matchAgain": "Nice! \"{letter}\" again.",
-            "sounds.tryAnotherFace": "Try another face!",
-            "words.prompt": "Listen to the sound and build the word.",
-            "words.speak": "Listen carefully.",
-            "words.instructions": "Drag the letters into the boxes to match the sound.",
-            "words.tryAgain": "Try again!",
-            "words.listen": "Listen",
-            "reaction.tryAgain": "Try again",
-            "words.builtToast": "You built \"{word}\"!",
-            "stories.prompt": "Let's read a story together!",
-            "stories.speak": "Let's read a story together!",
-            "stories.readButton": "Read Story",
-            "stories.greatReading": "Great reading!",
-            "stories.instructions": "Fill the missing word to continue the story.",
-            "confirm.reset": "Are you sure you want to reset all progress?",
-            "toast.saveFail": "Could not save progress",
-            "toast.reset": "Progress reset!",
-            "toast.newPhase": "New phase unlocked!",
-            "toast.unlockSpeak": "Great job! You unlocked a new level!",
-            "toast.unlockMore": "Complete more activities to unlock!",
-            "toast.welcome": "Welcome to Phonics Adventure!",
-            "toast.achievement": "Achievement unlocked: {name}!",
-            "streak.day": "Day {count} streak",
-            "fullscreen.enter": "Fullscreen",
-            "fullscreen.exit": "Exit",
-            "achievement.firstLetter.label": "First Letter",
-            "achievement.firstLetter.title": "First Letter Mastered",
-            "achievement.letterMaster.label": "Letter Master",
-            "achievement.letterMaster.title": "Master 10 Letters",
-            "achievement.wordBuilder.label": "Word Builder",
-            "achievement.wordBuilder.title": "Build 5 Words",
-            "achievement.storyReader.label": "Story Reader",
-            "achievement.storyReader.title": "Complete a Story",
-            "achievement.superstar.label": "Superstar",
-            "achievement.superstar.title": "Earn 50 Stars"
+            eyebrow: "LITTLE SOUNDS. BIG ADVENTURES.", title: "Phonics Adventure",
+            intro: "A little listening. A little reading. A whole world to discover.",
+            guideName: "FINN THE FOX", welcome: "Every great reader starts with a little curiosity. Let’s go!",
+            sounds: "Letter Meadow", soundsSub: "Listen & discover", words: "Word Workshop", wordsSub: "Build & blend", stories: "Story Woods", storiesSub: "Read & explore",
+            audioOn: "Sound on", audioOff: "Sound off", audioUnavailable: "Read together", focus: "Focus view", exitFocus: "Exit focus view",
+            dailyTitle: "A little every day", dailyHint: "Collect 5 stars on today’s trail.", dailyCount: "{n} of 5 discoveries", goalDone: "Today’s trail is complete. Beautiful work!",
+            journey: "Your story so far", saved: "Your progress is saved on this device.", saveFail: "Progress could not be saved. You can still play.",
+            gentleNote: "No timers. No rush. Just one lovely discovery at a time.",
+            grownups: "A little help for grown-ups", togetherTitle: "Small steps, together.",
+            togetherText: "Try a few minutes at a time. Say the sounds together, then blend them into a word. Explore any area whenever your child is ready. Storybooks include words you may need to read together.",
+            speechNote: "The Listen buttons use your device’s reading voice for whole words and sentences. For individual letter sounds, model the sound yourself without adding “uh”.",
+            practiceTitle: "Practice at a glance", voiceSpeed: "Reading voice speed", slow: "Gentle", normal: "Natural",
+            languageNote: "English and German each have their own learning journey.", reset: "Reset this language’s progress",
+            resetConfirm: "Reset all English progress? This cannot be undone. German progress will be kept.",
+            available: "Reading voices depend on your browser and installed languages.", unavailable: "A reading voice is unavailable here. Use the visible clues and read together with a grown-up.", audioError: "The reading voice could not play. Read the visible clue together or try Listen again.",
+            soundsLabel: "01 / LETTER MEADOW", wordsLabel: "02 / WORD WORKSHOP", storiesLabel: "03 / STORY WOODS",
+            soundTitle: "A little letter discovery", soundHint: "Listen to the word. Which letter does it start with?", endHint: "Listen to fox. Which letter is at the end?",
+            soundPrompt: "{word}. Which letter does {word} start with?", endPrompt: "Fox. Which letter is at the end of fox?",
+            listen: "Listen", listenAgain: "Listen again", slower: "A little slower", letterHint: "Tap a letter to make your match.",
+            correctLetter: "Yes! {letter} is for {word}.", correctEnd: "Yes! Fox ends with x.", wrongLetter: "A good try. Look at the word and try another letter.",
+            next: "Next adventure →", anotherLetter: "Next letter →", skip: "Try another →", pickLetter: "Explore the letter meadow", chooseLetter: "Explore letter {letter}", letterCount: "{n} of {total} letters discovered",
+            wordTitle: "Let’s build a little word", buildHint: "Listen, then tap the tiles in order. Tap a box to take a tile back.",
+            showWord: "Show the word", hideWord: "Hide the word", wordClue: "Word clue", check: "Check my word", undo: "Undo", clear: "Start again", slot: "Box {n}: {letter}. Tap to remove.", emptySlot: "Empty box {n}",
+            wrongWord: "Almost! Listen again, or show the word. You can change any tile.", correctWord: "You built {word}. Wonderful work!", nextWord: "Next word →", keyboardTip: "You can also type letters, use Backspace, and press Enter to check.", tile: "Add {letter}", wordSet: "Choose a word trail", trailCount: "{n} of {total} words discovered", soundTeam: "Letters joined on a tile work as a team.",
+            storyTitle: "A small story, a big adventure", chooseStory: "Choose a story", page: "Page {n} of {total}", readTogether: "Read with me", stop: "Stop reading", findWord: "Find the word", storyHint: "Tap the word in the sentence above.", storyListen: "Find the word {word}.",
+            wrongStory: "Try another word. Match the letters in the little clue.", correctStory: "You found {word}. Lovely reading!", nextPage: "Next page →", nextBook: "Another story →", storyDone: "You finished {title}!", previousPage: "← Previous page", storyTip: "Read together, then find one word on each page.",
+            statLetters: "Letters", statWords: "Words", statStories: "Stories", discovered: "discovered", read: "read", attempts: "Checks", correct: "Right", lettersRow: "Letters", wordsRow: "Words", storiesRow: "Story words",
+            badgeFirst: "First discovery", badgeLetters: "10 letters", badgeWords: "5 words", badgeStory: "Story explorer", badgeGoal: "Daily trail", badgeLocked: "Still to discover", badgeEarned: "Earned", progressLabel: "Daily adventure progress", languageLabel: "Learning language", pathLabel: "Reading adventures", sidebarLabel: "Your reading journey", legacy: "Your earlier progress has come along for the adventure.", resetDone: "A fresh adventure is ready.", mastered: "Already discovered", newDiscovery: "Ready to discover", speechPlaying: "Reading…"
         },
         de: {
-            "header.title": "Lese-Abenteuer",
-            "header.subtitle": "Lerne lesen mit Lauten, Wörtern und Geschichten! Tippe auf Buchstaben, höre die Laute, baue Wörter und lies lustige Geschichten.",
-            "phase.sounds": "Buchstaben",
-            "phase.words": "Wörter",
-            "phase.stories": "Geschichten",
-            "phase.hint": "Tippe auf einen Modus, um zu wechseln.",
-            "phase.tap": "Tippen",
-            "stats.stars": "Sterne",
-            "stats.sounds": "Buchstaben",
-            "stats.words": "Wörter",
-            "stats.stories": "Geschichten",
-            "summary.title": "Fortschritt",
-            "loading": "Aktivitäten werden geladen...",
-            "nav.back": "Zurück",
-            "nav.next": "Weiter",
-            "help.title": "Elterninfo",
-            "help.currentPhaseLabel": "Aktuelle Phase:",
-            "help.progressLabel": "Fortschritt:",
-            "help.phaseInfo": "Kinder durchlaufen Phasen: Laute → Wörter → Geschichten",
-            "help.masteryInfo": "Jede Phase muss gemeistert werden, bevor es weitergeht",
-            "help.autoSaveInfo": "Fortschritt wird automatisch in diesem Browser gespeichert",
-            "help.audioHint": "Tippe auf Hören, um Laute und Wörter zu hören",
-            "help.resetHint": "Nutze den Reset-Button unten, um neu zu starten",
-            "help.resetButton": "Fortschritt zurücksetzen",
-            "help.soundsSummary": "Buchstaben versucht/richtig:",
-            "help.wordsSummary": "Wörter versucht/richtig:",
-            "help.storiesSummary": "Geschichten versucht/richtig:",
-            "activity.soundsTitle": "Buchstaben",
-            "activity.wordsTitle": "Wörter",
-            "activity.storiesTitle": "Geschichtenzeit",
-            "sounds.prompt": "Höre dir jedes Gesicht an und verbinde den richtigen Laut!",
-            "sounds.instructions": "Tippe jedes Gesicht an, höre den Laut und verbinde Buchstabe und Gesicht von beiden Seiten.",
-            "sounds.letterTitle": "Buchstabe",
-            "sounds.dragToFace": "Ziehe zu einem Gesicht!",
-            "sounds.dragToLetter": "Ziehe zum Buchstaben!",
-            "sounds.matchToast": "Du hast \"{letter}\" verbunden!",
-            "sounds.matchAgain": "Super! \"{letter}\" nochmal.",
-            "sounds.tryAnotherFace": "Versuch ein anderes Gesicht!",
-            "words.prompt": "Höre den Laut und baue das Wort.",
-            "words.speak": "Hör genau zu.",
-            "words.instructions": "Ziehe die Buchstaben in die Kästchen passend zum Laut.",
-            "words.tryAgain": "Versuch es nochmal!",
-            "words.listen": "Hören",
-            "reaction.tryAgain": "Nochmal",
-            "words.builtToast": "Du hast \"{word}\" gebaut!",
-            "stories.prompt": "Lass uns zusammen eine Geschichte lesen!",
-            "stories.speak": "Lass uns zusammen eine Geschichte lesen!",
-            "stories.readButton": "Geschichte vorlesen",
-            "stories.greatReading": "Super gelesen!",
-            "stories.instructions": "Setze das fehlende Wort ein, um weiterzulesen.",
-            "confirm.reset": "Möchtest du den gesamten Fortschritt wirklich zurücksetzen?",
-            "toast.saveFail": "Fortschritt konnte nicht gespeichert werden",
-            "toast.reset": "Fortschritt zurückgesetzt!",
-            "toast.newPhase": "Neue Phase freigeschaltet!",
-            "toast.unlockSpeak": "Super gemacht! Du hast ein neues Level freigeschaltet!",
-            "toast.unlockMore": "Mache mehr Aktivitäten, um freizuschalten!",
-            "toast.welcome": "Willkommen im Lese-Abenteuer!",
-            "toast.achievement": "Erfolg freigeschaltet: {name}!",
-            "streak.day": "Tag {count} in Folge",
-            "fullscreen.enter": "Vollbild",
-            "fullscreen.exit": "Beenden",
-            "achievement.firstLetter.label": "Erster Buchstabe",
-            "achievement.firstLetter.title": "Ersten Buchstaben gemeistert",
-            "achievement.letterMaster.label": "Buchstaben-Meister",
-            "achievement.letterMaster.title": "10 Buchstaben meistern",
-            "achievement.wordBuilder.label": "Wort-Baumeister",
-            "achievement.wordBuilder.title": "5 Wörter bauen",
-            "achievement.storyReader.label": "Geschichtenleser",
-            "achievement.storyReader.title": "Eine Geschichte abschließen",
-            "achievement.superstar.label": "Superstar",
-            "achievement.superstar.title": "50 Sterne verdienen"
+            eyebrow: "KLEINE LAUTE. GROSSE ABENTEUER.", title: "Lese-Abenteuer",
+            intro: "Ein bisschen hören. Ein bisschen lesen. Eine ganze Welt entdecken.",
+            guideName: "FINN DER FUCHS", welcome: "Jedes Lese-Abenteuer beginnt mit ein wenig Neugier. Los geht’s!",
+            sounds: "Buchstabenwiese", soundsSub: "Hören & entdecken", words: "Wörterwerkstatt", wordsSub: "Bauen & verbinden", stories: "Geschichtenwald", storiesSub: "Lesen & entdecken",
+            audioOn: "Ton an", audioOff: "Ton aus", audioUnavailable: "Zusammen lesen", focus: "Fokusansicht", exitFocus: "Fokus beenden",
+            dailyTitle: "Jeden Tag ein bisschen", dailyHint: "Sammle heute 5 Sterne auf deinem Pfad.", dailyCount: "{n} von 5 Entdeckungen", goalDone: "Dein Tagespfad ist geschafft. Toll gemacht!",
+            journey: "Dein bisheriger Weg", saved: "Dein Fortschritt wird auf diesem Gerät gespeichert.", saveFail: "Der Fortschritt konnte nicht gespeichert werden. Du kannst weiterspielen.",
+            gentleNote: "Keine Zeitvorgaben. Keine Eile. Eine schöne Entdeckung nach der anderen.",
+            grownups: "Eine kleine Hilfe für Erwachsene", togetherTitle: "Kleine Schritte, gemeinsam.",
+            togetherText: "Übt jeweils ein paar Minuten. Sprecht die Laute zusammen und verbindet sie zu einem Wort. Entdeckt jeden Bereich, sobald euer Kind bereit ist. In den Geschichten gibt es auch Wörter, die ihr gemeinsam lesen könnt.",
+            speechNote: "Die Hören-Tasten nutzen die Vorlesestimme deines Geräts für ganze Wörter und Sätze. Einzelne Buchstabenlaute sprichst du am besten selbst vor, ohne ein zusätzliches „uh“.",
+            practiceTitle: "Übung auf einen Blick", voiceSpeed: "Tempo der Vorlesestimme", slow: "Gemütlich", normal: "Natürlich",
+            languageNote: "Deutsch und Englisch haben jeweils ihren eigenen Lernfortschritt.", reset: "Fortschritt für Deutsch zurücksetzen",
+            resetConfirm: "Den gesamten deutschen Fortschritt zurücksetzen? Das lässt sich nicht rückgängig machen. Der englische Fortschritt bleibt erhalten.",
+            available: "Vorlesestimmen hängen vom Browser und den installierten Sprachen ab.", unavailable: "Hier ist keine Vorlesestimme verfügbar. Nutzt die sichtbaren Hinweise und lest mit einem Erwachsenen.", audioError: "Die Vorlesestimme konnte nicht starten. Lest den Hinweis zusammen oder tippt noch einmal auf Hören.",
+            soundsLabel: "01 / BUCHSTABENWIESE", wordsLabel: "02 / WÖRTERWERKSTATT", storiesLabel: "03 / GESCHICHTENWALD",
+            soundTitle: "Eine kleine Buchstabenentdeckung", soundHint: "Höre das Wort. Mit welchem Buchstaben beginnt es?", endHint: "Höre das Wort. Mit welchem Buchstaben beginnt es?",
+            soundPrompt: "{word}. Mit welchem Buchstaben beginnt {word}?", endPrompt: "{word}. Mit welchem Buchstaben beginnt {word}?",
+            listen: "Hören", listenAgain: "Noch einmal hören", slower: "Etwas langsamer", letterHint: "Tippe auf den passenden Buchstaben.",
+            correctLetter: "Ja! {letter} wie {word}.", correctEnd: "Ja!", wrongLetter: "Ein guter Versuch. Schau dir das Wort an und probiere einen anderen Buchstaben.",
+            next: "Nächstes Abenteuer →", anotherLetter: "Nächster Buchstabe →", skip: "Etwas anderes →", pickLetter: "Entdecke die Buchstabenwiese", chooseLetter: "Buchstabe {letter} entdecken", letterCount: "{n} von {total} Buchstaben entdeckt",
+            wordTitle: "Wir bauen ein kleines Wort", buildHint: "Höre zu und tippe die Bausteine der Reihe nach an. Tippe auf ein Kästchen, um einen Baustein zurückzulegen.",
+            showWord: "Wort zeigen", hideWord: "Wort verbergen", wordClue: "Worthinweis", check: "Mein Wort prüfen", undo: "Zurück", clear: "Neu anfangen", slot: "Kästchen {n}: {letter}. Zum Entfernen tippen.", emptySlot: "Leeres Kästchen {n}",
+            wrongWord: "Fast! Höre noch einmal oder lass dir das Wort zeigen. Du kannst jeden Baustein ändern.", correctWord: "Du hast {word} gebaut. Toll gemacht!", nextWord: "Nächstes Wort →", keyboardTip: "Du kannst auch Buchstaben tippen, die Rücktaste nutzen und mit Enter prüfen.", tile: "{letter} einsetzen", wordSet: "Wörterpfad auswählen", trailCount: "{n} von {total} Wörtern entdeckt", soundTeam: "Buchstaben auf einem Baustein gehören als Team zusammen.",
+            storyTitle: "Eine kleine Geschichte wartet", chooseStory: "Geschichte auswählen", page: "Seite {n} von {total}", readTogether: "Lies mit mir", stop: "Vorlesen stoppen", findWord: "Finde das Wort", storyHint: "Tippe auf das Wort im Satz oben.", storyListen: "Finde das Wort {word}.",
+            wrongStory: "Probiere ein anderes Wort. Vergleiche die Buchstaben mit dem kleinen Hinweis.", correctStory: "Du hast {word} gefunden. Prima gelesen!", nextPage: "Nächste Seite →", nextBook: "Andere Geschichte →", storyDone: "Du hast {title} fertig gelesen!", previousPage: "← Vorherige Seite", storyTip: "Lest zusammen und findet auf jeder Seite ein Wort.",
+            statLetters: "Buchstaben", statWords: "Wörter", statStories: "Geschichten", discovered: "entdeckt", read: "gelesen", attempts: "Versuche", correct: "Richtig", lettersRow: "Buchstaben", wordsRow: "Wörter", storiesRow: "Geschichtenwörter",
+            badgeFirst: "Erste Entdeckung", badgeLetters: "10 Buchstaben", badgeWords: "5 Wörter", badgeStory: "Lesefuchs", badgeGoal: "Tagespfad", badgeLocked: "Noch zu entdecken", badgeEarned: "Geschafft", progressLabel: "Fortschritt des Tagespfads", languageLabel: "Lernsprache", pathLabel: "Lese-Abenteuer", sidebarLabel: "Dein Leseweg", legacy: "Dein bisheriger Fortschritt kommt mit auf das Abenteuer.", resetDone: "Ein neues Abenteuer wartet.", mastered: "Schon entdeckt", newDiscovery: "Bereit zum Entdecken", speechPlaying: "Wird vorgelesen…"
         }
     };
-
     function t(key, vars = {}) {
-        const strings = TRANSLATIONS[state.language] || TRANSLATIONS.en;
-        const fallback = TRANSLATIONS.en[key] || key;
-        const template = strings[key] || fallback;
-        return template.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
+        return (strings[state.language][key] || strings.en[key] || key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
     }
+    const emptyStats = () => ({ sounds: { attempts: 0, correct: 0 }, words: { attempts: 0, correct: 0 }, stories: { attempts: 0, correct: 0 } });
+    const freshJourney = () => ({ sounds: [], words: [], stories: [], pages: [], stars: 0, stats: emptyStats(), daily: { date: dateKey(), count: 0 }, mode: "sounds", group: "first", selected: { sounds: null, words: null, stories: null } });
+    const freshState = () => ({ version: 2, language: "en", audio: true, rate: 0.7, journeys: { en: freshJourney(), de: freshJourney() } });
+    const number = (value) => Number.isFinite(value) ? Math.min(1000000, Math.max(0, Math.floor(value))) : 0;
+    const list = (value) => Array.isArray(value) ? [...new Set(value.filter((item) => typeof item === "string"))] : [];
+    let storageFailed = false;
+    let migrated = false;
 
-    function applyTranslations() {
-        document.querySelectorAll("[data-i18n]").forEach((el) => {
-            const key = el.dataset.i18n;
-            el.textContent = t(key);
-        });
-    }
-
-    const ENCOURAGEMENTS = {
-        en: [
-            "Great job!",
-            "You did it!",
-            "Wonderful!",
-            "Amazing!",
-            "Keep going!",
-            "You're a star!",
-            "Fantastic!",
-            "Well done!",
-            "Super!",
-            "Brilliant!"
-        ],
-        de: [
-            "Toll gemacht!",
-            "Du hast es geschafft!",
-            "Wunderbar!",
-            "Großartig!",
-            "Mach weiter so!",
-            "Du bist ein Star!",
-            "Fantastisch!",
-            "Super gemacht!",
-            "Klasse!",
-            "Brillant!"
-        ]
-    };
-
-
-    const LETTERS = [{
-            letter: "A",
-            sound: "a",
-            example: {
-                en: "apple",
-                de: "apfel"
-            },
-            emoji: {
-                en: "🍎",
-                de: "🍎"
-            }
-        },
-        {
-            letter: "B",
-            sound: "b",
-            example: {
-                en: "ball",
-                de: "ball"
-            },
-            emoji: {
-                en: "⚽",
-                de: "⚽"
-            }
-        },
-        {
-            letter: "C",
-            sound: "k",
-            example: {
-                en: "cat",
-                de: "clown"
-            },
-            emoji: {
-                en: "🐱",
-                de: "🤡"
-            }
-        },
-        {
-            letter: "D",
-            sound: "d",
-            example: {
-                en: "dog",
-                de: "drache"
-            },
-            emoji: {
-                en: "🐕",
-                de: "🐉"
-            }
-        },
-        {
-            letter: "E",
-            sound: "e",
-            example: {
-                en: "egg",
-                de: "ente"
-            },
-            emoji: {
-                en: "🥚",
-                de: "🦆"
-            }
-        },
-        {
-            letter: "F",
-            sound: "f",
-            example: {
-                en: "fish",
-                de: "fisch"
-            },
-            emoji: {
-                en: "🐟",
-                de: "🐟"
-            }
-        },
-        {
-            letter: "G",
-            sound: "g",
-            example: {
-                en: "goat",
-                de: "giraffe"
-            },
-            emoji: {
-                en: "🐐",
-                de: "🦒"
-            }
-        },
-        {
-            letter: "H",
-            sound: "h",
-            example: {
-                en: "hat",
-                de: "haus"
-            },
-            emoji: {
-                en: "🎩",
-                de: "🏠"
-            }
-        },
-        {
-            letter: "I",
-            sound: "i",
-            example: {
-                en: "igloo",
-                de: "iglu"
-            },
-            emoji: {
-                en: "🏠",
-                de: "🧊"
-            }
-        },
-        {
-            letter: "J",
-            sound: "j",
-            example: {
-                en: "jam",
-                de: "joghurt"
-            },
-            emoji: {
-                en: "🍓",
-                de: "🥣"
-            }
-        },
-        {
-            letter: "K",
-            sound: "k",
-            example: {
-                en: "kite",
-                de: "katze"
-            },
-            emoji: {
-                en: "🪁",
-                de: "🐱"
-            }
-        },
-        {
-            letter: "L",
-            sound: "l",
-            example: {
-                en: "lion",
-                de: "loewe"
-            },
-            emoji: {
-                en: "🦁",
-                de: "🦁"
-            }
-        },
-        {
-            letter: "M",
-            sound: "m",
-            example: {
-                en: "mouse",
-                de: "maus"
-            },
-            emoji: {
-                en: "🐭",
-                de: "🐭"
-            }
-        },
-        {
-            letter: "N",
-            sound: "n",
-            example: {
-                en: "nest",
-                de: "nest"
-            },
-            emoji: {
-                en: "🪺",
-                de: "🪺"
-            }
-        },
-        {
-            letter: "O",
-            sound: "o",
-            example: {
-                en: "octopus",
-                de: "oktopus"
-            },
-            emoji: {
-                en: "🐙",
-                de: "🐙"
-            }
-        },
-        {
-            letter: "P",
-            sound: "p",
-            example: {
-                en: "pig",
-                de: "pferd"
-            },
-            emoji: {
-                en: "🐷",
-                de: "🐴"
-            }
-        },
-        {
-            letter: "Q",
-            sound: "q",
-            example: {
-                en: "queen",
-                de: "qualle"
-            },
-            emoji: {
-                en: "👸",
-                de: "🪼"
-            }
-        },
-        {
-            letter: "R",
-            sound: "r",
-            example: {
-                en: "rabbit",
-                de: "regen"
-            },
-            emoji: {
-                en: "🐰",
-                de: "🌧️"
-            }
-        },
-        {
-            letter: "S",
-            sound: "s",
-            example: {
-                en: "sun",
-                de: "sonne"
-            },
-            emoji: {
-                en: "☀️",
-                de: "☀️"
-            }
-        },
-        {
-            letter: "T",
-            sound: "t",
-            example: {
-                en: "turtle",
-                de: "tiger"
-            },
-            emoji: {
-                en: "🐢",
-                de: "🐯"
-            }
-        },
-        {
-            letter: "U",
-            sound: "u",
-            example: {
-                en: "umbrella",
-                de: "uhr"
-            },
-            emoji: {
-                en: "☂️",
-                de: "⏰"
-            }
-        },
-        {
-            letter: "V",
-            sound: "v",
-            example: {
-                en: "van",
-                de: "vogel"
-            },
-            emoji: {
-                en: "🚐",
-                de: "🐦"
-            }
-        },
-        {
-            letter: "W",
-            sound: "w",
-            example: {
-                en: "whale",
-                de: "wolke"
-            },
-            emoji: {
-                en: "🐋",
-                de: "☁️"
-            }
-        },
-        {
-            letter: "X",
-            sound: "x",
-            example: {
-                en: "box",
-                de: "xylophon"
-            },
-            emoji: {
-                en: "📦",
-                de: "🎼"
-            }
-        },
-        {
-            letter: "Y",
-            sound: "y",
-            example: {
-                en: "yellow",
-                de: "yoga"
-            },
-            emoji: {
-                en: "💛",
-                de: "🧘"
-            }
-        },
-        {
-            letter: "Z",
-            sound: "z",
-            example: {
-                en: "zebra",
-                de: "zebra"
-            },
-            emoji: {
-                en: "🦓",
-                de: "🦓"
-            }
-        }
-    ];
-
-    function getLetterExample(letterData) {
-        if (letterData.example && typeof letterData.example === "object") {
-            return letterData.example[state.language] || letterData.example.en || "";
-        }
-        return letterData.example || "";
-    }
-
-    function getLetterEmoji(letterData) {
-        if (letterData.emoji && typeof letterData.emoji === "object") {
-            return letterData.emoji[state.language] || letterData.emoji.en || "";
-        }
-        return letterData.emoji || "";
-    }
-
-
-    const WORD_CATEGORIES = {
-        animals: ["cat", "dog", "pig", "hen", "cow", "fox", "bat", "bee", "ant", "owl", "rat", "ram"],
-        colors: ["red", "tan", "sky"],
-        food: ["egg", "jam", "pie", "tea", "ham", "fig", "nut", "bun", "pea"],
-        nature: ["sun", "sky", "sea", "mud", "fog", "bay", "oak", "elm", "ash"],
-        body: ["arm", "leg", "ear", "eye", "lip", "toe", "jaw", "hip", "rib"],
-        objects: ["hat", "box", "cup", "bag", "bed", "pen", "pot", "pan", "key", "jar", "can", "mop", "net", "rug"]
-    };
-
-    const SHORT_WORDS = [
-        "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi",
-        "if", "in", "is", "it", "me", "my", "no", "of", "oh", "on",
-        "or", "ox", "up", "us", "we", "to", "so", "pi", "ex", "ace",
-        "act", "add", "age", "ago", "air", "and", "ant", "any", "ape", "arm",
-        "art", "ash", "ask", "ate", "awe", "bad", "bag", "ban", "bar", "bat",
-        "bay", "bed", "bee", "beg", "bet", "bib", "bid", "big", "bin", "bit",
-        "bog", "box", "boy", "bud", "bug", "bun", "bus", "but", "buy", "cab",
-        "can", "cap", "car", "cat", "cop", "cow", "cry", "cup", "cut", "dad",
-        "dam", "day", "den", "did", "dig", "dim", "din", "dip", "dog", "dot",
-        "dry", "due", "dug", "dye", "ear", "eat", "eel", "egg", "elf", "elk",
-        "elm", "end", "era", "eve", "eye", "fan", "far", "fat", "fed", "fee",
-        "few", "fig", "fin", "fit", "fix", "fog", "for", "fox", "fun", "fur",
-        "gas", "gem", "get", "gig", "gin", "gum", "gun", "guy", "had", "ham",
-        "has", "hat", "hay", "hen", "her", "hid", "him", "hip", "his", "hit",
-        "hog", "hop", "hot", "how", "hug", "hut", "ice", "icy", "ink", "jam",
-        "jar", "jaw", "jet", "job", "jog", "joy", "key", "kid", "kin", "kit",
-        "lab", "lad", "lag", "lap", "law", "lay", "leg", "let", "lid", "lip",
-        "lit", "log", "lot", "low", "mad", "man", "map", "mat", "men", "met",
-        "mix", "mom", "mop", "mud", "mug", "nap", "net", "new", "nod", "nor",
-        "now", "nut", "oak", "odd", "off", "old", "one", "out", "owl", "own",
-        "pad", "pal", "pan", "par", "pat", "paw", "pay", "pen", "pet", "pig",
-        "pin", "pip", "pit", "ply", "pod", "pop", "pot", "put", "rag", "ram",
-        "ran", "rap", "rat", "raw", "red", "rid", "rig", "rim", "rip", "rob",
-        "rod", "rot", "row", "rub", "rug", "run", "sad", "sap", "sat", "say",
-        "sea", "see", "set", "shy", "sip", "sit", "six", "ski", "sky", "sly",
-        "sob", "son", "sow", "sun", "tab", "tag", "tan", "tap", "tar", "tea",
-        "ten", "the", "tie", "tin", "tip", "toe", "ton", "top", "toy", "try",
-        "tub", "tug", "two", "use", "van", "vat", "vet", "vow", "wag", "war",
-        "was", "wax", "way", "web", "wet", "who", "why", "win", "wit", "won",
-        "yes", "yet", "you", "zap", "zig", "zip", "zoo", "able", "acid", "aged"
-    ];
-
-    const SHORT_WORDS_DE = [
-        "am", "an", "auf", "aus", "bei", "bin", "bis", "das", "der", "die",
-        "du", "ein", "er", "es", "ganz", "gut", "hat", "ich", "im", "in",
-        "ist", "ja", "mit", "nur", "ohne", "sie", "so", "und", "wie", "wir",
-        "zu", "oma", "opa", "mama", "papa", "haus", "maus", "baum", "ball",
-        "boot", "brot", "hand", "kind", "hund", "katze", "fisch", "vogel",
-        "biene", "blume", "sonne", "mond", "stern", "wald", "garten", "kiste",
-        "stall", "hof", "trog", "netz", "nass", "warm", "hell", "rot", "rosa",
-        "fett", "lieb", "spielt", "rennt", "sitzt", "schlaf", "schlafen",
-        "see", "schwein", "huhn", "fuchs", "honig", "fliegen", "schlamm",
-        "ei", "spiel", "spiele"
-    ];
-
-    const STORIES = [{
-            title: "The Cat 🐱",
-            emoji: "🐱",
-            sentences: [{
-                    text: "The ____ sat on a mat.",
-                    missing: "cat"
-                },
-                {
-                    text: "The cat is ____.",
-                    missing: "fat"
-                },
-                {
-                    text: "The cat can ____.",
-                    missing: "nap"
-                }
-            ]
-        },
-        {
-            title: "The Dog 🐕",
-            emoji: "🐕",
-            sentences: [{
-                    text: "The ____ ran to the log.",
-                    missing: "dog"
-                },
-                {
-                    text: "The dog dug in the ____.",
-                    missing: "mud"
-                },
-                {
-                    text: "The dog is ____.",
-                    missing: "fun"
-                }
-            ]
-        },
-        {
-            title: "The Sun ☀️",
-            emoji: "☀️",
-            sentences: [{
-                    text: "The sun is ____.",
-                    missing: "hot"
-                },
-                {
-                    text: "The sun is ____.",
-                    missing: "up"
-                },
-                {
-                    text: "I run in the ____.",
-                    missing: "sun"
-                }
-            ]
-        },
-        {
-            title: "The Pig 🐷",
-            emoji: "🐷",
-            sentences: [{
-                    text: "The ____ is pink.",
-                    missing: "pig"
-                },
-                {
-                    text: "The pig sat in the ____.",
-                    missing: "mud"
-                },
-                {
-                    text: "The pig ate from a ____.",
-                    missing: "cup"
-                }
-            ]
-        },
-        {
-            title: "The Fox 🦊",
-            emoji: "🦊",
-            sentences: [{
-                    text: "The ____ ran in the woods.",
-                    missing: "fox"
-                },
-                {
-                    text: "The fox is ____.",
-                    missing: "red"
-                },
-                {
-                    text: "The fox hid in a ____.",
-                    missing: "box"
-                }
-            ]
-        },
-        {
-            title: "The Hen 🐔",
-            emoji: "🐔",
-            sentences: [{
-                    text: "The ____ sat on ten eggs.",
-                    missing: "hen"
-                },
-                {
-                    text: "The hen ate from a ____.",
-                    missing: "pan"
-                },
-                {
-                    text: "The hen ran to her ____.",
-                    missing: "pen"
-                }
-            ]
-        },
-        {
-            title: "The Bee 🐝",
-            emoji: "🐝",
-            sentences: [{
-                    text: "The ____ can fly.",
-                    missing: "bee"
-                },
-                {
-                    text: "The bee sat on a ____.",
-                    missing: "bud"
-                },
-                {
-                    text: "The bee is on the ____.",
-                    missing: "log"
-                }
-            ]
-        },
-        {
-            title: "The Fish 🐟",
-            emoji: "🐟",
-            sentences: [{
-                    text: "The ____ swims in the sea.",
-                    missing: "fish"
-                },
-                {
-                    text: "The fish is ____.",
-                    missing: "wet"
-                },
-                {
-                    text: "The fish hid by the ____.",
-                    missing: "net"
-                }
-            ]
-        }
-    ];
-
-    const STORIES_DE = [{
-            title: "Die Katze 🐱",
-            emoji: "🐱",
-            sentences: [{
-                    text: "Die ____ sitzt auf der Matte.",
-                    missing: "katze"
-                },
-                {
-                    text: "Die katze ist ____.",
-                    missing: "fett"
-                },
-                {
-                    text: "Die katze kann ____.",
-                    missing: "schlafen"
-                }
-            ]
-        },
-        {
-            title: "Der Hund 🐕",
-            emoji: "🐕",
-            sentences: [{
-                    text: "Der ____ rennt zum Baum.",
-                    missing: "hund"
-                },
-                {
-                    text: "Der hund spielt im ____.",
-                    missing: "garten"
-                },
-                {
-                    text: "Der hund ist ____.",
-                    missing: "lieb"
-                }
-            ]
-        },
-        {
-            title: "Die Sonne ☀️",
-            emoji: "☀️",
-            sentences: [{
-                    text: "Die ____ ist hell.",
-                    missing: "sonne"
-                },
-                {
-                    text: "Die sonne ist ____.",
-                    missing: "warm"
-                },
-                {
-                    text: "Ich spiele in der ____.",
-                    missing: "sonne"
-                }
-            ]
-        },
-        {
-            title: "Das Schwein 🐷",
-            emoji: "🐷",
-            sentences: [{
-                    text: "Das ____ ist rosa.",
-                    missing: "schwein"
-                },
-                {
-                    text: "Das schwein rollt im ____.",
-                    missing: "schlamm"
-                },
-                {
-                    text: "Das schwein isst aus dem ____.",
-                    missing: "trog"
-                }
-            ]
-        },
-        {
-            title: "Der Fuchs 🦊",
-            emoji: "🦊",
-            sentences: [{
-                    text: "Der ____ rennt im Wald.",
-                    missing: "fuchs"
-                },
-                {
-                    text: "Der fuchs ist ____.",
-                    missing: "rot"
-                },
-                {
-                    text: "Der fuchs sitzt auf der ____.",
-                    missing: "kiste"
-                }
-            ]
-        },
-        {
-            title: "Das Huhn 🐔",
-            emoji: "🐔",
-            sentences: [{
-                    text: "Das ____ sitzt auf dem Ei.",
-                    missing: "huhn"
-                },
-                {
-                    text: "Das huhn rennt zum ____.",
-                    missing: "stall"
-                },
-                {
-                    text: "Das huhn pickt im ____.",
-                    missing: "hof"
-                }
-            ]
-        },
-        {
-            title: "Die Biene 🐝",
-            emoji: "🐝",
-            sentences: [{
-                    text: "Die ____ kann fliegen.",
-                    missing: "biene"
-                },
-                {
-                    text: "Die biene sitzt auf der ____.",
-                    missing: "blume"
-                },
-                {
-                    text: "Die biene macht ____.",
-                    missing: "honig"
-                }
-            ]
-        },
-        {
-            title: "Der Fisch 🐟",
-            emoji: "🐟",
-            sentences: [{
-                    text: "Der ____ schwimmt im See.",
-                    missing: "fisch"
-                },
-                {
-                    text: "Der fisch ist ____.",
-                    missing: "nass"
-                },
-                {
-                    text: "Der fisch schwimmt im ____.",
-                    missing: "netz"
-                }
-            ]
-        }
-    ];
-
-    function getShortWords() {
-        return state.language === "de" ? SHORT_WORDS_DE : SHORT_WORDS;
-    }
-
-    function getStories() {
-        return state.language === "de" ? STORIES_DE : STORIES;
-    }
-
-
-    let state = {
-        currentPhase: PHASES.SOUNDS,
-        currentActivity: 0,
-        stars: 0,
-        masteredSounds: [],
-        masteredWords: [],
-        completedStories: [],
-        language: "en",
-        streak: 0,
-        lastPlayDate: null,
-        achievements: [],
-        activityStats: {
-            sounds: {
-                attempts: 0,
-                correct: 0
-            },
-            words: {
-                attempts: 0,
-                correct: 0
-            },
-            stories: {
-                attempts: 0,
-                correct: 0
-            }
-        },
-        lastSoundIndex: null,
-        phaseProgress: {
-            sounds: 0,
-            words: 0,
-            sentences: 0
-        }
-    };
-
-    function stripEmojis(text) {
-        return text
-            .replace(/[\p{Extended_Pictographic}\u200d\uFE0F]/gu, "")
-            .replace(/\s{2,}/g, " ")
-            .trim();
-    }
-
-    function clampNumber(value, min, max) {
-        return Math.min(Math.max(value, min), max);
-    }
-
-    function getPreferredVoice(utteranceLang) {
-        if (!AudioSystem.synth) return null;
-        const voices = AudioSystem.synth.getVoices();
-        if (!voices.length) return null;
-
-        const langPrefix = utteranceLang.split("-")[0];
-        const preferredNames = {
-            de: [
-                "Google Deutsch",
-                "Google Deutsch Female",
-                "Microsoft Katja",
-                "Microsoft Hedda",
-                "Anna",
-                "Helena",
-                "Yannick"
-            ],
-            en: [
-                "Google US English",
-                "Google UK English Female",
-                "Microsoft Aria",
-                "Microsoft Jenny",
-                "Samantha",
-                "Alex"
-            ]
+    function sanitizeJourney(raw, lang) {
+        const fresh = freshJourney();
+        if (!raw || typeof raw !== "object") return fresh;
+        const valid = {
+            sounds: content.letters[lang].map(([letter]) => letter),
+            words: content.words[lang].flatMap((group) => group.items.map((item) => item.id)),
+            stories: content.stories[lang].map((story) => story.id),
+            pages: content.stories[lang].flatMap((story) => story.pages.map((_, index) => `${story.id}:${index}`))
         };
-
-        const preferredList = preferredNames[langPrefix] || [];
-        const byName = preferredList.map((name) => (
-            voices.find((voice) => voice.name === name || voice.name.includes(name))
-        )).find(Boolean);
-        if (byName) return byName;
-
-        return voices.find((voice) => voice.lang.startsWith(langPrefix) && voice.default) ||
-            voices.find((voice) => voice.lang.startsWith(langPrefix)) ||
-            null;
-    }
-
-    function adjustProsody(rate, pitch, utteranceLang) {
-        const langPrefix = utteranceLang.split("-")[0];
-        if (langPrefix === "de") {
-            return {
-                rate: clampNumber(rate * 0.95, 0.6, 1.05),
-                pitch: clampNumber(pitch * 0.9, 0.8, 1.15)
-            };
+        for (const key of Object.keys(valid)) fresh[key] = list(raw[key]).filter((id) => valid[key].includes(id));
+        fresh.stars = number(raw.stars);
+        for (const mode of MODES) {
+            fresh.stats[mode].attempts = number(raw.stats?.[mode]?.attempts);
+            fresh.stats[mode].correct = Math.min(fresh.stats[mode].attempts, number(raw.stats?.[mode]?.correct));
+            const selected = raw.selected?.[mode];
+            fresh.selected[mode] = valid[mode].includes(selected) ? selected : null;
         }
-        return {
-            rate,
-            pitch
-        };
+        if (MODES.includes(raw.mode)) fresh.mode = raw.mode;
+        if (content.words[lang].some((group) => group.id === raw.group)) fresh.group = raw.group;
+        if (raw.daily?.date === dateKey()) fresh.daily.count = Math.min(5, number(raw.daily.count));
+        return fresh;
     }
-
-
-    const AudioSystem = {
-        synth: typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null,
-        speaking: false,
-        supported: typeof window !== 'undefined' && 'speechSynthesis' in window,
-
-        speak(text, rate = 0.8, pitch = 1.2, langOverride = "") {
-            if (!this.supported || !this.synth) {
-                console.warn('Web Speech API not supported');
-                return;
-            }
-
-            if (this.synth.speaking) {
-                this.synth.cancel();
-            }
-
-            const utteranceText = stripEmojis(text);
-            if (!utteranceText) {
-                return;
-            }
-
-            const utteranceLang = langOverride || (state.language === "de" ? "de-DE" : "en-US");
-            const tuned = adjustProsody(rate, pitch, utteranceLang);
-            const utterance = new SpeechSynthesisUtterance(utteranceText);
-            utterance.rate = tuned.rate;
-            utterance.pitch = tuned.pitch;
-            utterance.volume = 1;
-            utterance.lang = utteranceLang;
-
-
-            const preferredVoice = getPreferredVoice(utteranceLang);
-            if (preferredVoice) utterance.voice = preferredVoice;
-
-            utterance.onstart = () => {
-                this.speaking = true;
-                animateCharacterMouth(true);
-            };
-
-            utterance.onend = () => {
-                this.speaking = false;
-                animateCharacterMouth(false);
-            };
-
-            this.synth.speak(utterance);
-        },
-
-        speakLetter(letter) {
-            const letterData = LETTERS.find(l => l.letter === letter.toUpperCase());
-            if (letterData) {
-                this.speak(letterData.sound, 0.6, 1.3);
-            }
-        },
-
-        speakWord(word, slow = false) {
-            if (slow) {
-
-                const letters = word.split("");
-                let delay = 0;
-                letters.forEach((letter, index) => {
-                    setTimeout(() => this.speakLetter(letter), delay);
-                    delay += 600;
-                });
-                setTimeout(() => this.speak(word, 0.7, 1.2), delay + 300);
-            } else {
-                this.speak(word, 0.8, 1.2);
-            }
-        },
-
-        speakEncouragement() {
-            const phrases = ENCOURAGEMENTS[state.language] || ENCOURAGEMENTS.en;
-            const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-            this.speak(phrase, 1, 1.3);
-        }
-    };
-
-
-    let characterState = {
-        mouthOpen: false,
-        eyesBlink: false,
-        emotion: "happy"
-    };
-
-    let animationFrameId = null;
-    let nextBlinkAt = 0;
-    let blinkUntil = 0;
-
-    function scheduleNextBlink(now) {
-        nextBlinkAt = now + 2000 + Math.random() * 3500;
-    }
-
-    const FALLBACK_PALETTE = {
-        panel: "#fbf8f1",
-        ink: "#1c1a17",
-        ink2: "#4f4a40",
-        gold: "#8a6620",
-        verdigris: "#2e6e62",
-        moon: "#3d5a85",
-        ember: "#a4511f",
-        rose: "#9e3b36",
-        grid: "rgba(28, 26, 23, 0.08)"
-    };
-
-    function readPalette() {
-        if (window.ToolShared && typeof window.ToolShared.palette === "function") {
-            const colors = window.ToolShared.palette();
-            if (colors.gold) return colors;
-        }
-        return FALLBACK_PALETTE;
-    }
-
-    let palette = readPalette();
-
-    if (window.ToolShared && typeof window.ToolShared.onThemeChange === "function") {
-        window.ToolShared.onThemeChange((colors) => {
-            palette = colors && colors.gold ? colors : readPalette();
-        });
-    }
-
-    function drawSparkle(x, y, size) {
-        ctx.beginPath();
-        ctx.moveTo(x, y - size);
-        ctx.lineTo(x + size, y);
-        ctx.lineTo(x, y + size);
-        ctx.lineTo(x - size, y);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    function drawCharacter(time = 0) {
-        ctx.clearRect(0, 0, 200, 200);
-
-        const t = time / 1000;
-        const bob = Math.sin(t * 2.2) * 3;
-        const sway = Math.sin(t * 1.4) * 2;
-        const pal = palette;
-
-        ctx.save();
-        ctx.fillStyle = pal.grid;
-        ctx.beginPath();
-        ctx.ellipse(100, 180, 54 - bob, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(100, 100 + bob);
-
-        ctx.fillStyle = pal.gold;
-        ctx.globalAlpha = 0.35;
-        ctx.beginPath();
-        ctx.ellipse(-70, 8 + sway, 13, 18, -0.4, 0, Math.PI * 2);
-        ctx.ellipse(70, 8 - sway, 13, 18, 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle = pal.panel;
-        ctx.beginPath();
-        ctx.arc(0, 0, 70, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = pal.gold;
-        ctx.globalAlpha = 0.2;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = pal.gold;
-        ctx.stroke();
-
-        ctx.fillStyle = pal.gold;
-        ctx.beginPath();
-        ctx.ellipse(-26, 72, 16, 7, 0.15, 0, Math.PI * 2);
-        ctx.ellipse(26, 72, 16, 7, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        const pupilOffsetX = Math.sin(t * 1.7) * 2;
-        const pupilOffsetY = Math.cos(t * 1.3) * 1.5;
-
-        function drawEye(x) {
-            if (characterState.eyesBlink) {
-                ctx.strokeStyle = pal.ink;
-                ctx.lineWidth = 3;
-                ctx.lineCap = "round";
-                ctx.beginPath();
-                ctx.moveTo(x - 10, -18);
-                ctx.lineTo(x + 10, -18);
-                ctx.stroke();
-                return;
-            }
-            ctx.fillStyle = pal.ink;
-            ctx.beginPath();
-            ctx.arc(x + pupilOffsetX, -18 + pupilOffsetY, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = pal.panel;
-            ctx.beginPath();
-            ctx.arc(x + pupilOffsetX + 3, -22 + pupilOffsetY, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        drawEye(-26);
-        drawEye(26);
-
-        ctx.strokeStyle = pal.ink2;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(-40, -42);
-        ctx.quadraticCurveTo(-26, -48, -12, -42);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(12, -42);
-        ctx.quadraticCurveTo(26, -48, 40, -42);
-        ctx.stroke();
-
-        if (characterState.mouthOpen) {
-            ctx.fillStyle = pal.rose;
-            ctx.beginPath();
-            ctx.ellipse(0, 30, 18, 13, 0, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.strokeStyle = pal.rose;
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            ctx.beginPath();
-            ctx.arc(0, 22, 18, 0.15 * Math.PI, 0.85 * Math.PI);
-            ctx.stroke();
-        }
-
-        ctx.fillStyle = pal.rose;
-        ctx.globalAlpha = 0.22;
-        ctx.beginPath();
-        ctx.arc(-46, 12, 11, 0, Math.PI * 2);
-        ctx.arc(46, 12, 11, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle = pal.gold;
-        drawSparkle(-74, -62 + Math.sin(t * 3) * 2, 5);
-        drawSparkle(74, -54 + Math.cos(t * 2.7) * 2, 4);
-
-        ctx.restore();
-    }
-
-    function animateCharacterMouth(open) {
-        characterState.mouthOpen = open;
-    }
-
-    function startCharacterAnimation() {
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-
-        const loop = (time) => {
-            if (time >= nextBlinkAt) {
-                characterState.eyesBlink = true;
-                blinkUntil = time + 160;
-                scheduleNextBlink(time);
-            }
-            if (characterState.eyesBlink && time >= blinkUntil) {
-                characterState.eyesBlink = false;
-            }
-            drawCharacter(time);
-            animationFrameId = requestAnimationFrame(loop);
-        };
-
-        scheduleNextBlink(performance.now());
-        animationFrameId = requestAnimationFrame(loop);
-    }
-
-    window.addEventListener("beforeunload", () => {
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-    });
-
-    function showCharacterSpeech(text) {
-        characterSpeech.textContent = text;
-        characterSpeech.classList.add("visible");
-        setTimeout(() => {
-            characterSpeech.classList.remove("visible");
-        }, 4000);
-    }
-
-    let reactionTimeoutId = null;
-
-    function showReaction() {
-        if (!reactionFace) return;
-        const emojiNode = reactionFace.querySelector(".reaction-emoji");
-        if (emojiNode) {
-            emojiNode.textContent = t("reaction.tryAgain");
-        }
-        reactionFace.classList.add("show");
-        if (reactionTimeoutId) {
-            clearTimeout(reactionTimeoutId);
-        }
-        reactionTimeoutId = setTimeout(() => {
-            reactionFace.classList.remove("show");
-        }, 900);
-    }
-
-
-    function showToast(message, type = "info") {
-        const toast = document.createElement("div");
-        toast.className = `toast ${type}`;
-
-        toast.innerHTML = `
-            <span class="toast-icon" aria-hidden="true"></span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3500);
-    }
-
-
-    function celebrate(intensity = 1) {
-        const celebration = document.createElement("div");
-        const useCardOverlay = isFullscreenActive();
-        celebration.className = useCardOverlay ? "celebration in-card" : "celebration";
-        (useCardOverlay ? activityCard : document.body).appendChild(celebration);
-
-        const count = Math.floor(25 * intensity);
-
-        for (let i = 0; i < count; i++) {
-            const star = document.createElement("span");
-            star.className = "star-burst";
-            star.style.left = Math.random() * 100 + "%";
-            star.style.top = Math.random() * 100 + "%";
-            star.style.animationDelay = Math.random() * 0.6 + "s";
-            star.style.fontSize = (1.5 + Math.random() * 1.5) + "rem";
-            celebration.appendChild(star);
-        }
-
-
-        const confettiColors = [palette.gold, palette.verdigris, palette.moon, palette.ember, palette.rose];
-        for (let i = 0; i < count; i++) {
-            const confetti = document.createElement("div");
-            confetti.className = "confetti";
-            confetti.style.left = Math.random() * 100 + "%";
-            confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
-            confetti.style.animationDelay = Math.random() * 1 + "s";
-            confetti.style.animationDuration = (2 + Math.random() * 2) + "s";
-            celebration.appendChild(confetti);
-        }
-
-        setTimeout(() => celebration.remove(), 3500);
-    }
-
-    function updateAchievementLabels() {
-        achievementsBadges.forEach((badge) => {
-            const badgeId = badge.dataset.badge;
-            const achievement = ACHIEVEMENTS[badgeId];
-            if (!achievement) return;
-
-            const label = badge.querySelector(".badge-label");
-            if (label) {
-                label.textContent = t(achievement.labelKey);
-            }
-            badge.title = t(achievement.titleKey);
-        });
-    }
-
-
-    function checkAchievements() {
-        const newAchievements = [];
-
-        for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
-            if (!state.achievements.includes(id) && achievement.condition(state)) {
-                state.achievements.push(id);
-                newAchievements.push({
-                    id,
-                    labelKey: achievement.labelKey
-                });
-            }
-        }
-
-        if (newAchievements.length > 0) {
-            saveProgress();
-            updateAchievementBadges();
-
-
-            newAchievements.forEach((achievement, index) => {
-                setTimeout(() => {
-                    showToast(t("toast.achievement", {
-                        name: t(achievement.labelKey)
-                    }), "achievement");
-                    celebrate(1.5);
-                }, index * 1500);
-            });
-        }
-    }
-
-
-    function updateAchievementBadges() {
-        achievementsBadges.forEach(badge => {
-            const badgeId = badge.dataset.badge;
-            badge.classList.remove("earned", "locked");
-
-            if (state.achievements.includes(badgeId)) {
-                badge.classList.add("earned");
-            } else {
-                badge.classList.add("locked");
-            }
-        });
-    }
-
-
-    function checkStreak() {
-        const today = new Date();
-        const todayString = today.toDateString();
-        const lastPlay = state.lastPlayDate;
-
-        if (!lastPlay) {
-
-            state.streak = 1;
-        } else if (lastPlay === todayString) {
-
-
-        } else {
-
-            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-            const yesterdayString = yesterday.toDateString();
-
-            if (lastPlay === yesterdayString) {
-
-                state.streak += 1;
-            } else {
-
-                state.streak = 1;
-            }
-        }
-
-        state.lastPlayDate = todayString;
-        saveProgress();
-        updateStreakDisplay();
-    }
-
-
-    function updateStreakDisplay() {
-        if (streakIndicator && streakText) {
-            streakText.textContent = t("streak.day", {
-                count: state.streak
-            });
-
-            if (state.streak >= 7) {
-                streakIndicator.dataset.level = "hot";
-            } else if (state.streak >= 3) {
-                streakIndicator.dataset.level = "warm";
-            }
-        }
-    }
-
-
-    function loadProgress() {
+    function load() {
+        const fresh = freshState();
         try {
-            const saved = localStorage.getItem("learnToReadProgress");
-            if (saved) {
-                state = JSON.parse(saved);
+            const saved = JSON.parse(localStorage.getItem(KEY));
+            if (saved?.version === 2) {
+                if (saved.language === "de") fresh.language = "de";
+                fresh.audio = saved.audio !== false;
+                fresh.rate = saved.rate === 0.9 ? 0.9 : 0.7;
+                for (const lang of ["en", "de"]) fresh.journeys[lang] = sanitizeJourney(saved.journeys?.[lang], lang);
+                return fresh;
             }
-        } catch (e) {
-            console.error("Error loading progress:", e);
-        }
-        if (!state.language) {
-            state.language = "en";
-        }
-        if (state.currentPhase === "blends") {
-            state.currentPhase = PHASES.WORDS;
-        }
-        if (!state.activityStats) {
-            state.activityStats = {
-                sounds: {
-                    attempts: 0,
-                    correct: 0
-                },
-                words: {
-                    attempts: 0,
-                    correct: 0
-                },
-                stories: {
-                    attempts: 0,
-                    correct: 0
-                }
-            };
-        }
-        if (!state.activityStats.words) {
-            state.activityStats.words = {
-                attempts: 0,
-                correct: 0
-            };
-        }
-        if (!state.achievements) {
-            state.achievements = [];
-        }
-        if (!state.streak) {
-            state.streak = 0;
-        }
-        if (state.lastSoundIndex === undefined) {
-            state.lastSoundIndex = null;
-        }
-        updateUI();
-        updateAchievementBadges();
-        updateStreakDisplay();
-    }
-
-    function saveProgress() {
+        } catch { /* Invalid or inaccessible storage must not prevent learning. */ }
         try {
-            localStorage.setItem("learnToReadProgress", JSON.stringify(state));
-        } catch (e) {
-            console.error("Error saving progress:", e);
-            showToast(t("toast.saveFail"), "warning");
-        }
-        updateUI();
+            const old = JSON.parse(localStorage.getItem("learnToReadProgress"));
+            if (old && typeof old === "object") {
+                const lang = old.language === "de" ? "de" : "en";
+                fresh.language = lang;
+                const previous = fresh.journeys[lang];
+                previous.sounds = list(old.masteredSounds).map((letter) => letter.toLowerCase());
+                previous.words = list(old.masteredWords).map((word) => content.words[lang].flatMap((group) => group.items).find((item) => item.text.toLowerCase() === word.toLowerCase())?.id).filter(Boolean);
+                const legacyStories = lang === "en" ? ["The Cat 🐱", "The Dog 🐕", "The Sun ☀️", "The Pig 🐷", "The Fox 🦊", "The Hen 🐔", "The Bee 🐝", "The Fish 🐟"] : ["Die Katze 🐱", "Der Hund 🐕", "Die Sonne ☀️", "Das Schwein 🐷", "Der Fuchs 🦊", "Das Huhn 🐔", "Die Biene 🐝", "Der Fisch 🐟"];
+                const legacyIds = ["cat", "dog", "sun", "pig", "fox", "hen", "bee", "fish"];
+                previous.stories = list(old.completedStories).map((title) => legacyIds[legacyStories.indexOf(title)]).filter(Boolean);
+                previous.pages = previous.stories.flatMap((id) => [0, 1, 2].map((page) => `${id}:${page}`));
+                previous.stars = number(old.stars);
+                for (const mode of MODES) previous.stats[mode] = { attempts: number(old.activityStats?.[mode]?.attempts), correct: number(old.activityStats?.[mode]?.correct) };
+                previous.mode = old.currentPhase === "sentences" ? "stories" : old.currentPhase === "words" || old.currentPhase === "blends" ? "words" : "sounds";
+                fresh.journeys[lang] = sanitizeJourney(previous, lang);
+                migrated = true;
+            }
+        } catch { /* Keep defaults and retain the original legacy save. */ }
+        return fresh;
     }
 
-    function resetProgress() {
-        if (confirm(t("confirm.reset"))) {
-            try {
-                localStorage.removeItem("learnToReadProgress");
-            } catch (e) {
-                console.error("Error clearing progress:", e);
+    let state = load();
+    let active = null;
+    let selection = [];
+    let bank = [];
+    let tileBuffer = "";
+    let solved = false;
+    let clueVisible = false;
+    let storyPage = 0;
+    let focusMode = false;
+    let speechToken = 0;
+    let speechTimer = null;
+    let speaking = false;
+    const speechSupported = Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
+
+    function save() {
+        try { localStorage.setItem(KEY, JSON.stringify(state)); storageFailed = false; }
+        catch { storageFailed = true; }
+        $("save-note").textContent = t(storageFailed ? "saveFail" : "saved");
+    }
+    function refreshDay() {
+        if (journey().daily.date !== dateKey()) journey().daily = { date: dateKey(), count: 0 };
+    }
+    function stopSpeech() {
+        speechToken += 1;
+        clearTimeout(speechTimer);
+        if (speechSupported) window.speechSynthesis.cancel();
+        speaking = false;
+        document.querySelectorAll(".pa-speaking").forEach((element) => element.classList.remove("pa-speaking"));
+        syncReadButton();
+    }
+    function syncReadButton() {
+        const button = $("read-story");
+        if (button) {
+            button.textContent = t(speaking ? "stop" : "readTogether");
+            button.setAttribute("aria-pressed", String(speaking));
+        }
+    }
+    function speak(text, { slow = false, track = false } = {}) {
+        stopSpeech();
+        if (!state.audio || !speechSupported) return;
+        const token = speechToken;
+        const utterance = new window.SpeechSynthesisUtterance(text);
+        utterance.lang = state.language === "de" ? "de-DE" : "en-US";
+        utterance.rate = slow ? 0.5 : state.rate;
+        const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(state.language));
+        if (voice) utterance.voice = voice;
+        const finish = () => {
+            if (token !== speechToken) return;
+            clearTimeout(speechTimer);
+            speaking = false;
+            area.querySelectorAll(".pa-speaking").forEach((element) => element.classList.remove("pa-speaking"));
+            syncReadButton();
+        };
+        utterance.onboundary = (event) => {
+            if (token !== speechToken || !track) return;
+            area.querySelectorAll("[data-char-start]").forEach((element) => {
+                const start = Number(element.dataset.charStart);
+                element.classList.toggle("pa-speaking", event.charIndex >= start && event.charIndex < start + Number(element.dataset.charLength));
+            });
+        };
+        utterance.onend = finish;
+        utterance.onerror = (event) => {
+            if (token !== speechToken) return;
+            finish();
+            if (event.error !== "canceled" && event.error !== "interrupted") {
+                $("audio-status").textContent = t("audioError");
+                if (!solved) announce(t("audioError"));
             }
-            state = {
-                currentPhase: PHASES.SOUNDS,
-                currentActivity: 0,
-                stars: 0,
-                masteredSounds: [],
-                masteredWords: [],
-                completedStories: [],
-                language: state.language || "en",
-                streak: 0,
-                lastPlayDate: null,
-                achievements: [],
-                activityStats: {
-                    sounds: {
-                        attempts: 0,
-                        correct: 0
-                    },
-                    words: {
-                        attempts: 0,
-                        correct: 0
-                    },
-                    stories: {
-                        attempts: 0,
-                        correct: 0
-                    }
-                },
-                lastSoundIndex: null,
-                phaseProgress: {
-                    sounds: 0,
-                    words: 0,
-                    sentences: 0
+        };
+        // Some browser voices omit lifecycle events. Never leave the UI stuck reading.
+        speaking = true;
+        syncReadButton();
+        speechTimer = setTimeout(finish, Math.max(10000, text.length * 350));
+        window.speechSynthesis.speak(utterance);
+    }
+    function announce(message, kind = "hint") {
+        feedback.className = `pa-feedback pa-${kind}`;
+        feedback.textContent = message;
+    }
+    function clearFeedback() { feedback.className = "pa-feedback"; feedback.textContent = ""; }
+    function recordAttempt(correct) {
+        refreshDay();
+        const stats = journey().stats[journey().mode];
+        stats.attempts += 1;
+        if (correct) stats.correct += 1;
+    }
+    function reward(kind, id) {
+        if (solved) return;
+        solved = true;
+        recordAttempt(true);
+        if (!journey()[kind].includes(id)) journey()[kind].push(id);
+        journey().stars += 1;
+        journey().daily.count = Math.min(5, journey().daily.count + 1);
+        save();
+        updateSummary();
+        next.disabled = false;
+        next.classList.add("pa-ready");
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            $("activity-panel").classList.remove("pa-celebrate");
+            void $("activity-panel").offsetWidth;
+            $("activity-panel").classList.add("pa-celebrate");
+        }
+    }
+    function updateSummary() {
+        refreshDay();
+        const current = journey();
+        $("total-stars").textContent = current.stars;
+        $("goal-stars").innerHTML = Array.from({ length: 5 }, (_, index) => `<span class="${index < current.daily.count ? "is-collected" : ""}">★</span>`).join("");
+        $("daily-progress").value = current.daily.count;
+        $("goal-caption").textContent = current.daily.count >= 5 ? t("goalDone") : t("dailyCount", { n: current.daily.count });
+        $("guide-message").textContent = t(current.daily.count >= 5 ? "goalDone" : "welcome");
+        $("journey-stats").innerHTML = [["statLetters", current.sounds.length, letters().length], ["statWords", current.words.length, groups().reduce((sum, group) => sum + group.items.length, 0)], ["statStories", current.stories.length, stories().length]].map(([label, count, total]) => `<div><span>${t(label)}</span><strong>${count}<small> / ${total}</small></strong><span class="pa-meter" aria-hidden="true"><i style="width:${count / total * 100}%"></i></span></div>`).join("");
+        const badges = [["✦", "badgeFirst", current.sounds.length + current.words.length + current.pages.length > 0], ["Aa", "badgeLetters", current.sounds.length >= 10], ["abc", "badgeWords", current.words.length >= 5], ["▤", "badgeStory", current.stories.length > 0], ["★", "badgeGoal", current.daily.count >= 5]];
+        $("badge-list").innerHTML = badges.map(([icon, label, earned]) => `<span class="pa-badge ${earned ? "is-earned" : ""}" title="${t(label)}: ${t(earned ? "badgeEarned" : "badgeLocked")}"><span aria-hidden="true">${icon}</span><small>${t(label)}</small><span class="pa-sr">: ${t(earned ? "badgeEarned" : "badgeLocked")}</span></span>`).join("");
+        $("practice-stats").innerHTML = `<table><thead><tr><th></th><th scope="col">${t("attempts")}</th><th scope="col">${t("correct")}</th></tr></thead><tbody>${MODES.map((mode) => `<tr><th scope="row">${t({ sounds: "lettersRow", words: "wordsRow", stories: "storiesRow" }[mode])}</th><td>${current.stats[mode].attempts}</td><td>${current.stats[mode].correct}</td></tr>`).join("")}</tbody></table>`;
+    }
+    function translate() {
+        app.lang = state.language;
+        app.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
+        document.querySelectorAll("[data-language]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.language === state.language)));
+        app.querySelector(".pa-language").setAttribute("aria-label", t("languageLabel"));
+        app.querySelector(".pa-path").setAttribute("aria-label", t("pathLabel"));
+        app.querySelector(".pa-sidebar").setAttribute("aria-label", t("sidebarLabel"));
+        $("daily-progress").setAttribute("aria-label", t("progressLabel"));
+        $("voice-speed").value = state.rate;
+        $("focus-toggle").textContent = t(focusMode ? "exitFocus" : "focus");
+        $("audio-status").textContent = t(speechSupported ? "available" : "unavailable");
+        updateAudioButton();
+        updateSummary();
+    }
+    function updateAudioButton() {
+        const button = $("audio-toggle");
+        button.setAttribute("aria-pressed", String(state.audio && speechSupported));
+        button.querySelector("span:last-child").textContent = t(!speechSupported ? "audioUnavailable" : state.audio ? "audioOn" : "audioOff");
+        if (!speechSupported) button.setAttribute("aria-disabled", "true");
+        else button.removeAttribute("aria-disabled");
+    }
+    function pick(items, completed, last, specific) {
+        const getId = (item) => Array.isArray(item) ? item[0] : item.id;
+        if (specific) {
+            const match = items.find((item) => getId(item) === specific);
+            if (match) return match;
+        }
+        return items.find((item) => !completed.includes(getId(item)) && getId(item) !== last)
+            || items.find((item) => getId(item) !== last) || items[0];
+    }
+    function resetActivity() {
+        stopSpeech();
+        solved = false;
+        clueVisible = false;
+        selection = [];
+        tileBuffer = "";
+        clearFeedback();
+        next.classList.remove("pa-ready");
+        next.disabled = false;
+        const mode = journey().mode;
+        document.querySelectorAll("[data-mode]").forEach((button) => {
+            const selected = button.dataset.mode === mode;
+            button.setAttribute("aria-selected", String(selected));
+            button.tabIndex = selected ? 0 : -1;
+        });
+        $("activity-panel").setAttribute("aria-labelledby", `tab-${mode}`);
+        $("activity-panel").dataset.mode = mode;
+        $("activity-label").textContent = t(`${mode}Label`);
+    }
+    function renderActivity({ specific = null, advancing = false } = {}) {
+        resetActivity();
+        const mode = journey().mode;
+        const last = advancing ? journey().selected[mode] : null;
+        const preferred = specific || (advancing ? null : journey().selected[mode]);
+        if (mode === "sounds") renderSounds(last, preferred);
+        else if (mode === "words") renderWords(last, preferred);
+        else renderStory(last, preferred);
+        save();
+    }
+    const listenButton = (id, label = "listen") => `<button type="button" class="pa-button pa-listen" id="${id}" ${!state.audio || !speechSupported ? "disabled" : ""}><span aria-hidden="true">♪</span> ${t(label)}</button>`;
+
+    function renderSounds(last, preferred) {
+        active = pick(letters(), journey().sounds, last, preferred);
+        const [letter, word, emoji] = active;
+        journey().selected.sounds = letter;
+        const isEnd = state.language === "en" && letter === "x";
+        const choices = shuffle([letter, ...shuffle(letters().filter(([item]) => item !== letter)).slice(0, 2).map(([item]) => item)]);
+        area.innerHTML = `<div class="pa-activity-heading"><h2 tabindex="-1" id="activity-title">${t("soundTitle")}</h2><p>${t(isEnd ? "endHint" : "soundHint")}</p></div>
+            <div class="pa-letter-scene"><span class="pa-scene-dot pa-dot-one" aria-hidden="true"></span><span class="pa-scene-dot pa-dot-two" aria-hidden="true"></span><span class="pa-example-emoji" aria-hidden="true">${emoji}</span><span class="pa-example-word">${escape(word)}</span>${listenButton("listen-letter")}</div>
+            <div class="pa-letter-choices" aria-label="${t("letterHint")}">${choices.map((item) => `<button type="button" class="pa-letter-choice" data-letter="${item}" aria-label="${item}"><span>${item}</span><small aria-hidden="true">${item.toUpperCase()}</small><span class="pa-choice-result" aria-hidden="true"></span></button>`).join("")}</div>
+            <details class="pa-letter-library"><summary>${t("pickLetter")} <span>${t("letterCount", { n: journey().sounds.length, total: letters().length })}</span></summary><div class="pa-alphabet">${letters().map(([item]) => `<button type="button" data-explore="${item}" class="${journey().sounds.includes(item) ? "is-discovered" : ""}" aria-label="${t("chooseLetter", { letter: item })}; ${t(journey().sounds.includes(item) ? "mastered" : "newDiscovery")}" ${item === letter ? 'aria-current="true"' : ""}>${item}</button>`).join("")}</div></details>`;
+        $("activity-tip").textContent = t("letterHint");
+        next.textContent = t("skip");
+        $("listen-letter").onclick = () => speak(t(isEnd ? "endPrompt" : "soundPrompt", { word }));
+        area.querySelectorAll("[data-letter]").forEach((button) => {
+            button.onclick = () => {
+                if (solved || button.disabled) return;
+                if (button.dataset.letter === letter) {
+                    button.classList.add("is-correct");
+                    button.querySelector(".pa-choice-result").textContent = "✓";
+                    reward("sounds", letter);
+                    area.querySelectorAll("[data-letter]").forEach((choice) => { choice.disabled = true; });
+                    announce(t(isEnd ? "correctEnd" : "correctLetter", { letter, word }), "success");
+                    next.textContent = t("anotherLetter");
+                } else {
+                    recordAttempt(false);
+                    button.classList.add("is-wrong");
+                    button.querySelector(".pa-choice-result").textContent = "↻";
+                    button.disabled = true;
+                    announce(t("wrongLetter"), "retry");
+                    save();
+                    updateSummary();
                 }
             };
-            saveProgress();
-            loadActivity();
-            updateAchievementBadges();
-            updateStreakDisplay();
-            showToast(t("toast.reset"), "info");
-        }
+        });
+        area.querySelectorAll("[data-explore]").forEach((button) => { button.onclick = () => { renderActivity({ specific: button.dataset.explore }); focusTitle(); }; });
     }
-
-    function updateUI() {
-
-        starsCount.textContent = state.stars;
-        soundsLearned.textContent = state.masteredSounds.length;
-        wordsLearned.textContent = state.masteredWords.length;
-        storiesRead.textContent = state.completedStories.length;
-
-
-        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
-        const currentIndex = phases.indexOf(state.currentPhase);
-
-        document.querySelectorAll(".phase-item").forEach((item, index) => {
-            item.classList.remove("active", "completed", "locked");
-            if (index < currentIndex) {
-                item.classList.add("completed");
-            } else if (index === currentIndex) {
-                item.classList.add("active");
-            }
-        });
-
-        document.querySelectorAll(".phase-connector").forEach((connector, index) => {
-            connector.classList.toggle("completed", index < currentIndex);
-        });
-
-
-        const phaseNames = {
-            sounds: t("activity.soundsTitle"),
-            words: t("activity.wordsTitle"),
-            sentences: t("activity.storiesTitle")
+    function renderWords(last, preferred) {
+        const group = groups().find((item) => item.id === journey().group) || groups()[0];
+        active = pick(group.items, journey().words, last, preferred);
+        journey().selected.words = active.id;
+        bank = shuffle(active.tiles.map((tile, id) => ({ text: tile.toLowerCase(), id })));
+        selection = Array(active.tiles.length).fill(null);
+        area.innerHTML = `<div class="pa-trail-picker"><label for="word-trail" class="pa-sr">${t("wordSet")}</label><select id="word-trail">${groups().map((item) => `<option value="${item.id}" ${item.id === group.id ? "selected" : ""}>${item.title}</option>`).join("")}</select><span>${t("trailCount", { n: group.items.filter((item) => journey().words.includes(item.id)).length, total: group.items.length })}</span></div>
+            <div class="pa-activity-heading"><h2 tabindex="-1" id="activity-title">${t("wordTitle")}</h2><p>${t("buildHint")}</p></div>
+            <div class="pa-word-clue"><span aria-hidden="true">${active.emoji}</span><div class="pa-listen-row">${listenButton("listen-word")}${listenButton("listen-slow", "slower")}</div><button type="button" id="show-word" class="pa-text-button" aria-expanded="false" aria-controls="word-model">${t("showWord")}</button><p id="word-model" class="pa-word-model" hidden>${escape(active.text)}</p></div>
+            <div class="pa-word-slots" id="word-slots" role="group" aria-label="${t("wordTitle")}"></div>
+            <div class="pa-letter-bank" id="letter-bank" role="group" aria-label="${t("buildHint")}">${bank.map((tile) => `<button type="button" class="pa-tile" data-tile="${tile.id}" aria-label="${t("tile", { letter: tile.text })}">${tile.text}</button>`).join("")}</div>
+            <div class="pa-builder-actions"><button type="button" class="pa-text-button" id="undo-letter">↶ ${t("undo")}</button><button type="button" class="pa-button pa-primary" id="check-word" disabled>${t("check")}</button><button type="button" class="pa-text-button" id="clear-word">${t("clear")}</button></div><p class="pa-trail-hint">${group.hint}${group.id === "teams" ? ` ${t("soundTeam")}` : ""}</p>`;
+        next.textContent = t("skip");
+        $("activity-tip").textContent = t("keyboardTip");
+        $("word-trail").onchange = (event) => { journey().group = event.target.value; journey().selected.words = null; renderActivity(); };
+        $("listen-word").onclick = () => speak(active.text);
+        $("listen-slow").onclick = () => speak(active.text, { slow: true });
+        $("show-word").onclick = () => {
+            clueVisible = !clueVisible;
+            $("word-model").hidden = !clueVisible;
+            $("show-word").textContent = t(clueVisible ? "hideWord" : "showWord");
+            $("show-word").setAttribute("aria-expanded", String(clueVisible));
         };
-        parentPhase.textContent = phaseNames[state.currentPhase];
-
-        const totalProgress = calculateTotalProgress();
-        parentProgress.textContent = totalProgress + "%";
-
-        const soundsTried = document.getElementById("sounds-tried");
-        const soundsRight = document.getElementById("sounds-right");
-        const wordsTried = document.getElementById("words-tried");
-        const wordsRight = document.getElementById("words-right");
-        const storiesTried = document.getElementById("stories-tried");
-        const storiesRight = document.getElementById("stories-right");
-
-        if (soundsTried) soundsTried.textContent = state.activityStats.sounds.attempts;
-        if (soundsRight) soundsRight.textContent = state.activityStats.sounds.correct;
-        if (wordsTried) wordsTried.textContent = state.activityStats.words.attempts;
-        if (wordsRight) wordsRight.textContent = state.activityStats.words.correct;
-        if (storiesTried) storiesTried.textContent = state.activityStats.stories.attempts;
-        if (storiesRight) storiesRight.textContent = state.activityStats.stories.correct;
+        area.querySelectorAll("[data-tile]").forEach((button) => { button.onclick = () => addTile(Number(button.dataset.tile)); });
+        $("undo-letter").onclick = undoTile;
+        $("clear-word").onclick = () => { if (!solved) { selection.fill(null); clearFeedback(); syncBuilder(); } };
+        $("check-word").onclick = checkWord;
+        syncBuilder();
     }
-
-    function calculateTotalProgress() {
-        const soundProgress = (state.masteredSounds.length / LETTERS.length) * 25;
-        const wordProgress = (state.masteredWords.length / getShortWords().length) * 50;
-        const storyProgress = (state.completedStories.length / getStories().length) * 25;
-        return Math.round(soundProgress + wordProgress + storyProgress);
+    function addTile(id) {
+        if (solved || selection.includes(id)) return;
+        const index = selection.indexOf(null);
+        if (index < 0) return;
+        selection[index] = id;
+        clearFeedback();
+        syncBuilder();
     }
-
-    function canUnlockPhase(phase) {
-        return true;
+    function undoTile() {
+        tileBuffer = "";
+        if (solved) return;
+        const index = selection.findLastIndex((tile) => tile !== null);
+        if (index >= 0) selection[index] = null;
+        clearFeedback();
+        syncBuilder();
     }
-
-    function checkPhaseProgression() {
-        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
-        const currentIndex = phases.indexOf(state.currentPhase);
-
-        if (currentIndex < phases.length - 1) {
-            const nextPhase = phases[currentIndex + 1];
-            if (canUnlockPhase(nextPhase)) {
-                state.currentPhase = nextPhase;
-                state.currentActivity = 0;
-                saveProgress();
-                showToast(t("toast.newPhase"), "success");
-                celebrate();
-                AudioSystem.speak(t("toast.unlockSpeak"));
-            }
-        }
+    function syncBuilder() {
+        $("word-slots").innerHTML = selection.map((id, index) => {
+            const text = id === null ? "" : bank.find((tile) => tile.id === id).text;
+            return `<button type="button" class="pa-slot ${text ? "is-filled" : ""} ${solved ? "is-correct" : ""}" data-slot="${index}" ${solved || id === null ? "disabled" : ""} aria-label="${escape(text ? t("slot", { n: index + 1, letter: text }) : t("emptySlot", { n: index + 1 }))}">${text || '<span aria-hidden="true">·</span>'}</button>`;
+        }).join("");
+        area.querySelectorAll("[data-slot]").forEach((button) => { button.onclick = () => { selection[Number(button.dataset.slot)] = null; clearFeedback(); syncBuilder(); }; });
+        area.querySelectorAll("[data-tile]").forEach((button) => { button.disabled = solved || selection.includes(Number(button.dataset.tile)); });
+        $("check-word").disabled = solved || selection.includes(null);
+        $("undo-letter").disabled = solved || selection.every((id) => id === null);
+        $("clear-word").disabled = solved || selection.every((id) => id === null);
     }
-
-
-    function loadActivity() {
-        loadingMessage.style.display = "none";
-
-        switch (state.currentPhase) {
-            case PHASES.SOUNDS:
-                renderSoundsActivity();
-                break;
-            case PHASES.WORDS:
-                renderWordsActivity();
-                break;
-            case PHASES.SENTENCES:
-                renderStoriesActivity();
-                break;
-        }
-
-        updateNavigationButtons();
-        scheduleSlotSizing();
-    }
-
-    function enableActivityGuidance() {
-        activityArea.classList.add("needs-guidance");
-        const clearGuidance = () => {
-            activityArea.classList.remove("needs-guidance");
-        };
-        activityArea.addEventListener("pointerdown", clearGuidance, {
-            once: true
-        });
-        activityArea.addEventListener("keydown", clearGuidance, {
-            once: true
-        });
-    }
-
-    let slotSizingFrame = null;
-
-    function scheduleSlotSizing() {
-        if (slotSizingFrame) {
-            cancelAnimationFrame(slotSizingFrame);
-        }
-        slotSizingFrame = requestAnimationFrame(() => {
-            slotSizingFrame = null;
-            updateSlotSizing();
-        });
-    }
-
-    function updateSlotSizing() {
-        const wordSlots = document.querySelector(".word-slots");
-        if (wordSlots) {
-            const slots = wordSlots.querySelectorAll(".word-slot");
-            if (slots.length) {
-                const gap = parseFloat(getComputedStyle(wordSlots).gap) || 0;
-                const parent = wordSlots.parentElement || wordSlots;
-                const parentWidth = parent.getBoundingClientRect().width;
-                const size = Math.floor((parentWidth - gap * (slots.length - 1)) / slots.length);
-                const clamped = Math.max(18, Math.min(size, 60));
-                wordSlots.style.setProperty("--slot-size", `${clamped}px`);
-            }
-        }
-
-        const storyBlank = document.querySelector(".story-blank");
-        if (storyBlank) {
-            const slots = storyBlank.querySelectorAll(".story-letter-slot");
-            if (slots.length) {
-                const gap = parseFloat(getComputedStyle(storyBlank).gap) || 0;
-                const parent = storyBlank.parentElement || storyBlank;
-                const parentWidth = parent.getBoundingClientRect().width;
-                const size = Math.floor((parentWidth - gap * (slots.length - 1)) / slots.length);
-                const clamped = Math.max(16, Math.min(size, 44));
-                storyBlank.style.setProperty("--slot-size", `${clamped}px`);
-            }
-        }
-    }
-
-    let fallbackFullscreenActive = false;
-
-    function getFullscreenElement() {
-        return document.fullscreenElement || document.webkitFullscreenElement;
-    }
-
-    function isFullscreenActive() {
-        return Boolean(getFullscreenElement()) || fallbackFullscreenActive;
-    }
-
-    function preventScroll(event) {
-        if (isFullscreenActive()) {
-            event.preventDefault();
-        }
-    }
-
-    const scrollPreventOptions = {
-        passive: false
-    };
-
-    function updateScrollPrevention(enabled) {
-        if (enabled) {
-            document.addEventListener("wheel", preventScroll, scrollPreventOptions);
-            document.addEventListener("touchmove", preventScroll, scrollPreventOptions);
+    function checkWord() {
+        if (solved || selection.includes(null)) return;
+        const built = selection.map((id) => bank.find((tile) => tile.id === id).text).join("");
+        if (normalize(built) === normalize(active.text)) {
+            reward("words", active.id);
+            syncBuilder();
+            announce(t("correctWord", { word: active.text }), "success");
+            next.textContent = t("nextWord");
+            speak(active.text);
         } else {
-            document.removeEventListener("wheel", preventScroll, scrollPreventOptions);
-            document.removeEventListener("touchmove", preventScroll, scrollPreventOptions);
+            recordAttempt(false);
+            announce(t("wrongWord"), "retry");
+            save();
+            updateSummary();
         }
     }
-
-    function setFullscreenUi(active) {
-        activityCard.classList.toggle("is-fullscreen", active);
-        document.body.classList.toggle("activity-fullscreen", active);
-        updateScrollPrevention(active);
-    }
-
-    function setFallbackFullscreen(enabled) {
-        fallbackFullscreenActive = enabled;
-        setFullscreenUi(enabled);
-    }
-
-    function syncFullscreenState() {
-        const nativeFullscreen = Boolean(getFullscreenElement());
-        if (nativeFullscreen) {
-            fallbackFullscreenActive = false;
+    function renderStory(last, preferred) {
+        active = pick(stories(), journey().stories, last, preferred);
+        journey().selected.stories = active.id;
+        if (storyPage >= active.pages.length) storyPage = 0;
+        // Resume on the first unfinished page after a reload or book change.
+        if (storyPage === 0 && !journey().stories.includes(active.id)) {
+            const unfinished = active.pages.findIndex((_, index) => !journey().pages.includes(`${active.id}:${index}`));
+            if (unfinished > 0) storyPage = unfinished;
         }
-        setFullscreenUi(nativeFullscreen || fallbackFullscreenActive);
-        scheduleSlotSizing();
-    }
-
-    function requestActivityFullscreen() {
-        if (getFullscreenElement()) {
-            return;
-        }
-
-        if (activityCard && activityCard.requestFullscreen) {
-            const requestResult = activityCard.requestFullscreen();
-            if (requestResult && requestResult.catch) {
-                requestResult.catch(() => {
-                    setFallbackFullscreen(true);
-                });
-            }
-            return;
-        }
-
-        if (activityCard) {
-            const webkitRequest = activityCard.webkitRequestFullscreen || activityCard.webkitRequestFullScreen;
-            if (webkitRequest) {
-                webkitRequest.call(activityCard);
-                return;
-            }
-        }
-
-        setFallbackFullscreen(true);
-    }
-
-    function exitActivityFullscreen() {
-
-        if (getFullscreenElement()) {
-            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
-            if (exit) {
-                const exitResult = exit.call(document);
-                if (exitResult && exitResult.catch) {
-                    exitResult.catch(() => {
-
-                        setFallbackFullscreen(false);
-                    });
+        const page = active.pages[storyPage];
+        let charIndex = 0;
+        const tokens = page.text.split(/(\s+)/).map((token) => {
+            const start = charIndex;
+            charIndex += token.length;
+            if (!token.trim()) return token;
+            return `<button type="button" class="pa-story-word" data-word="${escape(normalize(token))}" data-char-start="${start}" data-char-length="${token.length}">${escape(token)}</button>`;
+        }).join("");
+        area.innerHTML = `<div class="pa-story-picker"><label class="pa-sr" for="story-select">${t("chooseStory")}</label><select id="story-select">${stories().map((story) => `<option value="${story.id}" ${story.id === active.id ? "selected" : ""}>${story.emoji} ${story.title}${journey().stories.includes(story.id) ? " ✓" : ""}</option>`).join("")}</select><span>${t("page", { n: storyPage + 1, total: active.pages.length })}</span></div>
+            <div class="pa-book"><div class="pa-book-heading"><h2 id="activity-title" tabindex="-1">${active.title}</h2><div class="pa-book-dots" aria-hidden="true">${active.pages.map((_, index) => `<span class="${index === storyPage ? "is-current" : ""} ${journey().pages.includes(`${active.id}:${index}`) ? "is-read" : ""}"></span>`).join("")}</div></div><span class="pa-book-picture" aria-hidden="true">${page.emoji}</span><p class="pa-story-sentence" id="story-sentence">${tokens}</p><button type="button" class="pa-button pa-listen" id="read-story" aria-pressed="false" ${!state.audio || !speechSupported ? "disabled" : ""}>${t("readTogether")}</button></div>
+            <div class="pa-story-challenge"><div><span>${t("findWord")}</span><strong>${page.target}</strong></div>${listenButton("listen-target")}<p>${t("storyHint")}</p></div>`;
+        $("activity-tip").textContent = t("storyTip");
+        next.textContent = t(storyPage === active.pages.length - 1 ? "nextBook" : "nextPage");
+        next.disabled = true;
+        $("story-select").onchange = (event) => { storyPage = 0; renderActivity({ specific: event.target.value }); };
+        $("read-story").onclick = () => { if (speaking) stopSpeech(); else speak(page.text, { track: true }); };
+        $("listen-target").onclick = () => speak(t("storyListen", { word: page.target }));
+        area.querySelectorAll("[data-word]").forEach((button) => {
+            button.onclick = () => {
+                if (solved || button.disabled) return;
+                if (button.dataset.word === normalize(page.target)) {
+                    button.classList.add("is-correct");
+                    reward("pages", `${active.id}:${storyPage}`);
+                    const finishedBook = active.pages.every((_, index) => journey().pages.includes(`${active.id}:${index}`));
+                    if (finishedBook && !journey().stories.includes(active.id)) {
+                        journey().stories.push(active.id);
+                        save();
+                        updateSummary();
+                    }
+                    announce(t(storyPage === active.pages.length - 1 && finishedBook ? "storyDone" : "correctStory", { word: page.target, title: active.title }), "success");
+                    area.querySelectorAll("[data-word]").forEach((word) => { word.disabled = true; });
                 } else {
-
-                    setTimeout(() => {
-                        if (!getFullscreenElement()) {
-                            setFallbackFullscreen(false);
-                        }
-                    }, 100);
+                    recordAttempt(false);
+                    button.classList.add("is-wrong");
+                    button.disabled = true;
+                    announce(t("wrongStory"), "retry");
+                    save();
+                    updateSummary();
                 }
-                return;
-            }
-        }
-
-        setFallbackFullscreen(false);
-    }
-
-    function updateNavigationButtons() {
-        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
-        const currentIndex = phases.indexOf(state.currentPhase);
-
-        prevBtn.disabled = currentIndex === 0;
-        nextBtn.disabled = !canUnlockPhase(phases[currentIndex + 1]);
-    }
-
-    function updateLanguageButtons() {
-        langButtons.forEach((btn) => {
-            btn.classList.toggle("active", btn.dataset.lang === state.language);
-        });
-    }
-
-    function setLanguage(lang) {
-        if (lang === state.language) return;
-        state.language = lang;
-        saveProgress();
-        applyTranslations();
-        updateLanguageButtons();
-        updateAchievementLabels();
-        updateStreakDisplay();
-        loadActivity();
-        updateUI();
-    }
-
-    function getNextSoundIndex() {
-        if (LETTERS.length <= 1) {
-            return 0;
-        }
-
-        let idx = Math.floor(Math.random() * LETTERS.length);
-        if (typeof state.lastSoundIndex === "number") {
-            let guard = 0;
-            while (idx === state.lastSoundIndex && guard < 10) {
-                idx = Math.floor(Math.random() * LETTERS.length);
-                guard += 1;
-            }
-            if (idx === state.lastSoundIndex) {
-                idx = (state.lastSoundIndex + 1) % LETTERS.length;
-            }
-        }
-        return idx;
-    }
-
-    function getSoundChoices(targetLetter) {
-        const pool = LETTERS
-            .map((item) => item.letter)
-            .filter((letter) => letter !== targetLetter);
-        const wrongChoices = shuffleArray(pool).slice(0, 2);
-        return shuffleArray([targetLetter, ...wrongChoices]);
-    }
-
-
-    function renderSoundsActivity() {
-        activityTitle.textContent = t("activity.soundsTitle");
-
-        showCharacterSpeech(t("sounds.prompt"));
-
-        const targetIndex = getNextSoundIndex();
-        state.lastSoundIndex = targetIndex;
-        saveProgress();
-        state.currentActivity = targetIndex;
-        const target = LETTERS[targetIndex];
-        const exampleText = getLetterExample(target);
-        const exampleEmoji = getLetterEmoji(target);
-        const choices = getSoundChoices(target.letter);
-        const shapes = ["circle", "squircle", "blob"];
-
-        let html = `
-            <div class="sounds-stage">
-                <div class="drag-layer" aria-hidden="true">
-                    <span class="drag-line" id="drag-line"></span>
-                </div>
-                <div class="letter-zone">
-                    <div class="letter-card" id="target-letter-card" data-letter="${target.letter}">
-                        <span class="letter-title">${t("sounds.letterTitle")}</span>
-                        <span class="letter-display">${target.letter}</span>
-                        <span class="letter-example">${exampleEmoji} ${exampleText}</span>
-                    </div>
-                </div>
-                <div class="shape-zone">
-                    <p class="shape-instructions">${t("sounds.instructions")}</p>
-                    <div class="shape-row">
-                        ${choices.map((letter, index) => `
-                            <button class="shape-choice" data-letter="${letter}" aria-label="Play a letter sound">
-                                <span class="shape-body shape-${shapes[index % shapes.length]}">
-                                    <span class="shape-face">
-                                        <span class="eye"></span>
-                                        <span class="eye"></span>
-                                        <span class="mouth"></span>
-                                        <span class="blush blush-left"></span>
-                                        <span class="blush blush-right"></span>
-                                    </span>
-                                </span>
-                            </button>
-                        `).join("")}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        activityArea.innerHTML = html;
-        enableActivityGuidance();
-        scheduleSlotSizing();
-
-        const shapeButtons = activityArea.querySelectorAll(".shape-choice");
-        const letterCard = document.getElementById("target-letter-card");
-        const dragLine = document.getElementById("drag-line");
-        const stage = activityArea.querySelector(".sounds-stage");
-        let locked = false;
-        let dragging = false;
-        let dragSource = null;
-        let dragStartButton = null;
-        let dragCandidate = null;
-        let dragStartPoint = null;
-        let hoverTarget = null;
-        let suppressShapeClick = false;
-        const dragThreshold = 8;
-        const directionThreshold = Math.PI / 4;
-
-        shapeButtons.forEach(btn => {
-            btn.addEventListener("click", (event) => {
-                if (suppressShapeClick) {
-                    suppressShapeClick = false;
-                    event.preventDefault();
-                    return;
-                }
-                if (locked) return;
-                const letter = btn.dataset.letter;
-                AudioSystem.speakLetter(letter);
-                btn.classList.add("speaking");
-                setTimeout(() => btn.classList.remove("speaking"), 700);
-            });
-        });
-
-        function getStagePoint(event) {
-            const rect = stage.getBoundingClientRect();
-            return {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
             };
-        }
-
-        function getLetterCenter() {
-            const rect = letterCard.getBoundingClientRect();
-            const stageRect = stage.getBoundingClientRect();
-            return {
-                x: rect.left - stageRect.left + rect.width / 2,
-                y: rect.top - stageRect.top + rect.height / 2
-            };
-        }
-
-        function setDragLine(start, end) {
-            const dx = end.x - start.x;
-            const dy = end.y - start.y;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-            dragLine.style.width = `${length}px`;
-            dragLine.style.transform = `translate(${start.x}px, ${start.y}px) rotate(${angle}deg)`;
-        }
-
-        function getButtonCenter(button) {
-            const rect = button.getBoundingClientRect();
-            const stageRect = stage.getBoundingClientRect();
-            return {
-                x: rect.left - stageRect.left + rect.width / 2,
-                y: rect.top - stageRect.top + rect.height / 2
-            };
-        }
-
-        function getAngle(from, to) {
-            return Math.atan2(to.y - from.y, to.x - from.x);
-        }
-
-        function angleDiff(a, b) {
-            const diff = Math.abs(a - b);
-            return Math.min(diff, Math.PI * 2 - diff);
-        }
-
-        function findDirectionalTarget(from, to) {
-            const dragDistance = Math.hypot(to.x - from.x, to.y - from.y);
-            if (dragDistance < dragThreshold) return null;
-            const dragAngle = getAngle(from, to);
-            let best = null;
-            let bestDiff = Infinity;
-
-            shapeButtons.forEach((btn) => {
-                const center = getButtonCenter(btn);
-                const targetAngle = getAngle(from, center);
-                const diff = angleDiff(dragAngle, targetAngle);
-                if (diff < bestDiff) {
-                    bestDiff = diff;
-                    best = btn;
-                }
-            });
-
-            if (best && bestDiff <= directionThreshold) {
-                return best;
-            }
-            return null;
-        }
-
-        function updateHoverTarget(targetButton) {
-            if (hoverTarget && hoverTarget !== targetButton) {
-                hoverTarget.classList.remove("hovered");
-            }
-            hoverTarget = targetButton;
-            if (hoverTarget) {
-                hoverTarget.classList.add("hovered");
-            }
-        }
-
-        function clearHoverStates() {
-            updateHoverTarget(null);
-            letterCard.classList.remove("hovered");
-        }
-
-        function resetDragLine() {
-            dragLine.classList.remove("visible");
-            dragLine.style.width = "0px";
-        }
-
-        function handleSoundMatch(targetButton) {
-            const letter = targetButton.dataset.letter;
-            AudioSystem.speakLetter(letter);
-            targetButton.classList.add("speaking");
-            setTimeout(() => targetButton.classList.remove("speaking"), 700);
-
-            state.activityStats.sounds.attempts += 1;
-            saveProgress();
-
-            if (letter === target.letter) {
-                locked = true;
-                targetButton.classList.add("matched");
-                letterCard.classList.add("matched");
-                dragLine.classList.add("visible");
-                setDragLine(getLetterCenter(), getButtonCenter(targetButton));
-                state.activityStats.sounds.correct += 1;
-                saveProgress();
-
-                if (!state.masteredSounds.includes(target.letter)) {
-                    state.masteredSounds.push(target.letter);
-                    state.stars += 1;
-                    saveProgress();
-                    showToast(t("sounds.matchToast", {
-                        letter: target.letter
-                    }), "success");
-                    checkAchievements();
-
-                    if (state.masteredSounds.length % 5 === 0) {
-                        celebrate();
-                    }
-
-                    checkPhaseProgression();
-                } else {
-                    showToast(t("sounds.matchAgain", {
-                        letter: target.letter
-                    }), "success");
-                }
-
-                setTimeout(() => {
-                    resetDragLine();
-                    state.currentActivity = (targetIndex + 1) % LETTERS.length;
-                    saveProgress();
-                    renderSoundsActivity();
-                }, 600);
-            } else {
-                targetButton.classList.add("wrong");
-                showToast(t("sounds.tryAnotherFace"), "info");
-                showReaction();
-                setTimeout(() => targetButton.classList.remove("wrong"), 350);
-            }
-        }
-
-        letterCard.addEventListener("pointerdown", (event) => {
-            if (locked) return;
-            dragging = true;
-            dragSource = "letter";
-            letterCard.setPointerCapture(event.pointerId);
-            letterCard.classList.add("dragging");
-            dragLine.classList.add("visible");
-
-            const start = getLetterCenter();
-            const point = getStagePoint(event);
-            setDragLine(start, point);
-        });
-
-        letterCard.addEventListener("pointermove", (event) => {
-            if (!dragging || dragSource !== "letter") return;
-            const start = getLetterCenter();
-            const point = getStagePoint(event);
-            setDragLine(start, point);
-
-            const element = document.elementFromPoint(event.clientX, event.clientY);
-            const targetButton = element ? element.closest(".shape-choice") : null;
-            updateHoverTarget(targetButton);
-        });
-
-        letterCard.addEventListener("pointerup", (event) => {
-            if (!dragging || dragSource !== "letter") return;
-            dragging = false;
-            dragSource = null;
-            letterCard.releasePointerCapture(event.pointerId);
-            letterCard.classList.remove("dragging");
-            resetDragLine();
-
-            const element = document.elementFromPoint(event.clientX, event.clientY);
-            const targetButton = element ? element.closest(".shape-choice") : null;
-            clearHoverStates();
-
-            if (!targetButton) {
-                const from = getLetterCenter();
-                const to = getStagePoint(event);
-                const directionalTarget = findDirectionalTarget(from, to);
-                if (directionalTarget) {
-                    handleSoundMatch(directionalTarget);
-                    return;
-                }
-                showToast(t("sounds.dragToFace"), "info");
-                return;
-            }
-
-            handleSoundMatch(targetButton);
-        });
-
-        letterCard.addEventListener("pointercancel", (event) => {
-            if (!dragging || dragSource !== "letter") return;
-            dragging = false;
-            dragSource = null;
-            letterCard.releasePointerCapture(event.pointerId);
-            letterCard.classList.remove("dragging");
-            resetDragLine();
-            clearHoverStates();
-        });
-
-        shapeButtons.forEach((btn) => {
-            btn.addEventListener("pointerdown", (event) => {
-                if (locked) return;
-                dragCandidate = {
-                    button: btn,
-                    pointerId: event.pointerId
-                };
-                dragStartPoint = {
-                    x: event.clientX,
-                    y: event.clientY
-                };
-                btn.setPointerCapture(event.pointerId);
-            });
-
-            btn.addEventListener("pointermove", (event) => {
-                if (!dragCandidate || dragCandidate.button !== btn) return;
-                const dx = event.clientX - dragStartPoint.x;
-                const dy = event.clientY - dragStartPoint.y;
-                if (!dragging && Math.hypot(dx, dy) > dragThreshold) {
-                    dragging = true;
-                    dragSource = "shape";
-                    dragStartButton = btn;
-                    dragLine.classList.add("visible");
-                }
-
-                if (!dragging || dragSource !== "shape") return;
-                const start = getButtonCenter(dragStartButton);
-                const point = getStagePoint(event);
-                setDragLine(start, point);
-
-                const element = document.elementFromPoint(event.clientX, event.clientY);
-                const overLetter = element ? element.closest("#target-letter-card") : null;
-                letterCard.classList.toggle("hovered", Boolean(overLetter));
-            });
-
-            btn.addEventListener("pointerup", (event) => {
-                if (!dragCandidate || dragCandidate.button !== btn) return;
-                const wasDragging = dragging && dragSource === "shape";
-                dragging = false;
-                dragSource = null;
-                dragStartButton = null;
-                btn.releasePointerCapture(event.pointerId);
-                dragCandidate = null;
-                dragStartPoint = null;
-
-                if (!wasDragging) {
-                    letterCard.classList.remove("hovered");
-                    return;
-                }
-
-                suppressShapeClick = true;
-                setTimeout(() => {
-                    suppressShapeClick = false;
-                }, 0);
-                resetDragLine();
-
-                const element = document.elementFromPoint(event.clientX, event.clientY);
-                const overLetter = element ? element.closest("#target-letter-card") : null;
-                letterCard.classList.remove("hovered");
-
-                if (!overLetter) {
-                    const from = getButtonCenter(btn);
-                    const to = getStagePoint(event);
-                    const letterCenter = getLetterCenter();
-                    const dragAngle = getAngle(from, to);
-                    const targetAngle = getAngle(from, letterCenter);
-                    const diff = angleDiff(dragAngle, targetAngle);
-                    if (Math.hypot(to.x - from.x, to.y - from.y) >= dragThreshold && diff <= directionThreshold) {
-                        handleSoundMatch(btn);
-                        return;
-                    }
-                    showToast(t("sounds.dragToLetter"), "info");
-                    return;
-                }
-
-                handleSoundMatch(btn);
-            });
-
-            btn.addEventListener("pointercancel", (event) => {
-                if (!dragCandidate || dragCandidate.button !== btn) return;
-                dragging = false;
-                dragSource = null;
-                dragStartButton = null;
-                btn.releasePointerCapture(event.pointerId);
-                dragCandidate = null;
-                dragStartPoint = null;
-                resetDragLine();
-                clearHoverStates();
-            });
         });
     }
-
-
-    function renderWordsActivity() {
-        activityTitle.textContent = t("activity.wordsTitle");
-
-        const shortWords = getShortWords();
-        const word = shortWords[Math.floor(Math.random() * shortWords.length)];
-        const targetLetters = word.toUpperCase().split("");
-        const letterBank = shuffleArray([...targetLetters]);
-
-        showCharacterSpeech(t("words.prompt"));
-
-        let html = `
-            <div class="word-builder word-dragger">
-                <div class="target-word">
-                    <button class="sound-btn" id="play-word-btn" type="button"><span class="btn-icon" aria-hidden="true"></span><span class="btn-text">${t("words.listen")}</span></button>
-                </div>
-                <p class="blend-instructions">${t("words.instructions")}</p>
-                <div class="word-slots drag-slots" id="drag-slots">
-                    ${targetLetters.map((_, i) => `
-                        <div class="word-slot drag-slot" data-index="${i}"></div>
-                    `).join("")}
-                </div>
-                <div class="letter-bank" id="letter-bank">
-                    ${letterBank.map((letter, index) => `
-                        <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
-                    `).join("")}
-                </div>
-            </div>
-        `;
-
-        activityArea.innerHTML = html;
-        enableActivityGuidance();
-
-        let wordAttempted = false;
-        let wordCompleted = false;
-
-        function markWordAttempt() {
-            if (wordAttempted) return;
-            wordAttempted = true;
-            state.activityStats.words.attempts += 1;
-            saveProgress();
-        }
-
-        function checkWordCompletion() {
-            if (wordCompleted) return;
-            const slots = Array.from(document.querySelectorAll(".drag-slot"));
-            if (slots.some(slot => !slot.dataset.letter)) {
-                return;
-            }
-            const spelled = slots.map(slot => slot.dataset.letter).join("");
-            if (spelled === targetLetters.join("")) {
-                wordCompleted = true;
-                state.activityStats.words.correct += 1;
-                state.stars += 5;
-                saveProgress();
-                showToast(t("words.builtToast", {
-                    word
-                }), "success");
-                celebrate();
-                AudioSystem.speakEncouragement();
-                if (!state.masteredWords.includes(word)) {
-                    state.masteredWords.push(word);
-                    saveProgress();
-                    checkAchievements();
-                }
-                setTimeout(() => {
-                    state.currentActivity++;
-                    saveProgress();
-                    renderWordsActivity();
-                }, 800);
-            } else {
-                showToast(t("words.tryAgain"), "info");
-                showReaction();
-            }
-        }
-
-        document.getElementById("play-word-btn").addEventListener("click", () => {
-            AudioSystem.speakWord(word);
-        });
-
-        const tiles = Array.from(document.querySelectorAll(".letter-tile"));
-        const slots = Array.from(document.querySelectorAll(".drag-slot"));
-        let activeTile = null;
-        let activeLetter = "";
-
-        function setActiveTile(tile) {
-            if (activeTile) {
-                activeTile.classList.remove("picked");
-            }
-            activeTile = tile;
-            activeLetter = tile ? tile.dataset.letter : "";
-            if (activeTile) {
-                activeTile.classList.add("picked");
-                activityArea.classList.add("letter-picked");
-                highlightSlots(true);
-            } else {
-                activityArea.classList.remove("letter-picked");
-                highlightSlots(false);
-            }
-            slots.forEach((slot) => {
-                slot.dataset.preview = "";
-            });
-        }
-
-        function highlightSlots(active) {
-            slots.forEach((slot) => {
-                slot.classList.toggle("ready", active && !slot.dataset.letter);
-            });
-        }
-
-        let isDragging = false;
-        let dragStartPos = null;
-        const DRAG_THRESHOLD = 5;
-
-        function placeLetterIntoSlot(slot) {
-            if (!activeTile || slot.dataset.letter) return;
-            markWordAttempt();
-            if (slot.dataset.tile) {
-                const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                if (previousTile) {
-                    previousTile.classList.remove("used");
-                    previousTile.removeAttribute("aria-disabled");
-                }
-            }
-            slot.textContent = activeLetter;
-            slot.dataset.letter = activeLetter;
-            slot.dataset.tile = activeTile.dataset.tile;
-            slot.classList.add("filled");
-            activeTile.classList.add("used");
-            activeTile.setAttribute("aria-disabled", "true");
-            setActiveTile(null);
-            checkWordCompletion();
-        }
-
-        tiles.forEach(tile => {
-            tile.addEventListener("click", () => {
-                if (tile.classList.contains("used")) return;
-                if (activeTile === tile) {
-                    setActiveTile(null);
-                    return;
-                }
-                setActiveTile(tile);
-            });
-
-            tile.addEventListener("pointerdown", (event) => {
-                if (tile.classList.contains("used")) return;
-                dragStartPos = {
-                    x: event.clientX,
-                    y: event.clientY
-                };
-                isDragging = false;
-                tile.setPointerCapture(event.pointerId);
-            });
-
-            tile.addEventListener("pointermove", (event) => {
-                if (!dragStartPos) return;
-                if (tile.classList.contains("used")) return;
-
-                const dx = event.clientX - dragStartPos.x;
-                const dy = event.clientY - dragStartPos.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (!isDragging && distance > DRAG_THRESHOLD) {
-                    isDragging = true;
-                    setActiveTile(tile);
-                }
-            });
-
-            tile.addEventListener("pointerup", (event) => {
-                if (!dragStartPos) return;
-
-                if (isDragging) {
-                    isDragging = false;
-                    tile.releasePointerCapture(event.pointerId);
-                    const element = document.elementFromPoint(event.clientX, event.clientY);
-                    const slot = element ? element.closest(".drag-slot") : null;
-                    if (slot) {
-                        placeLetterIntoSlot(slot);
-                    } else {
-                        setActiveTile(null);
-                    }
-                }
-
-                dragStartPos = null;
-            });
-
-            tile.addEventListener("pointercancel", (event) => {
-                isDragging = false;
-                dragStartPos = null;
-                if (event.pointerId !== undefined) {
-                    tile.releasePointerCapture(event.pointerId);
-                }
-                setActiveTile(null);
-            });
-        });
-
-        slots.forEach(slot => {
-            slot.addEventListener("mouseenter", () => {
-                if (!activeLetter || slot.dataset.letter) return;
-                slot.classList.add("hover-fill");
-            });
-
-            slot.addEventListener("mouseleave", () => {
-                slot.classList.remove("hover-fill");
-            });
-
-            slot.addEventListener("click", () => {
-                if (activeTile) {
-                    placeLetterIntoSlot(slot);
-                } else if (slot.dataset.letter) {
-                    if (slot.dataset.tile) {
-                        const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                        if (previousTile) {
-                            previousTile.classList.remove("used");
-                            previousTile.removeAttribute("aria-disabled");
-                        }
-                    }
-                    slot.textContent = "";
-                    slot.dataset.letter = "";
-                    slot.dataset.tile = "";
-                    slot.classList.remove("filled");
-                }
-            });
-        });
-
-        activityArea.addEventListener("pointerup", (event) => {
-            if (!isDragging) return;
-            isDragging = false;
-            const element = document.elementFromPoint(event.clientX, event.clientY);
-            const slot = element ? element.closest(".drag-slot") : null;
-            if (slot) {
-                placeLetterIntoSlot(slot);
-            }
-        });
+    function focusTitle() { $("activity-title")?.focus({ preventScroll: true }); }
+    function changeMode(mode) {
+        if (!MODES.includes(mode) || journey().mode === mode) return;
+        journey().mode = mode;
+        storyPage = 0;
+        renderActivity();
     }
-
-
-    function renderStoriesActivity() {
-        activityTitle.textContent = t("activity.storiesTitle");
-
-        const stories = getStories();
-        const storyIndex = state.currentActivity % stories.length;
-        const story = stories[storyIndex];
-        let sentenceIndex = 0;
-        let storyAttempted = false;
-
-        showCharacterSpeech(t("stories.prompt"));
-        AudioSystem.speak(t("stories.speak"));
-
-        function renderSentence() {
-            const sentence = story.sentences[sentenceIndex];
-            const missing = sentence.missing.toUpperCase();
-            const missingLetters = shuffleArray(missing.split(""));
-
-            const parts = sentence.text.split("____");
-            const before = parts[0] || "";
-            const after = parts[1] || "";
-
-            let html = `
-                <div class="story-container">
-                    <h3 class="story-title">${story.title}</h3>
-                    <p class="story-instructions">${t("stories.instructions")}</p>
-                    <button class="nav-btn primary story-speech-btn" id="story-speech-btn" type="button">
-                        <span class="btn-icon" aria-hidden="true"></span>
-                        <span class="btn-text">${t("stories.readButton")}</span>
-                    </button>
-                    <div class="story-sentence">
-                        <span>${before}</span>
-                        <span class="story-blank" id="story-blank">
-                            ${missing.split("").map((_, index) => `
-                                <span class="story-letter-slot" data-index="${index}"></span>
-                            `).join("")}
-                        </span>
-                        <span>${after}</span>
-                    </div>
-                    <div class="letter-bank story-bank" id="story-bank">
-                        ${missingLetters.map((letter, index) => `
-                            <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
-                        `).join("")}
-                    </div>
-                </div>
-            `;
-
-            activityArea.innerHTML = html;
-            enableActivityGuidance();
-            scheduleSlotSizing();
-
-            const blank = document.getElementById("story-blank");
-            blank.dataset.letters = "";
-
-            function speakSentence() {
-                const fullSentence = sentence.text.replace("____", sentence.missing);
-                AudioSystem.speak(fullSentence, 0.8, 1.2);
-            }
-
-            document.getElementById("story-speech-btn").addEventListener("click", () => {
-                speakSentence();
-            });
-
-            speakSentence();
-
-            const slots = Array.from(document.querySelectorAll(".story-letter-slot"));
-
-            const tiles = Array.from(document.querySelectorAll(".letter-tile"));
-            let activeTile = null;
-            let activeLetter = "";
-
-            function setActiveTile(tile) {
-                if (activeTile) {
-                    activeTile.classList.remove("picked");
-                }
-                activeTile = tile;
-                activeLetter = tile ? tile.dataset.letter : "";
-                if (activeTile) {
-                    activeTile.classList.add("picked");
-                    activityArea.classList.add("letter-picked");
-                    highlightStorySlots(true);
-                } else {
-                    activityArea.classList.remove("letter-picked");
-                    highlightStorySlots(false);
-                }
-                slots.forEach((slot) => {
-                    slot.dataset.preview = "";
-                });
-            }
-
-            function highlightStorySlots(active) {
-                slots.forEach((slot) => {
-                    slot.classList.toggle("ready", active && !slot.dataset.letter);
-                });
-            }
-
-            function evaluateSentence() {
-                const filled = slots.every(s => s.dataset.letter);
-                if (!filled) return;
-                const spelled = slots.map(s => s.dataset.letter).join("");
-                if (spelled === missing) {
-                    setTimeout(() => {
-                        sentenceIndex += 1;
-                        if (sentenceIndex >= story.sentences.length) {
-                            if (!state.completedStories.includes(story.title)) {
-                                state.completedStories.push(story.title);
-                                state.stars += 10;
-                                saveProgress();
-                                checkAchievements();
-                            }
-                            state.activityStats.stories.correct += 1;
-                            saveProgress();
-                            showToast(t("stories.greatReading"), "success");
-                            celebrate(1.5);
-                            AudioSystem.speakEncouragement();
-                            state.currentActivity++;
-                            saveProgress();
-                            renderStoriesActivity();
-                        } else {
-                            renderSentence();
-                        }
-                    }, 400);
-                } else {
-                    showToast(t("words.tryAgain"), "info");
-                    showReaction();
-                }
-            }
-
-            let isDragging = false;
-            let dragStartPos = null;
-            const DRAG_THRESHOLD = 5;
-
-            function markStoryAttempt() {
-                if (!storyAttempted) {
-                    storyAttempted = true;
-                    state.activityStats.stories.attempts += 1;
-                    saveProgress();
-                }
-            }
-
-            function placeLetterIntoSlot(slot) {
-                if (!activeTile || slot.dataset.letter) return;
-                markStoryAttempt();
-                if (slot.dataset.tile) {
-                    const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                    if (prevTile) {
-                        prevTile.classList.remove("used");
-                        prevTile.removeAttribute("aria-disabled");
-                    }
-                }
-
-                slot.textContent = activeLetter;
-                slot.dataset.letter = activeLetter;
-                slot.dataset.tile = activeTile.dataset.tile;
-                slot.classList.add("filled");
-
-                activeTile.classList.add("used");
-                activeTile.setAttribute("aria-disabled", "true");
-                setActiveTile(null);
-                evaluateSentence();
-            }
-
-            tiles.forEach(tile => {
-                tile.addEventListener("click", () => {
-                    if (tile.classList.contains("used")) return;
-                    if (activeTile === tile) {
-                        setActiveTile(null);
-                        return;
-                    }
-                    setActiveTile(tile);
-                });
-
-                tile.addEventListener("pointerdown", (event) => {
-                    if (tile.classList.contains("used")) return;
-                    dragStartPos = {
-                        x: event.clientX,
-                        y: event.clientY
-                    };
-                    isDragging = false;
-                    tile.setPointerCapture(event.pointerId);
-                });
-
-                tile.addEventListener("pointermove", (event) => {
-                    if (!dragStartPos) return;
-                    if (tile.classList.contains("used")) return;
-
-                    const dx = event.clientX - dragStartPos.x;
-                    const dy = event.clientY - dragStartPos.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (!isDragging && distance > DRAG_THRESHOLD) {
-                        isDragging = true;
-                        setActiveTile(tile);
-                    }
-                });
-
-                tile.addEventListener("pointerup", (event) => {
-                    if (!dragStartPos) return;
-
-                    if (isDragging) {
-                        isDragging = false;
-                        tile.releasePointerCapture(event.pointerId);
-                        const element = document.elementFromPoint(event.clientX, event.clientY);
-                        const slot = element ? element.closest(".story-letter-slot") : null;
-                        if (slot) {
-                            placeLetterIntoSlot(slot);
-                        } else {
-                            setActiveTile(null);
-                        }
-                    }
-
-                    dragStartPos = null;
-                });
-
-                tile.addEventListener("pointercancel", (event) => {
-                    isDragging = false;
-                    dragStartPos = null;
-                    if (event.pointerId !== undefined) {
-                        tile.releasePointerCapture(event.pointerId);
-                    }
-                    setActiveTile(null);
-                });
-            });
-
-            slots.forEach(slot => {
-                slot.addEventListener("mouseenter", () => {
-                    if (!activeLetter || slot.dataset.letter) return;
-                    slot.classList.add("hover-fill");
-                });
-
-                slot.addEventListener("mouseleave", () => {
-                    slot.classList.remove("hover-fill");
-                });
-
-                slot.addEventListener("click", () => {
-                    if (activeTile) {
-                        placeLetterIntoSlot(slot);
-                    } else if (slot.dataset.letter) {
-                        if (slot.dataset.tile) {
-                            const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                            if (prevTile) {
-                                prevTile.classList.remove("used");
-                                prevTile.removeAttribute("aria-disabled");
-                            }
-                        }
-                        slot.textContent = "";
-                        slot.dataset.letter = "";
-                        slot.dataset.tile = "";
-                        slot.classList.remove("filled");
-                    }
-                });
-            });
-
-            activityArea.addEventListener("pointerup", (event) => {
-                if (!isDragging) return;
-                isDragging = false;
-                const element = document.elementFromPoint(event.clientX, event.clientY);
-                const slot = element ? element.closest(".story-letter-slot") : null;
-                if (slot) {
-                    placeLetterIntoSlot(slot);
-                }
-            });
-        }
-
-        renderSentence();
-    }
-
-
-    prevBtn.addEventListener("click", () => {
-        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
-        const currentIndex = phases.indexOf(state.currentPhase);
-        if (currentIndex > 0) {
-            state.currentPhase = phases[currentIndex - 1];
-            state.currentActivity = 0;
-            saveProgress();
-            loadActivity();
-            requestActivityFullscreen();
-        }
-    });
-
-    nextBtn.addEventListener("click", () => {
-        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
-        const currentIndex = phases.indexOf(state.currentPhase);
-
-
-        if (state.currentPhase === PHASES.WORDS) {
-            state.currentActivity++;
-            saveProgress();
-            loadActivity();
-            requestActivityFullscreen();
-        } else if (currentIndex < phases.length - 1 && canUnlockPhase(phases[currentIndex + 1])) {
-            state.currentPhase = phases[currentIndex + 1];
-            state.currentActivity = 0;
-            saveProgress();
-            loadActivity();
-            requestActivityFullscreen();
-        } else if (state.currentPhase === PHASES.SENTENCES) {
-            state.currentActivity++;
-            saveProgress();
-            loadActivity();
-            requestActivityFullscreen();
-        }
-    });
-
-    resetBtn.addEventListener("click", resetProgress);
-
-    langButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            setLanguage(btn.dataset.lang);
-        });
-    });
-
-    activityCard.addEventListener("contextmenu", (event) => {
-        event.preventDefault();
-    });
-
-    fullscreenExitBtn.addEventListener("click", () => {
-        exitActivityFullscreen();
-    });
-
-    fullscreenEnterBtn.addEventListener("click", () => {
-        requestActivityFullscreen();
-    });
-
-    document.addEventListener("fullscreenchange", syncFullscreenState);
-    document.addEventListener("webkitfullscreenchange", syncFullscreenState);
-    window.addEventListener("resize", scheduleSlotSizing);
-
-
-    document.querySelectorAll(".phase-item").forEach(item => {
-        item.addEventListener("click", () => {
-            const phase = item.dataset.phase;
-            if (!item.classList.contains("locked") || canUnlockPhase(phase)) {
-                state.currentPhase = phase;
-                state.currentActivity = 0;
-                saveProgress();
-                loadActivity();
-                requestActivityFullscreen();
+    next.onclick = () => {
+        if (journey().mode === "stories") {
+            if (!solved) return;
+            if (storyPage < active.pages.length - 1) {
+                storyPage += 1;
+                renderActivity({ specific: active.id });
             } else {
-                showToast(t("toast.unlockMore"), "info");
+                storyPage = 0;
+                renderActivity({ advancing: true });
             }
-        });
-
-        item.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
+        } else renderActivity({ advancing: true });
+        focusTitle();
+    };
+    document.querySelectorAll("[data-mode]").forEach((button, index) => {
+        button.onclick = () => changeMode(button.dataset.mode);
+        button.onkeydown = (event) => {
+            let newIndex;
+            if (event.key === "ArrowRight") newIndex = (index + 1) % MODES.length;
+            if (event.key === "ArrowLeft") newIndex = (index + MODES.length - 1) % MODES.length;
+            if (event.key === "Home") newIndex = 0;
+            if (event.key === "End") newIndex = MODES.length - 1;
+            if (newIndex !== undefined) {
                 event.preventDefault();
-                item.click();
+                changeMode(MODES[newIndex]);
+                $(`tab-${MODES[newIndex]}`).focus();
             }
-        });
+        };
     });
-
-
-    function init() {
-
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = () => {
-                AudioSystem.synth.getVoices();
-            };
-        }
-
-        loadProgress();
-        checkStreak();
-        applyTranslations();
-        updateAchievementLabels();
-        updateLanguageButtons();
-        startCharacterAnimation();
-        loadActivity();
-
-
-        setTimeout(() => {
-            showToast(t("toast.welcome"), "success");
-        }, 500);
+    document.querySelectorAll("[data-language]").forEach((button) => {
+        button.onclick = () => {
+            if (state.language === button.dataset.language) return;
+            stopSpeech();
+            state.language = button.dataset.language;
+            storyPage = 0;
+            translate();
+            renderActivity();
+        };
+    });
+    $("audio-toggle").onclick = () => {
+        if (!speechSupported) { $("grownups").open = true; return; }
+        stopSpeech();
+        state.audio = !state.audio;
+        updateAudioButton();
+        area.querySelectorAll(".pa-listen").forEach((button) => { button.disabled = !state.audio; });
+        save();
+    };
+    $("voice-speed").onchange = (event) => { stopSpeech(); state.rate = Number(event.target.value) === 0.9 ? 0.9 : 0.7; save(); };
+    function setFocus(enabled) {
+        focusMode = enabled;
+        document.body.classList.toggle("pa-focus-mode", enabled);
+        $("focus-toggle").setAttribute("aria-pressed", String(enabled));
+        $("focus-toggle").textContent = t(enabled ? "exitFocus" : "focus");
+        if (enabled) $("activity-panel").scrollIntoView({ block: "start" });
     }
-
-    init();
+    $("focus-toggle").onclick = () => setFocus(!focusMode);
+    $("reset-progress").onclick = () => {
+        if (!window.confirm(t("resetConfirm"))) return;
+        stopSpeech();
+        state.journeys[state.language] = freshJourney();
+        storyPage = 0;
+        translate();
+        renderActivity();
+        announce(t("resetDone"));
+    };
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && focusMode) { setFocus(false); $("focus-toggle").focus(); }
+        if (journey().mode !== "words" || solved || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.target.closest("input, select, textarea, [contenteditable], .pa-language, .pa-path, .pa-grownups, .pa-tools") || !event.target.closest("#activity-panel")) return;
+        if (event.key === "Backspace" || event.key === "Delete") { event.preventDefault(); undoTile(); }
+        else if (event.key === "Enter" && event.target === $("activity-panel")) { event.preventDefault(); checkWord(); }
+        else if (event.key.length === 1 && /\p{L}/u.test(event.key)) {
+            // Accumulate multi-letter teams so typing “sh” adds the “sh” tile.
+            const available = bank.filter((tile) => !selection.includes(tile.id));
+            let typed = tileBuffer + event.key.toLowerCase();
+            if (!available.some((tile) => tile.text.startsWith(typed))) typed = event.key.toLowerCase();
+            const candidate = available.find((tile) => tile.text === typed);
+            if (candidate) { event.preventDefault(); tileBuffer = ""; addTile(candidate.id); }
+            else if (available.some((tile) => tile.text.startsWith(typed))) { event.preventDefault(); tileBuffer = typed; }
+            else tileBuffer = "";
+        }
+    });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeech(); else { refreshDay(); updateSummary(); save(); } });
+    window.addEventListener("pagehide", stopSpeech);
+    translate();
+    renderActivity();
+    if (migrated) announce(t("legacy"));
 });
