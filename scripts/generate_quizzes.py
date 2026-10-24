@@ -42,6 +42,8 @@ sys.path.append(str(SCRIPT_DIR))
 from learning_sources import (  # noqa: E402
     DATABASES,
     DEVOPS,
+    C_CPP_PL,
+    PYTHON_PL,
     FRONTEND,
     LINUX,
     PARALLEL,
@@ -101,16 +103,32 @@ CATEGORIES: Tuple[Category, ...] = (
         sources=(Source(STATISTICS, "quizzes"),),
         math=True,
     ),
+    Category(
+        slug="kurs_pythona",
+        name="Kurs podstaw Pythona",
+        description="Podstawy Pythona, obiekty i wyjątki, programowanie funkcyjne, współbieżność, narzędzia i praktyka.",
+        sources=(Source(PYTHON_PL, "quizzes"),),
+        language="pl",
+    ),
+    Category(
+        slug="od_c_do_cpp",
+        name="Od C do C++",
+        description="Kompilacja, typy, wskaźniki i pamięć, programowanie obiektowe oraz nowoczesny C++ z biblioteką STL.",
+        sources=(Source(C_CPP_PL, "quizzes"),),
+        language="pl",
+    ),
 )
 
 QUESTION_HEADING = re.compile(r"^#{2,6}\s*Q\.\s*", re.M)
 OPTION = re.compile(r"^\s*[*-]\s*\[([ xX])\]\s?(.*)$")
 FENCE = re.compile(r"^\s*(```|~~~)")
-NOTES_LINE = re.compile(r"^Notes:\s*(.+)$", re.M | re.I)
+# English and Polish sources use the same format with translated labels.
+NOTES_LINE = re.compile(r"^(?:Notes|Notatki):\s*(.+)$", re.M | re.I)
 MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
-EXPLANATION_PREFIX = re.compile(r"^\*\*Explanation:?\*\*:?\s*", re.I)
+EXPLANATION_PREFIX = re.compile(r"^\*\*(?:Explanation|Wyjaśnienie):?\*\*:?\s*", re.I)
 POSITIONAL_OPTION = re.compile(
-    r"\b(all|none|both|neither) of the (above|options|answers)\b|^(both|neither) [a-e]\b|^[a-e] and [a-e]$",
+    r"\b(all|none|both|neither) of the (above|options|answers)\b|^(both|neither) [a-e]\b|^[a-e] and [a-e]$"
+    r"|\b(wszystkie|żadn[aey]|obie|oba) (z )?(powyższ\w*|odpowiedzi)\b|^odpowiedzi [a-e] i [a-e]$",
     re.I,
 )
 
