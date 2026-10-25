@@ -45,6 +45,7 @@ from learning_sources import (  # noqa: E402
     C_CPP_PL,
     PYTHON_PL,
     FRONTEND,
+    GIT,
     LINUX,
     PARALLEL,
     SCHEMA_VERSION,
@@ -72,6 +73,13 @@ CATEGORIES: Tuple[Category, ...] = (
         name="Linux",
         description="Files, permissions, users, processes, the shell, networking, storage and package managers.",
         sources=(Source(LINUX, "quizzes"),),
+        code_language="bash",
+    ),
+    Category(
+        slug="git",
+        name="Git",
+        description="Staging and commits, branches and merging, remotes, history rewriting and recovery, workflows and Git internals.",
+        sources=(Source(GIT, "quizzes"),),
         code_language="bash",
     ),
     Category(

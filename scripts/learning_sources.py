@@ -15,6 +15,7 @@ import posixpath
 import re
 import tempfile
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -107,6 +108,7 @@ STATISTICS = Repository("Statistics-Notes", "main")
 PARALLEL = Repository("Parallel-And-Concurrent-Programming", "master")
 DATABASES = Repository("Databases-Notes", "main")
 DEVOPS = Repository("Way-Of-DevOps", "main")
+GIT = Repository("Git-Notes", "main")
 PYTHON_PL = Repository("Kurs-Podstaw-Pythona", "master")
 C_CPP_PL = Repository("Od-C-do-Cpp", "master")
 
@@ -223,9 +225,7 @@ def _protect(text: str, math: bool) -> Tuple[str, Dict[str, str]]:
     for i, piece in enumerate(pieces):
         if i % 2 == 1:
             continue
-        piece = INLINE_CODE.sub(
-            lambda m: keep(m.group(0)) if math else m.group(0), piece
-        )
+        piece = INLINE_CODE.sub(lambda m: keep(_code_span(m.group(2))), piece)
         if math:
             piece = DISPLAY_MATH.sub(lambda m: keep(_escape_math(m.group(0))), piece)
             piece = INLINE_MATH.sub(lambda m: keep(_escape_math(m.group(0))), piece)
@@ -233,15 +233,25 @@ def _protect(text: str, math: bool) -> Tuple[str, Dict[str, str]]:
     return "".join(pieces), stash
 
 
+def _code_span(content: str) -> str:
+    """Render inline code like CommonMark, keeping significant spaces.
+
+    Python-Markdown strips code spans, which turns ``git status`` output such
+    as `` M a.txt`` into ``M a.txt``. Only one padding space per side is
+    dropped, and only when both sides have one.
+    """
+    content = content.replace("\n", " ")
+    if len(content) > 2 and content[0] == content[-1] == " " and content.strip():
+        content = content[1:-1]
+    return f"<code>{escape(content, quote=False)}</code>"
+
+
 def _escape_math(tex: str) -> str:
     return tex.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _restore(html: str, stash: Dict[str, str]) -> str:
-    # Inline code stashed for math pages still needs rendering as code.
     for key, value in reversed(list(stash.items())):
-        if value.startswith("`"):
-            value = markdown.markdown(value)[3:-4]
         html = html.replace(key, value)
     return html
 
