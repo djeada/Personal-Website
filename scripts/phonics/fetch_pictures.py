@@ -60,6 +60,8 @@ PICTURES = {
     "elephant": "Elephant", "dragon": "Dragon", "snail": "Snail", "openbook": "Open book",
     "party": "Party popper", "lock": "Locked", "sparkles": "Sparkles", "medal": "Sports medal",
     "seedling": "Seedling", "sunflower": "Sunflower", "blossom": "Blossom",
+    # Arabic letter pictures.
+    "corn": "Ear of corn", "feather": "Feather", "grapes": "Grapes", "gift": "Wrapped gift",
 }
 
 
