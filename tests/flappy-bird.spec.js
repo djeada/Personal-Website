@@ -116,12 +116,20 @@ test('settings and search keep their keyboard controls; held keys do not flap re
   await page.locator('#canvas').focus();
   await page.keyboard.down('Space');
   await page.evaluate(() => flightDriver.advance(12));
-  const before = await page.evaluate(() => flightDriver.draws);
+  const baseline = await page.evaluate(() => {
+    const before = flightDriver.draws;
+    flightDriver.step();
+    return flightDriver.draws - before;
+  });
   await page.keyboard.down('Space');
   await page.keyboard.up('Space');
-  await page.evaluate(() => flightDriver.step());
-  // No burst was created by the repeat event (an ordinary flap adds 7 draws).
-  expect(await page.evaluate(() => flightDriver.draws) - before).toBeLessThan(35);
+  const repeated = await page.evaluate(() => {
+    const before = flightDriver.draws;
+    flightDriver.step();
+    return flightDriver.draws - before;
+  });
+  // A regular flap adds seven particles; one new trail mote is allowed here.
+  expect(repeated).toBeLessThanOrEqual(baseline + 1);
   await page.keyboard.press('p');
   await expect(page.locator('#overlay-title')).toHaveText('Flight paused');
 });
@@ -165,8 +173,8 @@ test('themes and skins redraw immediately while idle and all three realms differ
   expect(await page.evaluate(() => flightDriver.frames)).toBe(frames + 4);
 });
 
-test('unavailable storage and invalid saved settings do not prevent playing', async ({ page }) => {
-  for (const blocked of [false, true]) {
+for (const blocked of [false, true]) {
+  test(`${blocked ? 'unavailable storage' : 'invalid saved settings'} does not prevent playing`, async ({ page }) => {
     await page.addInitScript(blocked => {
       if (blocked) {
         for (const name of ['getItem', 'setItem']) Storage.prototype[name] = () => { throw new Error('Storage blocked'); };
@@ -187,8 +195,8 @@ test('unavailable storage and invalid saved settings do not prevent playing', as
     await page.evaluate(() => flightDriver.advance(20));
     expect(await page.evaluate(() => flightDriver.pending)).toBe(1);
     expect(errors).toEqual([]);
-  }
-});
+  });
+}
 
 test('reduced motion omits decorative effects and still plays and scores', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

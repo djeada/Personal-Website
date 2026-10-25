@@ -120,6 +120,11 @@
         frameId = 0;
         state.last = null;
         state.acc = 0;
+        state.previousTime = state.time;
+        state.previousDistance = state.distance;
+        state.bird.previousY = state.bird.y;
+        state.bird.previousRot = state.bird.rot;
+        for (const gate of state.gates) gate.previousX = gate.x;
     }
 
     function cacheBackground() {
