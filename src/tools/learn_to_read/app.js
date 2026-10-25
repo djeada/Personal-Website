@@ -40,7 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
             soundsTitle: "Letters so far", masteryNote: "Green letters are secure. Orange letters need more practice and come back more often.",
             noSounds: "Letters appear here after the first letters level.",
             settingsTitle: "Settings", slowVoice: "Slower voice", unlockAll: "Unlock every level",
-            saved: "Progress is saved on this device. English and German each have their own paths.",
+            autoFullscreen: "Full screen while playing (keeps ads away)", fullscreen: "Full screen", exitFullscreen: "Leave full screen",
+            saved: "Progress is saved on this device. Every language has its own paths.",
             saveFail: "Progress could not be saved in this browser, but every level still works.",
             reset: "Reset this language’s progress", resetConfirm: "Reset all English progress? German progress is kept.",
             audioMissing: "Recorded audio could not load, so the device voice is used where possible.",
@@ -71,7 +72,8 @@ document.addEventListener("DOMContentLoaded", () => {
             soundsTitle: "Bisherige Buchstaben", masteryNote: "Grüne Buchstaben sitzen. Orange Buchstaben brauchen noch Übung und kommen öfter wieder.",
             noSounds: "Nach dem ersten Buchstaben-Level erscheinen hier die Buchstaben.",
             settingsTitle: "Einstellungen", slowVoice: "Langsamere Stimme", unlockAll: "Alle Levels freischalten",
-            saved: "Der Fortschritt wird auf diesem Gerät gespeichert. Deutsch und Englisch haben je eigene Pfade.",
+            autoFullscreen: "Vollbild beim Spielen (hält Werbung fern)", fullscreen: "Vollbild", exitFullscreen: "Vollbild verlassen",
+            saved: "Der Fortschritt wird auf diesem Gerät gespeichert. Jede Sprache hat eigene Pfade.",
             saveFail: "Der Fortschritt kann in diesem Browser nicht gespeichert werden, aber alle Levels funktionieren.",
             reset: "Fortschritt für Deutsch zurücksetzen", resetConfirm: "Den gesamten deutschen Fortschritt zurücksetzen? Der englische bleibt erhalten.",
             audioMissing: "Die Aufnahmen konnten nicht geladen werden, daher wird wenn möglich die Gerätestimme verwendet.",
@@ -84,6 +86,38 @@ document.addEventListener("DOMContentLoaded", () => {
             tile: "Baustein {letter}", slot: "Kästchen {n}: {letter}. Zum Zurücklegen tippen.", emptySlot: "Leeres Kästchen {n}",
             picture: "Bild: {word}", hearPicture: "{word} hören", letterChoice: "Buchstabe {letter}", wordChoice: "Wort {word}",
             correct: "Richtig!", tryAgain: "Noch nicht ganz, versuch es nochmal.", gap: "fehlendes Wort"
+        },
+        ar: {
+            title: "مغامرة القراءة", intro: "ثلاثة طرق إلى القراءة: الحروف، والكلمات، والجمل مع قصص صغيرة. مستوى قصير في كل مرة.",
+            soundOn: "الصوت يعمل", soundOff: "الصوت مغلق", welcome: "مرحبا، أنا فِن! هيا نتعلم القراءة معا.",
+            statStars: "نجوم", statStickers: "ملصقات", levelsDone: "من {total} مستويات مكتملة",
+            playLevel: "العب المستوى {n}", playAgain: "العب المراجعة الأخيرة مرة أخرى", choosePath: "اختر طريقا",
+            path_letters: "الحروف", path_words: "الكلمات", path_stories: "القصص",
+            pathHint_letters: "تعرّف على الحروف وابحث عنها، ثم طابق أشكالها.",
+            pathHint_words: "ابنِ الكلمات واقرأها بأربع طرق مختلفة.",
+            pathHint_stories: "اقرأ الجمل، أكمل الفراغات، واستمتع بقصص قصيرة.",
+            mapTitle: "طريقك", mapHint: "يمكنك إعادة المستويات المكتملة لتربح نجوما أكثر.",
+            stickerTitle: "دفتر الملصقات", stickerHint: "كل مستوى تكمله يضيف ملصقا.", closeStickers: "أغلق دفتر الملصقات",
+            grownups: "للكبار", howTitle: "كيف تعمل اللعبة",
+            howText: "يمكن لعب الطرق الثلاثة بأي ترتيب. طريق الحروف يقدم بضعة حروف في كل مرة ثم أشكالها المتصلة. طريق الكلمات يبني كلمات كاملة من حروف جاهزة، ويكمل الحروف الناقصة، ويربط الكلمات بالصور. طريق القصص يبدأ بجمل قصيرة ثم قصص صغيرة مع أسئلة.",
+            howText2: "كل كلمة واسم حرف وتعليمة تسجيل صوتي، لذلك تعمل بالطريقة نفسها على كل جهاز. كل جولة تعيد ما تعلمه الطفل سابقا، والأخطاء تجعله يعود أكثر.",
+            soundsTitle: "الحروف حتى الآن", masteryNote: "الحروف الخضراء متقنة. الحروف البرتقالية تحتاج إلى تدريب أكثر وتعود أكثر.",
+            noSounds: "تظهر الحروف هنا بعد أول مستوى للحروف.",
+            settingsTitle: "الإعدادات", slowVoice: "صوت أبطأ", unlockAll: "افتح كل المستويات",
+            autoFullscreen: "ملء الشاشة أثناء اللعب (يبعد الإعلانات)", fullscreen: "ملء الشاشة", exitFullscreen: "الخروج من ملء الشاشة",
+            saved: "يُحفظ التقدم على هذا الجهاز. لكل لغة طرقها الخاصة.",
+            saveFail: "تعذر حفظ التقدم في هذا المتصفح، لكن كل المستويات تعمل.",
+            reset: "أعد ضبط تقدم هذه اللغة", resetConfirm: "هل تريد مسح كل التقدم في العربية؟ تبقى اللغات الأخرى كما هي.",
+            audioMissing: "تعذر تحميل التسجيلات، لذلك يُستخدم صوت الجهاز عند الإمكان.",
+            kind_letters: "الحروف", kind_words: "الكلمات", kind_story: "قصة", kind_review: "مراجعة", kind_small: "أشكال الحروف",
+            mode_picture: "جمل", mode_cloze: "الكلمة الناقصة", mode_order: "ترتيب الكلمات", mode_mix: "جمل متنوعة",
+            locked: "مقفل", stars: "{n} من 3 نجوم", levelName: "المستوى {n}: {name}", notPlayed: "لم يُلعب بعد",
+            close: "العودة إلى الخريطة", replay: "استمع مرة أخرى", readToMe: "اقرأ لي", listen: "استمع",
+            levelDone: "أكملت المستوى!", nextLevel: "المستوى التالي", backToMap: "العودة إلى الخريطة", playAgainLevel: "العب مرة أخرى",
+            newSticker: "ملصق جديد!", allDone: "أكملت الطريق كله!", meet: "حرف جديد", progress: "الخطوة {n} من {total}",
+            tile: "بطاقة {letter}", slot: "المربع {n}: {letter}. اضغط لإرجاعه.", emptySlot: "مربع فارغ {n}",
+            picture: "صورة: {word}", hearPicture: "استمع إلى {word}", letterChoice: "حرف {letter}", wordChoice: "كلمة {word}",
+            correct: "صحيح!", tryAgain: "ليس تماما، حاول مرة أخرى.", gap: "كلمة ناقصة"
         }
     };
     const t = (key, vars = {}) => (strings[state.language][key] ?? strings.en[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
@@ -126,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const capitals = (path, index) => index < pathDef(path).lowercaseFrom;
     const cased = (text, path = round?.path ?? state.path, index = round?.index ?? 0) => (capitals(path, index) ? text.toLocaleUpperCase() : text);
     function letterShown(grapheme, pair = false) {
+        if (L().caseless) return grapheme;
         if (capitals(round.path, round.index)) return grapheme.toLocaleUpperCase();
         return pair ? `${grapheme[0].toLocaleUpperCase()}${grapheme.slice(1)} ${grapheme}` : grapheme;
     }
@@ -144,7 +179,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ---------- Saved progress ---------- */
     const freshJourney = () => ({ paths: { letters: {}, words: {}, stories: {} }, stats: {} });
-    const freshState = () => ({ version: 4, language: "en", path: "letters", sound: true, slow: false, unlockAll: false, journeys: { en: freshJourney(), de: freshJourney() } });
+    const LANGUAGES = content.languages;
+    const knownLanguage = (value) => (LANGUAGES.includes(value) ? value : "en");
+    const freshState = () => ({ version: 4, language: "en", path: "letters", sound: true, slow: false, unlockAll: false, fullscreen: true, journeys: Object.fromEntries(LANGUAGES.map((lang) => [lang, freshJourney()])) });
     const count = (value) => (Number.isFinite(value) ? Math.max(0, Math.min(100000, Math.floor(value))) : 0);
     let storageFailed = false;
 
@@ -216,27 +253,30 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const saved = JSON.parse(localStorage.getItem(KEY));
             if (saved?.version === 4) {
-                state.language = saved.language === "de" ? "de" : "en";
+                state.language = knownLanguage(saved.language);
                 state.path = PATHS.includes(saved.path) ? saved.path : "letters";
                 state.sound = saved.sound !== false;
                 state.slow = saved.slow === true;
                 state.unlockAll = saved.unlockAll === true;
-                for (const lang of ["en", "de"]) state.journeys[lang] = cleanJourney(saved.journeys?.[lang], lang);
+                state.fullscreen = saved.fullscreen !== false;
+                for (const lang of LANGUAGES) state.journeys[lang] = cleanJourney(saved.journeys?.[lang], lang);
                 return state;
             }
             const v3 = JSON.parse(localStorage.getItem("phonicsAdventure.v3"));
             if (v3?.version === 3) {
-                state.language = v3.language === "de" ? "de" : "en";
+                state.language = knownLanguage(v3.language);
                 state.sound = v3.sound !== false;
                 state.slow = v3.slow === true;
                 for (const lang of ["en", "de"]) state.journeys[lang] = fromVersion3(v3.journeys?.[lang], lang);
+                state.journeys.ar = freshJourney();
                 return state;
             }
             const v2 = JSON.parse(localStorage.getItem("phonicsAdventure.v2"));
             if (v2?.version === 2) {
-                state.language = v2.language === "de" ? "de" : "en";
+                state.language = knownLanguage(v2.language);
                 state.sound = v2.audio !== false;
                 for (const lang of ["en", "de"]) state.journeys[lang] = fromVersion2(v2.journeys?.[lang], lang);
+                state.journeys.ar = freshJourney();
             }
         } catch { /* Unreadable storage must never block play. */ }
         return state;
@@ -250,13 +290,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ---------- Sound ---------- */
+    // Clips play through one Web Audio channel that the first tap unlocks, which is what tablets allow reliably.
+    // A clip that is not ready in time is skipped: the game never waits on sound to move on.
     const speechReady = Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
-    const audioCache = new Map();
+    const Context = window.AudioContext || window.webkitAudioContext;
+    const READY_WAIT = 1500;
+    let context = null;
     let audioToken = 0;
-    let currentAudio = null;
-    let effects = null;
     let audioFailed = false;
+    let currentFinish = null;
+    const buffers = new Map();
+    const elements = new Map();
     const clipEntry = (id) => window.PhonicsAudio?.[state.language]?.[id];
+    const clipSrc = (id) => clipEntry(id) && `audio/${state.language}/${clipEntry(id)[0]}`;
     function clipText(id) {
         const [kind, ...rest] = id.split(":");
         if (kind === "w") return rest.join(":");
@@ -268,23 +314,59 @@ document.addEventListener("DOMContentLoaded", () => {
         if (kind === "ph") return rest[0].toLocaleUpperCase();
         return null;
     }
+    const audioContext = () => {
+        if (!context && Context) {
+            try { context = new Context(); } catch { /* Fall back to media elements. */ }
+        }
+        return context;
+    };
+    function unlockAudio() {
+        const ctx = audioContext();
+        if (!ctx) return;
+        if (ctx.state !== "running") ctx.resume().catch(() => {});
+        // iOS needs a sound started inside the tap itself; a one-sample silent buffer is enough.
+        const source = ctx.createBufferSource();
+        source.buffer = ctx.createBuffer(1, 1, 22050);
+        source.connect(ctx.destination);
+        source.start(0);
+    }
+    document.addEventListener("pointerdown", unlockAudio, { capture: true });
+    document.addEventListener("keydown", unlockAudio, { capture: true });
+    function noteFailure() {
+        if (audioFailed) return;
+        audioFailed = true;
+        $("audio-note").textContent = t("audioMissing");
+    }
+    function loadBuffer(id) {
+        const src = clipSrc(id);
+        const ctx = audioContext();
+        if (!src || !ctx) return Promise.resolve(null);
+        if (!buffers.has(src)) {
+            buffers.set(src, fetch(src)
+                .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(response.status))))
+                .then((data) => new Promise((resolve, reject) => ctx.decodeAudioData(data, resolve, reject)))
+                .catch(() => { buffers.delete(src); noteFailure(); return null; }));
+        }
+        return buffers.get(src);
+    }
     function element(id) {
-        const entry = clipEntry(id);
-        if (!entry) return null;
-        const src = `audio/${state.language}/${entry[0]}`;
-        if (!audioCache.has(src)) {
+        const src = clipSrc(id);
+        if (!src) return null;
+        if (!elements.has(src)) {
             const audio = new Audio();
             audio.preload = "auto";
             audio.src = src;
-            audioCache.set(src, audio);
+            elements.set(src, audio);
         }
-        return audioCache.get(src);
+        return elements.get(src);
     }
-    const preload = (ids) => { if (state.sound) ids.filter(Boolean).forEach(element); };
+    const preload = (ids) => {
+        if (!state.sound) return;
+        ids.filter(Boolean).forEach((id) => (audioContext() ? loadBuffer(id) : element(id)));
+    };
     function stopAudio() {
         audioToken += 1;
         if (currentFinish) currentFinish();
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         if (speechReady) window.speechSynthesis.cancel();
         document.querySelectorAll(".pa-reading").forEach((node) => node.classList.remove("pa-reading"));
         $("replay").classList.remove("pa-talking");
@@ -302,54 +384,73 @@ document.addEventListener("DOMContentLoaded", () => {
             else resolve();
         });
     }
-    // Only one clip ever sounds at a time: a new clip or a stop ends the one before it.
-    let playCount = 0;
-    let currentFinish = null;
+    // Plays one clip; a new clip or a stop always ends the one before it, so two never overlap.
     function playClip(id, token, onTime) {
         return new Promise((resolve) => {
             if (token !== audioToken || !state.sound) return resolve();
-            const audio = element(id);
-            if (!audio) { speakFallback(id, token).then(resolve); return; }
+            if (!clipEntry(id)) { speakFallback(id, token).then(resolve); return; }
             if (currentFinish) currentFinish();
-            const play = ++playCount;
             const rate = state.slow ? 0.85 : 1;
             let frame = 0;
             let timer = 0;
+            let stopSound = () => {};
             let ended = false;
             const finish = () => {
                 if (ended) return;
                 ended = true;
                 clearTimeout(timer);
                 cancelAnimationFrame(frame);
-                if (audio.owner === play) {
-                    audio.onended = audio.onerror = audio.onplaying = null;
-                    audio.pause();
-                }
+                stopSound();
                 if (currentFinish === finish) currentFinish = null;
                 resolve();
             };
             currentFinish = finish;
-            audio.owner = play;
-            // A slow connection gets time to load; once the clip really starts, wait for its own length.
-            timer = setTimeout(finish, 8000);
+            const follow = (now) => {
+                if (!onTime) return;
+                const tick = () => { onTime(now()); frame = requestAnimationFrame(tick); };
+                frame = requestAnimationFrame(tick);
+            };
+            const ctx = audioContext();
+            if (ctx) {
+                timer = setTimeout(finish, READY_WAIT);
+                Promise.all([loadBuffer(id), ctx.state === "running" ? null : ctx.resume().catch(() => {})]).then(([buffer]) => {
+                    if (ended) return;
+                    clearTimeout(timer);
+                    if (!buffer || ctx.state !== "running") return finish();
+                    const source = ctx.createBufferSource();
+                    source.buffer = buffer;
+                    source.playbackRate.value = rate;
+                    source.connect(ctx.destination);
+                    const startedAt = ctx.currentTime;
+                    source.onended = finish;
+                    stopSound = () => {
+                        source.onended = null;
+                        try { source.stop(); } catch { /* Already stopped. */ }
+                    };
+                    source.start();
+                    timer = setTimeout(finish, (buffer.duration / rate) * 1000 + 400);
+                    follow(() => (ctx.currentTime - startedAt) * rate);
+                });
+                return;
+            }
+            // Browsers without Web Audio use plain media elements with the same rules.
+            const audio = element(id);
+            stopSound = () => {
+                audio.onended = audio.onerror = audio.onplaying = null;
+                audio.pause();
+            };
+            timer = setTimeout(finish, READY_WAIT);
             audio.onplaying = () => {
                 clearTimeout(timer);
-                timer = setTimeout(finish, (clipEntry(id)[1] / rate) * 1000 + 1200);
+                timer = setTimeout(finish, (clipEntry(id)[1] / rate) * 1000 + 400);
             };
             audio.onended = finish;
-            audio.onerror = () => {
-                if (!audioFailed) { audioFailed = true; $("audio-note").textContent = t("audioMissing"); }
-                finish();
-            };
+            audio.onerror = () => { noteFailure(); finish(); };
             try { audio.currentTime = 0; } catch { /* Not yet seekable. */ }
             audio.playbackRate = rate;
-            currentAudio = audio;
-            if (onTime) {
-                const tick = () => { onTime(audio.currentTime); frame = requestAnimationFrame(tick); };
-                frame = requestAnimationFrame(tick);
-            }
+            follow(() => audio.currentTime);
             const started = audio.play();
-            if (started) started.catch(() => { if (!ended) speakFallback(id, token).then(finish); });
+            if (started) started.catch(finish);
         });
     }
     // Plays clips in order; resolves true when the whole sequence finished uninterrupted.
@@ -368,23 +469,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return token === audioToken;
     }
     function tone(kind) {
-        if (!state.sound) return;
-        const Context = window.AudioContext || window.webkitAudioContext;
-        if (!Context) return;
+        const ctx = state.sound && audioContext();
+        if (!ctx || ctx.state !== "running") return;
         try {
-            effects ||= new Context();
-            effects.resume().catch(() => {});
             const notes = { win: [523.25, 659.25, 783.99, 1046.5], soft: [311.13, 261.63], fanfare: [523.25, 659.25, 783.99, 659.25, 1046.5] }[kind];
             notes.forEach((frequency, index) => {
-                const oscillator = effects.createOscillator();
-                const gain = effects.createGain();
-                const start = effects.currentTime + index * (kind === "fanfare" ? 0.13 : 0.08);
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const start = ctx.currentTime + index * (kind === "fanfare" ? 0.13 : 0.08);
                 oscillator.type = kind === "soft" ? "sine" : "triangle";
                 oscillator.frequency.value = frequency;
                 gain.gain.setValueAtTime(0, start);
                 gain.gain.linearRampToValueAtTime(0.08, start + 0.015);
                 gain.gain.exponentialRampToValueAtTime(0.001, start + (kind === "soft" ? 0.22 : 0.3));
-                oscillator.connect(gain).connect(effects.destination);
+                oscillator.connect(gain).connect(ctx.destination);
                 oscillator.start(start);
                 oscillator.stop(start + 0.35);
             });
@@ -419,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const offset = PATHS.slice(0, PATHS.indexOf(path)).reduce((sum, item) => sum + levels(item).length, 0);
         return content.stickers[(offset + index) % content.stickers.length];
     };
-    const pathIcon = (path) => path === "letters" ? '<span class="pa-path-letters">ABC</span>'
+    const pathIcon = (path) => path === "letters" ? `<span class="pa-path-letters">${L().caseless ? Object.keys(L().sounds).slice(0, 3).join(" ") : "ABC"}</span>`
         : imageHtml(path === "words" ? pictureOf(levelItems(levels("words")[0])[0]) : "openbook");
 
     function renderPaths() {
@@ -691,8 +789,35 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         returnFocus?.focus({ preventScroll: true });
     }
+    // Full screen shows only the game, so page ads cannot appear over a round; the map keeps the normal page.
+    const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const canFullscreen = Boolean(app.requestFullscreen || app.webkitRequestFullscreen);
+    function enterFullscreen() {
+        if (!canFullscreen || fullscreenElement()) return;
+        try {
+            const request = app.requestFullscreen ? app.requestFullscreen({ navigationUI: "hide" }) : app.webkitRequestFullscreen();
+            request?.catch?.(() => {});
+        } catch { /* The browser said no; the round still works. */ }
+    }
+    function exitFullscreen() {
+        if (!fullscreenElement()) return;
+        try {
+            const exit = document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen();
+            exit?.catch?.(() => {});
+        } catch { /* Already left. */ }
+    }
+    function syncFullscreen() {
+        const on = Boolean(fullscreenElement());
+        $("fullscreen-toggle").hidden = !canFullscreen;
+        $("fullscreen-toggle").setAttribute("aria-pressed", String(on));
+        $("fullscreen-toggle").setAttribute("aria-label", t(on ? "exitFullscreen" : "fullscreen"));
+    }
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener("webkitfullscreenchange", syncFullscreen);
     function startLevel(index, path = state.path) {
         if (!unlocked(index, path)) return;
+        if (state.fullscreen) enterFullscreen();
+        syncFullscreen();
         round = { path, index, tasks: buildRound(path, index), step: 0, mistakes: 0, taskMistakes: 0, busy: false, replay: null };
         play.hidden = false;
         document.body.classList.add("pa-playing");
@@ -708,6 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function closePlay() {
         stopAudio();
+        exitFullscreen();
         round = null;
         play.hidden = true;
         document.body.classList.remove("pa-playing");
@@ -884,7 +1010,8 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         const ask = () => say(["line:findIt", `ph:${task.grapheme}`]);
         const hideLetter = () => {
-            if (!round || round.tasks[round.step] !== task) return;
+            if (!round || round.tasks[round.step] !== task || letter.dataset.hidden) return;
+            letter.dataset.hidden = "1";
             if (state.sound) {
                 letter.classList.add("pa-listen-card");
                 letter.innerHTML = '<span aria-hidden="true"></span>';
@@ -900,15 +1027,20 @@ document.addEventListener("DOMContentLoaded", () => {
         // With sound off there is nothing to listen for, so the letter stays visible and the choices open at once.
         if (!state.sound) return hideLetter();
         stage.querySelectorAll("[data-option]").forEach((button) => { button.disabled = true; });
+        // Whatever the sound does, the choices never stay locked for long.
+        const unlock = setTimeout(hideLetter, 7000);
         (async () => {
-            if (!(await say([lead, `in:${task.grapheme}`]))) return hideLetter();
+            const heard = await say([lead, `in:${task.grapheme}`]);
+            clearTimeout(unlock);
             hideLetter();
-            ask();
+            if (heard) ask();
         })();
     };
     renderers.matchCase = (task, lead) => {
         setGuide(L().lines.smallQ);
-        const options = choices(task, { answer: task.grapheme, kind: "letter", label: (option) => option, right: () => [`ph:${task.grapheme}`] });
+        // Arabic has no capitals: the letter is matched to its joined shape (ب to ـبـ) instead.
+        const shape = (option) => (L().caseless ? `\u0640${option}\u0640` : option);
+        const options = choices(task, { answer: task.grapheme, kind: "letter", label: shape, right: () => [`ph:${task.grapheme}`] });
         stage.innerHTML = `${bigLetter(task.grapheme.toLocaleUpperCase(), false)}${options.markup}`;
         round.replay = () => say(["line:smallQ", `ph:${task.grapheme}`]);
         $("prompt-sound").onclick = () => { pulse($("prompt-sound")); say(`ph:${task.grapheme}`); };
@@ -994,6 +1126,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const built = slots.map(textOf);
             if (built.every((text, i) => same(text, target[i]))) {
                 $("slots").querySelectorAll(".pa-slot").forEach((slot) => slot.classList.add("is-right"));
+                // In a joined script the separate letters become one word once it is built.
+                if (typing && L().connected) $("slots").insertAdjacentHTML("afterend", `<p class="pa-joined-word">${escape(target.join(""))}</p>`);
                 await sleep(state.sound ? 350 : 0);
                 success(task, $("slots"), finish);
             } else {
@@ -1062,7 +1196,11 @@ document.addEventListener("DOMContentLoaded", () => {
     renderers.read = (task, lead) => {
         setGuide(L().lines.read);
         const options = choices(task, { answer: task.word, kind: "picture", right: () => [`w:${wordKey(task.word)}`] });
-        stage.innerHTML = `<div class="pa-read-word">${task.tiles.map((tile) => `<button type="button" class="pa-read-tile" data-sound="${escape(tile.toLocaleLowerCase())}" aria-label="${escape(t("listen"))}: ${escape(cased(tile))}">${escape(cased(tile))}</button>`).join("")}</div>${options.markup}`;
+        // Joined scripts are read as one word, the way children will meet them in books.
+        const word = L().connected
+            ? `<span class="pa-read-tile pa-joined">${escape(task.word)}</span>`
+            : task.tiles.map((tile) => `<button type="button" class="pa-read-tile" data-sound="${escape(tile.toLocaleLowerCase())}" aria-label="${escape(t("listen"))}: ${escape(cased(tile))}">${escape(cased(tile))}</button>`).join("");
+        stage.innerHTML = `<div class="pa-read-word">${word}</div>${options.markup}`;
         round.replay = () => say("line:read");
         stage.querySelectorAll("[data-sound]").forEach((button) => {
             button.onclick = () => { pulse(button); say(`ph:${button.dataset.sound}`); };
@@ -1229,7 +1367,8 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ---------- Page wiring ---------- */
     function translate() {
         app.lang = state.language;
-        document.documentElement.lang = state.language === "de" ? "de" : "en";
+        document.documentElement.lang = state.language;
+        app.dir = L().rtl ? "rtl" : "ltr";
         app.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
         app.querySelectorAll("[data-language]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.language === state.language)));
         $("path-tabs").setAttribute("aria-label", t("choosePath"));
@@ -1238,6 +1377,8 @@ document.addEventListener("DOMContentLoaded", () => {
         $("sound-label").textContent = t(state.sound ? "soundOn" : "soundOff");
         $("slow-voice").checked = state.slow;
         $("unlock-all").checked = state.unlockAll;
+        $("auto-fullscreen").checked = state.fullscreen;
+        $("auto-fullscreen").closest("label").hidden = !canFullscreen;
         $("save-note").textContent = t(storageFailed ? "saveFail" : "saved");
         renderMap();
     }
@@ -1263,6 +1404,8 @@ document.addEventListener("DOMContentLoaded", () => {
     $("replay").onclick = () => { if (round?.replay) round.replay(); };
     $("slow-voice").onchange = (event) => { state.slow = event.target.checked; save(); };
     $("unlock-all").onchange = (event) => { state.unlockAll = event.target.checked; save(); renderMap(); };
+    $("auto-fullscreen").onchange = (event) => { state.fullscreen = event.target.checked; save(); };
+    $("fullscreen-toggle").onclick = () => (fullscreenElement() ? exitFullscreen() : enterFullscreen());
     $("reset-progress").onclick = () => {
         if (!window.confirm(t("resetConfirm"))) return;
         state.journeys[state.language] = freshJourney();

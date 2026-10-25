@@ -274,9 +274,135 @@ window.PhonicsContent = (() => {
         }
     };
 
+    // Arabic has no capital letters; its "small letters" levels match a letter to its joined shape instead.
+    const ar = {
+        locale: "ar-SA",
+        rtl: true,
+        caseless: true,
+        connected: true,
+        teams: [],
+        sounds: {
+            "أ": ["أرنب", "start"], "ب": ["بطة", "start"], "ت": ["تفاحة", "start"], "ث": ["ثعلب", "start"],
+            "ج": ["جمل", "start"], "ح": ["حصان", "start"], "خ": ["خروف", "start"], "د": ["دب", "start"],
+            "ذ": ["ذرة", "start"], "ر": ["ريشة", "start"], "ز": ["زرافة", "start"], "س": ["سمكة", "start"],
+            "ش": ["شمس", "start"], "ص": ["صاروخ", "start"], "ض": ["ضفدع", "start"], "ط": ["طائرة", "start"],
+            "ظ": ["ظرف", "start"], "ع": ["عنب", "start"], "غ": ["غيمة", "start"], "ف": ["فيل", "start"],
+            "ق": ["قمر", "start"], "ك": ["كلب", "start"], "ل": ["ليمون", "start"], "م": ["موز", "start"],
+            "ن": ["نحلة", "start"], "ه": ["هدية", "start"], "و": ["وردة", "start"], "ي": ["يويو", "start"],
+            "ة": ["شجرة", "end"], "ا": ["باب", "in"]
+        },
+        phonemes: pairs(`أ:ʔ ا:aː ب:b ت:t ث:θ ج:ʒ ح:ħ خ:x د:d ذ:ð ر:r ز:z س:s ش:ʃ ص:sˤ ض:dˤ ط:tˤ ظ:ðˤ ع:ʕ
+            غ:ɣ ف:f ق:q ك:k ل:l م:m ن:n ه:h و:w ي:j ة:at`),
+        pictures: pairs(`أرنب:rabbit بطة:duck تفاحة:apple ثعلب:fox جمل:camel حصان:horse خروف:sheep دب:bear ذرة:corn
+            ريشة:feather زرافة:giraffe سمكة:fish شمس:sun صاروخ:rocket ضفدع:frog طائرة:jet ظرف:letter عنب:grapes
+            غيمة:cloud فيل:elephant قمر:moon كلب:dog ليمون:lemon موز:banana نحلة:bee هدية:gift وردة:rose يويو:yoyo
+            شجرة:tree باب:door بيت:house نمر:tiger قلم:pencil فم:mouth عش:nest نار:fire خبز:bread كرة:ball قطة:cat
+            نجمة:star كتاب:book حليب:milk قارب:boat جبن:cheese خيمة:tent بقرة:cow دجاجة:hen بيضة:egg سيارة:car
+            حافلة:bus ساعة:clock كعكة:cake قبعة:hat قرد:monkey ملعقة:spoon مظلة:umbrella جورب:sock دلفين:dolphin
+            طماطم:tomato أسد:lion أنف:nose`),
+        names: pairs(`أ:ألف ا:ألف ب:باء ت:تاء ث:ثاء ج:جيم ح:حاء خ:خاء د:دال ذ:ذال ر:راء ز:زاي س:سين ش:شين ص:صاد
+            ض:ضاد ط:طاء ظ:ظاء ع:عين غ:غين ف:فاء ق:قاف ك:كاف ل:لام م:ميم ن:نون ه:هاء و:واو ي:ياء ة:تاء_مربوطة`),
+        paths: {
+            letters: { lowercaseFrom: 0, levels: [
+                { kind: "letters", items: "أ ب ت" }, { kind: "letters", items: "ث ج ح" }, { kind: "letters", items: "خ د ذ" },
+                { kind: "review" }, { kind: "letters", items: "ر ز س" }, { kind: "letters", items: "ش ص ض" },
+                { kind: "review" }, { kind: "letters", items: "ط ظ ع" }, { kind: "letters", items: "غ ف ق" },
+                { kind: "review" }, { kind: "letters", items: "ك ل م" }, { kind: "letters", items: "ن ه و ي" },
+                { kind: "review" }, { kind: "small", items: "أ ب ت ث ج ح خ د" }, { kind: "small", items: "ذ ر ز س ش ص ض ط" },
+                { kind: "small", items: "ظ ع غ ف ق ك ل م ن ه و ي" }, { kind: "letters", items: "ة ا" }, { kind: "review" }
+            ] },
+            words: { lowercaseFrom: 0, levels: [
+                { kind: "words", items: "بيت باب دب كلب قمر" }, { kind: "words", items: "موز نمر جمل فيل شمس" },
+                { kind: "words", items: "قلم فم عش نار خبز" }, { kind: "review" },
+                { kind: "words", items: "كرة بطة قطة وردة نجمة" }, { kind: "words", items: "كتاب حليب قارب جبن خيمة" },
+                { kind: "words", items: "سمكة بقرة شجرة دجاجة بيضة" }, { kind: "review" },
+                { kind: "words", items: "سيارة حافلة ساعة كعكة قبعة" }, { kind: "words", items: "زرافة ضفدع ثعلب قرد خروف" },
+                { kind: "words", items: "ملعقة مظلة جورب دلفين طماطم" }, { kind: "review" }
+            ] },
+            stories: { lowercaseFrom: 0, levels: [
+                { kind: "sentences", mode: "picture", items: "0 1 2 3 4 5" }, { kind: "story", story: "qitta" },
+                { kind: "sentences", mode: "cloze", items: "6 7 8 9 10 11" }, { kind: "story", story: "kalb" },
+                { kind: "sentences", mode: "order", items: "12 13 14 15 16 17" }, { kind: "story", story: "samaka" },
+                { kind: "sentences", mode: "mix", items: "18 19 20 21 22 23" }, { kind: "story", story: "nahla" },
+                { kind: "story", story: "qamar" }, { kind: "review" }
+            ] }
+        },
+        sentences: [
+            sentence("هذه قطة.", "قطة"), sentence("هذا كلب.", "كلب"), sentence("هذا بيت كبير.", "بيت"),
+            sentence("هذه وردة حمراء.", "وردة"), sentence("هذه شمس.", "شمس"), sentence("هذا قمر.", "قمر"),
+            sentence("مع سامي كرة.", "كرة"), sentence("مع ليلى كتاب.", "كتاب"), sentence("في البيت قطة.", "قطة"),
+            sentence("على الشجرة عش.", "عش"), sentence("في البحر سمكة.", "سمكة"), sentence("هذه بطة صغيرة.", "بطة"),
+            sentence("هذا فيل كبير.", "فيل"), sentence("عند سامي حصان.", "حصان"), sentence("عند ليلى قلم.", "قلم"),
+            sentence("هذه سيارة سريعة.", "سيارة"), sentence("نحلة على وردة.", "نحلة"), sentence("قارب في البحر.", "قارب"),
+            sentence("هذا أسد قوي.", "أسد"), sentence("هذه زرافة طويلة.", "زرافة"), sentence("في الكوب حليب.", "حليب"),
+            sentence("هذه نجمة لامعة.", "نجمة"), sentence("في الحديقة شجرة.", "شجرة"), sentence("هذا خبز طازج.", "خبز")
+        ],
+        stories: {
+            qitta: { title: "القطة والكرة", cover: "cat", pages: [
+                page("هذه قطة صغيرة.", "قطة", "cat"), page("مع القطة كرة.", "كرة", "cat ball"),
+                page("الكرة تحت السرير.", "تحت", "ball bed"), page("القطة سعيدة الآن.", "سعيدة", "cat")
+            ], questions: [question("ماذا مع القطة؟", "كرة", "كتاب قلم"), question("من الصغيرة في القصة؟", "قطة", "فيل حصان")] },
+            kalb: { title: "الكلب والبيت", cover: "dog", pages: [
+                page("هذا كلب.", "كلب", "dog"), page("الكلب يجري إلى البيت.", "يجري", "dog house"),
+                page("في البيت قطة.", "قطة", "house cat"), page("الكلب والقطة صديقان.", "صديقان", "dog cat")
+            ], questions: [question("إلى أين يجري الكلب؟", "بيت", "قارب سيارة"), question("من في البيت؟", "قطة", "بقرة أسد")] },
+            samaka: { title: "السمكة الصغيرة", cover: "fish", pages: [
+                page("في البحر سمكة.", "سمكة", "fish"), page("السمكة ترى قاربا.", "ترى", "fish boat"),
+                page("في القارب ولد.", "ولد", "boat"), page("السمكة تسبح بعيدا.", "تسبح", "fish")
+            ], questions: [question("من في البحر؟", "سمكة", "قطة كلب"), question("ماذا رأت السمكة؟", "قارب", "سيارة حافلة")] },
+            nahla: { title: "النحلة والوردة", cover: "bee", pages: [
+                page("هذه نحلة.", "نحلة", "bee"), page("النحلة تطير إلى وردة.", "تطير", "bee rose"),
+                page("الوردة حمراء وجميلة.", "حمراء", "rose"), page("النحلة تحب الوردة.", "تحب", "bee rose")
+            ], questions: [question("من تطير إلى الوردة؟", "نحلة", "ضفدع دب"), question("إلى أين تطير النحلة؟", "وردة", "شجرة بيت")] },
+            qamar: { title: "القمر والنجمة", cover: "moon", pages: [
+                page("في السماء قمر.", "قمر", "moon"), page("قرب القمر نجمة.", "نجمة", "moon star"),
+                page("الولد ينظر إلى السماء.", "ينظر", "star"), page("تصبح على خير يا قمر.", "خير", "moon")
+            ], questions: [question("ماذا في السماء؟", "قمر", "سمكة قطة"), question("ماذا قرب القمر؟", "نجمة", "وردة كرة")] }
+        },
+        lines: {
+            welcome: "مرحبا، أنا فِن! هيا نتعلم القراءة معا.",
+            startQ: "بأي حرف تبدأ هذه الكلمة؟",
+            endQ: "بأي حرف تنتهي هذه الكلمة؟",
+            inQ: "أي حرف تسمع في وسط الكلمة؟",
+            findStart: "أي صورة تبدأ بهذا الحرف؟",
+            findEnd: "أي صورة تنتهي بهذا الحرف؟",
+            findIn: "في أي صورة تسمع هذا الحرف؟",
+            findIt: "الآن ابحث عن حرف",
+            huntQ: "ابحث عن كل حرف تسمعه!",
+            smallQ: "أي شكل يناسب هذا الحرف؟",
+            small: "هيا نتعرف على أشكال الحروف!",
+            build: "هيا نبني كلمة",
+            missingQ: "أي حرف ناقص؟",
+            read: "اقرأ الكلمة، ثم اضغط على الصورة الصحيحة.",
+            matchQ: "أي كلمة تناسب الصورة؟",
+            sentencePicQ: "اقرأ الجملة. أي صورة تناسبها؟",
+            clozeQ: "أي كلمة ناقصة؟ انظر إلى الصورة.",
+            orderQ: "رتب الكلمات بالترتيب الصحيح.",
+            questions: "والآن سؤال عن القصة!",
+            storyFind: "هل تجد كلمة",
+            storyStart: "وقت القصة! اضغط على أي كلمة لتسمعها.",
+            sounds: "حروف جديدة تنتظرك!",
+            words: "هيا نبني كلمات!",
+            sentences: "هيا نقرأ جملا!",
+            review: "هيا نتدرب على كل ما تعرفه!",
+            theEnd: "النهاية! يا لها من قصة جميلة.",
+            levelDone: "رائع! أنهيت المستوى!",
+            sticker: "حصلت على ملصق جديد!",
+            allDone: "أنهيت الطريق كله. أنت قارئ رائع!",
+            hereItIs: "ها هي! اضغط عليها.",
+            praise1: "نعم!", praise2: "أحسنت!", praise3: "عمل رائع!", praise4: "ممتاز!",
+            praise5: "إجابة صحيحة!", praise6: "رائع جدا!", praise7: "مدهش!", praise8: "أنت تقرأ بشكل رائع!",
+            retry1: "حاول مرة أخرى.", retry2: "قريب! جرب مرة ثانية.", retry3: "استمع مرة أخرى.", retry4: "تقريبا! محاولة أخرى."
+        }
+    };
+    // Spaces cannot appear inside the compact lists above, so two-word names are written with an underscore.
+    ar.names = Object.fromEntries(Object.entries(ar.names).map(([letter, name]) => [letter, name.replace(/_/g, " ")]));
+    ar.introTemplate = "هذا حرف {name}. {name}، مثل {word}!";
+
     en.names = names(en.sounds, englishName);
     en.introTemplate = "This is {name}. {name}, like {word}!";
     de.names = names(de.sounds, germanName);
+    de.names.ck = germanName("ck"); // Only a word tile (Mücke), never a letter lesson, but tapping it still says its name.
     de.introTemplate = "Das ist {name}. {name} wie {word}!";
 
     // Collectable rewards, one per level across the three paths, shown in the sticker book.
@@ -285,5 +411,5 @@ window.PhonicsContent = (() => {
         "elephant", "polarbear", "castle", "trophy", "hedgehog", "owl", "penguin", "dolphin", "frog", "monkey",
         "octopus", "whale", "chick", "snail", "sunflower", "cake", "balloon", "gem", "lion", "zebra", "medal", "fox"];
 
-    return { en, de, stickers, paths: ["letters", "words", "stories"] };
+    return { en, de, ar, stickers, languages: ["en", "de", "ar"], paths: ["letters", "words", "stories"] };
 })();

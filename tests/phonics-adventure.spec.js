@@ -218,12 +218,12 @@ test("sentence levels match pictures, fill gaps and put words in order", async (
   }
 });
 
-test("every level of every path in both languages can be played to the end", async ({ page }) => {
+test("every level of every path in every language can be played to the end", async ({ page }) => {
   test.setTimeout(1500000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await start(page);
-  for (const language of ["en", "de"]) {
+  for (const language of ["en", "de", "ar"]) {
     await page.locator(`[data-language="${language}"]`).click();
     for (const path of ["letters", "words", "stories"]) {
       await page.locator(`[data-path="${path}"]`).click();
@@ -297,6 +297,7 @@ for (const broken of ["invalid-json", "invalid-shape", "unavailable-storage", "n
         Object.defineProperty(window, "speechSynthesis", { value: undefined });
         Object.defineProperty(window, "AudioContext", { value: undefined });
         HTMLMediaElement.prototype.play = function () { return Promise.reject(new Error("blocked")); };
+        Object.defineProperty(window, "webkitAudioContext", { value: undefined });
       }
     }, { kind: broken, storageKey: key });
     await page.goto(tool, { waitUntil: "domcontentloaded" });
@@ -311,6 +312,9 @@ for (const broken of ["invalid-json", "invalid-shape", "unavailable-storage", "n
 
 test("narration plays recorded clips in order and new letters are then found by hearing", async ({ page }) => {
   await page.addInitScript(() => {
+    // These checks fake media elements, so Web Audio is switched off and the fallback path plays.
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
     window.played = [];
     window.hold = false;
     HTMLMediaElement.prototype.play = function () {
@@ -345,13 +349,16 @@ test("narration plays recorded clips in order and new letters are then found by 
 
 test("only one clip plays at a time, even when clips load slowly and the child taps around", async ({ page }) => {
   await page.addInitScript(() => {
+    // These checks fake media elements, so Web Audio is switched off and the fallback path plays.
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
     window.active = new Set();
     window.maxActive = 0;
     HTMLMediaElement.prototype.play = function () {
       const element = this;
       window.active.add(element);
       window.maxActive = Math.max(window.maxActive, window.active.size);
-      // A slow phone connection: the clip takes three seconds to start, then plays for half a second.
+      // A slow phone connection: each clip takes over a second to start, then plays for half a second.
       setTimeout(() => {
         if (!window.active.has(element)) return;
         element.onplaying && element.onplaying();
@@ -360,7 +367,7 @@ test("only one clip plays at a time, even when clips load slowly and the child t
           window.active.delete(element);
           element.onended && element.onended();
         }, 500);
-      }, 3000);
+      }, 1200);
       return Promise.resolve();
     };
     HTMLMediaElement.prototype.pause = function () { window.active.delete(this); };
@@ -379,6 +386,9 @@ test("only one clip plays at a time, even when clips load slowly and the child t
 
 test("picture choices have their own speaker that names the picture without answering", async ({ page }) => {
   await page.addInitScript(() => {
+    // These checks fake media elements, so Web Audio is switched off and the fallback path plays.
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
     window.played = [];
     HTMLMediaElement.prototype.play = function () {
       window.played.push(this.src.split("/").slice(-1)[0]);
@@ -408,6 +418,9 @@ test("picture choices have their own speaker that names the picture without answ
 
 test("the letter hunt plays the letter instead of showing it", async ({ page }) => {
   await page.addInitScript(() => {
+    // These checks fake media elements, so Web Audio is switched off and the fallback path plays.
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
     HTMLMediaElement.prototype.play = function () { setTimeout(() => this.onended && this.onended(), 5); return Promise.resolve(); };
   });
   await start(page, { muted: false });
@@ -422,13 +435,118 @@ test("the letter hunt plays the letter instead of showing it", async ({ page }) 
   await expect(page.locator("#prompt-sound")).toHaveText("");
 });
 
+test("real Web Audio plays the narration in order, one clip at a time, and skips clips that load too slowly", async ({ page }) => {
+  await page.addInitScript(() => {
+    // Record which clip each sound came from, and how many sound at once.
+    window.played = [];
+    window.active = 0;
+    window.maxActive = 0;
+    const urls = new WeakMap();
+    const realFetch = window.fetch;
+    window.fetch = async (url, ...rest) => {
+      if (window.slow && String(url).includes("/audio/")) await new Promise((r) => setTimeout(r, 2500));
+      const response = await realFetch(url, ...rest);
+      const read = response.arrayBuffer.bind(response);
+      response.arrayBuffer = async () => { const data = await read(); urls.set(data, String(url).split("/").slice(-1)[0]); return data; };
+      return response;
+    };
+    const decode = BaseAudioContext.prototype.decodeAudioData;
+    BaseAudioContext.prototype.decodeAudioData = function (data, ok, fail) {
+      const name = urls.get(data);
+      return decode.call(this, data, (buffer) => { urls.set(buffer, name); ok && ok(buffer); }, fail);
+    };
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      const name = urls.get(this.buffer);
+      if (name) {
+        window.played.push(name);
+        window.active += 1;
+        window.maxActive = Math.max(window.maxActive, window.active);
+        // A stopped source fires "ended" a moment later, so stop() counts as the end straight away.
+        let over = false;
+        this.over = () => { if (!over) { over = true; window.active -= 1; } };
+        this.addEventListener("ended", this.over);
+      }
+      return start.apply(this, args);
+    };
+    const stop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.stop = function (...args) {
+      if (this.over) this.over();
+      return stop.apply(this, args);
+    };
+  });
+  await start(page, { muted: false });
+  await page.locator("#play-next").click();
+  await expect.poll(() => page.evaluate(() => window.played.slice(0, 3).join(" ")), { timeout: 20000 }).toBe("line-sounds.mp3 in-s.mp3 line-findit.mp3");
+  await page.locator("#meet-picture").click();
+  await page.locator("#meet-letter").click();
+  await expect.poll(() => page.evaluate(() => window.played.at(-1))).toBe("ph-s.mp3");
+  expect(await page.evaluate(() => window.maxActive)).toBe(1);
+  // When clips take too long to arrive, the game moves on without waiting for them.
+  await page.evaluate(() => { window.slow = true; });
+  await page.locator(".pa-letter-option[data-answer='true']").click();
+  await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", "1", { timeout: 6000 });
+  await expect(page.locator(".pa-letter-option").first()).toBeEnabled({ timeout: 9000 });
+  expect(await page.evaluate(() => window.maxActive)).toBe(1);
+});
+
+test("Arabic reads right to left, uses letter shapes instead of capitals and joined words", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await start(page);
+  await page.locator('[data-language="ar"]').click();
+  await expect(page.locator("#phonics-app")).toHaveAttribute("dir", "rtl");
+  await expect(page.locator("#phonics-app")).toHaveAttribute("lang", "ar");
+  await page.locator("#play-next").click();
+  await expect(page.locator(".pa-big-letter")).toHaveText("أ");
+  await playLevel(page);
+  expect((await save(page)).journeys.ar.paths.letters).toEqual({ 0: 3 });
+  await page.locator("#reward-map").click();
+  await unlockAll(page);
+  await openLevel(page, "letters", 13);
+  const shapes = await page.locator(".pa-letter-option").allTextContents();
+  shapes.forEach((shape) => expect(shape).toContain("\u0640"));
+  await page.locator("#close-play").click();
+  await openLevel(page, "words", 0);
+  for (let guard = 0; guard < 10 && (await taskType(page)) !== "read"; guard += 1) {
+    if ((await taskType(page)) === "reward") await page.locator("#reward-again").click();
+    else await solve(page);
+  }
+  await expect(page.locator(".pa-joined")).toHaveCount(1);
+  await page.locator("#close-play").click();
+  await page.locator('[data-language="en"]').click();
+  await expect(page.locator("#phonics-app")).toHaveAttribute("dir", "ltr");
+  expect(errors).toEqual([]);
+});
+
+test("a round goes full screen so page ads cannot cover it, and the map leaves full screen", async ({ page }) => {
+  await start(page);
+  const supported = await page.evaluate(() => document.fullscreenEnabled);
+  test.skip(!supported, "This browser has no full-screen support");
+  await page.locator("#play-next").click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id)).toBe("phonics-app");
+  await expect(page.locator("#fullscreen-toggle")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#fullscreen-toggle").click();
+  await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+  await page.locator("#fullscreen-toggle").click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id)).toBe("phonics-app");
+  await page.locator("#close-play").click();
+  await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+  // Grown-ups can switch the automatic full screen off.
+  await page.locator("#grownups summary").click();
+  await page.locator("#auto-fullscreen").uncheck();
+  await page.locator("#play-next").click();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+});
+
 test("every clip, picture and answer the game needs exists", async ({ page, request }) => {
   await page.goto(tool, { waitUntil: "domcontentloaded" });
   const needed = await page.evaluate(() => {
     const issues = [];
     const files = new Set();
     const pictures = new Set(window.PhonicsContent.stickers.concat(["trophy", "lock", "openbook"]));
-    for (const code of ["en", "de"]) {
+    for (const code of window.PhonicsContent.languages) {
       const lang = window.PhonicsContent[code];
       const clips = window.PhonicsAudio[code];
       const key = (word) => word.toLocaleLowerCase().replace(/[^\p{L}]/gu, "");
@@ -462,7 +580,17 @@ test("every clip, picture and answer the game needs exists", async ({ page, requ
       }
       for (const [path, def] of Object.entries(lang.paths)) {
         for (const level of def.levels) {
-          if (level.kind === "words") level.items.split(" ").forEach(picture);
+          if (level.kind === "words") level.items.split(" ").forEach((word) => {
+            picture(word);
+            const teams = [...lang.teams].sort((a, b) => b.length - a.length);
+            const lower = word.toLocaleLowerCase();
+            for (let i = 0; i < word.length;) {
+              const team = lang.tiles?.[word] ? null : teams.find((item) => lower.startsWith(item, i));
+              const tile = team || lower[i];
+              if (!lang.tiles?.[word]) need(`ph:${tile}`);
+              i += tile.length;
+            }
+          });
           if (level.kind === "letters" || level.kind === "small") level.items.split(" ").forEach((item) => { if (!lang.sounds[item]) issues.push(`${code} ${path} no letter ${item}`); });
           if (level.kind === "story" && !lang.stories[level.story]) issues.push(`${code} no story ${level.story}`);
         }

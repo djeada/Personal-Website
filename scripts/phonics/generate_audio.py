@@ -3,7 +3,8 @@
 Letters are spoken by their names ("em", "ess"; German "Em", "Es").
 
 English uses Kokoro-82M (voice af_heart, Apache-2.0). German uses the
-Kokoro-compatible kikiri-tts "Victoria" fine-tune (Apache-2.0). Whisper
+Kokoro-compatible kikiri-tts "Victoria" fine-tune (Apache-2.0). Arabic uses
+Chatterbox multilingual (Resemble AI, MIT; pip install chatterbox-tts). Whisper
 large-v3 checks that each clip says what it should and supplies word timings
 for the read-along highlight in stories.
 
@@ -22,6 +23,7 @@ only records what changed. Use --force to record everything again, or
 """
 import argparse
 import hashlib
+import os
 import json
 import re
 import subprocess
@@ -57,9 +59,11 @@ def use_system_espeak():
 
 
 def slug(text):
+    original = text
     text = text.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    # Scripts without Latin letters (Arabic) would collapse to nothing, so they get a short stable hash.
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-") or hashlib.sha1(original.encode()).hexdigest()[:8]
 
 
 def word_key(text):
@@ -247,6 +251,118 @@ def i_slug(clip_id):
     return slug(clip_id.partition(":")[2].replace(":", "-"))
 
 
+def arabic_norm(text):
+    """Arabic as Whisper might spell it: no vowel marks, one alif, ta marbuta and alif maqsura folded."""
+    text = re.sub(r"[\u064B-\u0652\u0670\u0640]", "", text)
+    text = re.sub(r"[أإآ]", "ا", text).replace("ة", "ه").replace("ى", "ي")
+    return re.sub(r"[^\w\s]", "", text).strip()
+
+
+def matches(heard, expected, code):
+    if code != "ar":
+        return similar(heard, expected)
+    import difflib
+    a, b = arabic_norm(heard).replace(" ", ""), arabic_norm(expected).replace(" ", "")
+    return a == b or difflib.SequenceMatcher(None, a, b).ratio() >= 0.92
+
+
+def closeness(heard, expected):
+    """How near a failed take came, so the best one is kept when no take passes."""
+    import difflib
+    return difflib.SequenceMatcher(None, arabic_norm(heard).replace(" ", ""), arabic_norm(expected).replace(" ", "")).ratio()
+
+
+def arabic_letters(text):
+    """The letters a listener hears: no hamza, and a word-final a-sound (ا ة ه ى) folded away."""
+    text = arabic_norm(text.replace("ى", "ا")).replace(" ", "")
+    text = text.replace("ء", "").replace("ؤ", "و").replace("ئ", "ي")
+    return re.sub(r"[اه]+$", "", text) or text
+
+
+def sounds_like(heard, expected):
+    import difflib
+    a, b = arabic_letters(heard), arabic_letters(expected)
+    return 1.0 if a == b else (difflib.SequenceMatcher(None, a, b).ratio() if len(b) >= 4 else 0.0)
+
+
+class ArabicVoice:
+    """Chatterbox multilingual (MIT). Its Arabic often slurs short words, so each lone word is recorded as
+    "word. let's play." and cut at the pause, and a letter-by-letter recogniser picks a take that says it right."""
+
+    def __init__(self):
+        import torch
+        from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+        self.code = "ar"
+        # The model needs about 5 GB of GPU memory; when the GPU is busy it runs (slowly) on the CPU.
+        device = "cuda" if torch.cuda.is_available() and not os.environ.get("PHONICS_CPU") and torch.cuda.mem_get_info()[0] > 5 * 1024 ** 3 else "cpu"
+        print("Arabic voice on", device)
+        self.model = ChatterboxMultilingualTTS.from_pretrained(device=device)
+        self.seed = int.from_bytes(os.urandom(3), "big")  # A rerun of a failed clip tries new takes.
+        # Unlike Whisper, a character-level model reports the sounds it hears instead of the nearest common word.
+        ear = "jonatasgrosman/wav2vec2-large-xlsr-53-arabic"
+        self.processor = Wav2Vec2Processor.from_pretrained(ear)
+        self.ear = Wav2Vec2ForCTC.from_pretrained(ear).eval()
+
+    def say(self, text, speed=None):
+        import torch
+        import torchaudio
+        self.seed += 1  # Every retry gets a fresh take.
+        torch.manual_seed(self.seed)
+        wav = self.model.generate(text, language_id="ar", exaggeration=0.5, cfg_weight=0.4).squeeze().cpu()
+        if self.model.sr != SR:
+            wav = torchaudio.functional.resample(wav, self.model.sr, SR)
+        return wav.numpy()
+
+    def hear(self, audio):
+        import torch
+        import torchaudio
+        audio16 = torchaudio.functional.resample(torch.from_numpy(audio.astype(np.float32)), SR, 16000).numpy()
+        inputs = self.processor(audio16, sampling_rate=16000, return_tensors="pt").input_values
+        with torch.no_grad():
+            ids = self.ear(inputs).logits.argmax(-1)
+        return self.processor.batch_decode(ids)[0]
+
+    def word(self, text, attempts=12):
+        """Returns the best cut take, what the recogniser heard in it and how close that was (1.0 = exact)."""
+        best = (None, "", -1.0)
+        for _ in range(attempts):
+            audio = trim(self.say(f"{text}. هيا نلعب."))
+            pauses = [p for p in pauses_in(audio) if p[0] > 0.15]
+            if not pauses:
+                continue
+            cut = trim(audio[:int((pauses[0][0] + 0.06) * SR)])
+            heard = self.hear(cut)
+            score = sounds_like(heard, text) or closeness(heard, text) / 10  # Near misses rank below any pass.
+            if score > best[2]:
+                best = (cut, heard, score)
+            if score >= 0.9:
+                break
+        if best[0] is None:  # No take paused after the word; record it on its own.
+            audio = trim(self.say(text + "."))
+            heard = self.hear(audio)
+            best = (audio, heard, sounds_like(heard, text))
+        return best
+
+
+def pauses_in(audio, frame=0.02, quiet=0.15):
+    """(start, end) seconds of every stretch of near silence at least `quiet` long."""
+    n = int(frame * SR)
+    level = np.array([np.sqrt(np.mean(audio[i:i + n] ** 2)) for i in range(0, len(audio) - n, n)])
+    if not len(level):
+        return []
+    threshold = max(0.006, level.max() * 0.03)
+    found, run = [], 0
+    for i, value in enumerate(level):
+        if value < threshold:
+            run += 1
+            continue
+        if run * frame >= quiet:
+            found.append(((i - run) * frame, i * frame))
+        run = 0
+    return found
+
+
 def similar(heard, expected):
     norm = lambda s: re.sub(r"[^\w]", "", s.lower().replace("-", ""))
     a, b = norm(heard), norm(expected)
@@ -257,7 +373,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--german", required=True, help="folder with the kikiri-german-victoria files")
     parser.add_argument("--force", action="store_true")
-    parser.add_argument("--only", choices=["en", "de"])
+    parser.add_argument("--only", choices=["en", "de", "ar"])
     parser.add_argument("--reencode", action="store_true", help="redo fades and loudness from the saved raw recordings")
     args = parser.parse_args()
     if args.reencode:
@@ -273,7 +389,12 @@ def main():
     import torch
     import torchaudio
     from faster_whisper import WhisperModel
-    whisper = WhisperModel("large-v3", device="cuda", compute_type="float16")
+    # int8 keeps Whisper small enough to share the GPU with the Arabic voice model; a busy GPU means the CPU.
+    # PHONICS_CPU=1 keeps everything off a GPU that other work is using.
+    gpu_free = torch.cuda.mem_get_info()[0] if torch.cuda.is_available() and not os.environ.get("PHONICS_CPU") else 0
+    size = os.environ.get("PHONICS_WHISPER", "large-v3")  # "medium" is several times faster on a CPU.
+    whisper = (WhisperModel(size, device="cuda", compute_type="int8_float16") if gpu_free > 2 * 1024 ** 3
+               else WhisperModel(size, device="cpu", compute_type="int8"))
 
     def listen(audio, code, words=False):
         audio16 = torchaudio.functional.resample(torch.from_numpy(audio.astype(np.float32)), SR, 16000).numpy()
@@ -293,18 +414,25 @@ def main():
         old = json.loads(manifest_path.read_text().split("=", 1)[1].rstrip().rstrip(";"))
     manifest = {}
     problems = []
-    for code in ("en", "de"):
+    recorded = 0
+
+    def save_progress():
+        merged = {code: {**old.get(code, {}), **clips} for code, clips in manifest.items()}
+        manifest_path.write_text("window.PhonicsAudio = " + json.dumps(merged, ensure_ascii=False, separators=(",", ":")) + ";\n")
+        CACHE.write_text(json.dumps(cache, indent=0, sort_keys=True))
+    for code in content["languages"]:
         lang = content[code]
         manifest[code] = {}
         if args.only and args.only != code:
             manifest[code] = old.get(code, {})
             continue
-        voice = Voice(code, args.german)
+        voice = ArabicVoice() if code == "ar" else Voice(code, args.german)
+        attempts = 10 if code == "ar" else 3
         for clip_id, kind, payload in plan(code, lang):
             kind_prefix, _, rest = clip_id.partition(":")
             name = f"{kind_prefix}-{slug(rest.replace(':', '-'))}.mp3"
             path = OUT / code / name
-            digest = hashlib.sha1(json.dumps([kind, payload, 3]).encode()).hexdigest()[:12]
+            digest = hashlib.sha1(json.dumps([kind, payload, 4 if code == "ar" else 3]).encode()).hexdigest()[:12]
             key = f"{code}/{clip_id}"
             if not args.force and cache.get(key) == digest and path.exists() and clip_id in old.get(code, {}):
                 manifest[code][clip_id] = old[code][clip_id]
@@ -315,17 +443,28 @@ def main():
                     continue
             entry = None
             if kind == "name":
-                audio = fade(trim(voice.word(payload)), 15)
-                print("name", code, clip_id, "heard", listen(audio, code)[0])
+                if code == "ar":
+                    audio, heard, score = voice.word(payload, attempts=16)
+                    if score < 0.9:
+                        problems.append(f"{code} {clip_id}: expected {payload!r}, heard {heard!r}")
+                    audio = fade(audio, 15)
+                else:
+                    audio = fade(trim(voice.word(payload)), 15)
+                print("name", code, clip_id, "heard", heard if code == "ar" else listen(audio, code)[0])
             elif kind == "sentence":
                 text, answer = payload
                 tokens = re.findall(r"\S+", text)
-                for attempt in range(3):
-                    audio = trim(voice.say(text, 0.88 - 0.04 * attempt))
+                best = None
+                for attempt in range(attempts):
+                    audio = trim(voice.say(text, 0.88 - 0.04 * min(attempt, 2)))
                     heard, words = listen(audio, code, words=True)
-                    if similar(heard, text) and len(words) == len(tokens):
+                    if matches(heard, text, code) and len(words) == len(tokens):
                         break
+                    near = closeness(heard, text) + (len(words) == len(tokens))
+                    if best is None or near > best[0]:
+                        best = (near, audio, heard, words)
                 else:
+                    _, audio, heard, words = best
                     problems.append(f"{code} {clip_id}: expected {text!r}, heard {heard!r} ({len(words)} words)")
                 starts = [round(w.start, 2) for w in words] if len(words) == len(tokens) else None
                 if starts is None:
@@ -344,18 +483,27 @@ def main():
                 cloze_name = f"cz-{i_slug(clip_id)}.mp3"
                 manifest[code][f"cz:{clip_id[3:]}"] = [cloze_name, encode(gap, OUT / code / cloze_name)]
             else:
-                for attempt in range(3):
-                    speed = 0.88 - 0.04 * attempt
+                best = None
+                for attempt in range(attempts):
+                    speed = 0.88 - 0.04 * min(attempt, 2)
+                    if kind == "word" and code == "ar":
+                        audio, heard, score = voice.word(payload)
+                        if score < 0.9:
+                            problems.append(f"{code} {clip_id}: expected {payload!r}, heard {heard!r}")
+                        break
                     audio = trim(voice.word(payload, speed) if kind == "word" else voice.say(payload, speed))
                     heard, words = listen(audio, code, words=(kind == "story"))
-                    # Whisper cannot tell one-syllable homophones apart (bee/B, see/C), and intros contain
-                    # letter names written as phonemes, so those are only printed for a listen-through.
-                    if kind == "intro":
+                    # Whisper cannot tell one-syllable homophones apart (bee/B, see/C), and English and German
+                    # intros spell letter names as phonemes, so those are only printed for a listen-through.
+                    if kind == "intro" and code != "ar":
                         print("intro", code, clip_id, "heard", heard)
                         break
-                    if similar(heard, payload) or (kind == "word" and len(payload) <= 3):
+                    if matches(heard, payload, code) or (kind == "word" and code != "ar" and len(payload) <= 3):
                         break
+                    if best is None or closeness(heard, payload) > best[0]:
+                        best = (closeness(heard, payload), audio, heard, words)
                 else:
+                    _, audio, heard, words = best
                     problems.append(f"{code} {clip_id}: expected {payload!r}, heard {heard!r}")
                 if kind == "story":
                     tokens = re.findall(r"\S+", payload)
@@ -369,11 +517,15 @@ def main():
             duration = encode(audio, path)
             manifest[code][clip_id] = [name, duration] + ([[round(start + LEAD, 2) for start in entry]] if entry else [])
             cache[key] = digest
-            print("recorded", code, clip_id, duration)
+            print("recorded", code, clip_id, duration, flush=True)
+            recorded += 1
+            if recorded % 15 == 0:
+                # Long runs (the Arabic voice on a CPU takes hours) keep their progress if interrupted.
+                save_progress()
         del voice
         torch.cuda.empty_cache()
     # Drop files that no clip uses any more.
-    for code in ("en", "de"):
+    for code in content["languages"]:
         used = {entry[0] for entry in manifest[code].values()}
         for file in (OUT / code).glob("*.mp3"):
             if file.name not in used:
