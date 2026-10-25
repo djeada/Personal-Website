@@ -36,6 +36,48 @@ test("quiz setup lists every subject and narrows topics", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("the start bar follows the chosen subject and starts from anywhere on the page", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${quiz}?category=linux`);
+  const dock = page.locator("#startDock");
+  await expect(dock).toBeVisible();
+  await expect(dock.locator(".la-dock-summary")).toContainText("from Linux");
+
+  await page.locator(".la-tile", { hasText: "Git" }).first().click();
+  await expect(dock.locator(".la-dock-summary")).toContainText("from Git");
+
+  await dock.getByRole("button", { name: "Settings" }).click();
+  await expect(page.locator("#settingsHeading")).toBeInViewport();
+
+  await page.locator("#startButton").scrollIntoViewIfNeeded();
+  await expect(dock).toBeHidden();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(dock).toBeVisible();
+
+  await dock.getByRole("button", { name: "Start quiz" }).click();
+  await expect(page.locator("#playScreen")).toBeVisible();
+  await expect(page.locator("#playCrumb")).toContainText("Git");
+  await expect(dock).toBeHidden();
+
+  await page.keyboard.press("a");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#primaryButton")).toBeInViewport();
+  expect(errors).toEqual([]);
+});
+
+test("the flashcard start bar names the chosen deck", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(cards);
+  const dock = page.locator("#startDock");
+  await page.locator(".la-tile", { hasText: "Statistics" }).first().click();
+  await expect(dock.locator(".la-dock-summary")).toContainText("from Statistics");
+  await dock.getByRole("button", { name: "Start studying" }).click();
+  await expect(page.locator("#studyScreen")).toBeVisible();
+  await page.keyboard.press("Space");
+  await expect(page.locator("#rateActions")).toBeInViewport();
+});
+
 test("practice mode checks each answer, explains it and ends with a review", async ({ page }) => {
   const errors = collectErrors(page);
   await startQuiz(page, `${quiz}?category=linux&n=5`);
