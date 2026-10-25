@@ -21,7 +21,7 @@ for (const url of pages) {
       body: document.body.classList.contains("dark-mode"),
       background: document.documentElement.style.backgroundColor,
     }));
-    expect(state).toEqual({ html: true, body: true, background: "rgb(13, 17, 23)" });
+    expect(state).toEqual({ html: true, body: true, background: "rgb(14, 18, 24)" });
   });
 }
 
