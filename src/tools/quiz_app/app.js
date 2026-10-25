@@ -19,6 +19,7 @@
             discard: 'Discard',
             stepSubject: 'Subjects',
             stepSettings: 'Quiz settings',
+            adjust: 'Settings',
             topics: 'Topics',
             selectAll: 'Select all',
             clear: 'Clear',
@@ -119,6 +120,7 @@
             discard: 'Odrzuć',
             stepSubject: 'Przedmioty',
             stepSettings: 'Ustawienia quizu',
+            adjust: 'Ustawienia',
             topics: 'Tematy',
             selectAll: 'Zaznacz wszystkie',
             clear: 'Wyczyść',
@@ -357,6 +359,7 @@
 
     async function init() {
         cache$();
+        Learning.startDock(ui.setupScreen);
         attachEvents();
         try {
             state.categories = (await Learning.fetchJson('categories.json')).categories || [];

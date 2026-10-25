@@ -146,7 +146,11 @@
     // Highlight every language-tagged code element inside the given nodes.
     async function highlight(elements) {
         const targets = (Array.isArray(elements) ? elements : [elements]).filter(Boolean);
-        const codes = targets.flatMap((node) => Array.from(node.querySelectorAll('code[class*="language-"]')));
+        // Inline code that is really a sentence (quoted program output) stays plain:
+        // highlighting it as code colours English words such as "in" or "case".
+        const codes = targets
+            .flatMap((node) => Array.from(node.querySelectorAll('code[class*="language-"]')))
+            .filter((code) => code.closest("pre") || code.textContent.trim().split(/\s+/).length < 6);
         if (!codes.length) return;
         const prism = await loadPrism();
         if (!prism) return;
@@ -180,18 +184,65 @@
 
     // Bring an app's top edge just under the sticky navigation bar, without
     // the site-wide smooth scrolling, once the new screen has been laid out.
-    function scrollIntoFocus(node) {
+    function scrollIntoFocus(node, smooth) {
         window.requestAnimationFrame(() => {
             const nav = document.querySelector('nav');
             const offset = (nav ? nav.getBoundingClientRect().height : 0) + 24;
             const top = node.getBoundingClientRect().top + window.scrollY - offset;
+            const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (Math.abs(window.scrollY - top) > 4) {
                 window.scrollTo({
                     top: Math.max(top, 0),
-                    behavior: 'instant'
+                    behavior: smooth && !calm ? 'smooth' : 'instant'
                 });
             }
         });
+    }
+
+    // The setup screen is long, so its start panel is usually below the fold. While
+    // it is, a bar fixed to the bottom of the window mirrors the panel's summary and
+    // start button: picking a subject visibly changes it, and starting never needs a
+    // scroll. The bar hides once the real panel comes into view.
+    function startDock(screen) {
+        const dock = screen.querySelector(".la-dock");
+        const panel = screen.querySelector(".la-start");
+        if (!dock || !panel || !("IntersectionObserver" in window)) return;
+        const summary = panel.querySelector(".la-start-summary");
+        const start = panel.querySelector("button.primary");
+        const copy = dock.querySelector(".la-dock-summary");
+        const go = dock.querySelector('[data-dock="start"]');
+        const settings = dock.querySelector('[data-dock="settings"]');
+        let ready = false;
+
+        const sync = () => {
+            copy.innerHTML = summary.innerHTML;
+            go.textContent = start.textContent;
+            go.disabled = start.disabled;
+            if (ready) {
+                dock.classList.remove("is-updated");
+                void dock.offsetWidth; // restart the flash
+                dock.classList.add("is-updated");
+            }
+        };
+        const watch = { childList: true, subtree: true, characterData: true };
+        new MutationObserver(sync).observe(summary, watch);
+        new MutationObserver(sync).observe(start, { ...watch, attributes: true, attributeFilter: ["disabled"] });
+        sync();
+        // Only flash for changes the visitor makes, not for the first render.
+        window.setTimeout(() => { ready = true; }, 800);
+
+        go.addEventListener("click", () => start.click());
+        if (settings) {
+            settings.addEventListener("click", () => {
+                const target = screen.querySelector(settings.dataset.target) || panel;
+                scrollIntoFocus(target, true);
+            });
+        }
+        // Treat the panel as visible a little before it reaches the window edge, so
+        // the bar never sits on top of the settings just above it.
+        new IntersectionObserver(([entry]) => {
+            dock.hidden = entry.isIntersecting || entry.boundingClientRect.top < 0;
+        }, { rootMargin: "0px 0px 96px 0px" }).observe(panel);
     }
 
     // Checkbox list of topics, grouped when topics carry a `group`. Calls
@@ -285,6 +336,7 @@
         highlight,
         enhance,
         balanceTiles,
+        startDock,
         glyph,
         topicPicker,
         topicSummary,

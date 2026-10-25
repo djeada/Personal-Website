@@ -122,6 +122,7 @@
 
     async function init() {
         cache$();
+        Learning.startDock(ui.setupScreen);
         attachEvents();
         try {
             state.decks = (await Learning.fetchJson('categories.json')).categories || [];
