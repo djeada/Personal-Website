@@ -76,6 +76,28 @@ test("the letters path starts with capitals, rewards three stars and unlocks the
   expect(errors).toEqual([]);
 });
 
+test("the sticker book opens with one tap from the map, during a round and after a reward", async ({ page }) => {
+  await start(page);
+  await page.locator(".pa-header [data-open-stickers]").click();
+  await expect(page.locator("#sticker-dialog")).toBeVisible();
+  await expect(page.locator(".pa-sticker-group")).toHaveCount(3);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#sticker-dialog")).toBeHidden();
+  await expect(page.locator(".pa-header [data-open-stickers]")).toBeFocused();
+  await page.locator("#play-next").click();
+  await page.locator(".pa-play-top [data-open-stickers]").click();
+  await expect(page.locator("#sticker-dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#sticker-dialog")).toBeHidden();
+  await expect(page.locator("#play")).toBeVisible();
+  await playLevel(page);
+  await page.locator("#reward-stickers").click();
+  await expect(page.locator("#sticker-dialog .pa-sticker.is-won")).toHaveCount(1);
+  await expect(page.locator(".pa-header .pa-sticker-count")).toHaveText("1");
+  await page.locator("#close-stickers").click();
+  await expect(page.locator("#reward-map")).toBeVisible();
+});
+
 test("a new letter is shown, named and found on one page, with a glowing hint after two misses", async ({ page }) => {
   await start(page);
   await page.locator("#play-next").click();
@@ -287,25 +309,117 @@ for (const broken of ["invalid-json", "invalid-shape", "unavailable-storage", "n
   });
 }
 
-test("narration plays recorded clips in order and letters are spoken by name", async ({ page }) => {
+test("narration plays recorded clips in order and new letters are then found by hearing", async ({ page }) => {
   await page.addInitScript(() => {
     window.played = [];
+    window.hold = false;
     HTMLMediaElement.prototype.play = function () {
       window.played.push(this.src.split("/").slice(-2).join("/"));
-      setTimeout(() => this.onended && this.onended(), 20);
+      const end = () => (window.hold ? setTimeout(end, 20) : this.onended && this.onended());
+      setTimeout(end, 20);
       return Promise.resolve();
     };
   });
   await start(page, { muted: false });
   expect(await page.evaluate(() => window.played.length)).toBe(0);
+  await page.evaluate(() => { window.hold = true; });
   await page.locator("#play-next").click();
-  await expect.poll(() => page.evaluate(() => window.played.join(" "))).toBe("en/line-sounds.mp3 en/in-s.mp3 en/line-findit.mp3");
+  // While the letter is being introduced it is visible and the choices are locked.
+  await expect(page.locator("#meet-letter")).toHaveText("S");
+  await expect(page.locator(".pa-letter-option").first()).toBeDisabled();
+  await page.evaluate(() => { window.hold = false; });
+  await expect.poll(() => page.evaluate(() => window.played.join(" "))).toBe("en/line-sounds.mp3 en/in-s.mp3 en/line-findit.mp3 en/ph-s.mp3");
+  // Then it hides behind a speaker, so the child finds it by its name.
+  await expect(page.locator("#meet-letter")).toHaveClass(/pa-listen-card/);
+  await expect(page.locator("#meet-letter")).not.toHaveText("S");
+  await expect(page.locator(".pa-letter-option").first()).toBeEnabled();
   await page.locator("#meet-letter").click();
   await expect.poll(() => page.evaluate(() => window.played.at(-1))).toBe("en/ph-s.mp3");
   await page.locator("#replay").click();
-  await expect.poll(() => page.evaluate(() => window.played.slice(-2).join(" "))).toBe("en/in-s.mp3 en/line-findit.mp3");
+  await expect.poll(() => page.evaluate(() => window.played.slice(-2).join(" "))).toBe("en/line-findit.mp3 en/ph-s.mp3");
+  const before = await page.evaluate(() => window.played.length);
   await page.locator(".pa-letter-option[data-answer='true']").click();
-  await expect.poll(() => page.evaluate(() => window.played.slice(-2).join(" "))).toMatch(/^en\/ph-s\.mp3 en\/line-praise\d\.mp3$/);
+  await expect(page.locator("#meet-letter")).toHaveText("S");
+  await expect.poll(() => page.evaluate((n) => window.played.slice(n, n + 2).join(" "), before)).toMatch(/^en\/ph-s\.mp3 en\/line-praise\d\.mp3$/);
+});
+
+test("only one clip plays at a time, even when clips load slowly and the child taps around", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.active = new Set();
+    window.maxActive = 0;
+    HTMLMediaElement.prototype.play = function () {
+      const element = this;
+      window.active.add(element);
+      window.maxActive = Math.max(window.maxActive, window.active.size);
+      // A slow phone connection: the clip takes three seconds to start, then plays for half a second.
+      setTimeout(() => {
+        if (!window.active.has(element)) return;
+        element.onplaying && element.onplaying();
+        setTimeout(() => {
+          if (!window.active.has(element)) return;
+          window.active.delete(element);
+          element.onended && element.onended();
+        }, 500);
+      }, 3000);
+      return Promise.resolve();
+    };
+    HTMLMediaElement.prototype.pause = function () { window.active.delete(this); };
+  });
+  await start(page, { muted: false });
+  await page.locator("#play-next").click();
+  await page.waitForTimeout(1500);
+  await page.locator("#meet-picture").click();
+  await page.waitForTimeout(500);
+  await page.locator("#meet-letter").click();
+  await page.waitForTimeout(9000);
+  await page.locator("#replay").click();
+  await page.waitForTimeout(4000);
+  expect(await page.evaluate(() => window.maxActive)).toBe(1);
+});
+
+test("picture choices have their own speaker that names the picture without answering", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.played = [];
+    HTMLMediaElement.prototype.play = function () {
+      window.played.push(this.src.split("/").slice(-1)[0]);
+      setTimeout(() => this.onended && this.onended(), 20);
+      return Promise.resolve();
+    };
+  });
+  await start(page, { muted: false });
+  await page.locator('[data-language="de"]').click();
+  await unlockAll(page);
+  await openLevel(page, "letters", 3);
+  for (let guard = 0; guard < 12 && (await taskType(page)) !== "pickPicture"; guard += 1) {
+    if ((await taskType(page)) === "reward") await page.locator("#reward-again").click();
+    else await solve(page);
+  }
+  expect(await taskType(page)).toBe("pickPicture");
+  await expect(page.locator("#prompt-sound")).toHaveClass(/pa-big-letter/);
+  await expect(page.locator(".pa-hear")).toHaveCount(3);
+  const progress = await page.locator("#play-progress").getAttribute("aria-valuenow");
+  const option = await page.locator(".pa-option").first().locator("[data-option]").getAttribute("data-option");
+  await page.locator(".pa-option").first().locator(".pa-hear").click();
+  await expect.poll(() => page.evaluate(() => window.played.at(-1))).toMatch(/^w-.*\.mp3$/);
+  expect(await page.evaluate(() => window.played.at(-1))).toContain(option.toLowerCase().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue"));
+  await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", progress);
+  await expect(page.locator("#stage [data-option]:disabled")).toHaveCount(0);
+});
+
+test("the letter hunt plays the letter instead of showing it", async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = function () { setTimeout(() => this.onended && this.onended(), 5); return Promise.resolve(); };
+  });
+  await start(page, { muted: false });
+  await unlockAll(page);
+  await openLevel(page, "letters", 3);
+  for (let guard = 0; guard < 12 && (await taskType(page)) !== "hunt"; guard += 1) {
+    if ((await taskType(page)) === "reward") await page.locator("#reward-again").click();
+    else await solve(page);
+  }
+  expect(await taskType(page)).toBe("hunt");
+  await expect(page.locator("#prompt-sound")).toHaveClass(/pa-listen-card/);
+  await expect(page.locator("#prompt-sound")).toHaveText("");
 });
 
 test("every clip, picture and answer the game needs exists", async ({ page, request }) => {
