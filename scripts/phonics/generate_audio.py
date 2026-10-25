@@ -16,7 +16,9 @@ Run from the repository root:
     ~/phonics-tts/bin/python scripts/phonics/generate_audio.py --german /path/to/kikiri-german-victoria
 
 Clips are cached by their text in scripts/phonics/audio_cache.json, so a rerun
-only records what changed. Use --force to record everything again.
+only records what changed. Use --force to record everything again, or
+--reencode to redo only the fades and loudness from the raw recordings kept in
+~/.cache/phonics-audio-raw.
 """
 import argparse
 import hashlib
@@ -37,6 +39,8 @@ OUT = TOOL / "audio"
 CACHE = Path(__file__).with_name("audio_cache.json")
 SR = 24000
 FRAME = 600  # Kokoro predicts durations in frames of 600 samples.
+LEAD = 0.06  # Seconds of quiet before every clip; word timings are shifted by the same amount.
+RAW = Path.home() / ".cache" / "phonics-audio-raw"
 OVERRIDE = re.compile(r"\[([^\]]+)\]\(/([^/]+)/\)")
 # espeak-ng cannot transcribe these words for the German voice.
 GERMAN_PRONUNCIATION = {"Gurke": "ɡˈʊɾkə."}
@@ -144,7 +148,7 @@ class Voice:
         return audio[int(max(0, span[0].start_ts - 0.05) * SR):int((span[-1].end_ts + 0.12) * SR)]
 
 
-def trim(audio, pad=0.04, floor=0.012, rel=0.04):
+def trim(audio, pad=0.09, floor=0.012, rel=0.04):
     level = np.abs(audio)
     loud = np.where(level > max(floor, level.max() * rel))[0]
     if not len(loud):
@@ -164,14 +168,40 @@ def fade(audio, ms=25):
     return audio
 
 
+def soften(audio):
+    """Gentle edges for young ears: a moment of quiet, a soft fade in and out, and an even loudness."""
+    audio = audio.astype(np.float32).copy()
+    fade_in, fade_out = min(len(audio) // 4, int(0.03 * SR)), min(len(audio) // 4, int(0.06 * SR))
+    audio[:fade_in] *= np.sin(np.linspace(0, np.pi / 2, fade_in)) ** 2
+    audio[len(audio) - fade_out:] *= np.cos(np.linspace(0, np.pi / 2, fade_out)) ** 2
+    # The voice often starts at full strength; ease the first 50 ms of speech in from a quarter volume.
+    # Speech starts where the 5 ms loudness first passes a fifth of its peak, so a quiet breath before it is skipped.
+    step = int(0.005 * SR)
+    usable = len(audio) // step * step
+    envelope = np.sqrt((audio[:usable].reshape(-1, step) ** 2).mean(axis=1))
+    onset = max(0, int(np.argmax(envelope > envelope.max() * 0.2)) * step - 2 * step)
+    ease = min(int(0.05 * SR), len(audio) - onset)
+    audio[onset:onset + ease] *= 0.25 + 0.75 * np.sin(np.linspace(0, np.pi / 2, ease)) ** 2
+    # Match clips by loudness of their voiced part, then keep peaks well below clipping.
+    voiced = audio[np.abs(audio) > np.abs(audio).max() * 0.05]
+    rms = np.sqrt((voiced ** 2).mean()) if len(voiced) else 1
+    audio *= min(0.09 / max(rms, 1e-6), 0.7 / (np.abs(audio).max() or 1))
+    return np.concatenate([np.zeros(int(LEAD * SR), np.float32), audio, np.zeros(int(0.08 * SR), np.float32)])
+
+
 def encode(audio, path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    peak = np.abs(audio).max() or 1
-    audio = audio / peak * 0.89
+    # Keep the raw recording so the finishing touches can be redone later without recording again (--reencode).
+    raw = RAW / path.parent.name / f"{path.stem}.npy"
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    np.save(raw, audio.astype(np.float32))
+    audio = soften(audio)
     with tempfile.TemporaryDirectory() as tmp:
         wav = Path(tmp, "clip.wav")
         sf.write(wav, audio, SR)
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-ac", "1", "-ar", "24000",
+                        # A gentle cut of the brightest frequencies keeps the synthetic voice warm.
+                        "-af", "highshelf=f=6000:g=-4,lowpass=f=10000",
                         "-codec:a", "libmp3lame", "-b:a", "48k", path], check=True)
     return round(len(audio) / SR, 2)
 
@@ -228,7 +258,17 @@ def main():
     parser.add_argument("--german", required=True, help="folder with the kikiri-german-victoria files")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--only", choices=["en", "de"])
+    parser.add_argument("--reencode", action="store_true", help="redo fades and loudness from the saved raw recordings")
     args = parser.parse_args()
+    if args.reencode:
+        manifest_path = OUT / "manifest.js"
+        manifest = json.loads(manifest_path.read_text().split("=", 1)[1].rstrip().rstrip(";"))
+        for code, clips in manifest.items():
+            for entry in clips.values():
+                path = OUT / code / entry[0]
+                entry[1] = encode(np.load(RAW / code / f"{path.stem}.npy"), path)
+        manifest_path.write_text("window.PhonicsAudio = " + json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + ";\n")
+        return print("Re-encoded every clip from the raw recordings.")
     use_system_espeak()
     import torch
     import torchaudio
@@ -298,7 +338,9 @@ def main():
                 lo = int(max(0, starts[index] - 0.02) * SR)
                 hi = int((starts[index + 1] - 0.03) * SR) if index + 1 < len(tokens) else len(audio)
                 gap[lo:hi] = 0
-                gap[max(0, lo - 240):lo] *= np.linspace(1, 0, len(gap[max(0, lo - 240):lo]))
+                ramp = int(0.025 * SR)
+                gap[max(0, lo - ramp):lo] *= np.linspace(1, 0, len(gap[max(0, lo - ramp):lo]))
+                gap[hi:hi + ramp] *= np.linspace(0, 1, len(gap[hi:hi + ramp]))
                 cloze_name = f"cz-{i_slug(clip_id)}.mp3"
                 manifest[code][f"cz:{clip_id[3:]}"] = [cloze_name, encode(gap, OUT / code / cloze_name)]
             else:
@@ -325,7 +367,7 @@ def main():
                         entry = [round(total * sum(lengths[:i]) / sum(lengths), 2) for i in range(len(tokens))]
                         problems.append(f"{code} {clip_id}: approximate word timings")
             duration = encode(audio, path)
-            manifest[code][clip_id] = [name, duration] + ([entry] if entry else [])
+            manifest[code][clip_id] = [name, duration] + ([[round(start + LEAD, 2) for start in entry]] if entry else [])
             cache[key] = digest
             print("recorded", code, clip_id, duration)
         del voice
