@@ -267,7 +267,11 @@
 
     // Lay out choice tiles in rows of three, or two when that leaves no orphan.
     function balanceTiles(container, count) {
-        container.style.setProperty("--la-cols", count % 3 === 0 || count > 6 ? 3 : count === 1 ? 1 : 2);
+        const cols = count === 4 ? 2 : Math.max(1, Math.min(count, 3));
+        container.style.setProperty("--la-cols", cols);
+        // A short last row of three is widened (see .la-tiles[data-rest]) instead of leaving a tile alone.
+        if (cols === 3 && count % 3) container.dataset.rest = String(count % 3);
+        else delete container.dataset.rest;
     }
 
     window.Learning = {

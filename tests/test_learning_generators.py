@@ -284,6 +284,18 @@ class RenderingTests(unittest.TestCase):
         self.assertIn('<code class="language-bash">ls -la</code>', html)
         self.assertIn('<pre><code class="language-python">', html)
 
+    def test_inline_code_keeps_significant_spaces_and_markup(self):
+        source = SourceFile(LINUX, "quizzes/x.md", "")
+        for math in (True, False):
+            html = render_markdown(
+                "` M a.txt` `M  a.txt` `` `x` `` `<!--`", source, math=math, inline=True
+            )
+            self.assertEqual(
+                html,
+                "<code> M a.txt</code> <code>M  a.txt</code> <code>`x`</code> "
+                "<code>&lt;!--</code>",
+            )
+
     def test_maths_is_detected_outside_code_only(self):
         self.assertTrue(has_math("Speedup is $S = \\frac{1}{1-p}$."))
         self.assertFalse(has_math("Print `echo $HOME and $PATH` in a shell."))

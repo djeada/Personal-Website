@@ -22,7 +22,7 @@ async function startQuiz(page, url) {
 test("quiz setup lists every subject and narrows topics", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(`${quiz}?category=linux`);
-  await expect(page.locator(".la-tile")).toHaveCount(8);
+  await expect(page.locator(".la-tile")).toHaveCount(9);
   await expect(page.locator(".la-tile:has(input:checked) .la-tile-name")).toHaveText("Linux");
   await expect(page.locator("#topicSummary")).toHaveText(/^All \d+ topics$/);
 
