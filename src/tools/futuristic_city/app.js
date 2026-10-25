@@ -10,15 +10,15 @@ const CONFIG = {
     extent: 92
 };
 const palette = {
-    void: new THREE.Color(0x0c0d10),
+    void: new THREE.Color(0x0e1218),
     dusk: new THREE.Color(0x1c1f2a),
     day: new THREE.Color(0x6f6a5c),
-    cyan: new THREE.Color(0x6fb3a3),
-    violet: new THREE.Color(0x9fb4d4),
-    gold: new THREE.Color(0xc8a55a),
-    ember: new THREE.Color(0xd0843c),
-    rose: new THREE.Color(0xc9716a),
-    ink: new THREE.Color(0xe9e4d8)
+    cyan: new THREE.Color(0x63c79c),
+    violet: new THREE.Color(0xb9a8ff),
+    gold: new THREE.Color(0x8ac2ff),
+    ember: new THREE.Color(0xf0a35a),
+    rose: new THREE.Color(0xff8f8f),
+    ink: new THREE.Color(0xe9eef5)
 };
 
 function applyTheme(colors) {
@@ -114,7 +114,7 @@ function init() {
 }
 
 function createWorld() {
-    ambient = new THREE.HemisphereLight(palette.violet, 0x0c0d10, .72);
+    ambient = new THREE.HemisphereLight(palette.violet, 0x0e1218, .72);
     scene.add(ambient);
     sun = new THREE.DirectionalLight(0xf0dcb4, 1.6);
     sun.position.set(-80, 110, 45);
@@ -135,7 +135,7 @@ function createWorld() {
     const violetFill = new THREE.DirectionalLight(palette.violet, .9);
     violetFill.position.set(85, 55, -90);
     scene.add(violetFill);
-    groundMaterial = material(0x15151a, 0x0e0f13, .34);
+    groundMaterial = material(0x15151a, 0x121820, .34);
     const ground = new THREE.Mesh(new THREE.CircleGeometry(138, 64), groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -150,7 +150,7 @@ function createWorld() {
 
 function createRoads() {
     const roadMat = new THREE.MeshStandardMaterial({
-        color: 0x0e0f13,
+        color: 0x121820,
         roughness: .82,
         metalness: .25
     });

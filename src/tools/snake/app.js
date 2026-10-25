@@ -19,7 +19,7 @@ const cellSize = canvas.width / gridSize;
 let isPaused = false;
 let lastTapTime = 0;
 
-const FONT_DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+const FONT_DISPLAY = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
 const FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
 const FONT_SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
 let pal = ToolShared.palette();

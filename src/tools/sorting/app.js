@@ -28,14 +28,14 @@ document.addEventListener("DOMContentLoaded", () => {
         radix: "Radix"
     };
     const fallbackPalette = {
-        canvas: "#fbf8f1",
-        grid: "rgba(28, 26, 23, 0.08)",
-        ruleStrong: "#a8946a",
-        ink2: "#4f4a40",
-        ink3: "#6c6557",
-        gold: "#8a6620",
-        verdigris: "#2e6e62",
-        moon: "#3d5a85"
+        canvas: "#ffffff",
+        grid: "rgba(14, 18, 24, 0.08)",
+        ruleStrong: "#9aa6b5",
+        ink2: "#3a4452",
+        ink3: "#5b6676",
+        gold: "#1f4fd1",
+        verdigris: "#137a55",
+        moon: "#6d4fd0"
     };
     const palette = () => Object.assign({}, fallbackPalette, window.ToolShared?.palette?.() || {});
     const toast = window.ToolShared?.showToast || ((message) => console.info(message));

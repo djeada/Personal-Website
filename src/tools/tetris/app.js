@@ -1,6 +1,6 @@
 const canvas = document.getElementById('canvas');
 const context = canvas.getContext('2d');
-const FONT_DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+const FONT_DISPLAY = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
 const FONT_MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
 let pal = ToolShared.palette();
 let grid;

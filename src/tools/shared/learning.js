@@ -266,6 +266,13 @@
     }
 
     // Lay out choice tiles in rows of three, or two when that leaves no orphan.
+    // The subject mark on a tile (">_", "SQL"); decorative, so hidden from screen readers.
+    function glyph(text) {
+        const mark = el("span", "la-tile-glyph", text);
+        mark.setAttribute("aria-hidden", "true");
+        return mark;
+    }
+
     function balanceTiles(container, count) {
         const cols = count === 4 ? 2 : Math.max(1, Math.min(count, 3));
         container.style.setProperty("--la-cols", cols);
@@ -278,6 +285,7 @@
         highlight,
         enhance,
         balanceTiles,
+        glyph,
         topicPicker,
         topicSummary,
         segmented,

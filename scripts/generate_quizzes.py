@@ -74,6 +74,7 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Files, permissions, users, processes, the shell, networking, storage and package managers.",
         sources=(Source(LINUX, "quizzes"),),
         code_language="bash",
+        glyph=">_",
     ),
     Category(
         slug="git",
@@ -81,12 +82,14 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Staging and commits, branches and merging, remotes, history rewriting and recovery, workflows and Git internals.",
         sources=(Source(GIT, "quizzes"),),
         code_language="bash",
+        glyph="±",
     ),
     Category(
         slug="frontend",
         name="Frontend",
         description="HTML semantics and forms, CSS layout and preprocessors, and modern JavaScript.",
         sources=(Source(FRONTEND, "quizzes"),),
+        glyph="</>",
     ),
     Category(
         slug="databases",
@@ -94,18 +97,21 @@ CATEGORIES: Tuple[Category, ...] = (
         description="SQL, schema design, indexing, transactions and how databases scale.",
         sources=(Source(DATABASES, "quizzes"),),
         code_language="sql",
+        glyph="SQL",
     ),
     Category(
         slug="devops",
         name="DevOps and Google Cloud",
         description="Delivery pipelines, infrastructure as code, containers and operations, plus Google Cloud architecture in the style of the Professional Cloud Architect exam.",
         sources=(Source(DEVOPS, "quizzes"),),
+        glyph="|>",
     ),
     Category(
         slug="parallel_programming",
         name="Parallel Programming",
         description="Threads, processes, async I/O, synchronisation, hardware and distributed systems.",
         sources=(Source(PARALLEL, "quizzes"),),
+        glyph="||",
     ),
     Category(
         slug="statistics",
@@ -113,6 +119,7 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Probability, distributions, descriptive statistics, inference, regression and time series.",
         sources=(Source(STATISTICS, "quizzes"),),
         math=True,
+        glyph="µ",
     ),
     Category(
         slug="kurs_pythona",
@@ -121,6 +128,7 @@ CATEGORIES: Tuple[Category, ...] = (
         sources=(Source(PYTHON_PL, "quizzes"),),
         language="pl",
         code_language="python",
+        glyph=">>>",
     ),
     Category(
         slug="od_c_do_cpp",
@@ -129,6 +137,7 @@ CATEGORIES: Tuple[Category, ...] = (
         sources=(Source(C_CPP_PL, "quizzes"),),
         language="pl",
         code_language="cpp",
+        glyph="C++",
     ),
 )
 

@@ -1,11 +1,11 @@
 const fallbackPalette = {
-    canvas: "#fbf8f1",
-    rule: "#d8d0bf",
-    ink3: "#6c6557",
-    gold: "#8a6620",
-    verdigris: "#2e6e62",
-    moon: "#3d5a85",
-    rose: "#9e3b36"
+    canvas: "#ffffff",
+    rule: "#dce1e8",
+    ink3: "#5b6676",
+    gold: "#1f4fd1",
+    verdigris: "#137a55",
+    moon: "#6d4fd0",
+    rose: "#c23b3b"
 };
 
 function palette() {

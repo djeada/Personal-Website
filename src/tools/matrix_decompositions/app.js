@@ -23,16 +23,16 @@
     const readPlotColors = () => {
         const colors = window.ToolShared ? window.ToolShared.palette() : {};
         return {
-            canvas: colors.canvas || "#fbf8f1",
-            grid: colors.rule || "#d8d0bf",
-            axis: colors.ink3 || "#6c6557",
-            text: colors.ink3 || "#6c6557",
-            base: colors.moon || "#3d5a85",
-            transformed: colors.rose || "#9e3b36",
-            column1: colors.ember || "#a4511f",
-            column2: colors.ink2 || "#4f4a40",
-            direction1: colors.verdigris || "#2e6e62",
-            direction2: colors.gold || "#8a6620"
+            canvas: colors.canvas || "#ffffff",
+            grid: colors.rule || "#dce1e8",
+            axis: colors.ink3 || "#5b6676",
+            text: colors.ink3 || "#5b6676",
+            base: colors.moon || "#6d4fd0",
+            transformed: colors.rose || "#c23b3b",
+            column1: colors.ember || "#b25a0c",
+            column2: colors.ink2 || "#3a4452",
+            direction1: colors.verdigris || "#137a55",
+            direction2: colors.gold || "#1f4fd1"
         };
     };
     let plotColors = readPlotColors();
@@ -387,7 +387,7 @@
             ctx.stroke();
             ctx.fillText(String(value), cx - 8, y);
         }
-        ctx.font = "italic 15px 'Cormorant Garamond', Garamond, serif";
+        ctx.font = "italic 15px 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif";
         ctx.textAlign = "right";
         ctx.textBaseline = "bottom";
         ctx.fillText(axisNames[0], width - 10, cy - 8);

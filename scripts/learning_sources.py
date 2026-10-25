@@ -73,6 +73,8 @@ class Category:
     language: str = "en"
     # Language Prism uses for inline code when a subject is about one language.
     code_language: Optional[str] = None
+    # Short ASCII/Latin-1 mark shown on the subject tile, e.g. ">_" for Linux.
+    glyph: str = ""
 
     def to_dict(self, **extra: Any) -> Dict[str, Any]:
         repos = sorted({s.repo.web_url for s in self.sources})
@@ -82,6 +84,7 @@ class Category:
             "description": self.description,
             "math": self.math,
             "language": self.language,
+            "glyph": self.glyph,
             "repositories": repos,
             **extra,
         }

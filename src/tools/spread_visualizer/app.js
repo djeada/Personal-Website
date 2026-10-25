@@ -29,13 +29,13 @@ const DATASETS = {
 const SERIES = [{
         key: "a",
         label: "Dataset A",
-        color: "#8a6620",
-        fill: "rgba(138, 102, 32, 0.16)"
+        color: "#1f4fd1",
+        fill: "rgba(31, 79, 209, 0.16)"
     },
     {
         key: "b",
         label: "Dataset B",
-        color: "#2e6e62",
+        color: "#137a55",
         fill: "rgba(46, 110, 98, 0.14)"
     }
 ];
@@ -328,8 +328,8 @@ function refreshTheme() {
     const pick = (key, fallback) => palette[key] || fallback;
     const isDark = Boolean(palette.isDark);
     const seriesColors = {
-        a: pick("gold", "#8a6620"),
-        b: pick("verdigris", "#2e6e62")
+        a: pick("gold", "#1f4fd1"),
+        b: pick("verdigris", "#137a55")
     };
 
     SERIES.forEach(series => {
@@ -338,14 +338,14 @@ function refreshTheme() {
     });
 
     THEME = {
-        canvas: pick("canvas", "#fbf8f1"),
-        frame: pick("rule", "#d8d0bf"),
-        axis: pick("ruleStrong", "#a8946a"),
-        grid: pick("grid", "rgba(28, 26, 23, 0.08)"),
-        text: pick("ink2", "#4f4a40"),
-        muted: pick("ink3", "#6c6557"),
-        guide: withAlpha(pick("ink3", "#6c6557"), 0.4),
-        ink: pick("ink", "#1c1a17")
+        canvas: pick("canvas", "#ffffff"),
+        frame: pick("rule", "#dce1e8"),
+        axis: pick("ruleStrong", "#9aa6b5"),
+        grid: pick("grid", "rgba(14, 18, 24, 0.08)"),
+        text: pick("ink2", "#3a4452"),
+        muted: pick("ink3", "#5b6676"),
+        guide: withAlpha(pick("ink3", "#5b6676"), 0.4),
+        ink: pick("ink", "#0e1218")
     };
 }
 

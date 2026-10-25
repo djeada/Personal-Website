@@ -531,7 +531,7 @@ function applyTheme(isDark) {
     root.classList.toggle("dark-mode", isDark);
     document.body.classList.toggle("dark-mode", isDark);
     root.style.colorScheme = isDark ? "dark" : "";
-    root.style.backgroundColor = isDark ? "#0d1117" : "";
+    root.style.backgroundColor = isDark ? "#0e1218" : "";
 
     const flagCounter = document.querySelector("#flag-counter img");
     if (flagCounter) {
