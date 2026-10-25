@@ -345,6 +345,16 @@ class ArabicVoice:
         return best
 
 
+def end_after_speech(audio, words):
+    """Chatterbox sometimes keeps making sounds after the sentence, so the clip ends at the first pause after the last word."""
+    if not words:
+        return audio
+    last = words[-1].end
+    after = [p for p in pauses_in(audio, quiet=0.12) if p[0] >= last - 0.15]
+    end = after[0][0] + 0.08 if after else last + 0.3
+    return trim(audio[:int(end * SR)])
+
+
 def pauses_in(audio, frame=0.02, quiet=0.15):
     """(start, end) seconds of every stretch of near silence at least `quiet` long."""
     n = int(frame * SR)
@@ -458,6 +468,9 @@ def main():
                 for attempt in range(attempts):
                     audio = trim(voice.say(text, 0.88 - 0.04 * min(attempt, 2)))
                     heard, words = listen(audio, code, words=True)
+                    if code == "ar":
+                        audio = end_after_speech(audio, words)
+                        heard, words = listen(audio, code, words=True)
                     if matches(heard, text, code) and len(words) == len(tokens):
                         break
                     near = closeness(heard, text) + (len(words) == len(tokens))
@@ -492,7 +505,10 @@ def main():
                             problems.append(f"{code} {clip_id}: expected {payload!r}, heard {heard!r}")
                         break
                     audio = trim(voice.word(payload, speed) if kind == "word" else voice.say(payload, speed))
-                    heard, words = listen(audio, code, words=(kind == "story"))
+                    heard, words = listen(audio, code, words=(kind == "story" or code == "ar"))
+                    if code == "ar":
+                        audio = end_after_speech(audio, words)
+                        heard, words = listen(audio, code, words=True)
                     # Whisper cannot tell one-syllable homophones apart (bee/B, see/C), and English and German
                     # intros spell letter names as phonemes, so those are only printed for a listen-through.
                     if kind == "intro" and code != "ar":
