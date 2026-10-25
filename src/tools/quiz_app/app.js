@@ -17,7 +17,7 @@
         en: {
             resume: 'Resume',
             discard: 'Discard',
-            stepSubject: 'Subject',
+            stepSubject: 'Subjects',
             stepSettings: 'Quiz settings',
             topics: 'Topics',
             selectAll: 'Select all',
@@ -117,7 +117,7 @@
         pl: {
             resume: 'Wznów',
             discard: 'Odrzuć',
-            stepSubject: 'Przedmiot',
+            stepSubject: 'Przedmioty',
             stepSettings: 'Ustawienia quizu',
             topics: 'Tematy',
             selectAll: 'Zaznacz wszystkie',
@@ -415,6 +415,7 @@
         input.checked = category.slug === selected;
         input.addEventListener('change', () => selectSubject(category.slug));
         tile.appendChild(input);
+        if (category.glyph) tile.appendChild(Learning.glyph(category.glyph));
         tile.appendChild(el('span', 'la-tile-name', category.name));
         tile.appendChild(el('span', 'la-tile-desc', category.description));
         const facts = el('span', 'la-tile-facts');

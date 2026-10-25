@@ -60,6 +60,7 @@ CATEGORIES: Tuple[Category, ...] = (
         name="Frontend",
         description="Applied HTML, CSS, JavaScript, protocol and hosting questions to explain in your own words.",
         sources=(Source(FRONTEND, "notes/12_quizes.md"),),
+        glyph="</>",
     ),
     Category(
         slug="databases",
@@ -67,12 +68,14 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Core database concepts: SQL objects, keys, normalisation, indexing, transactions and scaling.",
         sources=(Source(DATABASES, "notes/quizes.md"),),
         code_language="sql",
+        glyph="SQL",
     ),
     Category(
         slug="devops",
         name="DevOps and Google Cloud",
         description="DevOps practices and Google Cloud architecture decisions: what each service is for and when to choose it.",
         sources=(Source(DEVOPS, "flashcards"),),
+        glyph="|>",
     ),
     Category(
         slug="statistics",
@@ -80,6 +83,7 @@ CATEGORIES: Tuple[Category, ...] = (
         description="Definitions and worked reasoning for probability, inference, regression and time series.",
         sources=(Source(STATISTICS, "flashcards"),),
         math=True,
+        glyph="µ",
     ),
 )
 

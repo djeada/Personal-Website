@@ -168,7 +168,7 @@ function getColors() {
         particleSuccess: [p.verdigris, p.gold],
         particleFailure: [p.rose, p.ember],
         fontSans: readFont('--g-font-sans', '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif'),
-        fontDisplay: readFont('--g-font-display', '"Cormorant Garamond", Garamond, serif'),
+        fontDisplay: readFont('--g-font-display', '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif'),
         fontMono: readFont('--g-font-mono', '"IBM Plex Mono", ui-monospace, monospace')
     };
 }

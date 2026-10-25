@@ -9,7 +9,7 @@
     let colors = [pal.moon, pal.gold, pal.ember];
     const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
     const SANS = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
-    const DISPLAY = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+    const DISPLAY = '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif';
     const params = new URLSearchParams(location.search);
     const raw = params.get('challenge') || '';
     const validDate = /^\d{4}-\d{2}-\d{2}$/.test(raw) && Number.isFinite(Date.parse(raw)) && new Date(raw).toISOString().slice(0, 10) === raw;

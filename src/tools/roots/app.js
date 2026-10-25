@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawAxis = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = plotColor("ink3", "#6c6557");
+        ctx.strokeStyle = plotColor("ink3", "#5b6676");
         ctx.lineWidth = 1.5;
 
         const x0 = mapXToCanvas(0, xMin, xMax);
@@ -198,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawGrid = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = plotColor("rule", "#d8d0bf");
+        ctx.strokeStyle = plotColor("rule", "#dce1e8");
         ctx.lineWidth = 1;
 
         const numXTicks = 10;
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.font = "15px 'IBM Plex Mono', ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = plotColor("ink3", "#6c6557");
+        ctx.fillStyle = plotColor("ink3", "#5b6676");
 
         const numXTicks = 10;
         for (let i = 0; i <= numXTicks; i++) {
@@ -249,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawFunction = (coefficients, xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = plotColor("gold", "#8a6620");
+        ctx.strokeStyle = plotColor("gold", "#1f4fd1");
         ctx.lineWidth = 3;
         const numPoints = canvas.width;
 
@@ -270,8 +270,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const drawRoots = (roots, xMin, xMax, yMin, yMax) => {
         roots.forEach((root) => {
             if (Math.abs(root.imag) < 1e-6) {
-                ctx.fillStyle = plotColor("verdigris", "#2e6e62");
-                ctx.strokeStyle = plotColor("canvas", "#fbf8f1");
+                ctx.fillStyle = plotColor("verdigris", "#137a55");
+                ctx.strokeStyle = plotColor("canvas", "#ffffff");
                 ctx.lineWidth = 3;
                 const xPos = mapXToCanvas(root.real, xMin, xMax);
                 const yPos = mapYToCanvas(0, yMin, yMax);
@@ -328,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderPlot() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = plotColor("canvas", "#fbf8f1");
+        ctx.fillStyle = plotColor("canvas", "#ffffff");
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (!lastPlot) {
             drawAxis(-10, 10, -10, 10);

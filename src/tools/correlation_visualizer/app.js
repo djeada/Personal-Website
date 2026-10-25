@@ -166,18 +166,18 @@ function refreshTheme() {
         window.ToolShared.palette() :
         {};
     const pick = (key, fallback) => palette[key] || fallback;
-    const moon = pick("moon", "#3d5a85");
-    const gold = pick("gold", "#8a6620");
-    const verdigris = pick("verdigris", "#2e6e62");
-    const rose = pick("rose", "#9e3b36");
-    const ember = pick("ember", "#a4511f");
+    const moon = pick("moon", "#6d4fd0");
+    const gold = pick("gold", "#1f4fd1");
+    const verdigris = pick("verdigris", "#137a55");
+    const rose = pick("rose", "#c23b3b");
+    const ember = pick("ember", "#b25a0c");
     const isDark = Boolean(palette.isDark);
 
     COLORS = {
         point: moon,
         pointFill: withAlpha(moon, 0.72),
         regression: gold,
-        mean: pick("ink3", "#6c6557"),
+        mean: pick("ink3", "#5b6676"),
         positive: withAlpha(verdigris, isDark ? 0.1 : 0.08),
         negative: withAlpha(rose, isDark ? 0.1 : 0.07),
         residual: rose,
@@ -187,13 +187,13 @@ function refreshTheme() {
     };
 
     THEME = {
-        canvas: pick("canvas", "#fbf8f1"),
-        frame: pick("rule", "#d8d0bf"),
-        axis: pick("ruleStrong", "#a8946a"),
-        grid: pick("grid", "rgba(28, 26, 23, 0.08)"),
-        text: pick("ink2", "#4f4a40"),
-        label: pick("ink2", "#4f4a40"),
-        heading: pick("ink", "#1c1a17")
+        canvas: pick("canvas", "#ffffff"),
+        frame: pick("rule", "#dce1e8"),
+        axis: pick("ruleStrong", "#9aa6b5"),
+        grid: pick("grid", "rgba(14, 18, 24, 0.08)"),
+        text: pick("ink2", "#3a4452"),
+        label: pick("ink2", "#3a4452"),
+        heading: pick("ink", "#0e1218")
     };
 }
 

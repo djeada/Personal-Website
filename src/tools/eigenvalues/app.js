@@ -204,13 +204,13 @@
     function plotPalette() {
         const colors = window.ToolShared ? window.ToolShared.palette() : {};
         return {
-            canvas: colors.canvas || "#fbf8f1",
-            grid: colors.ruleStrong || "#a8946a",
-            text: colors.ink3 || "#6c6557",
-            vector: colors.gold || "#8a6620",
-            result: colors.verdigris || "#2e6e62",
-            basisOne: colors.moon || "#3d5a85",
-            basisTwo: colors.ember || "#a4511f"
+            canvas: colors.canvas || "#ffffff",
+            grid: colors.ruleStrong || "#9aa6b5",
+            text: colors.ink3 || "#5b6676",
+            vector: colors.gold || "#1f4fd1",
+            result: colors.verdigris || "#137a55",
+            basisOne: colors.moon || "#6d4fd0",
+            basisTwo: colors.ember || "#b25a0c"
         };
     }
 
@@ -372,7 +372,7 @@
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = textColor;
-        ctx.font = "italic 13px 'Cormorant Garamond', Garamond, serif";
+        ctx.font = "italic 13px 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif";
         ctx.fillText("x", width - 22, originY - 7);
         ctx.fillText("y", originX + 7, 22);
 

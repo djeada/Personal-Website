@@ -12,21 +12,21 @@
 
 
     const CANVAS_PALETTE = Object.freeze({
-        background: "#0c0d10",
-        panel: "#0e0f13",
-        grid: "rgba(233, 228, 216, 0.08)",
-        gridStrong: "rgba(233, 228, 216, 0.2)",
-        axis: "#a7a294",
-        text: "#e9e4d8",
-        textMuted: "#a7a294",
-        cursor: "#c8a55a",
-        marker: "#c8a55a",
-        warning: "#d0843c",
-        scrim: "rgba(14, 15, 19, 0.86)",
+        background: "#0e1218",
+        panel: "#121820",
+        grid: "rgba(233, 238, 245, 0.08)",
+        gridStrong: "rgba(233, 238, 245, 0.2)",
+        axis: "#b3bfcd",
+        text: "#e9eef5",
+        textMuted: "#b3bfcd",
+        cursor: "#8ac2ff",
+        marker: "#8ac2ff",
+        warning: "#f0a35a",
+        scrim: "rgba(14, 18, 24, 0.86)",
         font: FONT_FAMILY,
         mono: MONO_FAMILY,
 
-        series: ["#c8a55a", "#6fb3a3", "#9fb4d4", "#c9716a", "#d0843c", "#b3a1cf", "#9fbf78"],
+        series: ["#8ac2ff", "#63c79c", "#b9a8ff", "#ff8f8f", "#f0a35a", "#b3a1cf", "#9fbf78"],
         dashes: [
             [],
             [7, 4],
@@ -39,35 +39,35 @@
     });
 
     const LIGHT_FALLBACK = {
-        text: "#1c1a17",
-        textSecondary: "#4f4a40",
-        textMuted: "#6c6557",
-        surface: "#fbf8f1",
-        surfaceElevated: "#efe9dc",
-        border: "#d8d0bf",
-        primary: "#8a6620",
-        accent: "#2e6e62",
+        text: "#0e1218",
+        textSecondary: "#3a4452",
+        textMuted: "#5b6676",
+        surface: "#ffffff",
+        surfaceElevated: "#eef1f5",
+        border: "#dce1e8",
+        primary: "#1f4fd1",
+        accent: "#137a55",
         spectrum: {
-            cyan: "#2e6e62",
-            violet: "#3d5a85",
-            rose: "#9e3b36",
-            gold: "#8a6620"
+            cyan: "#137a55",
+            violet: "#6d4fd0",
+            rose: "#c23b3b",
+            gold: "#1f4fd1"
         }
     };
     const DARK_FALLBACK = {
-        text: "#e9e4d8",
-        textSecondary: "#a7a294",
-        textMuted: "#85806f",
-        surface: "#121318",
-        surfaceElevated: "#181a20",
-        border: "#2a2b31",
-        primary: "#c8a55a",
-        accent: "#6fb3a3",
+        text: "#e9eef5",
+        textSecondary: "#b3bfcd",
+        textMuted: "#8794a6",
+        surface: "#171e27",
+        surfaceElevated: "#1e2732",
+        border: "#303c4c",
+        primary: "#8ac2ff",
+        accent: "#63c79c",
         spectrum: {
-            cyan: "#6fb3a3",
-            violet: "#9fb4d4",
-            rose: "#c9716a",
-            gold: "#c8a55a"
+            cyan: "#63c79c",
+            violet: "#b9a8ff",
+            rose: "#ff8f8f",
+            gold: "#8ac2ff"
         }
     };
 

@@ -160,6 +160,7 @@
             input.checked = deck.slug === selected;
             input.addEventListener('change', () => selectDeck(deck.slug));
             tile.appendChild(input);
+            if (deck.glyph) tile.appendChild(Learning.glyph(deck.glyph));
             tile.appendChild(el('span', 'la-tile-name', deck.name));
             tile.appendChild(el('span', 'la-tile-desc', deck.description));
             tile.appendChild(el('span', 'la-tile-facts'));

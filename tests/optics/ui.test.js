@@ -87,5 +87,5 @@ test("withAlpha converts hex and rgb()/rgba() colours to rgba with the given alp
     assert.equal(ui.withAlpha("rgba(233, 228, 216, 0.08)", 0.6), "rgba(233,228,216,0.6)");
     assert.equal(ui.withAlpha(" #6fb3a3 ", 0), "rgba(111,179,163,0)");
     assert.equal(ui.withAlpha("transparent", 0.5), "transparent");
-    assert.equal(ui.withAlpha(ui.CANVAS_PALETTE.series[1], 0.25), "rgba(111,179,163,0.25)");
+    assert.equal(ui.withAlpha(ui.CANVAS_PALETTE.series[1], 0.25), "rgba(99,199,156,0.25)");
 });

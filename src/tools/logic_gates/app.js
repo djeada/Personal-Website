@@ -1,8 +1,8 @@
 function gateColors() {
     const colors = window.ToolShared ? window.ToolShared.palette() : {};
     return {
-        ink: colors.ink || "#1c1a17",
-        fill: colors.panel2 || "#efe9dc"
+        ink: colors.ink || "#0e1218",
+        fill: colors.panel2 || "#eef1f5"
     };
 }
 

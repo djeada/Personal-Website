@@ -222,8 +222,8 @@ for (const name of referenceTools) {
       };
     });
     expect(theme.reference).toBe(true);
-    expect(theme.accent).toBe("#c8a55a");
-    expect(theme.surface).toBe("#121318");
+    expect(theme.accent).toBe("#8ac2ff");
+    expect(theme.surface).toBe("#171e27");
     expect(theme.pageWidth).toBeLessThanOrEqual(theme.viewportWidth + 1);
     expect(theme.contentPadding).toBe(0);
     expect(theme.headingAlignment).toBe("center");
@@ -232,14 +232,14 @@ for (const name of referenceTools) {
 }
 
 for (const name of ["ant_colony", "futuristic_city"]) {
-  test(`${name} uses the grimoire accent`, async ({ page, context }) => {
+  test(`${name} uses the tool accent`, async ({ page, context }) => {
     await context.addCookies([{ name: "darkMode", value: "true", domain: "127.0.0.1", path: "/" }]);
     await page.goto(`/tools/${name}/`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).not.toHaveClass(/tool-reference/);
     const accent = await page.locator("body").evaluate((body) =>
       getComputedStyle(body).getPropertyValue("--tool-primary").trim(),
     );
-    expect(accent).toBe("#c8a55a");
+    expect(accent).toBe("#8ac2ff");
   });
 }
 
@@ -264,8 +264,8 @@ for (const name of ["graphs", "sorting", "searching"]) {
     expect(layout.canvasWidth).toBeGreaterThan(layout.areaWidth * 0.7);
     expect(layout.intrinsicWidth).toBeGreaterThan(600);
     expect(layout.semanticLegend).toBeGreaterThanOrEqual(3);
-    expect(layout.current).toBe("#8a6620");
-    expect(layout.frontier).toBe("#2e6e62");
+    expect(layout.current).toBe("#1f4fd1");
+    expect(layout.frontier).toBe("#137a55");
   });
 }
 
