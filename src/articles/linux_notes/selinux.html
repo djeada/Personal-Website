@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/selinux",
             "description": "SELinux stands for Security-Enhanced Linux.",
-            "dateModified": "2026-10-17",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/selinux" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="SELinux stands for Security-Enhanced Linux." property="og:description" />
-    <meta content="2026-10-17" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -323,7 +322,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -596,7 +595,7 @@ focus on the type.</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">-rw-r--r--. root root system_u:object_r:httpd_sys_content_t:s0 /var/www/html/index.html</code></pre>
+                <pre><code class="language-text">system_u:object_r:httpd_sys_content_t:s0 /var/www/html/index.html</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
@@ -822,7 +821,7 @@ SELINUXTYPE=targeted</code></pre>
             </div>
             <p>Output:</p>
             <div>
-                <pre><code class="language-text">drwxr-xr-x. root root system_u:object_r:httpd_sys_content_t:s0 /var/www/html</code></pre>
+                <pre><code class="language-text">system_u:object_r:httpd_sys_content_t:s0 /var/www/html</code></pre>
             </div>
             <p>View process context:</p>
             <div>
@@ -872,7 +871,7 @@ SELINUXTYPE=targeted</code></pre>
             </ul>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">Relabeled /var/www/html/index.html from unconfined_u:object_r:default_t:s0 to system_u:object_r:httpd_sys_content_t:s0</code></pre>
+                <pre><code class="language-text">Relabeled /var/www/html/index.html from unconfined_u:object_r:default_t:s0 to unconfined_u:object_r:httpd_sys_content_t:s0</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
@@ -1136,12 +1135,12 @@ echo "Hello from SELinux test" | sudo tee /srv/mywebsite/index.html</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">-rw-r--r--. root root unconfined_u:object_r:default_t:s0 /srv/mywebsite/index.html</code></pre>
+                <pre><code class="language-text">unconfined_u:object_r:var_t:s0 /srv/mywebsite/index.html</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
-                <li>The file is labeled default_t.</li>
-                <li>A web server process running as httpd_t is usually not allowed to read default_t.</li>
+                <li>The file is labeled var_t.</li>
+                <li>A web server process running as httpd_t is usually not allowed to read var_t.</li>
                 <li>This can cause access denial even when normal permissions look correct.</li>
             </ul>
             <h4 id="check-avc-denial">Check AVC Denial</h4>
@@ -1154,12 +1153,12 @@ echo "Hello from SELinux test" | sudo tee /srv/mywebsite/index.html</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">type=AVC msg=audit(...): avc:  denied  { open } for  pid=1234 comm="nginx" path="/srv/mywebsite/index.html" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:default_t:s0 tclass=file</code></pre>
+                <pre><code class="language-text">type=AVC msg=audit(...): avc:  denied  { open } for  pid=1234 comm="nginx" path="/srv/mywebsite/index.html" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:var_t:s0 tclass=file</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
                 <li>The web server process is httpd_t.</li>
-                <li>The file is default_t.</li>
+                <li>The file is var_t.</li>
                 <li>SELinux denied file open.</li>
                 <li>The likely fix is to label the directory as web content.</li>
             </ul>
@@ -1179,7 +1178,7 @@ sudo restorecon -Rv /srv/mywebsite</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">Relabeled /srv/mywebsite/index.html from unconfined_u:object_r:default_t:s0 to system_u:object_r:httpd_sys_content_t:s0</code></pre>
+                <pre><code class="language-text">Relabeled /srv/mywebsite/index.html from unconfined_u:object_r:var_t:s0 to unconfined_u:object_r:httpd_sys_content_t:s0</code></pre>
             </div>
             <h4 id="final-interpretation">Final Interpretation</h4>
             <ul>
@@ -1204,7 +1203,7 @@ ls -Z /srv/mywebsite/index.html</code></pre>
             </div>
             <p>If no persistent <code>semanage fcontext</code> rule exists, example output may show:</p>
             <div>
-                <pre><code class="language-text">Relabeled /srv/mywebsite/index.html from unconfined_u:object_r:httpd_sys_content_t:s0 to unconfined_u:object_r:default_t:s0</code></pre>
+                <pre><code class="language-text">Relabeled /srv/mywebsite/index.html from unconfined_u:object_r:httpd_sys_content_t:s0 to unconfined_u:object_r:var_t:s0</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
@@ -1284,7 +1283,7 @@ sudo restorecon -Rv /srv/mywebsite</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">avc: denied { name_bind } for pid=3333 comm="nginx" src=8081 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:unreserved_port_t:s0 tclass=tcp_socket</code></pre>
+                <pre><code class="language-text">avc: denied { name_bind } for pid=3333 comm="nginx" src=8081 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:transproxy_port_t:s0 tclass=tcp_socket</code></pre>
             </div>
             <p>Interpretation:</p>
             <div>
@@ -1300,9 +1299,9 @@ SELinux does not currently label that port as an allowed HTTP port.</code></pre>
                 <pre><code class="language-text">http_port_t tcp 80, 81, 443, 488, 8008, 8009, 8443</code></pre>
             </div>
             <h4 id="fix-2">Fix</h4>
-            <p>Add port 8081 as an HTTP port:</p>
+            <p>Port 8081 is already labeled <code>transproxy_port_t</code> in the targeted policy, so modify its type to <code>http_port_t</code> (<code>-a</code> is for ports that have no type yet):</p>
             <div>
-                <pre><code class="language-bash">sudo semanage port -a -t http_port_t -p tcp 8081</code></pre>
+                <pre><code class="language-bash">sudo semanage port -m -t http_port_t -p tcp 8081</code></pre>
             </div>
             <p>Verify:</p>
             <div>
@@ -1436,7 +1435,7 @@ getenforce</code></pre>
             </div>
             <p>Example:</p>
             <div>
-                <pre><code class="language-text">unconfined_u:object_r:default_t:s0 index.html</code></pre>
+                <pre><code class="language-text">unconfined_u:object_r:var_t:s0 index.html</code></pre>
             </div>
             <h4 id="step-3-check-process-context">Step 3: Check Process Context</h4>
             <div>
@@ -1452,12 +1451,12 @@ getenforce</code></pre>
             </div>
             <p>Example:</p>
             <div>
-                <pre><code class="language-text">avc: denied { read } for comm="nginx" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:default_t:s0 tclass=file</code></pre>
+                <pre><code class="language-text">avc: denied { read } for comm="nginx" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:var_t:s0 tclass=file</code></pre>
             </div>
             <p>Interpretation:</p>
             <ul>
                 <li>Unix permissions allow reading.</li>
-                <li>SELinux denies reading because the file type is default_t.</li>
+                <li>SELinux denies reading because the file type is var_t.</li>
                 <li>The correct fix is to label the file as web content.</li>
             </ul>
             <h4 id="fix-4">Fix</h4>
@@ -1572,8 +1571,8 @@ ls -Z /srv/mywebsite/index.html</code></pre>
             </div>
             <p>Example:</p>
             <div>
-                <pre><code class="language-text">unconfined_u:object_r:default_t:s0 /srv/mywebsite
-unconfined_u:object_r:default_t:s0 /srv/mywebsite/index.html</code></pre>
+                <pre><code class="language-text">unconfined_u:object_r:var_t:s0 /srv/mywebsite
+unconfined_u:object_r:var_t:s0 /srv/mywebsite/index.html</code></pre>
             </div>
             <h4 id="check-denials">Check Denials</h4>
             <div>
@@ -1581,12 +1580,12 @@ unconfined_u:object_r:default_t:s0 /srv/mywebsite/index.html</code></pre>
             </div>
             <p>Example:</p>
             <div>
-                <pre><code class="language-text">avc: denied { getattr open read } for comm="nginx" path="/srv/mywebsite/index.html" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:default_t:s0 tclass=file</code></pre>
+                <pre><code class="language-text">avc: denied { getattr open read } for comm="nginx" path="/srv/mywebsite/index.html" scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:var_t:s0 tclass=file</code></pre>
             </div>
             <h4 id="interpret">Interpret</h4>
             <ul>
                 <li>The web server process is httpd_t.</li>
-                <li>The target file is default_t.</li>
+                <li>The target file is var_t.</li>
                 <li>SELinux denied access.</li>
                 <li>The file needs a web content context.</li>
             </ul>
@@ -1601,7 +1600,7 @@ sudo restorecon -Rv /srv/mywebsite</code></pre>
             </div>
             <p>Expected:</p>
             <div>
-                <pre><code class="language-text">system_u:object_r:httpd_sys_content_t:s0 index.html</code></pre>
+                <pre><code class="language-text">unconfined_u:object_r:httpd_sys_content_t:s0 index.html</code></pre>
             </div>
             <h4 id="retest">Retest</h4>
             <p>Restart or reload the web service if needed:</p>
@@ -1646,7 +1645,7 @@ sudo reboot</code></pre>
             <ul>
                 <li>service gets permission denied</li>
                 <li>Unix permissions look correct</li>
-                <li>AVC denial shows target type default_t or user_home_t</li>
+                <li>AVC denial shows target type default_t, var_t or user_home_t</li>
             </ul>
             <p>Check:</p>
             <div>

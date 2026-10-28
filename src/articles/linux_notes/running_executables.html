@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/running_executables",
             "description": "When you type a command such as: a lot happens behind the scenes. The shell does not directly \u201cbecome\u201d ls by itself.",
-            "dateModified": "2026-10-17",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/running_executables" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="When you type a command such as: a lot happens behind the scenes. The shell does not directly “become” ls by itself." property="og:description" />
-    <meta content="2026-10-17" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -280,7 +279,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -753,10 +752,11 @@ libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6
             <p>That means the program may fail to start.</p>
             <h3 id="library-search-paths">Library Search Paths</h3>
             <p>The dynamic linker searches for libraries using several sources.</p>
-            <p>Common places include:</p>
+            <p>For glibc, the order is:</p>
             <ul>
-                <li>RPATH or RUNPATH embedded in the executable</li>
-                <li>LD_LIBRARY_PATH environment variable</li>
+                <li>RPATH embedded in the executable (only if it has no RUNPATH)</li>
+                <li>LD_LIBRARY_PATH environment variable (ignored for setuid programs)</li>
+                <li>RUNPATH embedded in the executable</li>
                 <li>/etc/ld.so.cache</li>
                 <li>/lib</li>
                 <li>/usr/lib</li>
@@ -1002,30 +1002,30 @@ cd ..</code></pre>
             </div>
             <p>Connect to QEMU:</p>
             <div>
-                <pre><code class="language-gdb">target remote :1234</code></pre>
+                <pre><code class="language-plaintext">target remote :1234</code></pre>
             </div>
             <p>The kernel is paused.</p>
             <p>Useful setup:</p>
             <div>
-                <pre><code class="language-gdb">set pagination off</code></pre>
+                <pre><code class="language-plaintext">set pagination off</code></pre>
             </div>
             <p>Set a breakpoint.</p>
             <p>Depending on kernel version, try:</p>
             <div>
-                <pre><code class="language-gdb">break do_execveat_common</code></pre>
+                <pre><code class="language-plaintext">break do_execveat_common</code></pre>
             </div>
             <p>or:</p>
             <div>
-                <pre><code class="language-gdb">break bprm_execve</code></pre>
+                <pre><code class="language-plaintext">break bprm_execve</code></pre>
             </div>
             <p>or search for relevant symbols:</p>
             <div>
-                <pre><code class="language-gdb">info functions execve
+                <pre><code class="language-plaintext">info functions execve
 info functions search_binary_handler</code></pre>
             </div>
             <p>Continue:</p>
             <div>
-                <pre><code class="language-gdb">continue</code></pre>
+                <pre><code class="language-plaintext">continue</code></pre>
             </div>
             <p>When you run a program inside QEMU, the breakpoint should trigger during execution.</p>
             <h3 id="binary-handler-selection">Binary Handler Selection</h3>
@@ -1043,13 +1043,13 @@ info functions search_binary_handler</code></pre>
             </ul>
             <p>Set a breakpoint:</p>
             <div>
-                <pre><code class="language-gdb">break search_binary_handler
+                <pre><code class="language-plaintext">break search_binary_handler
 continue</code></pre>
             </div>
             <p>When it stops, inspect the execution path.</p>
             <p>For ELF binaries, another useful breakpoint is:</p>
             <div>
-                <pre><code class="language-gdb">break load_elf_binary
+                <pre><code class="language-plaintext">break load_elf_binary
 continue</code></pre>
             </div>
             <h3 id="program-entry-point">Program Entry Point</h3>
@@ -1057,7 +1057,7 @@ continue</code></pre>
             <p>On x86-64, the instruction pointer register controls the next instruction to execute.</p>
             <p>In kernel debugging, you may inspect something like:</p>
             <div>
-                <pre><code class="language-gdb">print/x regs-&gt;ip</code></pre>
+                <pre><code class="language-plaintext">print/x regs-&gt;ip</code></pre>
             </div>
             <p>The exact register structure and symbol names can vary by kernel version and architecture.</p>
             <p>Compare with:</p>
@@ -1309,7 +1309,7 @@ Hello from the custom kernel!</code></pre>
             </div>
             <p>Inside GDB:</p>
             <div>
-                <pre><code class="language-gdb">target remote :1234
+                <pre><code class="language-plaintext">target remote :1234
 set pagination off
 info functions execve
 break do_execveat_common
@@ -1317,7 +1317,7 @@ continue</code></pre>
             </div>
             <p>If the symbol is unavailable, try:</p>
             <div>
-                <pre><code class="language-gdb">break bprm_execve
+                <pre><code class="language-plaintext">break bprm_execve
 break search_binary_handler
 break load_elf_binary</code></pre>
             </div>
@@ -1340,7 +1340,7 @@ break load_elf_binary</code></pre>
             <p>Watch the kernel choose the correct binary format handler.</p>
             <h4 id="gdb-breakpoints">GDB Breakpoints</h4>
             <div>
-                <pre><code class="language-gdb">break search_binary_handler
+                <pre><code class="language-plaintext">break search_binary_handler
 break load_elf_binary
 continue</code></pre>
             </div>
@@ -1371,7 +1371,7 @@ continue</code></pre>
             <p>Near the end of ELF loading, inspect the instruction pointer setup.</p>
             <p>Example:</p>
             <div>
-                <pre><code class="language-gdb">print/x regs-&gt;ip</code></pre>
+                <pre><code class="language-plaintext">print/x regs-&gt;ip</code></pre>
             </div>
             <p>Example output:</p>
             <div>
@@ -1502,7 +1502,7 @@ file bin/busybox</code></pre>
             </ul>
             <p>Check symbols:</p>
             <div>
-                <pre><code class="language-gdb">info functions execve
+                <pre><code class="language-plaintext">info functions execve
 info functions binary_handler
 info functions load_elf</code></pre>
             </div>
@@ -1566,7 +1566,7 @@ make scripts_gdb</code></pre>
             </div>
             <p>GDB:</p>
             <div>
-                <pre><code class="language-gdb">target remote :1234
+                <pre><code class="language-plaintext">target remote :1234
 break do_execveat_common
 break search_binary_handler
 break load_elf_binary

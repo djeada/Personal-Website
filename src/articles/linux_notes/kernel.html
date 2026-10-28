@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/kernel",
             "description": "We will now delve deeply into the Linux kernel to understand its role in the operating system, where it resides on your system, and how kernel modules\u2026",
-            "dateModified": "2026-10-17",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/kernel" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="We will now delve deeply into the Linux kernel to understand its role in the operating system, where it resides on your system, and how kernel modules…" property="og:description" />
-    <meta content="2026-10-17" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -217,7 +216,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -419,12 +418,12 @@ System.map-5.4.0-42-generic</code></pre>
                     <tr>
                         <td>3.x</td>
                         <td>2011</td>
-                        <td>Numbering change (no functional leap from 2.6.39); added Btrfs improvements, transparent huge pages, and cgroup-based resource control.</td>
+                        <td>Numbering change (no functional leap from 2.6.39); added Btrfs improvements, overlayfs (3.18), and the first eBPF infrastructure (3.18).</td>
                     </tr>
                     <tr>
                         <td>4.x</td>
                         <td>2015</td>
-                        <td>Live kernel patching, eBPF for tracing and networking, improved GPU support, and overlayfs.</td>
+                        <td>Live kernel patching, eBPF for tracing and networking (including XDP), improved GPU support, and cgroup v2 (4.5).</td>
                     </tr>
                     <tr>
                         <td>5.x</td>
@@ -434,7 +433,7 @@ System.map-5.4.0-42-generic</code></pre>
                     <tr>
                         <td>6.x</td>
                         <td>2022</td>
-                        <td>Rust language support in kernel modules, improved Btrfs RAID, MGLRU memory management, and user-space access to hardware performance counters.</td>
+                        <td>Rust language support in kernel modules, improved Btrfs RAID, MGLRU memory management, and the EEVDF scheduler (6.6).</td>
                     </tr>
                 </tbody>
             </table>
@@ -469,7 +468,7 @@ rpm -qa | grep kernel             # RHEL/Fedora</code></pre>
             <ul>
                 <li><strong>Device drivers</strong> facilitate communication between the operating system and various hardware components, enabling devices like network cards, USB peripherals, and graphics cards to function correctly within the system.</li>
                 <li>To ensure compatibility across diverse storage formats, <strong>file system drivers</strong> provide support for various file systems, including NTFS, FAT, and ext4, allowing the operating system to read and write data to different types of storage media.</li>
-                <li><strong>System calls</strong> offer a structured way for applications to request specific functionalities from the operating system, such as file manipulation, memory allocation, and network communication, enhancing the interaction between user applications and the kernel.</li>
+                <li><strong>Network protocol and filtering modules</strong>, such as <code>wireguard</code> or <code>nf_tables</code>, add networking features to the running kernel only when they are needed.</li>
             </ul>
             <h4 id="viewing-loaded-modules">Viewing Loaded Modules</h4>
             <p>To see which modules are currently loaded into the kernel, use the <code>lsmod</code> command:</p>
@@ -769,6 +768,7 @@ ls</code></pre>
             <div>
                 <pre><code class="language-bash">sysctl -p</code></pre>
             </div>
+            <p><code>sysctl -p</code> reads only <code>/etc/sysctl.conf</code> (or the file you name). To load the files in <code>/etc/sysctl.d/</code> and the other system directories as well, use <code>sysctl --system</code>.</p>
             <p>Here are some common scenarios where <code>sysctl</code> is used, with relevant examples and explanations for each:</p>
             <h5>Adjust TCP Buffer Sizes (Network Performance Tuning)</h5>
             <p>You want to optimize the network performance, especially for high-bandwidth or high-latency environments, by adjusting TCP buffer sizes.</p>
@@ -807,7 +807,7 @@ net.ipv4.tcp_wmem = 4096 65536 16777216</code></pre>
             </div>
             <p>ASLR randomizes the memory addresses used by system processes, making it harder for attackers to exploit memory corruption vulnerabilities. Setting <code>kernel.randomize_va_space</code> to 2 fully enables it.</p>
             <h5>Increase Maximum Number of Open File Descriptors (Process Management)</h5>
-            <p>You need to increase the maximum number of file descriptors a process can open, which is important for applications handling many simultaneous connections (e.g., web servers).</p>
+            <p>You need to increase the maximum number of file descriptors the whole system can open, which is important for applications handling many simultaneous connections (e.g., web servers).</p>
             <div>
                 <pre><code class="language-bash">sysctl -w fs.file-max=100000</code></pre>
             </div>

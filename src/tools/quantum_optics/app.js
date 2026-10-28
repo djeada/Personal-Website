@@ -565,7 +565,7 @@
         } else mzCanvas.redraw();
     }, {
         onChange: (running) => {
-            mzPlay.innerHTML = running ? '<span aria-hidden="true">⏸</span> Pause' : '<span aria-hidden="true">▶</span> Emit photons';
+            mzPlay.textContent = running ? "Pause" : "Emit photons";
             mzPlay.setAttribute("aria-pressed", String(running));
         }
     });

@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/ai_architecture",
             "description": "Standard of Iron runs one strategic AI instance per computer-controlled owner.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Standard of Iron runs one strategic AI instance per computer-controlled owner." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -244,7 +243,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -467,6 +466,7 @@ shared gameplay command/effect path</code></pre>
             <h2 id="command-ownership-and-arbitration">Command ownership and arbitration</h2>
             <p>Multiple behaviors can notice the same unit. The AI resolves this through explicit priority and ownership rather than relying on whichever behavior happens to run last.</p>
             <p><code>AICommandFilter::arbitrate_move_ownership()</code> gives movement ownership to the highest-priority claim when competing behaviors try to move one subject in the same decision batch.</p>
+            <p>Across decisions, <code>claim_units</code> keeps a unit with the behavior that claimed it until that claim is older than the lock (2 s unless the caller passes another), after which a higher priority may take it. The lock is measured from <code>UnitAssignment::claimed_since</code>, the first claim, not from <code>assignment_time</code>, the last refresh. Measured from the refresh, a low-priority behavior that re-claims its unit on every update (the gather muster does) held it forever against every higher priority. <code>assignment_time</code> still drives the 4.5 s stale-claim sweep.</p>
             <p>The application side also validates subjects before applying commands. A command cannot act on an entity merely because the entity ID existed in an older snapshot. Ownership, lifetime, and current validity are checked again at application time.</p>
             <p>This protects against cases such as:</p>
             <ul>
@@ -489,9 +489,11 @@ shared gameplay command/effect path</code></pre>
             <p>Mission reinforcement waves receive <code>AssaultWaveComponent</code> and are owned by <code>AssaultBehavior</code>.</p>
             <p>These units are intentionally separated from the AI's ordinary strategic posture. A mission can keep the owning AI in a garrison posture while authored reinforcement waves attack on schedule.</p>
             <p>Assault-wave units are excluded from ordinary reserve, gathering, expansion, and retreat pools. Their attack path advances toward eligible hostile targets and can breach obstructing barriers when movement toward the objective has stalled.</p>
+            <p>A wave that reaches the fight spreads over the defenders it reached instead of falling on one man. The wave's objective is the hostile nearest the wave's centre, and every unit within the engage radius of it used to be ordered onto that one target, so at the Sepulcher Bridge a commander standing a pace in front of his spear line drew all eight squads of a rising (about 140 skeletons) into a ball around himself while the spears beside him stood idle in hold. <code>spread_engagements</code> now takes every non-building hostile within the engage radius of the objective as a quarry: a unit already attacking one of them keeps it, and the rest go to the nearest quarry that is under its cap. A commander takes at most three squads (<code>k_max_assailants_on_a_commander</code>); any other quarry takes a fair share (engagers divided by quarries, plus one, at least two). Breaches and buildings are still assaulted by the whole group.</p>
             <p>A wave whose objective is sealed off counts as stalled from its first decision. The snapshot builder flood-fills walkable cells outward from each wave's march target, treating every visible hostile gate as a wall whatever its current open state (the pathfinder's region map connects through gates, because a gate opens for its owner), and gives up as reachable after a few thousand cells. If the fill never reaches the wave (<code>EntitySnapshot::march_target_reachable</code>), the objective is inside a closed ring: the wave commits to breaching the barrier on its line at once, instead of walking to the nearest reachable point outside the ring and waiting there for the stall timer.</p>
             <h3 id="commander">Commander</h3>
             <p><code>CommanderBehavior</code> manages the commander separately from line units. It positions the commander relative to the force, uses commander abilities, and respects doctrine/health/escort constraints.</p>
+            <p>A commander who is not marching with the army steps away from threats within 15 m. There is one exception: when the threat is an enemy commander under direct player control, with no other enemy unit inside that radius, and the AI commander is at half health or better, he answers the challenge with an <code>AttackTarget</code> instead of retreating. The snapshot marks such contacts with <code>ContactSnapshot::player_driven</code>. See "Duels" in <code>RPG_PLAYABILITY.md</code>.</p>
             <p>This prevents the commander from being treated as merely another infantry entity in a bulk movement pool.</p>
             <p>The "army" the commander stations on is the muster only (<code>stands_in_the_muster</code>): living line units that are not part of a mission assault wave. Waves march on the enemy under their own orders, and counting them once walked the tutorial's Roman commander out of his outpost behind the raid and into the player's camp — his threat step averages its retreat point with the army centre, so an army centre inside the enemy camp drags him there.</p>
             <h2 id="local-engagement-vs-strategic-attack">Local engagement vs strategic attack</h2>

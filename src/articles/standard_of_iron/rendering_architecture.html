@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture",
             "description": "Standard of Iron renders from published simulation snapshots.",
-            "dateModified": "2026-10-18",
+            "dateModified": "2026-10-24",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Standard of Iron renders from published simulation snapshots." property="og:description" />
-    <meta content="2026-10-18" property="article:modified_time" />
+    <meta content="2026-10-24" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -162,7 +161,11 @@
                     </li>
                     <li><a href="#terrain-scatter-readiness">Terrain scatter readiness</a></li>
                     <li><a href="#scatter-variation">Scatter variation</a></li>
-                    <li><a href="#water">Water</a></li>
+                    <li><a href="#water">Water</a>
+                        <ol>
+                            <li><a href="#river-mist">River mist</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#environment-lighting">Environment lighting</a>
                         <ol>
                             <li><a href="#shared-fill-terms">Shared fill terms</a></li>
@@ -265,7 +268,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 24, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -657,6 +660,8 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li><strong>Junction caps.</strong> Caps fill the gaps between river segments at bends. Their radial UV makes the whole rim read as shore, so drawn over the ribbon they showed as rings and shards mid-river. River caps now sit <code>junction_sink</code> (3 cm) below the ribbon, so the ribbon wins wherever both exist.</li>
                 <li><strong>Wet bank.</strong> <code>riverbank.frag</code> darkens a wet band (<code>k_wet_band_reach</code>, <code>k_wet_band_darkening</code>) and keeps the core opaque over a wider strip, so water meets darker soil instead of dry grass.</li>
             </ul>
+            <h3 id="river-mist">River mist</h3>
+            <p><code>post_composite.frag</code> lays water mist over every pixel within <code>k_mist_bank_reach</code> (7 m) of a river or lake and below <code>k_mist_water_ceiling</code> (1.7 m) above the bank, at up to <code>k_water_mist_strength</code> (0.42). The amount is applied at the surface the pixel shows, so it also has to account for how much mist lies between the lens and that surface: it is scaled by <code>1 - exp(-view_distance / k_mist_view_reach)</code> with a 9 m reach. Without that, a chase camera standing on a bridge saw the commander and the men beside him, three metres away, through the same milky veil as the far bank.</p>
             <h2 id="environment-lighting">Environment lighting</h2>
             <p><code>scene/environment_lighting.h</code> defines the shared outdoor environment-lighting state.</p>
             <p>It carries the common scene inputs used across materials/passes, including values such as:</p>
@@ -729,28 +734,34 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                     <tr>
                         <th>Profile</th>
                         <th>Directional shadows</th>
+                        <th>Rigged casters per cascade</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Low</td>
                         <td>disabled</td>
+                        <td>60</td>
                     </tr>
                     <tr>
                         <td>Medium</td>
                         <td>2 cascades, 1024 resolution</td>
+                        <td>100</td>
                     </tr>
                     <tr>
                         <td>High</td>
                         <td>4 cascades, 4096 resolution, 200 m envelope</td>
+                        <td>160</td>
                     </tr>
                     <tr>
                         <td>Ultra</td>
                         <td>full High-style cascade envelope</td>
+                        <td>240</td>
                     </tr>
                 </tbody>
             </table>
             <p>Cascade fitting, bias, filtering, light-space culling, and sampling are implemented in <code>render/gl/</code> and shared shader includes.</p>
+            <p><code>max_rigged_casters_per_cascade</code> caps how many soldiers, horses and elephants cast into each cascade. For every cascade the pass ranks the rigged commands that fall in that cascade's range by distance to the camera and keeps the nearest ones, across all rigged batches, so the budget is spent on the soldiers that are large on screen; the rest keep only their contact shadow, which is blended against the directional term anyway and reads as the same grounding at that size. A duel or a small fight never reaches the cap, so nothing changes there. On the Sepulcher Bridge's last rising (about 280 soldiers in view at preset High, 1280x720) the unlimited shadow pass cost 4.6 ms average and 7.6 ms at the 95th percentile; at 220 casters it was 3.2 / 3.9, at 120 it was 2.7 / 3.2 and at 60 it was 2.6 / 3.0, where the remaining cost is static casters and terrain. The benchmark report counts the dropped casters in <code>shadow_rigged_casters_dropped</code>.</p>
             <p>Those implementation sources are the correct place to read exact shadow mechanics. The profile table documents the quality envelope rather than duplicating every internal shadow constant into multiple articles.</p>
             <h2 id="contact-shadows-and-grounding">Contact shadows and grounding</h2>
             <p>Creature/world grounding also uses contact-shadow presentation with its own <code>ContactShadowBudget</code>.</p>

@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/performance",
             "description": "How the game is profiled, what was found on the heaviest mission, and why the hot paths look the way they do.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-26",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/performance" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="How the game is profiled, what was found on the heaviest mission, and why the hot paths look the way they do." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-26" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -119,11 +118,13 @@
                     <li><a href="#siege-of-aurelia-magna">Siege of Aurelia Magna</a></li>
                     <li><a href="#september-2026-follow-up-measurement">September 2026 follow-up measurement</a></li>
                     <li><a href="#october-2026-live-play-profile">October 2026 live-play profile</a></li>
+                    <li><a href="#october-2026-shadow-caster-budget">October 2026 shadow caster budget</a></li>
                     <li><a href="#simulation">Simulation</a></li>
                     <li><a href="#rendering">Rendering</a></li>
                     <li><a href="#gui-thread">GUI thread</a></li>
                     <li><a href="#build-time">Build time</a>
                         <ol>
+                            <li><a href="#avoiding-redundant-rebuilds">Avoiding redundant rebuilds</a></li>
                             <li><a href="#the-ci-debug-build-from-scratch">The CI Debug build from scratch</a></li>
                         </ol>
                     </li>
@@ -188,7 +189,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 26, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -447,6 +448,8 @@ perf report -i aurelia.data --sort comm --no-children</code></pre>
                 indicative only. The intended comparison records a played session with
                 <code>--record-replay</code> and replays it on both builds with <code>--replay</code>.
             </p>
+            <h2 id="october-2026-shadow-caster-budget">October 2026 shadow caster budget</h2>
+            <p>With the sepulcher waves the GPU, not the simulation, capped a crowded frame: 468 skeletons plus a hundred Romans tick in 0.73 ms, while the shadow pass drew every rigged soldier in range into every cascade. <code>DirectionalShadowSettings::max_rigged_casters_per_cascade</code> now keeps the nearest casters per cascade (60/100/160/240 by preset). Measured on the last rising with a fixed camera on the bridge mouth (<code>--action-fixture</code> with <code>camera_look_at</code>, preset High, 1280x720, about 280 soldiers visible): shadow 4.64 ms average / 7.62 ms p95 unlimited, 3.24 / 3.90 at 220, 2.72 / 3.16 at 120, 2.56 / 2.98 at 60; GPU p95 13.1 ms down to 8.6 ms at 120. Below about 120 the curve is flat because the rest is static casters and terrain.</p>
             <h2 id="simulation">Simulation</h2>
             <p><strong>Unreachable goals.</strong> A* used to flood the whole reachable region whenever the goal
                 could not be reached, capped only by <code>width*height</code> iterations. <code>find_path_internal</code>
@@ -458,6 +461,17 @@ perf report -i aurelia.data --sort comm --no-children</code></pre>
             <p><strong>Path cache.</strong> Partial results (searches that stopped short of their goal) are cached
                 too. A partial result depends on the whole reachable region, so any navigation change
                 drops it; a complete path is dropped only when a change crosses its bounds.</p>
+            <p><strong>Target detours and counter baseline (26 October 2026).</strong> Engagement checks apply
+                activity, formation and guard restrictions before searching around an obstruction.
+                Retaliation and squad alerts still check the detour before accepting a target.
+                The 1,000/2,000-unit fixtures use 578/1,031 route-cache misses instead of 603/1,118,
+                with identical battle digests before and after this ordering change.</p>
+            <p>The September counter baseline predates the current melee-detour rules. Refreshing
+                its deterministic counters also tightens the search-work limits: the fixtures now
+                expand 17,437/31,032 cells, down from the baseline's 111,031/133,321. Cache misses and
+                evictions increase with the additional target-detour queries; flushes, region-map
+                rebuilds and dirty-cell work remain zero. Wall-clock timing budgets retain their
+                previous measurements because this counter refresh used different hardware.</p>
             <p><strong>Region map.</strong> A closed gate's cells are treated identically by the grid and by
                 <code>connects()</code> (one sorted <code>closed_gate_cells</code> list), so a gate toggle can never change
                 which cells connect. After a navigation change the region map is reused when every
@@ -568,9 +582,9 @@ perf report -i aurelia.data --sort comm --no-children</code></pre>
                 selected. The tick is now bumped only while a building or builder with a production
                 panel is selected; selection changes still bump it immediately.</p>
             <h2 id="build-time">Build time</h2>
-            <p>Every translation unit parsed ~120k lines of standard-library and Qt headers. One
-                precompiled header (<code>cmake/soi_pch.h</code>, applied to every project target by
-                <code>cmake/PrecompiledHeaders.cmake</code>) cuts a clean build of the game and tools from
+            <p>Every translation unit parsed ~120k lines of standard-library and Qt headers. The
+                initial per-target precompiled header (<code>cmake/soi_pch.h</code>, applied by
+                <code>cmake/PrecompiledHeaders.cmake</code>) cut a clean build of the game and tools from
                 2758 to 2041 CPU-seconds (−26%) and from 728 to 508 s wall at <code>-j3</code>.
             </p>
             <ul>
@@ -583,6 +597,43 @@ perf report -i aurelia.data --sort comm --no-children</code></pre>
                 <li>Release links use LTO; re-linking one small tool costs ~160 CPU-seconds because
                     whole-program optimisation reruns over every static library.</li>
             </ul>
+            <p>Targets with only one or two C++ sources now compile without a PCH. In a Linux
+                Debug configuration this reduces PCH generation from 55 targets to 29. A clean
+                build of <code>audio_master_preview</code> (including <code>soi_audio_mastering</code>) and <code>scene_core</code>
+                with GCC 13.3, Qt 6.4.2, Ninja, <code>BUILD_TESTING=OFF</code>, <code>SOI_DEBUG_INFO=lines</code>, mold,
+                <code>-j3</code> and no compiler cache took 35.4 s before and 15.7 s afterwards. This measures
+                those small targets, not a whole-game clean build; larger targets retain their PCH.
+            </p>
+            <h3 id="avoiding-redundant-rebuilds">Avoiding redundant rebuilds</h3>
+            <p>Repeated configuration preserves the timestamps of the generated campaign-map
+                and translation resource manifests when their contents are unchanged. Previously
+                every <code>make build-app</code> rewrote both <code>.qrc</code> files, so even a build with no source
+                changes ran the resource compiler and linked the game again.</p>
+            <p>The Makefile now delegates asset baking to CMake's <code>bake_creature_assets</code> target.
+                The game already depends on that target, so <code>make build</code> and <code>make build-app</code>
+                need no second baker invocation. <code>make bake-bpat</code> uses the same dependency graph:
+                it builds a missing baker, regenerates stale assets, and skips current outputs
+                in both the source tree and the staged runtime tree.
+                Source <code>.cmesh</code> packages, troop/nation/formation/construction JSON and equipment
+                loadouts are explicit bake dependencies. A stable snapshot of that input list
+                also invalidates the bake when an input is removed. Generated bake outputs and
+                unrelated textures do not invalidate it.</p>
+            <p>The simulation's Git build ID is defined only for <code>game/command/replay.cpp</code>,
+                which is the only source that reads it. Changing commits therefore invalidates
+                one compiler invocation instead of all 47 in <code>game_sim</code> (including its PCH and
+                AUTOMOC object in the Linux Debug configuration). Replay compatibility checks
+                still receive the current commit ID.</p>
+            <p><code>make</code> invokes <code>cmake --build</code>, so an existing Ninja build directory works with
+                the developer targets too. Set <code>CMAKE_GENERATOR=Ninja</code> for a fresh build tree,
+                <code>BUILD_JOBS</code> to limit parallel work, and <code>CMAKE_ARGS</code> for extra configure flags.
+            </p>
+            <p>Run the small build-graph regression checks without building the game:</p>
+            <div>
+                <pre><code class="language-sh">python3 -m unittest discover -s tests/scripts -p test_build_incrementality.py -v</code></pre>
+            </div>
+            <p>They check unchanged and changed manifests, a commit change's compile-command
+                invalidation, and incremental Makefile builds and bakes with Make and Ninja
+                (when installed). They also run with the script tests in the quality workflow.</p>
             <h3 id="the-ci-debug-build-from-scratch">The CI Debug build from scratch</h3>
             <p>Measured 28 Sep 2026 on the pull-request lane's configuration (Debug, every test
                 binary plus <code>content_validator</code>, 1610 steps, <code>-j4</code>, no ccache, both before the

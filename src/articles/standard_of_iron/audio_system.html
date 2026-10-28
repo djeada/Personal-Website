@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/audio_system",
             "description": "Everything the player hears goes through one path: a cue is requested by gameplay or QML, the cue registry picks a resource from the manifest,\u2026",
-            "dateModified": "2026-10-01",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/audio_system" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Everything the player hears goes through one path: a cue is requested by gameplay or QML, the cue registry picks a resource from the manifest,…" property="og:description" />
-    <meta content="2026-10-01" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -215,7 +214,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 01, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -507,7 +506,9 @@ device callback on_audio                            no locks
             <p><code>AudioCoordinator</code> and <code>AudioEventHandler</code> pick music, beds and voices by querying manifest tags. No track ID for music or ambience appears in code except the final fallback bed.</p>
             <p><strong>Frontend music.</strong> Tracks tagged <code>screen_context=&lt;context&gt;</code> rotate round-robin per context. The context <code>battle</code> (or empty) stops music.</p>
             <p><strong>Mission music.</strong> For each ambient state (<code>peaceful</code>, <code>tense</code>, <code>combat</code>, <code>victory</code>, <code>defeat</code>) the handler holds the tracks tagged <code>ambient_state=&lt;state&gt;</code>; for combat, victory and defeat the player's own <code>faction</code> is queried first. A state change rotates to the next track and plays one of the SFX tagged <code>state=&lt;state&gt;</code> as a stinger (priority 7, at most once a minute). Coming back into a state within 90 seconds of leaving it resumes that state's last track instead of rotating, so a lull in a battle does not turn the score over twice. Victory and defeat play only <code>state.victory</code> / <code>state.defeat</code>, never a stinger as well.</p>
-            <p><strong>Ambient state.</strong> <code>AmbientStateManager</code> samples every two seconds. Combat means one of the player's units has an attack target, or an <em>enemy troop</em> (per <code>OwnerRegistry::are_enemies</code>: not an ally, not neutral wildlife, not a building) stands within 15 m of one. Combat is entered at once and released only after 20 seconds of quiet; other changes settle for 4 seconds.</p>
+            <p><strong>The final assault.</strong> When a mission announces its last wave (<code>MissionWaveIncomingEvent</code> with <code>final_wave</code>, at the wave's warning), the handler switches straight to the track tagged <code>ambient_state=combat</code> and <code>intensity=final_assault</code> (<code>combat_siege_at_dawn</code>, the densest and most percussive combat track by onset rate and spectral flux) and holds it through every ambient change until the wave is cleared or the match is decided. Without this the Sepulcher Bridge's biggest rising stormed the gate to a quiet peaceful bed: the third rising's fight had released combat 20 s after it ended, the fourth rising was still marching from the barrows, and <code>base_ancient_peak_fires</code> opens with 40 s at about -40 dB. Keep <code>final_assault</code> off faction-tagged tracks: the faction-free fallback query matches them too, so tagging <code>combat_carthaginian_dust</code> as well turned a Roman climax into a coin toss between the two.</p>
+            <p><strong>Slow tracks are not combat tracks.</strong> <code>combat_last_defensive_wall</code> is slow and melancholic (the documentary and marketing cuts ban it as the music that reads as defeat) and is tagged <code>ambient_state=defeat</code>; <code>combat_shield_wall_at_dusk</code> (about one onset a second) is tagged <code>tense</code>. Both were in the Roman combat pool, so a Roman player could get a dirge for a battle.</p>
+            <p><strong>Ambient state.</strong> <code>AmbientStateManager</code> samples every two seconds. Combat means one of the player's units has an attack target, an <em>enemy troop</em> (per <code>OwnerRegistry::are_enemies</code>: not an ally, not neutral wildlife, not a building) stands within 15 m of one, or a living enemy mission-wave unit (<code>AssaultWaveComponent</code>) is on the field, so a wave marching on the player keeps the battle score instead of letting it release while the wave is still on its way. Combat is entered at once and released only after 20 seconds of quiet; other changes settle for 4 seconds.</p>
             <p><strong>Mission ambience.</strong> One looping bed, chosen by the first query below that matches anything:</p>
             <ol>
                 <li>Words in the map path, map name, mission ID, title, summary and terrain: <code>harbor</code>/<code>port</code> → <code>biome=harbor</code>; <code>city</code>/<code>market</code> → <code>city</code>; <code>village</code>/<code>hamlet</code> → <code>village</code>; <code>siege</code> → <code>biome=camp, context=siege</code>; <code>road</code>/<code>crossroads</code> (Roman players only) → <code>biome=plains, context=road, faction=roman</code>; <code>desert</code>/<code>zama</code> → <code>biome=plains, faction=carthage</code>.</li>

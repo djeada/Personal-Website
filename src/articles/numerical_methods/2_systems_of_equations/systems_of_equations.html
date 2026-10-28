@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/2_systems_of_equations/systems_of_equations",
             "description": "A linear system of equations is a collection of one or more linear equations involving the same set of variables.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-22",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/numerical_methods/2_systems_of_equations/systems_of_equations" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A linear system of equations is a collection of one or more linear equations involving the same set of variables." property="og:description" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-22" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -124,8 +123,13 @@ messageStyle: "none"
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#mathematical-formulation">Mathematical Formulation</a></li>
-                    <li><a href="#criteria-for-a-unique-solution">Criteria for a Unique Solution</a></li>
+                    <li><a href="#mathematical-formulation">Mathematical formulation</a></li>
+                    <li><a href="#criteria-for-a-unique-solution">Criteria for a unique solution</a></li>
+                    <li><a href="#rank-residuals-and-sensitivity">Rank, residuals, and sensitivity</a>
+                        <ol>
+                            <li><a href="#why-row-operations-preserve-the-solution">Why row operations preserve the solution</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#example">Example</a></li>
                     <li><a href="#advantages">Advantages</a></li>
                     <li><a href="#limitations">Limitations</a></li>
@@ -232,7 +236,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -252,16 +256,16 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Linear Systems of Equations</h1>
-            <p>A <em>linear system of equations</em> is a collection of one or more linear equations involving the same set of variables. Such systems arise in diverse areas such as engineering, economics, physics, and computer science. The overarching goal is to find values of the variables that simultaneously satisfy all equations.</p>
+            <p>A <em>linear system of equations</em> is a collection of one or more linear equations involving the same set of variables. Such systems arise in diverse areas such as engineering, economics, physics, and computer science. The main goal is to find values of the variables that simultaneously satisfy all equations.</p>
             <p>When working with linear systems, representing the equations in <em>matrix form</em> proves to be highly efficient. This matrix-based representation underpins a variety of numerical methods—such as Gaussian elimination, LU decomposition, and iterative techniques—used for both small and large-scale problems.</p>
-            <h3 id="mathematical-formulation">Mathematical Formulation</h3>
+            <h2 id="mathematical-formulation">Mathematical formulation</h2>
             <p>A general linear system with $n$ variables $x_1, x_2, \ldots, x_n$ can be expressed as:</p>
             <p>$$
                 \begin{cases}
-                A_{11}x_1 + A_{12}x_2 + \cdots + A_{1n}x_n = b_1, \\
-                A_{21}x_1 + A_{22}x_2 + \cdots + A_{2n}x_n = b_2, \\
+                a_{11}x_1 + a_{12}x_2 + \cdots + a_{1n}x_n = b_1, \\
+                a_{21}x_1 + a_{22}x_2 + \cdots + a_{2n}x_n = b_2, \\
                 \quad\vdots \\
-                A_{n1}x_1 + A_{n2}x_2 + \cdots + A_{nn}x_n = b_n.
+                a_{n1}x_1 + a_{n2}x_2 + \cdots + a_{nn}x_n = b_n.
                 \end{cases}
                 $$</p>
             <p>We can rewrite this collection of equations succinctly as:</p>
@@ -271,10 +275,10 @@ messageStyle: "none"
             <p>where</p>
             <p>$$
                 \mathbf{A} = \begin{bmatrix}
-                A_{11} &amp; A_{12} &amp; \ldots &amp; A_{1n} \\
-                A_{21} &amp; A_{22} &amp; \ldots &amp; A_{2n} \\
+                a_{11} &amp; a_{12} &amp; \ldots &amp; a_{1n} \\
+                a_{21} &amp; a_{22} &amp; \ldots &amp; a_{2n} \\
                 \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
-                A_{n1} &amp; A_{n2} &amp; \ldots &amp; A_{nn}
+                a_{n1} &amp; a_{n2} &amp; \ldots &amp; a_{nn}
                 \end{bmatrix},
                 \quad
                 \mathbf{x} = \begin{bmatrix}
@@ -298,10 +302,12 @@ messageStyle: "none"
                 <li>$\mathbf{b}$ (an $n \times 1$ column vector) contains the constant terms from the right-hand side of each equation.</li>
             </ul>
             <p>Expressing the system in matrix form allows us to apply well-studied algebraic procedures and computational routines to solve for $\mathbf{x}$.</p>
-            <h3 id="criteria-for-a-unique-solution">Criteria for a Unique Solution</h3>
+            <h2 id="criteria-for-a-unique-solution">Criteria for a unique solution</h2>
             <p>A system $\mathbf{A}\mathbf{x} = \mathbf{b}$ of $n$ linear equations in $n$ unknowns has a <em>unique</em> solution if and only if any one (and thus all) of the following equivalent conditions holds:</p>
             <p>I. <strong>Non-zero determinant</strong>:</p>
-            <p>$$\det(\mathbf{A}) \neq 0$$ </p>
+            <p>$$
+                \det(\mathbf{A}) \neq 0
+                $$</p>
             <p>A non-zero determinant indicates that the matrix $\mathbf{A}$ is <em>invertible</em>.</p>
             <p>II. <strong>Invertibility of $\mathbf{A}$</strong>:</p>
             <p>There exists an inverse matrix $\mathbf{A}^{-1}$ such that</p>
@@ -313,7 +319,21 @@ messageStyle: "none"
             <p>IV. <strong>Linear independence of rows</strong>:</p>
             <p>Similarly, the rows of $\mathbf{A}$ are also linearly independent. No row can be expressed as a linear combination of the other rows.</p>
             <p>If any of these criteria fail (e.g., $\det(\mathbf{A}) = 0$), the system does not have a unique solution: it may either have <em>no solution</em> (inconsistent system) or <em>infinitely many solutions</em> (underdetermined system).</p>
-            <h3 id="example">Example</h3>
+            <h2 id="rank-residuals-and-sensitivity">Rank, residuals, and sensitivity</h2>
+            <p>For a general $m\times n$ system, consistency requires $\operatorname{rank}(A)=\operatorname{rank}([A\mid\mathbf{b}])$. A consistent system has a unique solution exactly when this rank is $n$; otherwise it has free variables. If the ranks differ, there is no exact solution, and a <a href="../6_regression/least_squares.html">least-squares approximation</a> may be appropriate.</p>
+            <p>For a nonsingular square matrix, define the residual of an approximation $\widehat{\mathbf{x}}$ as $\mathbf{r}=\mathbf{b}-A\widehat{\mathbf{x}}$. Since $A\mathbf{x}=\mathbf{b}$,</p>
+            <p>$$
+                \mathbf{x}-\widehat{\mathbf{x}}=A^{-1}\mathbf{r}.
+                $$</p>
+            <p>For a compatible induced matrix norm and nonzero $\mathbf{b}$, this implies</p>
+            <p>$$
+                \frac{\|\mathbf{x}-\widehat{\mathbf{x}}\|}{\|\mathbf{x}\|}\leq\kappa(A)\frac{\|\mathbf{r}\|}{\|\mathbf{b}\|},\qquad \kappa(A)=\|A\|\|A^{-1}\|.
+                $$</p>
+            <p>The <strong>condition number</strong> describes sensitivity of the mathematical problem, whereas <strong>stability</strong> describes how an algorithm propagates rounding. Pivoting improves elimination stability but does not change an ill-conditioned problem into a well-conditioned one. A small residual therefore needs to be interpreted with the condition number and the accuracy of the input data.</p>
+            <p>For a dense square system, pivoted LU is a standard direct approach. SPD systems admit Cholesky factorization; large sparse systems often benefit from iterative methods and preconditioners. The expression $\mathbf{x}=A^{-1}\mathbf{b}$ is a theoretical identity, while factorization is usually the practical way to compute the solution.</p>
+            <h3 id="why-row-operations-preserve-the-solution">Why row operations preserve the solution</h3>
+            <p>Swapping equations, multiplying an equation by a nonzero scalar, and adding a multiple of one equation to another are reversible operations. Applying any of them to the whole augmented system therefore keeps exactly the same solutions. This is the common reason Gaussian elimination and the triangular solves following LU are valid. An operation on the coefficient row alone would instead change the problem, which is why the right-hand side must be updated with it.</p>
+            <h2 id="example">Example</h2>
             <p>Consider the following system of three linear equations in three unknowns $x, y, z$:</p>
             <p>$$
                 \begin{cases}
@@ -349,18 +369,19 @@ messageStyle: "none"
                 <li>Compute $\mathbf{A}^{-1}$ and multiply both sides of $\mathbf{A}\mathbf{x} = \mathbf{b}$ by $\mathbf{A}^{-1}$.</li>
             </ul>
             <p>Each approach exploits the structure of linear systems to systematically isolate the solution for $\mathbf{x}$.</p>
-            <h3 id="advantages">Advantages</h3>
+            <p>For this example the solution is $(x,y,z)=(1,-2,-2)$. Substitution gives $3-4+2=1$, $2+4-8=-2$, and $-1-1+2=0$, checking all three equations independently of the chosen solver.</p>
+            <h2 id="advantages">Advantages</h2>
             <ul>
                 <li>Matrix methods, such as Gaussian elimination, provide a <em>systematic framework</em> for solving linear systems, making both theoretical understanding and practical implementation more straightforward.</li>
                 <li>Representing a system of equations as $\mathbf{A}\mathbf{x} = \mathbf{b}$ creates a <em>compact representation</em> that reduces complexity, especially for systems involving many equations and variables.</li>
                 <li>Computational efficiency benefits from <em>scalability</em>, as many matrix-based algorithms have predictable complexities, and optimized libraries like BLAS and LAPACK are designed to utilize modern hardware capabilities.</li>
                 <li>Properties of the system can be analyzed using <em>matrix insights</em>, such as the determinant to assess solution existence or uniqueness, or matrix decompositions (e.g., LU, QR, SVD) to reveal structure and enhance solving methods.</li>
             </ul>
-            <h3 id="limitations">Limitations</h3>
+            <h2 id="limitations">Limitations</h2>
             <ul>
                 <li>When the matrix $\mathbf{A}$ is <em>singular</em> or nearly singular, solutions may not exist, may be infinite, or may be numerically unstable due to amplified computational errors.</li>
                 <li>Solving large systems can be computationally expensive since direct methods like Gaussian elimination scale with $O(n^3)$, and dense matrices increase memory requirements significantly.</li>
-                <li>Numerical instability can arise from <em>ill-conditioned</em> matrices where small changes in $\mathbf{A}$ or $\mathbf{b}$ lead to large deviations in the solution, requiring techniques like pivoting or iterative refinement to mitigate errors.</li>
+                <li><em>Ill-conditioned</em> matrices amplify small changes in $\mathbf A$ or $\mathbf b$ into larger changes in the solution. Pivoting controls arithmetic error growth, and iterative refinement can improve a computed residual, but neither removes sensitivity to uncertainty already present in the supplied data.</li>
                 <li>Sparse systems can be inefficiently handled if treated as dense, leading to unnecessary computational and memory overhead unless <em>specialized sparse techniques</em> are employed.</li>
             </ul>
         </article-section>

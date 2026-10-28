@@ -163,8 +163,7 @@ function withAlpha(color, alpha) {
 
 function refreshTheme() {
     const palette = window.ToolShared && typeof window.ToolShared.palette === "function" ?
-        window.ToolShared.palette() :
-        {};
+        window.ToolShared.palette() : {};
     const pick = (key, fallback) => palette[key] || fallback;
     const moon = pick("moon", "#6d4fd0");
     const gold = pick("gold", "#1f4fd1");

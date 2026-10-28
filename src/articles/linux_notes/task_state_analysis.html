@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/task_state_analysis",
             "description": "Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states.",
-            "dateModified": "2026-10-17",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/linux_notes/task_state_analysis" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states." property="og:description" />
-    <meta content="2026-10-17" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -290,7 +289,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -417,7 +416,7 @@
                     </tr>
                     <tr>
                         <td>Stopped process</td>
-                        <td>Tasks in stopped/traced (<strong>T</strong> state)</td>
+                        <td>Tasks stopped (<strong>T</strong>) or stopped by a tracer (<strong>t</strong>)</td>
                     </tr>
                     <tr>
                         <td>Zombie accumulation</td>
@@ -524,7 +523,7 @@
             <ul>
                 <li>a user sends SIGSTOP</li>
                 <li>a shell job is suspended with Ctrl+Z</li>
-                <li>a debugger stops the process</li>
+                <li>a debugger stops the process (shown as lowercase <code>t</code>, "tracing stop")</li>
             </ul>
             <p>A stopped process is not running. It stays paused until continued.</p>
             <h3 id="z-zombie"><code>Z</code>: Zombie</h3>
@@ -640,8 +639,9 @@ Threads: 3</code></pre>
             <h3 id="counting-task-states">Counting Task States</h3>
             <p>A useful quick view is to count states across the system.</p>
             <div>
-                <pre><code class="language-bash">ps -eo state | sort | uniq -c</code></pre>
+                <pre><code class="language-bash">ps -eo state= | sort | uniq -c</code></pre>
             </div>
+            <p>The <code>=</code> after <code>state</code> removes the column header, which would otherwise be counted as one extra <code>S</code>.</p>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-text">  4 D
@@ -661,7 +661,7 @@ Threads: 3</code></pre>
             <div>
                 <pre><code class="language-bash">while true; do
     date
-    ps -eo state | sort | uniq -c
+    ps -eo state= | sort | uniq -c
     sleep 1
 done</code></pre>
             </div>
@@ -808,7 +808,10 @@ Overhead  Shared Object      Symbol
                 <pre><code class="language-text">%Cpu(s): 96.0 us,  3.0 sy,  0.0 ni,  1.0 id,  0.0 wa
 
   PID USER      PR  NI S  %CPU COMMAND
- 4101 user      20   0 R 399.0 stress-ng-cpu</code></pre>
+ 4102 user      20   0 R 100.0 stress-ng-cpu
+ 4103 user      20   0 R 100.0 stress-ng-cpu
+ 4104 user      20   0 R  99.7 stress-ng-cpu
+ 4105 user      20   0 R  99.7 stress-ng-cpu</code></pre>
             </div>
             <h4 id="check-task-states">Check Task States</h4>
             <div>
@@ -816,11 +819,12 @@ Overhead  Shared Object      Symbol
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text"> 4101  4101 R    stress-ng-cpu
- 4101  4102 R    stress-ng-cpu
- 4101  4103 R    stress-ng-cpu
- 4101  4104 R    stress-ng-cpu</code></pre>
+                <pre><code class="language-text"> 4102  4102 R    stress-ng-cpu
+ 4103  4103 R    stress-ng-cpu
+ 4104  4104 R    stress-ng-cpu
+ 4105  4105 R    stress-ng-cpu</code></pre>
             </div>
+            <p>The parent <code>stress-ng</code> process (here PID 4101) sleeps in <code>S</code>; each worker is a separate single-threaded process, so its TID equals its PID.</p>
             <p>Interpretation:
                 - The stress-ng workers are in R state.
                 - CPU user time is high.
@@ -1244,7 +1248,7 @@ COUNT="${2:-10}"
 
 for i in $(seq 1 "$COUNT"); do
     echo "===== $(date) ====="
-    ps -eo state | sort | uniq -c
+    ps -eo state= | sort | uniq -c
     echo
     sleep "$INTERVAL"
 done
@@ -1558,7 +1562,7 @@ ps -L -p PID -o pid,tid,stat,pcpu,pmem,wchan:30,comm</code></pre>
             </div>
             <p>Count states:</p>
             <div>
-                <pre><code class="language-bash">ps -eo state | sort | uniq -c</code></pre>
+                <pre><code class="language-bash">ps -eo state= | sort | uniq -c</code></pre>
             </div>
             <p>Find D-state tasks:</p>
             <div>

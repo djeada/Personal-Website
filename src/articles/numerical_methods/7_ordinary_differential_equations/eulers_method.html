@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/7_ordinary_differential_equations/eulers_method",
             "description": "Euler's method is the simplest explicit time-stepping method for an initial value problem (IVP).",
-            "dateModified": "2026-10-13",
+            "dateModified": "2026-10-22",
             "image": "https://adamdjellouli.com/resources/article-images/euler-tangent-steps-8c5a6e88a2.svg",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Euler's method is the simplest explicit time-stepping method for an initial value problem (IVP)." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/euler-tangent-steps-8c5a6e88a2.svg" property="og:image" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-22" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -128,13 +127,17 @@ messageStyle: "none"
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#update-formula">Update Formula</a></li>
-                    <li><a href="#derivation-from-taylor-expansion">Derivation from Taylor Expansion</a></li>
-                    <li><a href="#worked-example">Worked Example</a></li>
+                    <li><a href="#update-formula">Update formula</a></li>
+                    <li><a href="#derivation-from-taylor-expansion">Derivation from Taylor expansion</a>
+                        <ol>
+                            <li><a href="#how-local-error-accumulates">How local error accumulates</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#worked-example">Worked example</a></li>
                     <li><a href="#algorithm">Algorithm</a></li>
-                    <li><a href="#repository-implementation">Repository Implementation</a></li>
-                    <li><a href="#step-size-and-stability">Step Size and Stability</a></li>
-                    <li><a href="#when-euler-s-method-is-useful">When Euler's Method Is Useful</a></li>
+                    <li><a href="#repository-implementation">Repository implementation</a></li>
+                    <li><a href="#step-size-and-stability">Step size and stability</a></li>
+                    <li><a href="#when-euler-s-method-is-useful">When Euler's method is useful</a></li>
                     <li><a href="#advantages">Advantages</a></li>
                     <li><a href="#limitations">Limitations</a></li>
                 </ol>
@@ -240,7 +243,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -268,7 +271,7 @@ messageStyle: "none"
                 $$</p>
             <p>The differential equation gives the slope of the solution curve. Euler's method assumes that this slope remains constant over one short step of length $h$.</p>
             <p><img alt="Euler method follows the tangent at the current point" decoding="async" loading="lazy" src="../../../resources/article-images/euler-tangent-steps-8c5a6e88a2.svg" /></p>
-            <h3 id="update-formula">Update Formula</h3>
+            <h2 id="update-formula">Update formula</h2>
             <p>If $t_n=t_0+nh$ and $u_n$ approximates $u(t_n)$, then</p>
             <p>$$
                 u_{n+1} = u_n + h f(t_n,u_n).
@@ -280,7 +283,7 @@ messageStyle: "none"
                 <li>follow the tangent line for a horizontal distance $h$,</li>
                 <li>use the endpoint as the next numerical value.</li>
             </ol>
-            <h3 id="derivation-from-taylor-expansion">Derivation from Taylor Expansion</h3>
+            <h2 id="derivation-from-taylor-expansion">Derivation from Taylor expansion</h2>
             <p>Expand the exact solution about $t_n$:</p>
             <p>$$
                 u(t_n + h) = u(t_n) + h u'(t_n) + \frac{h^2}{2}u''(\xi_n),
@@ -297,7 +300,18 @@ messageStyle: "none"
             </ul>
             <p>So halving the step size should roughly halve the total error once the asymptotic regime is reached.</p>
             <p><img alt="Euler error decreases linearly with step size" decoding="async" loading="lazy" src="../../../resources/article-images/euler-error-vs-step-926a35b4d3.svg" /></p>
-            <h3 id="worked-example">Worked Example</h3>
+            <h3 id="how-local-error-accumulates">How local error accumulates</h3>
+            <p>The $O(h^2)$ local error refers to one step <strong>starting from the exact value</strong>. In a computed trajectory, each new step also propagates earlier errors. If $f$ is Lipschitz in $u$ with constant $L$ and $|u''|\leq M$, the global error $e_n=|u(t_n)-u_n|$ satisfies</p>
+            <p>$$
+                e_{n+1}\leq(1+hL)e_n+\frac{M}{2}h^2.
+                $$</p>
+            <p>Starting with $e_0=0$ and summing the geometric series gives, for $L&gt;0$,</p>
+            <p>$$
+                e_n\leq\frac{M}{2L}h\bigl((1+hL)^n-1\bigr)\leq\frac{M}{2L}h(e^{L(t_n-t_0)}-1).
+                $$</p>
+            <p>On a fixed time interval the factor multiplying $h$ is bounded, giving first-order global accuracy. If $L=0$, the corresponding bound is $M(t_n-t_0)h/2$. This argument also explains why smoothness and controlled error propagation are needed; simply counting steps does not establish convergence for every differential equation.</p>
+            <p>For $u'=u$, the recurrence is $u_n=(1+h)^n u_0$ on a uniform grid. At fixed $T=nh$, $n\log(1+h)=T-Th/2+O(h^2)$, so the numerical growth differs from $e^T$ by a first-order term. When comparing vector ODEs, compute every component of $f(t_n,\mathbf u_n)$ from the same old state before updating the state.</p>
+            <h2 id="worked-example">Worked example</h2>
             <p>Solve approximately</p>
             <p>$$
                 u' = u,
@@ -319,10 +333,10 @@ messageStyle: "none"
                 $$</p>
             <p>The exact value is</p>
             <p>$$
-                e^{0.1}\approx 1.105170.
+                e^{0.1}\approx 1.105170918.
                 $$</p>
             <p>The error is about $2.67\times 10^{-3}$.</p>
-            <h3 id="algorithm">Algorithm</h3>
+            <h2 id="algorithm">Algorithm</h2>
             <p>For a scalar ODE:</p>
             <div>
                 <pre><code class="language-text">t = t0
@@ -341,9 +355,9 @@ while t &lt; tf:
             <p>$$
                 \mathbf{u}_{n+1} = \mathbf{u}_n + h\mathbf{f}(t_n,\mathbf{u}_n).
                 $$</p>
-            <h3 id="repository-implementation">Repository Implementation</h3>
+            <h2 id="repository-implementation">Repository implementation</h2>
             <p><code>euler_method</code> takes a final time <code>t_end</code> and a nominal step <code>h</code>. When <code>(t_end - t0)/h</code> is not an integer, the last step is shortened so that the returned grid ends exactly at <code>t_end</code>; all earlier steps have length <code>h</code>. The returned array has shape <code>(n + 1,)</code> for a scalar ODE (one component) and <code>(n + 1, d)</code> for a system with <code>d</code> components.</p>
-            <h3 id="step-size-and-stability">Step Size and Stability</h3>
+            <h2 id="step-size-and-stability">Step size and stability</h2>
             <p>Accuracy is not the only reason to choose $h$ carefully. A step can be small enough to look reasonable but still be unstable.</p>
             <p>For the test equation</p>
             <p>$$
@@ -361,8 +375,9 @@ while t &lt; tf:
             <p>$$
                 0&lt;h&lt; \frac{2}{|\lambda|}.
                 $$</p>
+            <p>Stability does not imply that the numerical decay has the same shape as the exact decay. For $\lambda&lt;0$ and $1&lt;h|\lambda|&lt;2$, the factor $1+h\lambda$ is negative with magnitude below one: the numerical values alternate in sign while decreasing in magnitude. For example, $\lambda=-1$ and $h=1.5$ give factor $-0.5$, while the exact positive initial solution remains positive. Preserving nonnegative decay requires the stricter condition $0&lt;h\leq1/|\lambda|$ in this scalar example.</p>
             <p>This restriction is severe for <strong>stiff</strong> problems, where some modes decay much faster than others. Explicit Euler may then require extremely small steps even when the solution itself changes slowly.</p>
-            <h3 id="when-euler-s-method-is-useful">When Euler's Method Is Useful</h3>
+            <h2 id="when-euler-s-method-is-useful">When Euler's method is useful</h2>
             <p>Euler's method is valuable when:</p>
             <ul>
                 <li>learning the mechanics of time stepping,</li>
@@ -371,14 +386,14 @@ while t &lt; tf:
                 <li>exploring a model before investing in a higher-order method.</li>
             </ul>
             <p>It is usually not the best production method when high accuracy or stiffness matters.</p>
-            <h3 id="advantages">Advantages</h3>
+            <h2 id="advantages">Advantages</h2>
             <ul>
                 <li>Very simple to derive and implement.</li>
                 <li>Requires only one evaluation of $f$ per step.</li>
                 <li>Extends directly to systems of ODEs.</li>
                 <li>Makes error, stability, and time-stepping ideas easy to visualize.</li>
             </ul>
-            <h3 id="limitations">Limitations</h3>
+            <h2 id="limitations">Limitations</h2>
             <ul>
                 <li>Only first-order accurate globally.</li>
                 <li>Can accumulate substantial error over many steps.</li>

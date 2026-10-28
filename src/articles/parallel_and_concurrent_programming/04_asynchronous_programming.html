@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/04_asynchronous_programming",
             "description": "Asynchronous programming is a technique for achieving concurrency without forcing one operation to block progress while it waits for another to finish.",
-            "dateModified": "2026-10-12",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/04_asynchronous_programming" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Asynchronous programming is a technique for achieving concurrency without forcing one operation to block progress while it waits for another to finish." property="og:description" />
-    <meta content="2026-10-12" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -158,7 +157,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -564,6 +563,67 @@ thread 3 (worker):     -----------CCCCCCCC--------------</code></pre>
             <h3 id="examples">Examples</h3>
             <h4 id="examples-in-c">Examples in C++</h4>
             <p>In C++, asynchronous and concurrent work can be expressed with facilities such as <code>std::async</code>, <code>std::future</code>, and <code>std::promise</code>, while event-driven asynchronous I/O is typically provided by libraries such as Boost.Asio. These mechanisms can keep a caller responsive or coordinate work that completes later, but they are not all based on an event loop.</p>
+            <h5>Choose the Execution Model First</h5>
+            <p>The <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/README.md">C++ guide</a> uses <strong>C++20</strong> as its baseline and separates
+                modern solutions, older comparisons, and low-level mechanics. A feature's
+                introduction date does not decide whether it fits a problem today.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Problem</th>
+                        <th>Approach</th>
+                        <th>Execution model</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>A few independent results</td>
+                        <td><code>std::async</code> with retained futures</td>
+                        <td>C++11 facility still useful in modern code; <code>get()</code> blocks the caller</td>
+                    </tr>
+                    <tr>
+                        <td>Many small tasks with results</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/thread_pool_futures.cpp">Owned worker pool</a></td>
+                        <td>C++20 <code>std::jthread</code> workers; packaged tasks propagate results and exceptions</td>
+                    </tr>
+                    <tr>
+                        <td>Pause, resume, or cancel a worker</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/pause_resume.cpp">Stop-aware waits</a></td>
+                        <td>C++20 stop tokens and <code>condition_variable_any</code></td>
+                    </tr>
+                    <tr>
+                        <td>Sort or reduce independent data</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/parallel_algorithms.cpp">Standard parallel algorithms</a></td>
+                        <td>C++17 execution policies remain the higher-level starting point</td>
+                    </tr>
+                    <tr>
+                        <td>Learn coroutine suspension and return types</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/coroutine_generator.cpp">Generator</a> and <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/coroutine_task.cpp">Task</a></td>
+                        <td>C++20 mechanics; these examples execute synchronously</td>
+                    </tr>
+                    <tr>
+                        <td>Event-driven HTTP</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/parallel_fetch.cpp">Bounded libcurl multi transfers</a></td>
+                        <td>Multiple requests progressed on one event-loop thread</td>
+                    </tr>
+                    <tr>
+                        <td>Event-driven TCP</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/distributed_computing.cpp">Bounded poll-based echo service</a></td>
+                        <td>Owned nonblocking sockets, per-client output limits, and backpressure</td>
+                    </tr>
+                    <tr>
+                        <td>Coroutine-based network I/O</td>
+                        <td>An async I/O library such as Boost.Asio</td>
+                        <td>Library-provided event loop, I/O operations, and coroutine integration</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The <code>async_mutex</code>, <code>async_barrier</code>, <code>async_semaphore</code>, and
+                <code>async_producer_consumer</code> filenames refer to threaded/future-based work. Their
+                waits block OS threads; they are not awaitable coroutine synchronization tools.
+                For a bounded queue with explicit closure, start with
+                <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multithreading/producer_consumer.cpp">producer_consumer.cpp</a>.
+            </p>
             <h5>Asynchronous Tasks with <code>std::async</code></h5>
             <p>With <code>std::launch::async</code>, <code>std::async</code> starts a callable asynchronously and returns a <code>std::future</code> that will hold its result or exception.</p>
             <div>
@@ -607,19 +667,19 @@ int main() {
     std::promise&lt;int&gt; promise;
     std::future&lt;int&gt; future = promise.get_future();
 
-    std::thread t(set_value, std::ref(promise));
+    std::jthread producer(set_value, std::ref(promise));
     
     std::cout &lt;&lt; "Waiting for value..." &lt;&lt; std::endl;
     int value = future.get(); // Wait for the value
     std::cout &lt;&lt; "Value: " &lt;&lt; value &lt;&lt; std::endl;
 
-    t.join();
+    // producer joins automatically before promise is destroyed.
     return 0;
 }</code></pre>
             </div>
             <p>In this example, the <code>set_value</code> function sets a value to the promise, which is then retrieved by the future in the main thread.</p>
             <h5>Asynchronous Waiting with <code>std::future</code></h5>
-            <p>The <code>std::future</code> object provides a way to wait for a result that is being computed asynchronously.</p>
+            <p>The <code>std::future</code> object provides a way to wait for a result that is being computed asynchronously. Its wait functions block the calling thread; they do not suspend a coroutine or drive an event loop.</p>
             <div>
                 <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;future&gt;
@@ -686,7 +746,7 @@ int compute_value() {
 int main() {
     std::shared_future&lt;int&gt; shared_future = std::async(std::launch::async, compute_value).share();
 
-    std::vector&lt;std::thread&gt; threads;
+    std::vector&lt;std::jthread&gt; threads;
     for (int i = 0; i &lt; 5; ++i) {
         threads.emplace_back([shared_future, i]() {
             std::cout &lt;&lt; "Thread " &lt;&lt; i &lt;&lt; ": " &lt;&lt; shared_future.get() &lt;&lt; std::endl;
@@ -704,7 +764,7 @@ int main() {
             <h5>Asynchronous Continuations with <code>std::future</code></h5>
             <p>Asynchronous continuations allow chaining of asynchronous operations.</p>
             <blockquote>
-                <p><strong>⚠️ Note:</strong> <code>std::future</code> does <strong>not</strong> have a <code>.then()</code> method in standard C++ (C++11–C++23). Such code will not compile. The <code>.then()</code> continuation API was proposed in the Concurrency TS (N4538) but was never merged into the standard. Libraries such as Folly, HPX, and Boost.Future provide it as an extension.</p>
+                <p><strong>⚠️ Note:</strong> <code>std::future</code> has no <code>.then()</code> method in this repository's C++20 baseline. The continuation API appeared in the Concurrency TS; libraries such as Folly, HPX, and Boost.Future provide continuations as extensions.</p>
             </blockquote>
             <p>The standard way to sequence async work is to call <code>.get()</code> and pass the result manually:</p>
             <div>
@@ -734,9 +794,10 @@ int main() {
     return 0;
 }</code></pre>
             </div>
-            <p>For true non-blocking chaining, use C++20 coroutines (see <code>coroutine_task.cpp</code>) or a library such as Boost.Asio.</p>
+            <p>For event-driven composition, use a library such as <a href="https://www.boost.org/doc/libs/latest/doc/html/boost_asio/overview/composition/cpp20_coroutines.html">Boost.Asio</a> with asynchronous operations. The local <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/coroutine_task.cpp">coroutine_task.cpp</a> only demonstrates synchronous <code>co_await</code> mechanics; it supplies no I/O scheduler.</p>
             <h5>Performance Considerations and Best Practices</h5>
             <ul>
+                <li>For HTTP I/O, <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/parallel_fetch.cpp">parallel_fetch.cpp</a> uses libcurl multi with at most four in-flight transfers, scoped handles, timeouts, and per-request error reporting. It creates no thread per URL.</li>
                 <li>Use asynchronous or concurrent execution when it helps keep the caller responsive or overlap independent work.</li>
                 <li>Handle exceptions from asynchronous operations explicitly, especially when retrieving results through futures.</li>
                 <li>Protect shared mutable state with appropriate synchronization when work can run concurrently.</li>
@@ -800,12 +861,12 @@ int main() {
                     <tr>
                         <td>10</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/thread_pool_futures.cpp">thread_pool_futures.cpp</a></td>
-                        <td>Thread pool with <code>packaged_task</code> and future-based interface</td>
+                        <td>C++20 owned worker pool with packaged tasks, futures, and draining shutdown</td>
                     </tr>
                     <tr>
                         <td>11</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/pause_resume.cpp">pause_resume.cpp</a></td>
-                        <td>Pause and resume asynchronous tasks</td>
+                        <td>Pause, resume, and cancel a C++20 worker with stop-aware waits</td>
                     </tr>
                     <tr>
                         <td>12</td>
@@ -815,7 +876,7 @@ int main() {
                     <tr>
                         <td>13</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/async_producer_consumer.cpp">async_producer_consumer.cpp</a></td>
-                        <td>Implement a producer-consumer pattern asynchronously</td>
+                        <td>Future-based tasks with a bounded queue, explicit closure, and draining</td>
                     </tr>
                     <tr>
                         <td>14</td>
@@ -825,32 +886,32 @@ int main() {
                     <tr>
                         <td>15</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/async_semaphore.cpp">async_semaphore.cpp</a></td>
-                        <td>Control access to shared resources with a semaphore</td>
+                        <td>Bound concurrent worker access with <code>std::counting_semaphore</code></td>
                     </tr>
                     <tr>
                         <td>16</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/async_barrier.cpp">async_barrier.cpp</a></td>
-                        <td>Synchronize multiple asynchronous tasks using a barrier</td>
+                        <td>Synchronize OS worker threads with a blocking <code>std::barrier</code></td>
                     </tr>
                     <tr>
                         <td>17</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/coroutine_generator.cpp">coroutine_generator.cpp</a></td>
-                        <td>C++20 lazy generator with <code>co_yield</code></td>
+                        <td>C++20 synchronous lazy generator with <code>co_yield</code></td>
                     </tr>
                     <tr>
                         <td>18</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/coroutine_task.cpp">coroutine_task.cpp</a></td>
-                        <td>C++20 <code>co_await</code> coroutine chaining with a minimal <code>Task&lt;T&gt;</code></td>
+                        <td>C++20 synchronous <code>co_await</code> mechanics with a minimal <code>Task&lt;T&gt;</code></td>
                     </tr>
                     <tr>
                         <td>19</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/async_mutex.cpp">async_mutex.cpp</a></td>
-                        <td>Use a mutex to synchronize access to shared resources</td>
+                        <td>Protect shared state in threaded tasks with a mutex</td>
                     </tr>
                     <tr>
                         <td>20</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/parallel_fetch.cpp">parallel_fetch.cpp</a></td>
-                        <td>Fetch data in parallel (requires libcurl)</td>
+                        <td>Bounded asynchronous HTTP on one libcurl multi event-loop thread</td>
                     </tr>
                     <tr>
                         <td>21</td>
@@ -860,7 +921,7 @@ int main() {
                     <tr>
                         <td>22</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/asynchrony/distributed_computing.cpp">distributed_computing.cpp</a></td>
-                        <td>Distributed computing with socket server/worker/client</td>
+                        <td>Bounded nonblocking TCP echo protocol with owned sockets and backpressure</td>
                     </tr>
                 </tbody>
             </table>

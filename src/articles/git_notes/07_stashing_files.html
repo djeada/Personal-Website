@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/07_stashing_files",
             "description": "In Git terminology, \"stashing\" refers to temporarily saving changes that are not ready to be committed.",
-            "dateModified": "2026-05-03",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/git_notes/07_stashing_files" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content='In Git terminology, "stashing" refers to temporarily saving changes that are not ready to be committed.' property="og:description" />
-    <meta content="2026-05-03" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -165,7 +164,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -216,16 +215,14 @@ After git stash pop/apply
             <p>For example:</p>
             <div>
                 <pre><code class="language-bash">$ git stash
-Saved working directory and index state WIP on feature: abcdefg Add new feature
-HEAD is now at abcdefg Add new feature</code></pre>
+Saved working directory and index state WIP on feature: abcdefg Add new feature</code></pre>
             </div>
             <p>This will save your changes and leave your working directory clean, allowing you to switch branches or make other changes without losing your work.</p>
             <h2 id="stashing-with-a-message">Stashing with a message</h2>
             <p>You can also provide a message when stashing your changes, which can be helpful for keeping track of what you were working on. To do this, use the <code>git stash push -m</code> command followed by the message. For example:</p>
             <div>
                 <pre><code class="language-bash">$ git stash push -m "Work in progress on new feature"
-Saved working directory and index state WIP on feature: abcdefg Work in progress on new feature
-HEAD is now at abcdefg Add new feature</code></pre>
+Saved working directory and index state On feature: Work in progress on new feature</code></pre>
             </div>
             <p>Note: The older <code>git stash save "message"</code> syntax still works but has been deprecated since Git 2.16 in favour of <code>git stash push -m "message"</code>.</p>
             <h2 id="viewing-stashed-changes">Viewing Stashed Changes</h2>
@@ -234,7 +231,7 @@ HEAD is now at abcdefg Add new feature</code></pre>
             <p>To see a list of all the stashed changes in your repository, you can use the <code>git stash list</code> command. This command will display a list of all the stashes that you have created in your repository. Each stash entry will include an index, a description of the changes, and a message if one was provided. For example:</p>
             <div>
                 <pre><code class="language-bash">$ git stash list
-stash@{0}: WIP on feature: abcdefg Work in progress on new feature
+stash@{0}: On feature: Work in progress on new feature
 stash@{1}: WIP on bugfix: 1234567 Temporary stash before bugfix
 stash@{2}: WIP on refactor: 89abcde Started refactoring codebase</code></pre>
             </div>
@@ -274,15 +271,15 @@ stash@{2}: WIP on refactor: 89abcde Started refactoring codebase</code></pre>
             </div>
             <p>This command will apply the changes from the most recent stash (i.e., <code>stash@{0}</code>).</p>
             <h3 id="resolving-conflicts">Resolving Conflicts</h3>
-            <p>When applying a stash, you may encounter conflicts if the changes in the stash conflict with the changes in your working directory. Git will notify you of any conflicts, and you will need to resolve them manually, similar to resolving merge conflicts. Once resolved, you can continue working with the applied changes.</p>
+            <p>When applying a stash, you may encounter conflicts if the changes in the stash conflict with changes committed since the stash was made (if uncommitted local changes touch the same files, Git refuses to apply the stash instead). Git will notify you of any conflicts, and you will need to resolve them manually, similar to resolving merge conflicts. Once resolved, you can continue working with the applied changes.</p>
             <h3 id="removing-a-stash-after-applying">Removing a Stash After Applying</h3>
-            <p>If you want to apply a stash and remove it from the stash list in one step, you can use the <code>git stash pop</code> command. This command applies the stash and then deletes it from the stash list:</p>
+            <p>If you want to apply a stash and remove it from the stash list in one step, you can use the <code>git stash pop</code> command. This command applies the stash and then deletes it from the stash list (if applying it causes conflicts, the stash is kept):</p>
             <div>
                 <pre><code class="language-bash">$ git stash pop stash@{0}</code></pre>
             </div>
             <p>This is useful when you are sure you no longer need the stash after applying it. The stash is applied to your working directory, and <code>stash@{0}</code> is removed from the list.</p>
             <h3 id="applying-stashes-with-index-changes">Applying Stashes with Index Changes</h3>
-            <p>By default, <code>git stash apply</code> only applies changes to the working directory. If your stash includes changes to the index (staged files), you can include those changes by using the <code>--index</code> option:</p>
+            <p>By default, <code>git stash apply</code> restores changes to the working directory only, so previously staged modifications come back unstaged (newly added files stay added). If your stash includes changes to the index (staged files), you can include those changes by using the <code>--index</code> option:</p>
             <div>
                 <pre><code class="language-bash">$ git stash apply --index stash@{0}</code></pre>
             </div>

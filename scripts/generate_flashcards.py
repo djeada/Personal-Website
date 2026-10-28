@@ -30,8 +30,8 @@ from typing import Dict, List, Optional, Tuple
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.append(str(SCRIPT_DIR))
 
-from generate_quizzes import Report, load_files  # noqa: E402
-from learning_sources import (  # noqa: E402
+from generate_quizzes import Report, load_files
+from learning_sources import (
     DATABASES,
     DEVOPS,
     FRONTEND,
@@ -50,7 +50,7 @@ from learning_sources import (  # noqa: E402
     stable_id,
     write_json,
 )
-import requests  # noqa: E402
+import requests
 
 OUTPUT_DIR = SCRIPT_DIR.parent / "src" / "tools" / "flash_cards"
 
@@ -124,8 +124,7 @@ def parse_cards(source: SourceFile, report: Report) -> List[Tuple[str, str, str,
             continue
 
         above = [h for h in headings if h[0] < match.start()]
-        # Cards are grouped by their nearest level-2 heading, so sub-headings
-        # inside a section do not splinter it into tiny topics.
+
         section = next(
             (h for h in reversed(above) if h[1] == 2), above[-1] if above else None
         )

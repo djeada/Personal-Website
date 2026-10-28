@@ -39,7 +39,7 @@ from typing import Dict, List, Optional, Tuple
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.append(str(SCRIPT_DIR))
 
-from learning_sources import (  # noqa: E402
+from learning_sources import (
     DATABASES,
     DEVOPS,
     C_CPP_PL,
@@ -63,7 +63,7 @@ from learning_sources import (  # noqa: E402
     stable_id,
     write_json,
 )
-import requests  # noqa: E402
+import requests
 
 OUTPUT_DIR = SCRIPT_DIR.parent / "src" / "tools" / "quiz_app"
 
@@ -144,7 +144,7 @@ CATEGORIES: Tuple[Category, ...] = (
 QUESTION_HEADING = re.compile(r"^#{2,6}\s*Q\.\s*", re.M)
 OPTION = re.compile(r"^\s*[*-]\s*\[([ xX])\]\s?(.*)$")
 FENCE = re.compile(r"^\s*(```|~~~)")
-# English and Polish sources use the same format with translated labels.
+
 NOTES_LINE = re.compile(r"^(?:Notes|Notatki):\s*(.+)$", re.M | re.I)
 MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 EXPLANATION_PREFIX = re.compile(r"^\*\*(?:Explanation|Wyjaśnienie):?\*\*:?\s*", re.I)
@@ -159,7 +159,7 @@ MIN_OPTIONS = 3
 
 @dataclass
 class Problem:
-    level: str  # "error" drops the question, "warning" only reports it
+    level: str
     location: str
     message: str
 
@@ -374,7 +374,6 @@ def build_category(category: Category, files: List[SourceFile], report: Report) 
         "category": category.to_dict(
             questionCount=len(questions),
             topicCount=len(topics),
-            # The app loads MathJax only for subjects whose sources use TeX.
             math=category.math or any(has_math(source.text) for source in files),
         ),
         "topics": topics,
@@ -480,9 +479,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             len(data["topics"]),
         )
 
-    # A normal build publishes the valid questions and only logs the broken
-    # ones, so one upstream typo cannot block a deploy; --check and --strict
-    # are for CI and for authors fixing the sources.
     if (args.check or args.strict) and report.errors:
         return 1
     if args.strict and report.warnings:

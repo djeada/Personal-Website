@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/17_git_internals",
             "description": "Git stores your project as a graph of immutable objects. Instead of storing changes as a sequence of file diffs, Git stores snapshots of your project.",
-            "dateModified": "2026-05-03",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/git_notes/17_git_internals" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Git stores your project as a graph of immutable objects. Instead of storing changes as a sequence of file diffs, Git stores snapshots of your project." property="og:description" />
-    <meta content="2026-05-03" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -146,9 +145,7 @@
                     <li><a href="#reflog-git-s-safety-net">Reflog: Git’s Safety Net</a></li>
                     <li><a href="#tags">Tags</a>
                         <ol>
-                            <ol>
-                                <li><a href="#lightweight-tag">Lightweight Tag</a></li>
-                            </ol>
+                            <li><a href="#lightweight-tag">Lightweight Tag</a></li>
                             <li><a href="#annotated-tag">Annotated Tag</a></li>
                             <li><a href="#quick-commands">Quick Commands</a></li>
                             <li><a href="#inspect-any-object">Inspect Any Object</a></li>
@@ -187,7 +184,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -207,7 +204,7 @@
                     </button></div>
             </div>
             <h1>Git Internals</h1>
-            <p>Git stores your project as a graph of immutable objects. Instead of storing changes as a sequence of file diffs, Git stores snapshots of your project. Each snapshot is built from content-addressed objects, meaning each object is identified by a hash of its contents.</p>
+            <p>Git stores your project as a graph of immutable objects. Instead of storing changes as a sequence of file diffs, Git stores snapshots of your project. Each snapshot is built from content-addressed objects, meaning each object is identified by a hash of its contents (more precisely, a hash of a short header with the object type and size, followed by the contents; <code>echo "hello world" | git hash-object --stdin</code> equals the SHA-1 of <code>blob 12\0hello world\n</code>).</p>
             <p>At the bottom are <strong>blobs</strong>. A blob stores raw file contents only. It does not store the file name, path, permissions, or history.</p>
             <p>Above blobs are <strong>trees</strong>. A tree is like a directory. It maps names to objects. Each tree entry contains a file mode, object type, object hash, and name. A tree can point to blobs, which represent files, or to other trees, which represent subdirectories.</p>
             <p>Above trees are <strong>commits</strong>. A commit points to one top-level tree, which represents the full project snapshot at that moment. A commit also stores parent commit IDs, author and committer information, timestamps, and the commit message.</p>
@@ -757,7 +754,7 @@ a1b2c3d HEAD@{1}: commit: initial snapshot</code></pre>
             <h3 id="tags">Tags</h3>
             <p>Tags give names to important points in history, often releases.</p>
             <p>There are two main tag types.</p>
-            <h2 id="lightweight-tag">Lightweight Tag</h2>
+            <h4 id="lightweight-tag">Lightweight Tag</h4>
             <p>A lightweight tag is just a ref pointing directly to a commit.</p>
             <div>
                 <pre><code class="language-bash">git tag v1.0</code></pre>
@@ -805,7 +802,7 @@ $ git cat-file -s HEAD
 
 $ git cat-file -p HEAD
 tree 7b3f9a1c5d3e8f6a2b0c9d4e1f8a6b7c9d0e1f2a
-parent 2a4c6e8f1b3d5a7c9e0f2a4b6d8e1c3f5a7b9d0
+parent 2a4c6e8f1b3d5a7c9e0f2a4b6d8e1c3f5a7b9d01
 author Alex Example &lt;alex@example.com&gt; 1777808400 +0200
 committer Alex Example &lt;alex@example.com&gt; 1777808400 +0200
 
@@ -828,7 +825,7 @@ Add hello.txt</code></pre>
             <div>
                 <pre><code class="language-text">commit 9fceb02d0ae598e95dc970b74767f19372d61af8
 tree 7b3f9a1c5d3e8f6a2b0c9d4e1f8a6b7c9d0e1f2a
-parent 2a4c6e8f1b3d5a7c9e0f2a4b6d8e1c3f5a7b9d0
+parent 2a4c6e8f1b3d5a7c9e0f2a4b6d8e1c3f5a7b9d01
 author Alex Example &lt;alex@example.com&gt; 1777808400 +0200
 committer Alex Example &lt;alex@example.com&gt; 1777808400 +0200
 
@@ -856,14 +853,14 @@ git ls-tree -r --long HEAD</code></pre>
             <div>
                 <pre><code class="language-text">$ git ls-tree HEAD
 100644 blob e965047ad7c57865823c7d992b1d046ea66edf78    hello.txt
-040000 tree 3b18e512dba79e4c8300dd08aeb37f8e728b8dad    src
+040000 tree 4f2e8c1a9b7d3e5f6a0c2b4d8e1f3a5c7b9d0e2f    src
 
 $ git ls-tree -r HEAD
 100644 blob e965047ad7c57865823c7d992b1d046ea66edf78    hello.txt
 100644 blob a3f5c7d9e1b2a4c6e8f0d3b5a7c9e1f2d4b6a8c0    src/main.py
 
 $ git ls-tree -r --long HEAD
-100644 blob e965047ad7c57865823c7d992b1d046ea66edf78       14    hello.txt
+100644 blob e965047ad7c57865823c7d992b1d046ea66edf78        6    hello.txt
 100644 blob a3f5c7d9e1b2a4c6e8f0d3b5a7c9e1f2d4b6a8c0      128    src/main.py</code></pre>
             </div>
             <p>Explanation:</p>
@@ -926,7 +923,7 @@ R100    app.py   src/app.py</code></pre>
             <p>This command reads a file directly from a commit without checking out that commit. It is useful when you want to inspect a historical version of a file, compare content mentally, or recover a file’s contents from another revision.</p>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-text">Hello, Git!</code></pre>
+                <pre><code class="language-text">Hello</code></pre>
             </div>
             <p>Explanation:</p>
             <ul>

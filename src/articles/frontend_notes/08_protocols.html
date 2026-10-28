@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/frontend_notes/08_protocols",
             "description": "In today\u2019s connected world, front-end developers do far more than style web pages and craft user interfaces.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-23",
             "image": "https://adamdjellouli.com/resources/article-images/request-lifecycle-3c94191350.svg",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="In today’s connected world, front-end developers do far more than style web pages and craft user interfaces." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/request-lifecycle-3c94191350.svg" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-23" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -117,6 +116,7 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
+                    <li><a href="#what-a-newer-protocol-actually-replaces">What a newer protocol actually replaces</a></li>
                     <li><a href="#foundational-concepts">Foundational Concepts</a>
                         <ol>
                             <li><a href="#internet">Internet</a></li>
@@ -193,7 +193,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 23, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -214,6 +214,42 @@
             </div>
             <h1>Protocols</h1>
             <p>In today’s connected world, front-end developers do far more than style web pages and craft user interfaces. They also need to understand the underlying network protocols that shape how data travels between their applications and the servers that power them. By mastering the inner workings of protocols, developers can create more efficient, secure, and reliable experiences for users. This section explores some of the foundational concepts, tools, and processes that every front-end developer should know to ensure smooth communication between the front end and back end.</p>
+            <h3 id="what-a-newer-protocol-actually-replaces">What a newer protocol actually replaces</h3>
+            <p>“Newer” can mean a different transport, a different API contract, or simply a different client library. Keep the layer explicit when reading older tutorials:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Change</th>
+                        <th>Problem it addresses</th>
+                        <th>What stays relevant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>HTTP/1.1 to HTTP/2</td>
+                        <td>Multiplex requests over a connection using a different wire representation.</td>
+                        <td>Methods, status codes, cache rules, and application authorization.</td>
+                    </tr>
+                    <tr>
+                        <td>HTTP/2 to HTTP/3</td>
+                        <td>Use QUIC streams instead of TCP, avoiding TCP's connection-wide head-of-line blocking between streams.</td>
+                        <td>HTTP semantics and the need to measure the actual network path.</td>
+                    </tr>
+                    <tr>
+                        <td>Resource-oriented HTTP API to GraphQL</td>
+                        <td>Let clients describe data selections against a schema.</td>
+                        <td>HTTP can still carry requests; resolvers, authorization, caching, and query cost remain design work.</td>
+                    </tr>
+                    <tr>
+                        <td>Polling to server push</td>
+                        <td>Deliver updates without repeating the same query on a timer.</td>
+                        <td>Connection lifecycle, reconnect behavior, stale data, and server capacity.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The <a href="https://www.rfc-editor.org/rfc/rfc9114">HTTP/3 specification</a> defines a new HTTP mapping onto QUIC, not a new JavaScript data model. <a href="https://graphql.org/learn/">GraphQL</a> is an application-level alternative for some API designs, not a version of HTTP or proof that REST-style APIs are obsolete. A simple resource API with useful HTTP caching may be easier to operate; a graph can suit clients needing varied combinations of related data. Neither choice removes backend work.</p>
+            <p><strong>Choose the interaction before the protocol:</strong> a status feed mainly sends updates from server to browser, which may suit <a href="https://html.spec.whatwg.org/multipage/server-sent-events.html">server-sent events</a>. Collaborative editing needs messages in both directions and may suit WebSockets. Occasional polling may be enough for a low-frequency dashboard. “Real-time” is a latency requirement to quantify, not a requirement to use sockets.</p>
+            <p><strong>Failure lesson:</strong> a connection can drop after the server accepts an operation but before the browser receives confirmation. Retrying blindly may repeat the operation. Decide how the application recognizes duplicates and recovers state; changing HTTP versions does not decide that contract.</p>
             <h3 id="foundational-concepts">Foundational Concepts</h3>
             <h4 id="internet">Internet</h4>
             <p>The Internet is often called a “network of networks” because it consists of numerous smaller, interconnected networks run by private, public, academic, business, and government entities. This global system enables billions of devices to connect and exchange information at unprecedented speed and scale.</p>
@@ -780,7 +816,7 @@ Content-Length: 3057
                 <li>In <strong>active mode</strong>, the server initiates the data connection to the client. </li>
                 <li>In <strong>passive mode</strong>, the client initiates the data connection, which is more suitable for navigating firewalls. </li>
             </ul>
-            <p>Security-wise, <strong>plain FTP traffic is unencrypted</strong> and can be intercepted. Hence, more secure variants like FTPS (FTP over SSL/TLS) and SFTP (FTP over SSH) are recommended when data privacy is a concern.</p>
+            <p>Security-wise, <strong>plain FTP traffic is unencrypted</strong> and can be intercepted. <a href="https://www.rfc-editor.org/rfc/rfc4217">FTPS adds TLS to FTP</a>; <a href="https://man.openbsd.org/sftp">SFTP uses SSH file transfer</a>, a separate protocol rather than an FTP encryption option. Check which protocol the server supports rather than assuming the clients are interchangeable.</p>
             <p><strong>FTP Workflow Diagram</strong>:</p>
             <div>
                 <pre><code class="language-shell">[Client]

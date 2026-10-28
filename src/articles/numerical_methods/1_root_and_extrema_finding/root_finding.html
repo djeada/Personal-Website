@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/1_root_and_extrema_finding/root_finding",
             "description": "Root-finding algorithms aim to solve equations of the form for a scalar (or vector) variable x.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-22",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/numerical_methods/1_root_and_extrema_finding/root_finding" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Root-finding algorithms aim to solve equations of the form for a scalar (or vector) variable x." property="og:description" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-22" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -124,25 +123,37 @@ messageStyle: "none"
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#relevance-and-applications">Relevance and Applications</a></li>
-                    <li><a href="#basic-concepts">Basic Concepts</a>
+                    <li><a href="#relevance-and-applications">Relevance and applications</a></li>
+                    <li><a href="#basic-concepts">Basic concepts</a>
                         <ol>
                             <li><a href="#root">Root</a></li>
-                            <li><a href="#brackets-and-the-intermediate-value-theorem">Brackets and the Intermediate Value Theorem</a></li>
+                            <li><a href="#brackets-and-the-intermediate-value-theorem">Brackets and the intermediate value theorem</a></li>
                             <li><a href="#convergence">Convergence</a></li>
                             <li><a href="#tolerance">Tolerance</a></li>
+                            <li><a href="#residual-position-error-and-conditioning">Residual, position error, and conditioning</a></li>
                         </ol>
                     </li>
-                    <li><a href="#common-root-finding-methods">Common Root-Finding Methods</a>
+                    <li><a href="#common-root-finding-methods">Common root-finding methods</a>
                         <ol>
-                            <li><a href="#bracketing-methods">Bracketing Methods</a></li>
-                            <li><a href="#open-methods">Open Methods</a></li>
-                            <li><a href="#combination-methods">Combination Methods</a></li>
+                            <li><a href="#bracketing-methods">Bracketing methods</a>
+                                <ol>
+                                    <li><a href="#bisection-method">Bisection method</a></li>
+                                    <li><a href="#false-position-regula-falsi">False position (regula falsi)</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#open-methods">Open methods</a>
+                                <ol>
+                                    <li><a href="#newton-s-method">Newton’s method</a></li>
+                                    <li><a href="#secant-method">Secant method</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#combination-methods">Combination methods</a></li>
                         </ol>
                     </li>
-                    <li><a href="#choosing-a-root-finding-method">Choosing a Root-Finding Method</a>
+                    <li><a href="#checking-the-domain-before-iterating">Checking the domain before iterating</a></li>
+                    <li><a href="#choosing-a-root-finding-method">Choosing a root-finding method</a>
                         <ol>
-                            <li><a href="#example-flow-of-decision">Example Flow of Decision</a></li>
+                            <li><a href="#example-flow-of-decision">Example flow of decision</a></li>
                         </ol>
                     </li>
                 </ol>
@@ -248,7 +259,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -269,60 +280,78 @@ messageStyle: "none"
             </div>
             <h1>Root-Finding in Numerical Methods</h1>
             <p>Root-finding algorithms aim to solve equations of the form</p>
-            <p>$$f(x) = 0$$</p>
+            <p>$$
+                f(x) = 0
+                $$</p>
             <p>for a scalar (or vector) variable $x$. Although linear problems $\,ax + b = 0\,$ admit the straightforward solution $x = -b/a$, many practical applications involve <strong>nonlinear</strong> equations—polynomial or transcendental—where closed-form solutions may be unavailable or difficult to find. Consequently, numerical methods are indispensable for approximating roots.</p>
-            <h3 id="relevance-and-applications">Relevance and Applications</h3>
+            <h2 id="relevance-and-applications">Relevance and applications</h2>
             <ul>
                 <li><strong>Root-finding</strong> is used in engineering to determine operating points and equilibrium solutions in mechanical, electrical, or chemical systems.</li>
                 <li>In <strong>physics</strong>, root-finding helps solve boundary value problems, locate energy eigenstates, or find intersection points in scattering problems.</li>
-                <li>In <strong>computer science and machine learning</strong>, root-finding is involved in optimizing objective functions, which can reduce to solving \(\nabla f(x) = 0\).</li>
+                <li>In <strong>computer science and machine learning</strong>, root-finding is involved in optimizing objective functions, which can reduce to solving $\nabla f(x) = 0$.</li>
                 <li><strong>Financial applications</strong> include calculating implied volatilities or internal rates of return, often involving transcendental equations that require root-finding.</li>
-                <li>Solving <strong>nonlinear systems</strong> in higher dimensions, such as \(\mathbf{f}(\mathbf{x}) = \mathbf{0}\), extends 1D root-finding methods (e.g., Newton’s method generalizes to Newton–Raphson for multiple dimensions).</li>
+                <li>Solving <strong>nonlinear systems</strong> in higher dimensions, such as $\mathbf{f}(\mathbf{x}) = \mathbf{0}$, extends 1D root-finding methods (e.g., Newton’s method generalizes to Newton–Raphson for multiple dimensions).</li>
             </ul>
-            <h3 id="basic-concepts">Basic Concepts</h3>
-            <h4 id="root">Root</h4>
+            <h2 id="basic-concepts">Basic concepts</h2>
+            <h3 id="root">Root</h3>
             <p>A <strong>root</strong> $r$ of a function $f$ is a solution to</p>
-            <p>$$f(r) = 0.$$</p>
+            <p>$$
+                f(r) = 0.
+                $$</p>
             <p>Depending on $f$:</p>
             <ol>
                 <li><strong>Polynomial functions</strong> $f(x) = a_n x^n + \dots + a_0$ may have multiple real or complex roots.</li>
                 <li><strong>Transcendental functions</strong> (e.g., $\sin x$, $\exp x$, $\log x$) may have infinitely many roots or require special methods.</li>
                 <li><strong>Generalized exponents</strong> or radicals ($x^\pi, x^{3/5}, \sqrt{x}, \ldots$) introduce domain constraints or branch cuts.</li>
             </ol>
-            <h4 id="brackets-and-the-intermediate-value-theorem">Brackets and the Intermediate Value Theorem</h4>
+            <h3 id="brackets-and-the-intermediate-value-theorem">Brackets and the intermediate value theorem</h3>
             <p>A <strong>bracket</strong> $[a,b]$ is an interval such that</p>
-            <p>$$f(a)\, f(b) &lt; 0.$$</p>
+            <p>$$
+                f(a)\, f(b) &lt; 0.
+                $$</p>
             <p>Provided $f$ is <strong>continuous</strong> on $[a,b]$, the <strong>Intermediate Value Theorem (IVT)</strong> guarantees there is at least one root in $[a,b]$. This property underpins <strong>bracketing methods</strong>, ensuring that each iteration can reduce the interval size while preserving a sign change that encloses a root.</p>
             <blockquote>
                 <p><strong>Note</strong>: If $f$ is not continuous, sign changes do not necessarily imply roots in that interval.</p>
             </blockquote>
-            <h4 id="convergence">Convergence</h4>
+            <h3 id="convergence">Convergence</h3>
             <p>An iterative method generates a sequence of approximations $\{x_k\}$. If $x_k \to r$ as $k \to \infty$ (for some root $r$), we say the method <strong>converges</strong> to $r$. The <strong>rate of convergence</strong> is an important property:</p>
             <ul>
                 <li><strong>Linear convergence</strong>: $\lvert x_{k+1} - r\rvert \approx C \,\lvert x_k - r\rvert$ for some $C &lt; 1$.</li>
                 <li><strong>Quadratic convergence</strong>: $\lvert x_{k+1} - r\rvert \approx K \,\lvert x_k - r\rvert^2$.</li>
             </ul>
-            <p>For example, Bisection typically has <strong>linear convergence</strong>, while Newton’s Method can exhibit <strong>quadratic convergence</strong> (under favorable conditions).</p>
-            <h4 id="tolerance">Tolerance</h4>
+            <p>For example, Bisection typically has <strong>linear convergence</strong>, while Newton’s method can exhibit <strong>quadratic convergence</strong> (under favorable conditions).</p>
+            <h3 id="tolerance">Tolerance</h3>
             <p>A <strong>tolerance</strong> $\varepsilon$ is chosen so that when</p>
             <p>$$
                 \lvert x_{k+1} - x_k\rvert \,&lt;\, \varepsilon \quad \text{or}\quad \lvert f(x_k)\rvert
                 \,&lt;\, \delta,
                 $$
                 we consider the root sufficiently approximated and stop. The choice of $\varepsilon$ and $\delta$ depends on the application’s precision needs.</p>
-            <h3 id="common-root-finding-methods">Common Root-Finding Methods</h3>
+            <h3 id="residual-position-error-and-conditioning">Residual, position error, and conditioning</h3>
+            <p>The <strong>residual</strong> $|f(\widehat r)|$ tells us how well an approximation satisfies the equation; the <strong>position error</strong> $|\widehat r-r|$ tells us how close it is to a particular root. Near a simple root, Taylor expansion gives</p>
+            <p>$$
+                f(\widehat r)=f'(r)(\widehat r-r)+O((\widehat r-r)^2),\qquad \widehat r-r\approx\frac{f(\widehat r)}{f'(r)}.
+                $$</p>
+            <p>A small derivative can amplify a small residual into a larger position error. For example, $f(x)=10^{-12}(x-1)$ has residual $10^{-12}$ at $x=2$, even though the position error is $1$. Multiplying an equation by a constant changes its residual without changing its roots.</p>
+            <p>A practical step test combines absolute and relative tolerances,</p>
+            <p>$$
+                |x_{k+1}-x_k|\leq\epsilon_{\mathrm{abs}}+\epsilon_{\mathrm{rel}}|x_{k+1}|,
+                $$</p>
+            <p>and is interpreted alongside a suitably scaled residual or a certified bracket width. A small step alone can mean stagnation. An iteration limit reports failure to meet the requested criterion, rather than establishing that the last iterate is accurate.</p>
+            <p>A <strong>simple root</strong> satisfies $f'(r)\ne0$. A root of multiplicity $m&gt;1$ has the form $f(x)=(x-r)^m h(x)$ with $h(r)\ne0$. Even multiplicities need not produce a sign change, so scanning for sign changes can miss them. The scalar methods in this chapter should also be distinguished from optimization: solving $f'(x)=0$ finds stationary points, whose classification requires further analysis.</p>
+            <h2 id="common-root-finding-methods">Common root-finding methods</h2>
             <p>Root-finding methods can be broadly classified into <strong>bracketing</strong> (guaranteed convergence under certain assumptions) and <strong>open</strong> methods (faster convergence but risk of divergence). Some methods combine both aspects.</p>
-            <h4 id="bracketing-methods">Bracketing Methods</h4>
-            <h5>Bisection Method</h5>
+            <h3 id="bracketing-methods">Bracketing methods</h3>
+            <h4 id="bisection-method">Bisection method</h4>
             <ul>
                 <li>Start with an interval $[a_0, b_0]$ where $f(a_0)f(b_0) &lt; 0$ to ensure the presence of a root.</li>
                 <li>Calculate the midpoint $m = \frac{a_k + b_k}{2}$ of the current interval.</li>
                 <li>If $f(a_k)f(m) &lt; 0$, update the interval to $[a_{k+1}, b_{k+1}] = [a_k, m]$.</li>
-                <li>If $f(a_k)f(m) \geq 0$, update the interval to $[a_{k+1}, b_{k+1}] = [m, b_k]$.</li>
+                <li>If $f(m)=0$, return $m$ immediately. Otherwise, if $f(a_k)f(m)&gt;0$, update the interval to $[a_{k+1}, b_{k+1}] = [m,b_k]$.</li>
                 <li>The method halves the interval length in each iteration, leading to linear convergence with a ratio of 0.5.</li>
                 <li>After $n$ steps, the bracket size reduces to $\frac{b_0 - a_0}{2^n}$.</li>
             </ul>
-            <h5>False Position (Regula Falsi)</h5>
+            <h4 id="false-position-regula-falsi">False position (regula falsi)</h4>
             <ul>
                 <li>Select an interval $[a, b]$ such that $f(a)f(b) &lt; 0$, ensuring the presence of a root in the interval.</li>
                 <li>Compute the interpolated point $x_{\text{interp}} = \frac{a f(b) - b f(a)}{f(b) - f(a)}$ using linear interpolation between $(a, f(a))$ and $(b, f(b))$.</li>
@@ -333,9 +362,10 @@ messageStyle: "none"
                 <li>Stop when $|b - a|$ or $|f(x_{\text{interp}})|$ is smaller than the predefined tolerance.</li>
                 <li>The final result is the root approximation $x_{\text{interp}}$ with accuracy determined by the chosen tolerance.</li>
             </ul>
-            <h4 id="open-methods">Open Methods</h4>
+            <p>An exact zero at the interpolation point is returned immediately. In classical false position, one endpoint can remain fixed for many steps, so the bracket width may not approach zero even while the interpolated points converge. A residual test, interpreted with conditioning information, or a modified false-position method is useful in this case.</p>
+            <h3 id="open-methods">Open methods</h3>
             <p>Open methods rely on derivative information or estimates, and do not require an initial bracket. However, they can fail to converge if poorly chosen initial guesses or pathological function behavior occurs.</p>
-            <h5>Newton’s Method</h5>
+            <h4 id="newton-s-method">Newton’s method</h4>
             <ul>
                 <li>Start with an initial guess $x_0$ for the root of $f(x) = 0$.</li>
                 <li>Compute the next approximation using the formula $x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}$.</li>
@@ -346,14 +376,14 @@ messageStyle: "none"
                 <li>If $f'(x_k) \approx 0$, the method can diverge or produce large, inaccurate jumps.</li>
                 <li>Without a guaranteed bracket, the method may fail if the initial guess $x_0$ is too far from the actual root.</li>
             </ul>
-            <h5>Secant Method</h5>
+            <h4 id="secant-method">Secant method</h4>
             <ul>
                 <li>The <strong>idea</strong> is to approximate $f'(x_k)$ using a finite difference, resulting in the formula $f'(x_k) \approx \frac{f(x_k) - f(x_{k-1})}{x_k - x_{k-1}}$.</li>
                 <li>The iterative formula is derived as $x_{k+1} = x_k - f(x_k) \frac{x_k - x_{k-1}}{f(x_k) - f(x_{k-1})}$, replacing the derivative in Newton's method.</li>
                 <li>The method typically exhibits <strong>superlinear convergence</strong> with a rate close to $1.618$, which is the golden ratio.</li>
                 <li>This approach is <strong>useful</strong> because it avoids the need for an explicit derivative function, relying instead on previous function evaluations.</li>
             </ul>
-            <h4 id="combination-methods">Combination Methods</h4>
+            <h3 id="combination-methods">Combination methods</h3>
             <ul>
                 <li>Start with a bracket $[a_0, b_0]$ such that $f(a_0)f(b_0) &lt; 0$, ensuring a root exists within the interval.</li>
                 <li>Evaluate $f(a)$ and $f(b)$, and initialize $c = b$ as the last valid root approximation.</li>
@@ -365,7 +395,9 @@ messageStyle: "none"
                 <li>Repeat the process until the stopping condition is met, typically when the interval size or $f(c)$ is below a predefined tolerance.</li>
                 <li>The final result is the approximation $c$, which satisfies the convergence criteria.</li>
             </ul>
-            <h3 id="choosing-a-root-finding-method">Choosing a Root-Finding Method</h3>
+            <h2 id="checking-the-domain-before-iterating">Checking the domain before iterating</h2>
+            <p>The numerical problem includes the domain of $f$, not just its formula. For $f(x)=\log x-c$, every iterate must satisfy $x&gt;0$. A secant or Newton step may leave that domain even when its starting points are valid; a bracket wholly inside the domain provides a useful safeguard. Likewise, a sign change across a pole is not a root certificate: $f(x)=1/x$ changes sign across zero, but is discontinuous there and never vanishes. Locate singularities and excluded points before scanning for brackets or interpreting a small step as convergence.</p>
+            <h2 id="choosing-a-root-finding-method">Choosing a root-finding method</h2>
             <ul>
                 <li><strong>Continuity</strong> ensures that a bracketing method can reliably locate a root, as the existence of a sign change guarantees a solution within the interval.</li>
                 <li><strong>Differentiability</strong> allows for use of methods like Newton's, which rely on first derivatives to predict the root. If the derivative is unavailable, alternative methods such as secant or bisection are better options.</li>
@@ -376,7 +408,7 @@ messageStyle: "none"
                 <li><strong>Hybrid approaches</strong> combine reliability and speed by starting with a bracketing method like bisection to secure the root interval, then transitioning to faster methods like Newton's or secant once near the solution.</li>
                 <li><strong>Combination methods</strong> like Brent’s dynamically adapt between bracketing and open techniques, providing both robustness of convergence and faster refinement when conditions are favorable.</li>
             </ul>
-            <h4 id="example-flow-of-decision">Example Flow of Decision</h4>
+            <h3 id="example-flow-of-decision">Example flow of decision</h3>
             <ul>
                 <li>Determine if $f(x)$ has an easily detectable sign change.</li>
                 <li>If a sign change is present, use bracketing methods like bisection or false position to isolate the root.</li>

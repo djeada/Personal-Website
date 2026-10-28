@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/7_ordinary_differential_equations/picards_method",
             "description": "Picard iteration turns an initial value problem into a sequence of integral approximations.",
-            "dateModified": "2026-10-13",
+            "dateModified": "2026-10-22",
             "image": "https://adamdjellouli.com/resources/article-images/picard-iterates-b75bae6819.svg",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Picard iteration turns an initial value problem into a sequence of integral approximations." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/picard-iterates-b75bae6819.svg" property="og:image" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-22" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -126,16 +125,20 @@ messageStyle: "none"
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#picard-iteration">Picard Iteration</a></li>
-                    <li><a href="#fixed-point-interpretation">Fixed-Point Interpretation</a></li>
-                    <li><a href="#why-the-lipschitz-condition-appears">Why the Lipschitz Condition Appears</a></li>
-                    <li><a href="#worked-example">Worked Example</a></li>
-                    <li><a href="#an-important-distinction">An Important Distinction</a></li>
-                    <li><a href="#numerical-implementation">Numerical Implementation</a></li>
-                    <li><a href="#convergence-caveats">Convergence Caveats</a></li>
+                    <li><a href="#picard-iteration">Picard iteration</a></li>
+                    <li><a href="#fixed-point-interpretation">Fixed-point interpretation</a></li>
+                    <li><a href="#why-the-lipschitz-condition-appears">Why the Lipschitz condition appears</a>
+                        <ol>
+                            <li><a href="#keeping-the-iterates-inside-the-theorem-s-domain">Keeping the iterates inside the theorem's domain</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#worked-example">Worked example</a></li>
+                    <li><a href="#an-important-distinction">An important distinction</a></li>
+                    <li><a href="#numerical-implementation">Numerical implementation</a></li>
+                    <li><a href="#convergence-caveats">Convergence caveats</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/partial_differential_equations.html">Partial Differential Equations</a></li><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/runge_kutta.html">Runge--Kutta Methods</a></li><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/ordinary_differential_equations.html">Ordinary Differential Equations</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/partial_differential_equations.html">Partial Differential Equations</a></li><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/runge_kutta.html">Runge–Kutta Methods</a></li><li><a href="/articles/numerical_methods/7_ordinary_differential_equations/ordinary_differential_equations.html">Ordinary Differential Equations</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
                     <li>
@@ -236,7 +239,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -256,7 +259,7 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Picard's Iteration Method</h1>
-            <p>Picard iteration turns an initial value problem into a sequence of integral approximations. It is important less as a production ODE solver than as the constructive idea behind a fundamental existence-and-uniqueness theorem.</p>
+            <p>Picard iteration turns an initial value problem into a sequence of integral approximations. Each iterate is a function obtained by substituting the previous function into the ODE's integral form. This construction is central to the Picard–Lindelof existence-and-uniqueness theorem and explains how fixed-point arguments enter the analysis of ODE solvers.</p>
             <p>Consider</p>
             <p>$$
                 y'(t) = f(t,y(t)),
@@ -267,7 +270,7 @@ messageStyle: "none"
                 y(t) = y_0 + \int_{t_0}^{t} f(s,y(s))\, ds.
                 $$</p>
             <p>Picard's method replaces the unknown function inside the integral with the previous approximation.</p>
-            <h3 id="picard-iteration">Picard Iteration</h3>
+            <h2 id="picard-iteration">Picard iteration</h2>
             <p>Choose an initial function, often</p>
             <p>$$
                 y_0(t) = y_0.
@@ -277,8 +280,9 @@ messageStyle: "none"
                 y_{n+1}(t) = y_0 + \int_{t_0}^{t} f(s,y_n(s))\, ds.
                 $$</p>
             <p>Each iteration produces a new function, not merely a single number.</p>
+            <p>Here the subscript $n$ counts improvements to the entire function $y_n(t)$; it is not a time-grid index. The starting object $y_0(t)$ is a constant function equal to the prescribed initial value $y_0$. If the integral is discretized, all values of the next function should be formed from the previous function unless a different iteration has deliberately been chosen.</p>
             <p><img alt="Successive Picard iterates approaching the exact solution" decoding="async" loading="lazy" src="../../../resources/article-images/picard-iterates-b75bae6819.svg" /></p>
-            <h3 id="fixed-point-interpretation">Fixed-Point Interpretation</h3>
+            <h2 id="fixed-point-interpretation">Fixed-point interpretation</h2>
             <p>Define an operator</p>
             <p>$$
                 (Ty)(t) = y_0 + \int_{t_0}^{t} f(s,y(s))\, ds.
@@ -292,14 +296,14 @@ messageStyle: "none"
                 y_{n+1} = Ty_n.
                 $$</p>
             <p>If $T$ is a contraction on a suitable function space, the contraction mapping theorem guarantees convergence to a unique fixed point.</p>
-            <h3 id="why-the-lipschitz-condition-appears">Why the Lipschitz Condition Appears</h3>
+            <h2 id="why-the-lipschitz-condition-appears">Why the Lipschitz condition appears</h2>
             <p>Suppose</p>
             <p>$$
                 |f(t,y) - f(t,z)| \le L|y - z|.
                 $$</p>
             <p>Then on a short interval $|t-t_0|\le a$,</p>
             <p>$$
-                |(Ty)(t) - (Tz)(t)| \le \int_{t_0}^{t} L|y(s) - z(s)|\, ds.
+                |(Ty)(t) - (Tz)(t)| \le \int_{\min(t,t_0)}^{\max(t,t_0)} L|y(s) - z(s)|\, ds.
                 $$</p>
             <p>Using the supremum norm,</p>
             <p>$$
@@ -310,7 +314,18 @@ messageStyle: "none"
                 La&lt;1,
                 $$</p>
             <p>then $T$ is a contraction. This is the core idea behind the local Picard--Lindelof theorem.</p>
-            <h3 id="worked-example">Worked Example</h3>
+            <h3 id="keeping-the-iterates-inside-the-theorem-s-domain">Keeping the iterates inside the theorem's domain</h3>
+            <p>The contraction estimate is only part of the argument: $T$ must also map the chosen function space into itself. Suppose $f$ is continuous and bounded by $M$ on the rectangle $|t-t_0|\leq a$, $|y-y_0|\leq b$. Restrict attention to continuous functions in the state band and choose $a$ so that $aM\leq b$. Then</p>
+            <p>$$
+                |(Ty)(t)-y_0|\leq aM\leq b,
+                $$</p>
+            <p>so $T$ preserves that band. Combining this with $q=La&lt;1$ gives a contraction on a closed set of continuous functions in the supremum norm. The fixed point solves the integral equation and, by differentiation, the original IVP.</p>
+            <p>The simple contraction condition is sufficient, not necessary. In the linear worked example, $L=1$ and the displayed evaluation point $x=1$ makes $La=1$, so the strict one-step contraction bound does not establish convergence on $[0,1]$. Repeated integration supplies a sharper factorial estimate:</p>
+            <p>$$
+                |y_n(x)-y(x)|\leq\frac{x^n}{n!}\|y_0-y\|_{\infty,[0,1]},\qquad 0\leq x\leq1.
+                $$</p>
+            <p>It follows by applying $|y_{n+1}(x)-y(x)|\leq\int_0^x|y_n(t)-y(t)|\,dt$ repeatedly. Since $1/n!\to0$, the table at $x=1$ is justified even though the simpler contraction test is inconclusive there.</p>
+            <h2 id="worked-example">Worked example</h2>
             <p>Consider</p>
             <p>$$
                 y' = x + y,
@@ -383,16 +398,16 @@ messageStyle: "none"
             </table>
             <p>The iterate $y_n$ agrees with the Taylor series of the exact solution through the $x^n$ term, so the error shrinks rapidly on this short interval.</p>
             <p><img alt="Picard iteration error decreases with iteration count" decoding="async" loading="lazy" src="../../../resources/article-images/picard-convergence-8b756657ca.svg" /></p>
-            <h3 id="an-important-distinction">An Important Distinction</h3>
+            <h2 id="an-important-distinction">An important distinction</h2>
             <p>Picard iteration is sometimes described as a numerical method, but a direct implementation can be expensive because every iteration requires a new integral over an entire function.</p>
-            <p>In practical numerical integration, methods such as Runge--Kutta usually provide better efficiency. Picard iteration remains especially valuable for:</p>
+            <p>In practical numerical integration, methods such as Runge–Kutta usually provide better efficiency. Picard iteration remains especially valuable for:</p>
             <ul>
                 <li>proving local existence and uniqueness,</li>
                 <li>deriving series approximations,</li>
                 <li>understanding fixed-point methods,</li>
                 <li>motivating iterative schemes for integral and differential equations.</li>
             </ul>
-            <h3 id="numerical-implementation">Numerical Implementation</h3>
+            <h2 id="numerical-implementation">Numerical implementation</h2>
             <p>If the integral cannot be evaluated analytically, choose grid points</p>
             <p>$$
                 t_0&lt;t_1&lt;\cdots&lt;t_m
@@ -413,8 +428,9 @@ messageStyle: "none"
                 y_{n+1} = y_n + h f\left(t_n + \frac{h}{2}, \frac{y_n + y_{n+1}}{2}\right)
                 $$</p>
             <p>by fixed-point (Picard-style) substitution. The substitution converges when $hL/2&lt;1$, and the resulting method is second-order accurate. The name refers only to the fixed-point iteration used inside each step.</p>
+            <p>For an inner iterate $v^{(m)}$, the map is $v\mapsto y_n+hf(t_n+h/2,(y_n+v)/2)$, whose Lipschitz factor is $q=hL/2$. If $q&lt;1$, the remaining inner-solve error after an update is bounded by $q\|v^{(m+1)}-v^{(m)}\|/(1-q)$. The implicit midpoint method is second order when its nonlinear solves are sufficiently accurate; a loose inner tolerance can dominate the time-discretization error. Moreover, an implicit method's stability does not guarantee that this particular fixed-point solver converges for a large step.</p>
             <p>When $(t_\text{end}-t_0)/h$ is not an integer, the last step is shortened so that the returned grid ends exactly at $t_\text{end}$. The returned array has shape <code>(n + 1,)</code> for a scalar ODE and <code>(n + 1, d)</code> for a system with <code>d</code> components.</p>
-            <h3 id="convergence-caveats">Convergence Caveats</h3>
+            <h2 id="convergence-caveats">Convergence caveats</h2>
             <p>Picard iteration may fail or become inconvenient when:</p>
             <ul>
                 <li>$f$ is not Lipschitz in the relevant region,</li>

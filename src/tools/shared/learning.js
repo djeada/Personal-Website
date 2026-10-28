@@ -1,13 +1,8 @@
-/*
- * Helpers shared by the quiz app and the flashcard app: loading the
- * generated JSON, remembering progress in localStorage, keeping the setup
- * in the URL and typesetting maths on demand.
- */
 (function() {
     "use strict";
 
     const MATHJAX_SRC = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-svg.js";
-    // Same Prism build the articles use; the autoloader fetches grammars on demand.
+
     const PRISM_BASE = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0";
     let mathReady = null;
     let prismReady = null;
@@ -46,7 +41,7 @@
                 try {
                     window.localStorage.setItem(prefix + key, JSON.stringify(value));
                 } catch (error) {
-                    // Private windows and full quotas just lose progress.
+
                 }
             }
         };
@@ -80,8 +75,8 @@
                         ["\\[", "\\]"]
                     ],
                     processEscapes: true,
-                    // Quiz answers put whole derivations inline; full-size
-                    // fractions keep them readable.
+
+
                     macros: {
                         frac: ["\\dfrac{#1}{#2}", 2]
                     }
@@ -143,11 +138,11 @@
         return prismReady;
     }
 
-    // Highlight every language-tagged code element inside the given nodes.
+
     async function highlight(elements) {
         const targets = (Array.isArray(elements) ? elements : [elements]).filter(Boolean);
-        // Inline code that is really a sentence (quoted program output) stays plain:
-        // highlighting it as code colours English words such as "in" or "case".
+
+
         const codes = targets
             .flatMap((node) => Array.from(node.querySelectorAll('code[class*="language-"]')))
             .filter((code) => code.closest("pre") || code.textContent.trim().split(/\s+/).length < 6);
@@ -161,7 +156,7 @@
         });
     }
 
-    // Highlight code, then typeset maths when the subject uses it.
+
     function enhance(elements, math) {
         highlight(elements);
         if (math) typeset(elements);
@@ -182,8 +177,8 @@
         return anchor;
     }
 
-    // Bring an app's top edge just under the sticky navigation bar, without
-    // the site-wide smooth scrolling, once the new screen has been laid out.
+
+
     function scrollIntoFocus(node, smooth) {
         window.requestAnimationFrame(() => {
             const nav = document.querySelector('nav');
@@ -199,10 +194,10 @@
         });
     }
 
-    // The setup screen is long, so its start panel is usually below the fold. While
-    // it is, a bar fixed to the bottom of the window mirrors the panel's summary and
-    // start button: picking a subject visibly changes it, and starting never needs a
-    // scroll. The bar hides once the real panel comes into view.
+
+
+
+
     function startDock(screen) {
         const dock = screen.querySelector(".la-dock");
         const panel = screen.querySelector(".la-start");
@@ -220,16 +215,26 @@
             go.disabled = start.disabled;
             if (ready) {
                 dock.classList.remove("is-updated");
-                void dock.offsetWidth; // restart the flash
+                void dock.offsetWidth;
                 dock.classList.add("is-updated");
             }
         };
-        const watch = { childList: true, subtree: true, characterData: true };
+        const watch = {
+            childList: true,
+            subtree: true,
+            characterData: true
+        };
         new MutationObserver(sync).observe(summary, watch);
-        new MutationObserver(sync).observe(start, { ...watch, attributes: true, attributeFilter: ["disabled"] });
+        new MutationObserver(sync).observe(start, {
+            ...watch,
+            attributes: true,
+            attributeFilter: ["disabled"]
+        });
         sync();
-        // Only flash for changes the visitor makes, not for the first render.
-        window.setTimeout(() => { ready = true; }, 800);
+
+        window.setTimeout(() => {
+            ready = true;
+        }, 800);
 
         go.addEventListener("click", () => start.click());
         if (settings) {
@@ -238,15 +243,17 @@
                 scrollIntoFocus(target, true);
             });
         }
-        // Treat the panel as visible a little before it reaches the window edge, so
-        // the bar never sits on top of the settings just above it.
+
+
         new IntersectionObserver(([entry]) => {
             dock.hidden = entry.isIntersecting || entry.boundingClientRect.top < 0;
-        }, { rootMargin: "0px 0px 96px 0px" }).observe(panel);
+        }, {
+            rootMargin: "0px 0px 96px 0px"
+        }).observe(panel);
     }
 
-    // Checkbox list of topics, grouped when topics carry a `group`. Calls
-    // onChange with the selected slugs; an empty array means "all topics".
+
+
     function topicPicker(container, topics, selected, countOf, onChange) {
         container.innerHTML = "";
         const groups = new Map();
@@ -299,7 +306,7 @@
         return `${chosen.length} of ${topics.length}: ${shown}`;
     }
 
-    // Segmented control made of radio inputs: options are {value, label}.
+
     function segmented(container, name, options, current, onChange) {
         container.innerHTML = "";
         options.forEach((option) => {
@@ -316,8 +323,8 @@
         });
     }
 
-    // Lay out choice tiles in rows of three, or two when that leaves no orphan.
-    // The subject mark on a tile (">_", "SQL"); decorative, so hidden from screen readers.
+
+
     function glyph(text) {
         const mark = el("span", "la-tile-glyph", text);
         mark.setAttribute("aria-hidden", "true");
@@ -327,7 +334,7 @@
     function balanceTiles(container, count) {
         const cols = count === 4 ? 2 : Math.max(1, Math.min(count, 3));
         container.style.setProperty("--la-cols", cols);
-        // A short last row of three is widened (see .la-tiles[data-rest]) instead of leaving a tile alone.
+
         if (cols === 3 && count % 3) container.dataset.rest = String(count % 3);
         else delete container.dataset.rest;
     }

@@ -6,7 +6,7 @@
     const SEGMENTED_TRACK_LIMIT = 60;
     const KEYS = 'ABCDEFGHI';
 
-    // Polish counts take one of three forms: 1 pytanie, 2-4 pytania, 5 pytań.
+
     function pl(n, one, few, many) {
         if (n === 1) return one;
         const tens = n % 100;
@@ -251,8 +251,8 @@
         return category && STRINGS[category.language] ? category.language : 'en';
     }
 
-    // Switch every interface string, and the content language for assistive
-    // technology and hyphenation, to the selected subject's language.
+
+
     function applyLanguage(lang) {
         state.lang = lang;
         ui.quizApp.lang = lang;
@@ -279,9 +279,9 @@
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Data and persistence
-    // ---------------------------------------------------------------------
+
+
+
 
     async function loadCategory(slug) {
         if (!cache.has(slug)) cache.set(slug, await Learning.fetchJson(`${slug}.json`));
@@ -340,9 +340,9 @@
         return state.data.topics.find((topic) => topic.slug === slug);
     }
 
-    // ---------------------------------------------------------------------
-    // Screens
-    // ---------------------------------------------------------------------
+
+
+
 
     function show(screen) {
         ['setup', 'play', 'results'].forEach((name) => {
@@ -353,9 +353,9 @@
         Learning.scrollIntoFocus(ui.quizApp);
     }
 
-    // ---------------------------------------------------------------------
-    // Setup
-    // ---------------------------------------------------------------------
+
+
+
 
     async function init() {
         cache$();
@@ -510,7 +510,7 @@
     function renderLengths(available) {
         const values = LENGTHS.filter((n) => n < available).concat(['all']);
         if (state.length !== 'all' && !values.includes(state.length)) {
-            // The pool shrank below the chosen length: use the largest option that still fits.
+
             const fitting = values.filter((v) => v !== 'all' && v <= state.length);
             state.length = fitting.length ? fitting[fitting.length - 1] : 'all';
         }
@@ -588,9 +588,9 @@
         ui.resumeBanner.hidden = true;
     }
 
-    // ---------------------------------------------------------------------
-    // Session
-    // ---------------------------------------------------------------------
+
+
+
 
     function startSession(questions) {
         const picked = questions ? Learning.shuffle(questions) : Learning.shuffle(pool()).slice(0, sessionSize(pool().length));
@@ -925,9 +925,9 @@
         finish();
     }
 
-    // ---------------------------------------------------------------------
-    // Timer
-    // ---------------------------------------------------------------------
+
+
+
 
     function startTimer() {
         stopTimer();
@@ -961,9 +961,9 @@
         return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
     }
 
-    // ---------------------------------------------------------------------
-    // Results
-    // ---------------------------------------------------------------------
+
+
+
 
     function finish() {
         const s = state.session;
@@ -1164,9 +1164,9 @@
         startSession(questions);
     }
 
-    // ---------------------------------------------------------------------
-    // Events
-    // ---------------------------------------------------------------------
+
+
+
 
     function onKeydown(event) {
         if (ui.playScreen.hidden || !state.session || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -1184,7 +1184,7 @@
             }
             return;
         }
-        // Buttons and links inside the session handle Enter natively.
+
         const nativeEnter = ['BUTTON', 'A', 'SUMMARY'].includes(target.tagName) && ui.playScreen.contains(target);
         if (key === 'Enter' && !nativeEnter) {
             if (!ui.submitConfirm.hidden) finish();
