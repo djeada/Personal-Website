@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import html
 import logging
 import multiprocessing
 import random
@@ -15,6 +16,7 @@ import math
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.append(str(SCRIPT_DIR))
 import date_utils
+from tex_text import strip_math
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -106,7 +108,7 @@ def get_article_description(file_path: Path) -> str:
         paragraphs = soup.find_all("p")
 
         for paragraph in paragraphs:
-            description = paragraph.text[:300]
+            description = re.sub(r"\s+", " ", strip_math(paragraph.text)).strip()[:300]
             if (
                 "This article is written in:" not in description
                 and "Last modified:" not in description
@@ -258,7 +260,7 @@ def _process_article(article_info: Tuple[str, str]) -> str:
             <div class="article-date">{formatted_date}</div>
             <div class="article-category"><a href="{category_url}">{category}</a></div>
             {language_html}
-            <p><a href="{url}">{description}...</a></p>
+            <p><a href="{url}">{html.escape(description, quote=False)}...</a></p>
         </div>
         """
 

@@ -128,6 +128,19 @@ class RenderingTests(unittest.TestCase):
         self.assertIn('<span class="pyk-math">$a*b*c$</span>', html)
         self.assertIn("<em>ważne</em>", html)
 
+    def test_bold_can_wrap_inline_code(self):
+        html = course._inline_markup("wypisz **bez prefiksu `0b` i bez zer**")
+        self.assertEqual(html, "wypisz <strong>bez prefiksu <code>0b</code> i bez zer</strong>")
+
+    def test_fenced_code_inside_a_list_item_becomes_a_code_block(self):
+        html = course._markdown_to_html("* Wczytaj tak:\n\n  ```python\n  n = int(input())\n  ```\n\n* Dalej")
+        self.assertIn('<li>Wczytaj tak:<pre class="pyk-pre"><code>n = int(input())</code></pre></li>', html)
+        self.assertNotIn("```", html)
+
+    def test_course_index_writes_formulas_as_text(self):
+        html = course._static_math(course._markdown_to_html(r"Wielomian $a_n x^n + \dots + a_0$."))
+        self.assertEqual(html, "<p>Wielomian aₙ xⁿ + … + a₀.</p>")
+
     def test_plain_text_converts_latex_for_meta_descriptions(self):
         text = course._plain_text(r"Pole to $\frac{1}{2} a \cdot h$, gdzie $a \le 10$.")
         self.assertEqual(text, "Pole to 1/2 a · h, gdzie a ≤ 10.")

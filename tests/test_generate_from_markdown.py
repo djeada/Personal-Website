@@ -87,6 +87,14 @@ print("hello")
         self.assertIn('class="language-python"', result)
         self.assertIn('print("hello")', result)
 
+    def test_languages_prism_does_not_know_use_a_grammar_that_exists(self):
+        source = "<p>```proto\nsyntax = \"proto3\";\n```</p><p>```fstab\n/dev/sda1 / ext4\n```</p>"
+
+        result = HtmlEnhancer.apply_prism_for_code_samples(source)
+
+        self.assertIn('class="language-protobuf"', result)
+        self.assertIn('class="language-plaintext"', result)
+
     def test_leading_spaces_on_first_code_line_are_preserved(self):
         source = """<p>```
        +-------+

@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,9 @@ from typing import Tuple, Dict, Callable, Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
+
+sys.path.append(str(Path(__file__).resolve().parent))
+from tex_text import strip_math
 
 
 CONFIG = {
@@ -172,18 +176,11 @@ def change_title_in_head(html: str, file_path: Optional[Path] = None) -> str:
     return str(soup)
 
 
-def plain_math(latex: str) -> str:
-    """Readable text for a short inline formula, e.g. $f(x)$ -> f(x)."""
-    text = re.sub(r"\\[a-zA-Z]+|[{}\\]", "", latex).strip()
-    return text if len(text) <= 20 else "…"
-
-
 def summarize(texts: list) -> Optional[str]:
     """Joins the opening sentences of an article into a ~155 character summary."""
     sentences = []
     for text in texts:
-        text = re.sub(r"\$\$.*?\$\$", "", text, flags=re.S)
-        text = re.sub(r"\$([^$]+)\$", lambda m: plain_math(m.group(1)), text)
+        text = strip_math(text)
         text = re.sub(r"\s+", " ", text).strip()
         pieces = re.split(r"(?<=[.!?]) +", text)
         for piece in pieces:

@@ -15,9 +15,14 @@ import hashlib
 import html
 import json
 import re
+import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+sys.path.append(str(Path(__file__).resolve().parent))
+from tex_text import tex_to_text
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT_DIR / "src"
@@ -256,27 +261,36 @@ def _latex_to_text(text: str) -> str:
     return re.sub(r"\$\$?([^$]+)\$\$?", convert, text)
 
 
+def _static_math(fragment: str) -> str:
+    """The course index loads no KaTeX, so its formulas are written as text."""
+    return re.sub(
+        r'<span class="pyk-math">\$+(.*?)\$+</span>',
+        lambda m: html.escape(tex_to_text(html.unescape(m.group(1)))),
+        fragment,
+    )
+
+
 def _has_math(text: str) -> bool:
     return bool(re.search(r"\$[^$\n]+\$", text or ""))
 
 
 def _inline_markup(text: str) -> str:
-    parts = INLINE_TOKEN_RE.split(text)
-    out = []
-    for part in parts:
-        if len(part) > 1 and part.startswith("`") and part.endswith("`"):
-            out.append(f"<code>{html.escape(part[1:-1])}</code>")
-            continue
-        if len(part) > 2 and part.startswith("$") and part.endswith("$"):
-            out.append(f'<span class="pyk-math">{html.escape(part)}</span>')
-            continue
-        escaped = html.escape(part)
-        escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
-        escaped = re.sub(
-            r"(?<![*\w])\*(?![\s*])([^*]+?)(?<!\s)\*(?![*\w])", r"<em>\1</em>", escaped
-        )
-        out.append(escaped)
-    return "".join(out)
+    tokens: List[str] = []
+
+    def stash(match: "re.Match[str]") -> str:
+        part = match.group(0)
+        if part.startswith("`"):
+            tokens.append(f"<code>{html.escape(part[1:-1])}</code>")
+        else:
+            tokens.append(f'<span class="pyk-math">{html.escape(part)}</span>')
+        return f"\x00{len(tokens) - 1}\x00"
+
+    escaped = html.escape(INLINE_TOKEN_RE.sub(stash, text))
+    escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(
+        r"(?<![*\w])\*(?![\s*])([^*]+?)(?<!\s)\*(?![*\w])", r"<em>\1</em>", escaped
+    )
+    return re.sub(r"\x00(\d+)\x00", lambda m: tokens[int(m.group(1))], escaped)
 
 
 def _indent(line: str) -> int:
@@ -313,6 +327,15 @@ def _parse_list(lines: List[str], i: int) -> Tuple[str, int]:
             if match:
                 sub, i = _parse_list(lines, i)
                 items[-1].append(sub)
+            elif line.strip().startswith("```"):
+                j = i + 1
+                while j < len(lines) and not lines[j].strip().startswith("```"):
+                    j += 1
+                code = textwrap.dedent("\n".join(lines[i + 1 : j]))
+                items[-1].append(
+                    f'<pre class="pyk-pre"><code>{html.escape(code)}</code></pre>'
+                )
+                i = j + 1
             else:
                 items[-1].append("<br>" + _inline_markup(line.strip()))
                 i += 1
@@ -1160,7 +1183,7 @@ def render_course_tasks(chapters: List[Chapter], commit: str = "") -> str:
                 + "</p>"
             )
         details = (
-            f'<details class="pyk-details"><summary>Wprowadzenie i zasady rozdziału</summary>{ch.description}</details>'
+            f'<details class="pyk-details"><summary>Wprowadzenie i zasady rozdziału</summary>{_static_math(ch.description)}</details>'
             if ch.description
             else ""
         )
