@@ -8,7 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const app = $("phonics-app");
     const stage = $("stage");
     const play = $("play");
-    const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    } [char]));
     const shuffle = (items) => {
         const copy = [...items];
         for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -24,100 +30,235 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const strings = {
         en: {
-            title: "Phonics Adventure", intro: "Three paths to reading: letters, words, and sentences with little stories. One short level at a time.",
-            soundOn: "Sound on", soundOff: "Sound off", welcome: "Hi, I’m Finn! Let’s learn to read together.",
-            statStars: "stars", statStickers: "stickers", levelsDone: "of {total} levels done",
-            playLevel: "Play level {n}", playAgain: "Play the last review again", choosePath: "Choose a path",
-            path_letters: "Letters", path_words: "Words", path_stories: "Stories",
+            title: "Phonics Adventure",
+            intro: "Three paths to reading: letters, words, and sentences with little stories. One short level at a time.",
+            soundOn: "Sound on",
+            soundOff: "Sound off",
+            welcome: "Hi, I’m Finn! Let’s learn to read together.",
+            statStars: "stars",
+            statStickers: "stickers",
+            levelsDone: "of {total} levels done",
+            playLevel: "Play level {n}",
+            playAgain: "Play the last review again",
+            choosePath: "Choose a path",
+            path_letters: "Letters",
+            path_words: "Words",
+            path_stories: "Stories",
             pathHint_letters: "Meet letters, find them, then match big and small.",
             pathHint_words: "Build and read words in four different ways.",
             pathHint_stories: "Read sentences, fill gaps and enjoy short stories.",
-            mapTitle: "Your path", mapHint: "Finished levels can be played again for more stars.",
-            stickerTitle: "Sticker book", stickerHint: "Every finished level adds a sticker.", closeStickers: "Close the sticker book",
-            grownups: "For grown-ups", howTitle: "How it works",
+            mapTitle: "Your path",
+            mapHint: "Finished levels can be played again for more stars.",
+            stickerTitle: "Sticker book",
+            stickerHint: "Every finished level adds a sticker.",
+            closeStickers: "Close the sticker book",
+            grownups: "For grown-ups",
+            howTitle: "How it works",
             howText: "The three paths can be played in any order. Letters starts with capitals; small letters come once the capitals are known. Words builds whole words from ready letters, fills in missing letters and matches words with pictures. Stories moves from single sentences to short stories with questions.",
             howText2: "Every word, letter name and instruction is a recorded clip, so it works the same on every device. Each round mixes in things learned earlier, and mistakes bring them back more often.",
-            soundsTitle: "Letters so far", masteryNote: "Green letters are secure. Orange letters need more practice and come back more often.",
+            soundsTitle: "Letters so far",
+            masteryNote: "Green letters are secure. Orange letters need more practice and come back more often.",
             noSounds: "Letters appear here after the first letters level.",
-            settingsTitle: "Settings", slowVoice: "Slower voice", unlockAll: "Unlock every level",
-            autoFullscreen: "Full screen while playing (keeps ads away)", fullscreen: "Full screen", exitFullscreen: "Leave full screen",
+            settingsTitle: "Settings",
+            slowVoice: "Slower voice",
+            unlockAll: "Unlock every level",
+            autoFullscreen: "Full screen while playing (keeps ads away)",
+            fullscreen: "Full screen",
+            exitFullscreen: "Leave full screen",
             saved: "Progress is saved on this device. Every language has its own paths.",
             saveFail: "Progress could not be saved in this browser, but every level still works.",
-            reset: "Reset this language’s progress", resetConfirm: "Reset all English progress? German progress is kept.",
+            reset: "Reset this language’s progress",
+            resetConfirm: "Reset all English progress? German progress is kept.",
             audioMissing: "Recorded audio could not load, so the device voice is used where possible.",
-            kind_letters: "Letters", kind_words: "Words", kind_story: "Story", kind_review: "Review", kind_small: "Small letters",
-            mode_picture: "Sentences", mode_cloze: "Missing word", mode_order: "Word order", mode_mix: "Mixed sentences",
-            locked: "Locked", stars: "{n} of 3 stars", levelName: "Level {n}: {name}", notPlayed: "Not played yet",
-            close: "Back to the map", replay: "Hear it again", readToMe: "Read to me", listen: "Listen",
-            levelDone: "Level complete!", nextLevel: "Next level", backToMap: "Back to the map", playAgainLevel: "Play again",
-            newSticker: "New sticker!", allDone: "You finished the whole path!", meet: "A new letter", progress: "Step {n} of {total}",
-            tile: "Tile {letter}", slot: "Box {n}: {letter}. Tap to take it back.", emptySlot: "Empty box {n}",
-            picture: "Picture: {word}", hearPicture: "Hear {word}", letterChoice: "Letter {letter}", wordChoice: "Word {word}",
-            correct: "Correct!", tryAgain: "Not quite, try again.", gap: "missing word"
+            kind_letters: "Letters",
+            kind_words: "Words",
+            kind_story: "Story",
+            kind_review: "Review",
+            kind_small: "Small letters",
+            mode_picture: "Sentences",
+            mode_cloze: "Missing word",
+            mode_order: "Word order",
+            mode_mix: "Mixed sentences",
+            locked: "Locked",
+            stars: "{n} of 3 stars",
+            levelName: "Level {n}: {name}",
+            notPlayed: "Not played yet",
+            close: "Back to the map",
+            replay: "Hear it again",
+            readToMe: "Read to me",
+            listen: "Listen",
+            levelDone: "Level complete!",
+            nextLevel: "Next level",
+            backToMap: "Back to the map",
+            playAgainLevel: "Play again",
+            newSticker: "New sticker!",
+            allDone: "You finished the whole path!",
+            meet: "A new letter",
+            progress: "Step {n} of {total}",
+            tile: "Tile {letter}",
+            slot: "Box {n}: {letter}. Tap to take it back.",
+            emptySlot: "Empty box {n}",
+            picture: "Picture: {word}",
+            hearPicture: "Hear {word}",
+            letterChoice: "Letter {letter}",
+            wordChoice: "Word {word}",
+            correct: "Correct!",
+            tryAgain: "Not quite, try again.",
+            gap: "missing word"
         },
         de: {
-            title: "Lese-Abenteuer", intro: "Drei Wege zum Lesen: Buchstaben, Wörter und Sätze mit kleinen Geschichten. Ein kurzes Level nach dem anderen.",
-            soundOn: "Ton an", soundOff: "Ton aus", welcome: "Hallo, ich bin Finn! Komm, wir lernen zusammen lesen.",
-            statStars: "Sterne", statStickers: "Sticker", levelsDone: "von {total} Levels geschafft",
-            playLevel: "Level {n} spielen", playAgain: "Letzte Wiederholung noch einmal spielen", choosePath: "Wähle einen Pfad",
-            path_letters: "Buchstaben", path_words: "Wörter", path_stories: "Geschichten",
+            title: "Lese-Abenteuer",
+            intro: "Drei Wege zum Lesen: Buchstaben, Wörter und Sätze mit kleinen Geschichten. Ein kurzes Level nach dem anderen.",
+            soundOn: "Ton an",
+            soundOff: "Ton aus",
+            welcome: "Hallo, ich bin Finn! Komm, wir lernen zusammen lesen.",
+            statStars: "Sterne",
+            statStickers: "Sticker",
+            levelsDone: "von {total} Levels geschafft",
+            playLevel: "Level {n} spielen",
+            playAgain: "Letzte Wiederholung noch einmal spielen",
+            choosePath: "Wähle einen Pfad",
+            path_letters: "Buchstaben",
+            path_words: "Wörter",
+            path_stories: "Geschichten",
             pathHint_letters: "Buchstaben kennenlernen, finden und groß mit klein verbinden.",
             pathHint_words: "Wörter auf vier verschiedene Arten bauen und lesen.",
             pathHint_stories: "Sätze lesen, Lücken füllen und kurze Geschichten genießen.",
-            mapTitle: "Dein Pfad", mapHint: "Geschaffte Levels kannst du für mehr Sterne wiederholen.",
-            stickerTitle: "Stickerheft", stickerHint: "Jedes geschaffte Level bringt einen Sticker.", closeStickers: "Stickerheft schließen",
-            grownups: "Für Erwachsene", howTitle: "So funktioniert es",
+            mapTitle: "Dein Pfad",
+            mapHint: "Geschaffte Levels kannst du für mehr Sterne wiederholen.",
+            stickerTitle: "Stickerheft",
+            stickerHint: "Jedes geschaffte Level bringt einen Sticker.",
+            closeStickers: "Stickerheft schließen",
+            grownups: "Für Erwachsene",
+            howTitle: "So funktioniert es",
             howText: "Die drei Pfade können in beliebiger Reihenfolge gespielt werden. Buchstaben beginnt mit Großbuchstaben; die kleinen kommen, sobald die großen sitzen. Wörter baut ganze Wörter aus fertigen Buchstaben, ergänzt fehlende Buchstaben und verbindet Wörter mit Bildern. Geschichten führt von einzelnen Sätzen zu kurzen Geschichten mit Fragen.",
             howText2: "Alle Wörter, Buchstabennamen und Anweisungen sind Aufnahmen und klingen auf jedem Gerät gleich. Jede Runde mischt früher Gelerntes ein, und Fehler holen es öfter zurück.",
-            soundsTitle: "Bisherige Buchstaben", masteryNote: "Grüne Buchstaben sitzen. Orange Buchstaben brauchen noch Übung und kommen öfter wieder.",
+            soundsTitle: "Bisherige Buchstaben",
+            masteryNote: "Grüne Buchstaben sitzen. Orange Buchstaben brauchen noch Übung und kommen öfter wieder.",
             noSounds: "Nach dem ersten Buchstaben-Level erscheinen hier die Buchstaben.",
-            settingsTitle: "Einstellungen", slowVoice: "Langsamere Stimme", unlockAll: "Alle Levels freischalten",
-            autoFullscreen: "Vollbild beim Spielen (hält Werbung fern)", fullscreen: "Vollbild", exitFullscreen: "Vollbild verlassen",
+            settingsTitle: "Einstellungen",
+            slowVoice: "Langsamere Stimme",
+            unlockAll: "Alle Levels freischalten",
+            autoFullscreen: "Vollbild beim Spielen (hält Werbung fern)",
+            fullscreen: "Vollbild",
+            exitFullscreen: "Vollbild verlassen",
             saved: "Der Fortschritt wird auf diesem Gerät gespeichert. Jede Sprache hat eigene Pfade.",
             saveFail: "Der Fortschritt kann in diesem Browser nicht gespeichert werden, aber alle Levels funktionieren.",
-            reset: "Fortschritt für Deutsch zurücksetzen", resetConfirm: "Den gesamten deutschen Fortschritt zurücksetzen? Der englische bleibt erhalten.",
+            reset: "Fortschritt für Deutsch zurücksetzen",
+            resetConfirm: "Den gesamten deutschen Fortschritt zurücksetzen? Der englische bleibt erhalten.",
             audioMissing: "Die Aufnahmen konnten nicht geladen werden, daher wird wenn möglich die Gerätestimme verwendet.",
-            kind_letters: "Buchstaben", kind_words: "Wörter", kind_story: "Geschichte", kind_review: "Wiederholung", kind_small: "Kleine Buchstaben",
-            mode_picture: "Sätze", mode_cloze: "Fehlendes Wort", mode_order: "Satz bauen", mode_mix: "Gemischte Sätze",
-            locked: "Gesperrt", stars: "{n} von 3 Sternen", levelName: "Level {n}: {name}", notPlayed: "Noch nicht gespielt",
-            close: "Zurück zur Karte", replay: "Noch einmal hören", readToMe: "Vorlesen", listen: "Hören",
-            levelDone: "Level geschafft!", nextLevel: "Nächstes Level", backToMap: "Zurück zur Karte", playAgainLevel: "Noch einmal",
-            newSticker: "Neuer Sticker!", allDone: "Du hast den ganzen Pfad geschafft!", meet: "Ein neuer Buchstabe", progress: "Schritt {n} von {total}",
-            tile: "Baustein {letter}", slot: "Kästchen {n}: {letter}. Zum Zurücklegen tippen.", emptySlot: "Leeres Kästchen {n}",
-            picture: "Bild: {word}", hearPicture: "{word} hören", letterChoice: "Buchstabe {letter}", wordChoice: "Wort {word}",
-            correct: "Richtig!", tryAgain: "Noch nicht ganz, versuch es nochmal.", gap: "fehlendes Wort"
+            kind_letters: "Buchstaben",
+            kind_words: "Wörter",
+            kind_story: "Geschichte",
+            kind_review: "Wiederholung",
+            kind_small: "Kleine Buchstaben",
+            mode_picture: "Sätze",
+            mode_cloze: "Fehlendes Wort",
+            mode_order: "Satz bauen",
+            mode_mix: "Gemischte Sätze",
+            locked: "Gesperrt",
+            stars: "{n} von 3 Sternen",
+            levelName: "Level {n}: {name}",
+            notPlayed: "Noch nicht gespielt",
+            close: "Zurück zur Karte",
+            replay: "Noch einmal hören",
+            readToMe: "Vorlesen",
+            listen: "Hören",
+            levelDone: "Level geschafft!",
+            nextLevel: "Nächstes Level",
+            backToMap: "Zurück zur Karte",
+            playAgainLevel: "Noch einmal",
+            newSticker: "Neuer Sticker!",
+            allDone: "Du hast den ganzen Pfad geschafft!",
+            meet: "Ein neuer Buchstabe",
+            progress: "Schritt {n} von {total}",
+            tile: "Baustein {letter}",
+            slot: "Kästchen {n}: {letter}. Zum Zurücklegen tippen.",
+            emptySlot: "Leeres Kästchen {n}",
+            picture: "Bild: {word}",
+            hearPicture: "{word} hören",
+            letterChoice: "Buchstabe {letter}",
+            wordChoice: "Wort {word}",
+            correct: "Richtig!",
+            tryAgain: "Noch nicht ganz, versuch es nochmal.",
+            gap: "fehlendes Wort"
         },
         ar: {
-            title: "مغامرة القراءة", intro: "ثلاثة طرق إلى القراءة: الحروف، والكلمات، والجمل مع قصص صغيرة. مستوى قصير في كل مرة.",
-            soundOn: "الصوت يعمل", soundOff: "الصوت مغلق", welcome: "مرحبا، أنا فِن! هيا نتعلم القراءة معا.",
-            statStars: "نجوم", statStickers: "ملصقات", levelsDone: "من {total} مستويات مكتملة",
-            playLevel: "العب المستوى {n}", playAgain: "العب المراجعة الأخيرة مرة أخرى", choosePath: "اختر طريقا",
-            path_letters: "الحروف", path_words: "الكلمات", path_stories: "القصص",
+            title: "مغامرة القراءة",
+            intro: "ثلاثة طرق إلى القراءة: الحروف، والكلمات، والجمل مع قصص صغيرة. مستوى قصير في كل مرة.",
+            soundOn: "الصوت يعمل",
+            soundOff: "الصوت مغلق",
+            welcome: "مرحبا، أنا فِن! هيا نتعلم القراءة معا.",
+            statStars: "نجوم",
+            statStickers: "ملصقات",
+            levelsDone: "من {total} مستويات مكتملة",
+            playLevel: "العب المستوى {n}",
+            playAgain: "العب المراجعة الأخيرة مرة أخرى",
+            choosePath: "اختر طريقا",
+            path_letters: "الحروف",
+            path_words: "الكلمات",
+            path_stories: "القصص",
             pathHint_letters: "تعرّف على الحروف وابحث عنها، ثم طابق أشكالها.",
             pathHint_words: "ابنِ الكلمات واقرأها بأربع طرق مختلفة.",
             pathHint_stories: "اقرأ الجمل، أكمل الفراغات، واستمتع بقصص قصيرة.",
-            mapTitle: "طريقك", mapHint: "يمكنك إعادة المستويات المكتملة لتربح نجوما أكثر.",
-            stickerTitle: "دفتر الملصقات", stickerHint: "كل مستوى تكمله يضيف ملصقا.", closeStickers: "أغلق دفتر الملصقات",
-            grownups: "للكبار", howTitle: "كيف تعمل اللعبة",
+            mapTitle: "طريقك",
+            mapHint: "يمكنك إعادة المستويات المكتملة لتربح نجوما أكثر.",
+            stickerTitle: "دفتر الملصقات",
+            stickerHint: "كل مستوى تكمله يضيف ملصقا.",
+            closeStickers: "أغلق دفتر الملصقات",
+            grownups: "للكبار",
+            howTitle: "كيف تعمل اللعبة",
             howText: "يمكن لعب الطرق الثلاثة بأي ترتيب. طريق الحروف يقدم بضعة حروف في كل مرة ثم أشكالها المتصلة. طريق الكلمات يبني كلمات كاملة من حروف جاهزة، ويكمل الحروف الناقصة، ويربط الكلمات بالصور. طريق القصص يبدأ بجمل قصيرة ثم قصص صغيرة مع أسئلة.",
             howText2: "كل كلمة واسم حرف وتعليمة تسجيل صوتي، لذلك تعمل بالطريقة نفسها على كل جهاز. كل جولة تعيد ما تعلمه الطفل سابقا، والأخطاء تجعله يعود أكثر.",
-            soundsTitle: "الحروف حتى الآن", masteryNote: "الحروف الخضراء متقنة. الحروف البرتقالية تحتاج إلى تدريب أكثر وتعود أكثر.",
+            soundsTitle: "الحروف حتى الآن",
+            masteryNote: "الحروف الخضراء متقنة. الحروف البرتقالية تحتاج إلى تدريب أكثر وتعود أكثر.",
             noSounds: "تظهر الحروف هنا بعد أول مستوى للحروف.",
-            settingsTitle: "الإعدادات", slowVoice: "صوت أبطأ", unlockAll: "افتح كل المستويات",
-            autoFullscreen: "ملء الشاشة أثناء اللعب (يبعد الإعلانات)", fullscreen: "ملء الشاشة", exitFullscreen: "الخروج من ملء الشاشة",
+            settingsTitle: "الإعدادات",
+            slowVoice: "صوت أبطأ",
+            unlockAll: "افتح كل المستويات",
+            autoFullscreen: "ملء الشاشة أثناء اللعب (يبعد الإعلانات)",
+            fullscreen: "ملء الشاشة",
+            exitFullscreen: "الخروج من ملء الشاشة",
             saved: "يُحفظ التقدم على هذا الجهاز. لكل لغة طرقها الخاصة.",
             saveFail: "تعذر حفظ التقدم في هذا المتصفح، لكن كل المستويات تعمل.",
-            reset: "أعد ضبط تقدم هذه اللغة", resetConfirm: "هل تريد مسح كل التقدم في العربية؟ تبقى اللغات الأخرى كما هي.",
+            reset: "أعد ضبط تقدم هذه اللغة",
+            resetConfirm: "هل تريد مسح كل التقدم في العربية؟ تبقى اللغات الأخرى كما هي.",
             audioMissing: "تعذر تحميل التسجيلات، لذلك يُستخدم صوت الجهاز عند الإمكان.",
-            kind_letters: "الحروف", kind_words: "الكلمات", kind_story: "قصة", kind_review: "مراجعة", kind_small: "أشكال الحروف",
-            mode_picture: "جمل", mode_cloze: "الكلمة الناقصة", mode_order: "ترتيب الكلمات", mode_mix: "جمل متنوعة",
-            locked: "مقفل", stars: "{n} من 3 نجوم", levelName: "المستوى {n}: {name}", notPlayed: "لم يُلعب بعد",
-            close: "العودة إلى الخريطة", replay: "استمع مرة أخرى", readToMe: "اقرأ لي", listen: "استمع",
-            levelDone: "أكملت المستوى!", nextLevel: "المستوى التالي", backToMap: "العودة إلى الخريطة", playAgainLevel: "العب مرة أخرى",
-            newSticker: "ملصق جديد!", allDone: "أكملت الطريق كله!", meet: "حرف جديد", progress: "الخطوة {n} من {total}",
-            tile: "بطاقة {letter}", slot: "المربع {n}: {letter}. اضغط لإرجاعه.", emptySlot: "مربع فارغ {n}",
-            picture: "صورة: {word}", hearPicture: "استمع إلى {word}", letterChoice: "حرف {letter}", wordChoice: "كلمة {word}",
-            correct: "صحيح!", tryAgain: "ليس تماما، حاول مرة أخرى.", gap: "كلمة ناقصة"
+            kind_letters: "الحروف",
+            kind_words: "الكلمات",
+            kind_story: "قصة",
+            kind_review: "مراجعة",
+            kind_small: "أشكال الحروف",
+            mode_picture: "جمل",
+            mode_cloze: "الكلمة الناقصة",
+            mode_order: "ترتيب الكلمات",
+            mode_mix: "جمل متنوعة",
+            locked: "مقفل",
+            stars: "{n} من 3 نجوم",
+            levelName: "المستوى {n}: {name}",
+            notPlayed: "لم يُلعب بعد",
+            close: "العودة إلى الخريطة",
+            replay: "استمع مرة أخرى",
+            readToMe: "اقرأ لي",
+            listen: "استمع",
+            levelDone: "أكملت المستوى!",
+            nextLevel: "المستوى التالي",
+            backToMap: "العودة إلى الخريطة",
+            playAgainLevel: "العب مرة أخرى",
+            newSticker: "ملصق جديد!",
+            allDone: "أكملت الطريق كله!",
+            meet: "حرف جديد",
+            progress: "الخطوة {n} من {total}",
+            tile: "بطاقة {letter}",
+            slot: "المربع {n}: {letter}. اضغط لإرجاعه.",
+            emptySlot: "مربع فارغ {n}",
+            picture: "صورة: {word}",
+            hearPicture: "استمع إلى {word}",
+            letterChoice: "حرف {letter}",
+            wordChoice: "كلمة {word}",
+            correct: "صحيح!",
+            tryAgain: "ليس تماما، حاول مرة أخرى.",
+            gap: "كلمة ناقصة"
         }
     };
     const t = (key, vars = {}) => (strings[state.language][key] ?? strings.en[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
@@ -133,6 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pictureOf = (word) => L().pictures[word] ?? L().pictures[allWords().find((key) => wordKey(key) === wordKey(word))];
     const imageHtml = (pic, cls = "") => `<img class="pa-pic ${cls}" src="pics/${pic}.webp" alt="" draggable="false" width="240" height="240" />`;
     const levelItems = (level) => (level.items ? level.items.split(" ") : []);
+
     function tilesFor(word) {
         if (L().tiles?.[word]) return L().tiles[word];
         const teams = [...L().teams].sort((a, b) => b.length - a.length);
@@ -159,6 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Capital letters come first in every path; lowercase starts at the path's own turning point.
     const capitals = (path, index) => index < pathDef(path).lowercaseFrom;
     const cased = (text, path = round?.path ?? state.path, index = round?.index ?? 0) => (capitals(path, index) ? text.toLocaleUpperCase() : text);
+
     function letterShown(grapheme, pair = false) {
         if (L().caseless) return grapheme;
         if (capitals(round.path, round.index)) return grapheme.toLocaleUpperCase();
@@ -178,10 +321,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ---------- Saved progress ---------- */
-    const freshJourney = () => ({ paths: { letters: {}, words: {}, stories: {} }, stats: {} });
+    const freshJourney = () => ({
+        paths: {
+            letters: {},
+            words: {},
+            stories: {}
+        },
+        stats: {}
+    });
     const LANGUAGES = content.languages;
     const knownLanguage = (value) => (LANGUAGES.includes(value) ? value : "en");
-    const freshState = () => ({ version: 4, language: "en", path: "letters", sound: true, slow: false, unlockAll: false, fullscreen: true, journeys: Object.fromEntries(LANGUAGES.map((lang) => [lang, freshJourney()])) });
+    const freshState = () => ({
+        version: 4,
+        language: "en",
+        path: "letters",
+        sound: true,
+        slow: false,
+        unlockAll: false,
+        fullscreen: true,
+        journeys: Object.fromEntries(LANGUAGES.map((lang) => [lang, freshJourney()]))
+    });
     const count = (value) => (Number.isFinite(value) ? Math.max(0, Math.min(100000, Math.floor(value))) : 0);
     let storageFailed = false;
 
@@ -195,7 +354,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         for (const [key, value] of Object.entries(raw.stats || {})) {
-            if (key.length < 40 && value && typeof value === "object") journey.stats[key] = { c: count(value.c), w: count(value.w) };
+            if (key.length < 40 && value && typeof value === "object") journey.stats[key] = {
+                c: count(value.c),
+                w: count(value.w)
+            };
         }
         return journey;
     }
@@ -205,8 +367,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const paths = content[lang].paths;
         paths.letters.levels.every((level, i) => {
             const next = paths.letters.levels.slice(i + 1).find((item) => item.kind === "letters");
-            const ok = level.kind === "letters" ? levelItems(level).every((item) => learned.has(item))
-                : level.kind === "review" ? Boolean(next && levelItems(next).every((item) => learned.has(item))) : false;
+            const ok = level.kind === "letters" ? levelItems(level).every((item) => learned.has(item)) :
+                level.kind === "review" ? Boolean(next && levelItems(next).every((item) => learned.has(item))) : false;
             if (ok) journey.paths.letters[i] = 2;
             return ok;
         });
@@ -226,6 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
         en: "s:s a t|s:p i n|w|s:m d g o|w|t:dogpig|s:c k e u|w|s:r h b f|w|t:cathat|r|s:l j v w|w|s:x y z qu|t:foxbox|s:sh ch th ng ck|w|s:ee oo ar oa|w|t:moonboat|r",
         de: "s:m a o|s:l i s|w|s:e r n t|w|t:lotte|s:u d h b|w|s:f w k p|w|t:hund|r|s:g z j v|w|s:sch ch ei au|w|s:ie eu ä ö ü|w|t:eule|s:st sp qu pf|w|t:stern|r"
     };
+
     function fromVersion3(raw, lang) {
         const finishedBefore = raw?.done || {};
         const learned = new Set();
@@ -242,12 +405,14 @@ document.addEventListener("DOMContentLoaded", () => {
         journey.stats = cleanJourney(raw, lang).stats;
         return journey;
     }
+
     function fromVersion2(raw, lang) {
         if (!raw || typeof raw !== "object") return freshJourney();
         const words = new Set((raw.words || []).map((word) => wordKey(String(word))));
         const sets = content[lang].paths.words.levels.filter((level) => level.kind === "words" && levelItems(level).filter((word) => words.has(wordKey(word))).length >= 2).length;
         return rebuild(lang, new Set((raw.sounds || []).map(String)), sets, new Set());
     }
+
     function load() {
         const state = freshState();
         try {
@@ -278,14 +443,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 for (const lang of ["en", "de"]) state.journeys[lang] = fromVersion2(v2.journeys?.[lang], lang);
                 state.journeys.ar = freshJourney();
             }
-        } catch { /* Unreadable storage must never block play. */ }
+        } catch {
+            /* Unreadable storage must never block play. */
+        }
         return state;
     }
     const state = load();
     const journey = () => state.journeys[state.language];
     const done = (path = state.path) => journey().paths[path];
+
     function save() {
-        try { localStorage.setItem(KEY, JSON.stringify(state)); storageFailed = false; } catch { storageFailed = true; }
+        try {
+            localStorage.setItem(KEY, JSON.stringify(state));
+            storageFailed = false;
+        } catch {
+            storageFailed = true;
+        }
         $("save-note").textContent = t(storageFailed ? "saveFail" : "saved");
     }
 
@@ -303,6 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const elements = new Map();
     const clipEntry = (id) => window.PhonicsAudio?.[state.language]?.[id];
     const clipSrc = (id) => clipEntry(id) && `audio/${state.language}/${clipEntry(id)[0]}`;
+
     function clipText(id) {
         const [kind, ...rest] = id.split(":");
         if (kind === "w") return rest.join(":");
@@ -316,10 +490,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const audioContext = () => {
         if (!context && Context) {
-            try { context = new Context(); } catch { /* Fall back to media elements. */ }
+            try {
+                context = new Context();
+            } catch {
+                /* Fall back to media elements. */
+            }
         }
         return context;
     };
+
     function unlockAudio() {
         const ctx = audioContext();
         if (!ctx) return;
@@ -330,13 +509,19 @@ document.addEventListener("DOMContentLoaded", () => {
         source.connect(ctx.destination);
         source.start(0);
     }
-    document.addEventListener("pointerdown", unlockAudio, { capture: true });
-    document.addEventListener("keydown", unlockAudio, { capture: true });
+    document.addEventListener("pointerdown", unlockAudio, {
+        capture: true
+    });
+    document.addEventListener("keydown", unlockAudio, {
+        capture: true
+    });
+
     function noteFailure() {
         if (audioFailed) return;
         audioFailed = true;
         $("audio-note").textContent = t("audioMissing");
     }
+
     function loadBuffer(id) {
         const src = clipSrc(id);
         const ctx = audioContext();
@@ -345,10 +530,15 @@ document.addEventListener("DOMContentLoaded", () => {
             buffers.set(src, fetch(src)
                 .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(response.status))))
                 .then((data) => new Promise((resolve, reject) => ctx.decodeAudioData(data, resolve, reject)))
-                .catch(() => { buffers.delete(src); noteFailure(); return null; }));
+                .catch(() => {
+                    buffers.delete(src);
+                    noteFailure();
+                    return null;
+                }));
         }
         return buffers.get(src);
     }
+
     function element(id) {
         const src = clipSrc(id);
         if (!src) return null;
@@ -364,6 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.sound) return;
         ids.filter(Boolean).forEach((id) => (audioContext() ? loadBuffer(id) : element(id)));
     };
+
     function stopAudio() {
         audioToken += 1;
         if (currentFinish) currentFinish();
@@ -371,6 +562,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".pa-reading").forEach((node) => node.classList.remove("pa-reading"));
         $("replay").classList.remove("pa-talking");
     }
+
     function speakFallback(id, token) {
         const text = clipText(id);
         if (!speechReady || !text) return Promise.resolve();
@@ -379,7 +571,10 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.lang = L().locale;
             utterance.rate = state.slow ? 0.75 : 0.9;
             const timer = setTimeout(resolve, 1500 + text.length * 120);
-            utterance.onend = utterance.onerror = () => { clearTimeout(timer); resolve(); };
+            utterance.onend = utterance.onerror = () => {
+                clearTimeout(timer);
+                resolve();
+            };
             if (token === audioToken) window.speechSynthesis.speak(utterance);
             else resolve();
         });
@@ -388,7 +583,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function playClip(id, token, onTime) {
         return new Promise((resolve) => {
             if (token !== audioToken || !state.sound) return resolve();
-            if (!clipEntry(id)) { speakFallback(id, token).then(resolve); return; }
+            if (!clipEntry(id)) {
+                speakFallback(id, token).then(resolve);
+                return;
+            }
             if (currentFinish) currentFinish();
             const rate = state.slow ? 0.85 : 1;
             let frame = 0;
@@ -407,7 +605,10 @@ document.addEventListener("DOMContentLoaded", () => {
             currentFinish = finish;
             const follow = (now) => {
                 if (!onTime) return;
-                const tick = () => { onTime(now()); frame = requestAnimationFrame(tick); };
+                const tick = () => {
+                    onTime(now());
+                    frame = requestAnimationFrame(tick);
+                };
                 frame = requestAnimationFrame(tick);
             };
             const ctx = audioContext();
@@ -425,7 +626,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     source.onended = finish;
                     stopSound = () => {
                         source.onended = null;
-                        try { source.stop(); } catch { /* Already stopped. */ }
+                        try {
+                            source.stop();
+                        } catch {
+                            /* Already stopped. */
+                        }
                     };
                     source.start();
                     timer = setTimeout(finish, (buffer.duration / rate) * 1000 + 400);
@@ -445,8 +650,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 timer = setTimeout(finish, (clipEntry(id)[1] / rate) * 1000 + 400);
             };
             audio.onended = finish;
-            audio.onerror = () => { noteFailure(); finish(); };
-            try { audio.currentTime = 0; } catch { /* Not yet seekable. */ }
+            audio.onerror = () => {
+                noteFailure();
+                finish();
+            };
+            try {
+                audio.currentTime = 0;
+            } catch {
+                /* Not yet seekable. */
+            }
             audio.playbackRate = rate;
             follow(() => audio.currentTime);
             const started = audio.play();
@@ -454,7 +666,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     // Plays clips in order; resolves true when the whole sequence finished uninterrupted.
-    async function say(ids, { onTime = null, gap = 140 } = {}) {
+    async function say(ids, {
+        onTime = null,
+        gap = 140
+    } = {}) {
         stopAudio();
         const token = audioToken;
         const list = [].concat(ids).filter(Boolean);
@@ -468,11 +683,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (token === audioToken) $("replay").classList.remove("pa-talking");
         return token === audioToken;
     }
+
     function tone(kind) {
         const ctx = state.sound && audioContext();
         if (!ctx || ctx.state !== "running") return;
         try {
-            const notes = { win: [523.25, 659.25, 783.99, 1046.5], soft: [311.13, 261.63], fanfare: [523.25, 659.25, 783.99, 659.25, 1046.5] }[kind];
+            const notes = {
+                win: [523.25, 659.25, 783.99, 1046.5],
+                soft: [311.13, 261.63],
+                fanfare: [523.25, 659.25, 783.99, 659.25, 1046.5]
+            } [kind];
             notes.forEach((frequency, index) => {
                 const oscillator = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -486,7 +706,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 oscillator.start(start);
                 oscillator.stop(start + 0.35);
             });
-        } catch { /* Visual feedback is enough when audio output is blocked. */ }
+        } catch {
+            /* Visual feedback is enough when audio output is blocked. */
+        }
     }
 
     /* ---------- Paths, map and sticker book ---------- */
@@ -497,6 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const finished = (path) => Object.keys(done(path)).length;
     const starsIn = (path) => Object.values(done(path)).reduce((sum, n) => sum + n, 0);
+
     function levelName(level, index, path = state.path) {
         if (level.kind === "letters") return levelItems(level).map((item) => cased(item, path, index)).join(" ");
         if (level.kind === "story") return L().stories[level.story].title;
@@ -504,6 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (level.kind === "words") return `${levelItems(level).slice(0, 2).map((word) => cased(shown(word), path, index)).join(", ")} …`;
         return t(`kind_${level.kind}`);
     }
+
     function levelIcon(level, index, path = state.path) {
         if (level.kind === "letters") return `<span class="pa-node-letters">${escape(levelName(level, index, path))}</span>`;
         if (level.kind === "small") return '<span class="pa-node-letters">Aa</span>';
@@ -517,8 +741,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const offset = PATHS.slice(0, PATHS.indexOf(path)).reduce((sum, item) => sum + levels(item).length, 0);
         return content.stickers[(offset + index) % content.stickers.length];
     };
-    const pathIcon = (path) => path === "letters" ? `<span class="pa-path-letters">${L().caseless ? Object.keys(L().sounds).slice(0, 3).join(" ") : "ABC"}</span>`
-        : imageHtml(path === "words" ? pictureOf(levelItems(levels("words")[0])[0]) : "openbook");
+    const pathIcon = (path) => path === "letters" ? `<span class="pa-path-letters">${L().caseless ? Object.keys(L().sounds).slice(0, 3).join(" ") : "ABC"}</span>` :
+        imageHtml(path === "words" ? pictureOf(levelItems(levels("words")[0])[0]) : "openbook");
 
     function renderPaths() {
         $("path-tabs").innerHTML = PATHS.map((path) => `<button type="button" role="tab" class="pa-path-tab" data-path="${path}" aria-selected="${path === state.path}" tabindex="${path === state.path ? 0 : -1}">
@@ -528,7 +752,12 @@ document.addEventListener("DOMContentLoaded", () => {
         $("path-tabs").querySelectorAll("[data-path]").forEach((button, i, all) => {
             button.onclick = () => choosePath(button.dataset.path);
             button.onkeydown = (event) => {
-                const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+                const step = {
+                    ArrowRight: 1,
+                    ArrowDown: 1,
+                    ArrowLeft: -1,
+                    ArrowUp: -1
+                } [event.key];
                 if (!step) return;
                 event.preventDefault();
                 const next = all[(i + step + all.length) % all.length].dataset.path;
@@ -537,12 +766,14 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         });
     }
+
     function choosePath(path) {
         if (!PATHS.includes(path)) return;
         state.path = path;
         save();
         renderMap();
     }
+
     function renderMap() {
         renderPaths();
         const current = nextLevelIndex();
@@ -562,7 +793,9 @@ document.addEventListener("DOMContentLoaded", () => {
         layoutMap();
         $("map-title").textContent = `${t("mapTitle")}: ${t(`path_${state.path}`)}`;
         $("stat-level").textContent = finished(state.path);
-        $("stat-level-label").textContent = t("levelsDone", { total: levels().length });
+        $("stat-level-label").textContent = t("levelsDone", {
+            total: levels().length
+        });
         $("stat-stars").textContent = PATHS.reduce((sum, path) => sum + starsIn(path), 0);
         $("stat-stickers").textContent = PATHS.reduce((sum, path) => sum + finished(path), 0);
         $("journey-fill").style.width = `${(finished(state.path) / levels().length) * 100}%`;
@@ -570,12 +803,15 @@ document.addEventListener("DOMContentLoaded", () => {
         renderStickers();
         renderMastery();
     }
+
     function renderStickers() {
         $("sticker-book").innerHTML = PATHS.map((path) => `<div class="pa-sticker-group"><h3>${t(`path_${path}`)}</h3><div class="pa-sticker-grid">${levels(path).map((_, index) => {
             const won = done(path)[index] !== undefined;
             return `<span class="pa-sticker ${won ? "is-won" : ""}">${imageHtml(stickerOf(path, index))}</span>`;
         }).join("")}</div></div>`).join("");
-        app.querySelectorAll(".pa-sticker-count").forEach((node) => { node.textContent = PATHS.reduce((sum, path) => sum + finished(path), 0); });
+        app.querySelectorAll(".pa-sticker-count").forEach((node) => {
+            node.textContent = PATHS.reduce((sum, path) => sum + finished(path), 0);
+        });
     }
     // Connects the level stones with a soft path drawn behind them.
     function drawPath() {
@@ -616,13 +852,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     let mapWidth = 0;
     if (window.ResizeObserver) new ResizeObserver(() => {
-        if ($("level-map").clientWidth !== mapWidth) { mapWidth = $("level-map").clientWidth; layoutMap(); }
+        if ($("level-map").clientWidth !== mapWidth) {
+            mapWidth = $("level-map").clientWidth;
+            layoutMap();
+        }
     }).observe($("level-map"));
+
     function renderMastery() {
         const reached = Math.max(-1, ...Object.keys(done("letters")).map(Number));
         const learned = reached >= 0 ? itemsUpTo("letters", reached, "letters") : [];
         $("mastery").innerHTML = learned.length ? learned.map((grapheme) => {
-            const stat = journey().stats[grapheme] || { c: 0, w: 0 };
+            const stat = journey().stats[grapheme] || {
+                c: 0,
+                w: 0
+            };
             const level = stat.c >= 2 && stat.w <= stat.c / 3 ? "is-secure" : stat.w > 0 ? "is-practise" : "";
             return `<span class="pa-mastery-item ${level}">${escape(cased(grapheme, "letters", reached))}</span>`;
         }).join("") : `<p class="pa-note">${t("noSounds")}</p>`;
@@ -630,11 +873,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ---------- Building a round ---------- */
     function weightedSample(items, weight, n) {
-        const pool = items.map((item) => ({ item, w: Math.max(0.2, weight(item)) * (0.6 + Math.random()) }));
-        return pool.sort((a, b) => b.w - a.w).slice(0, n).map(({ item }) => item);
+        const pool = items.map((item) => ({
+            item,
+            w: Math.max(0.2, weight(item)) * (0.6 + Math.random())
+        }));
+        return pool.sort((a, b) => b.w - a.w).slice(0, n).map(({
+            item
+        }) => item);
     }
     const needsPractice = (key) => {
-        const stat = journey().stats[key] || { c: 0, w: 0 };
+        const stat = journey().stats[key] || {
+            c: 0,
+            w: 0
+        };
         return 1 + stat.w * 2.5 - Math.min(stat.c, 6) * 0.3;
     };
     // Letter questions draw pictures from the whole picture set, so the same letter brings new words each time.
@@ -646,23 +897,50 @@ document.addEventListener("DOMContentLoaded", () => {
             // A distractor may appear elsewhere in the word, just not where the question looks.
             const ok = (item) => phoneme(item) !== phoneme(grapheme) && !(position === "in" ? anywhere(word, item) : hasSound(word, item, position));
             const others = distinct(known, allLetters(), ok, phoneme, 2, [grapheme]);
-            return { type, grapheme, word, position, options: shuffle([grapheme, ...others]), key: grapheme };
+            return {
+                type,
+                grapheme,
+                word,
+                position,
+                options: shuffle([grapheme, ...others]),
+                key: grapheme
+            };
         }
         if (type === "hunt") {
             // Same-sized tiles first (sh among th and ch); "sch" has no three-letter neighbours, so any tile can fill in.
             const differs = (item) => phoneme(item) !== phoneme(grapheme);
             const sameSize = distinct(known, allLetters(), (item) => differs(item) && item.length === grapheme.length, phoneme, 5, [grapheme]);
             const others = sameSize.length >= 3 ? sameSize : [...sameSize, ...distinct(known, allLetters(), differs, phoneme, 5 - sameSize.length, [grapheme, ...sameSize])];
-            const cells = shuffle([grapheme, grapheme, grapheme, ...Array.from({ length: 5 }, (_, i) => others[i % others.length])]);
-            return { type, grapheme, cells, key: grapheme };
+            const cells = shuffle([grapheme, grapheme, grapheme, ...Array.from({
+                length: 5
+            }, (_, i) => others[i % others.length])]);
+            return {
+                type,
+                grapheme,
+                cells,
+                key: grapheme
+            };
         }
         const ok = (item) => Boolean(pictureOf(item)) && !(position === "in" ? anywhere(item, grapheme) : hasSound(item, grapheme, position));
         const others = distinct(allWords(), [], ok, pictureOf, 2, [word]);
-        return { type: "pickPicture", grapheme, word, position, options: shuffle([word, ...others]), key: grapheme };
+        return {
+            type: "pickPicture",
+            grapheme,
+            word,
+            position,
+            options: shuffle([word, ...others]),
+            key: grapheme
+        };
     }
+
     function meetTask(grapheme, known) {
         const others = distinct(known, allLetters(), (item) => phoneme(item) !== phoneme(grapheme), phoneme, 2, [grapheme]);
-        return { type: "meet", grapheme, options: shuffle([grapheme, ...others]), key: grapheme };
+        return {
+            type: "meet",
+            grapheme,
+            options: shuffle([grapheme, ...others]),
+            key: grapheme
+        };
     }
     // Similar-looking words make children read every letter instead of guessing from the first one.
     function similarWords(word, pool) {
@@ -674,28 +952,56 @@ document.addEventListener("DOMContentLoaded", () => {
         const ranked = pool.filter((item) => pictureOf(item) !== pictureOf(word)).sort((a, b) => score(b) - score(a)).slice(0, 4);
         return distinct(ranked, allWords(), (item) => item !== word, pictureOf, 2, [word]);
     }
+
     function wordTask(word, pool, type, index) {
         const tiles = tilesFor(word);
         const key = `w:${wordKey(word)}`;
         if (type === "build") {
-            const extra = index >= 4 && tiles.length <= 4
-                ? distinct(allLetters().filter((item) => item.length === 1), [], (item) => !tiles.some((tile) => tile.toLocaleLowerCase() === item), (item) => item, 1) : [];
-            let bank = tiles.map((text, id) => ({ id, text })).concat(extra.map((text, i) => ({ id: tiles.length + i, text })));
+            const extra = index >= 4 && tiles.length <= 4 ?
+                distinct(allLetters().filter((item) => item.length === 1), [], (item) => !tiles.some((tile) => tile.toLocaleLowerCase() === item), (item) => item, 1) : [];
+            let bank = tiles.map((text, id) => ({
+                id,
+                text
+            })).concat(extra.map((text, i) => ({
+                id: tiles.length + i,
+                text
+            })));
             for (let tries = 0; tries < 6; tries += 1) {
                 bank = shuffle(bank);
                 if (bank.map((tile) => tile.text).join("") !== tiles.join("") || bank.length === 1) break;
             }
-            return { type, word, tiles, bank, key };
+            return {
+                type,
+                word,
+                tiles,
+                bank,
+                key
+            };
         }
         if (type === "missing") {
             const gap = Math.floor(Math.random() * tiles.length);
             const missing = tiles[gap].toLocaleLowerCase();
             const sameKind = allLetters().filter((item) => (item.length > 1) === (missing.length > 1));
             const others = distinct(sameKind, allLetters(), (item) => phoneme(item) !== phoneme(missing), phoneme, 2, [missing]);
-            return { type, word, tiles, gap, grapheme: missing, options: shuffle([missing, ...others]), key };
+            return {
+                type,
+                word,
+                tiles,
+                gap,
+                grapheme: missing,
+                options: shuffle([missing, ...others]),
+                key
+            };
         }
-        return { type, word, tiles, options: shuffle([word, ...similarWords(word, pool)]), key };
+        return {
+            type,
+            word,
+            tiles,
+            options: shuffle([word, ...similarWords(word, pool)]),
+            key
+        };
     }
+
     function sentenceTask(index, type) {
         const item = L().sentences[index];
         const tokens = item.text.split(/\s+/);
@@ -703,17 +1009,35 @@ document.addEventListener("DOMContentLoaded", () => {
         const inSentence = new Set(tokens.map(wordKey));
         const key = `s:${index}`;
         if (type === "order") {
-            let pieces = tokens.map((text, id) => ({ id, text }));
+            let pieces = tokens.map((text, id) => ({
+                id,
+                text
+            }));
             for (let tries = 0; tries < 6; tries += 1) {
                 pieces = shuffle(pieces);
                 if (pieces.map((piece) => piece.text).join(" ") !== item.text) break;
             }
-            return { type, index, tokens, pieces, key };
+            return {
+                type,
+                index,
+                tokens,
+                pieces,
+                key
+            };
         }
         const answers = L().sentences.map((other) => other.answer);
         const others = distinct(answers, allWords(), (word) => !inSentence.has(wordKey(word)) && Boolean(pictureOf(word)), pictureOf, 2, [item.answer]);
-        return { type: type === "cloze" ? "cloze" : "sentencePic", index, tokens, answerAt, answer: item.answer, options: shuffle([item.answer, ...others]), key };
+        return {
+            type: type === "cloze" ? "cloze" : "sentencePic",
+            index,
+            tokens,
+            answerAt,
+            answer: item.answer,
+            options: shuffle([item.answer, ...others]),
+            key
+        };
     }
+
     function buildRound(path, index) {
         const level = levels(path)[index];
         const items = levelItems(level);
@@ -730,7 +1054,12 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (level.kind === "small") {
                 for (const grapheme of weightedSample(items, needsPractice, 8)) {
                     const others = distinct(items, allLetters(), (item) => item !== grapheme, (item) => item, 2, [grapheme]);
-                    tasks.push({ type: "matchCase", grapheme, options: shuffle([grapheme, ...others]), key: grapheme });
+                    tasks.push({
+                        type: "matchCase",
+                        grapheme,
+                        options: shuffle([grapheme, ...others]),
+                        key: grapheme
+                    });
                 }
             } else {
                 const types = ["pickLetter", "pickPicture", "hunt"];
@@ -746,8 +1075,19 @@ document.addEventListener("DOMContentLoaded", () => {
             tasks.splice(0, tasks.length, ...shuffle(tasks));
         } else if (level.kind === "story") {
             const story = L().stories[level.story];
-            story.pages.forEach((_, page) => tasks.push({ type: "story", story: level.story, page }));
-            story.questions.forEach((item, i) => tasks.push({ type: "question", story: level.story, question: i, answer: item.answer, options: shuffle([item.answer, ...item.others]), key: `q:${level.story}:${i}` }));
+            story.pages.forEach((_, page) => tasks.push({
+                type: "story",
+                story: level.story,
+                page
+            }));
+            story.questions.forEach((item, i) => tasks.push({
+                type: "question",
+                story: level.story,
+                question: i,
+                answer: item.answer,
+                options: shuffle([item.answer, ...item.others]),
+                key: `q:${level.story}:${i}`
+            }));
         } else {
             const seen = levels(path).slice(0, index + 1).filter((item) => item.kind === "sentences").flatMap(levelItems).map(Number);
             const source = level.kind === "sentences" ? items.map(Number) : seen.length ? seen : L().sentences.map((_, i) => i);
@@ -760,8 +1100,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ---------- Playing a round ---------- */
     let round = null;
-    function setGuide(text) { $("play-title").textContent = text; }
-    function announce(text) { $("announcer").textContent = ""; requestAnimationFrame(() => { $("announcer").textContent = text; }); }
+
+    function setGuide(text) {
+        $("play-title").textContent = text;
+    }
+
+    function announce(text) {
+        $("announcer").textContent = "";
+        requestAnimationFrame(() => {
+            $("announcer").textContent = text;
+        });
+    }
+
     function setInert(on) {
         document.querySelectorAll("body > nav, body > footer, body > .skip-link, .pa > .breadcrumbs, #phonics-app > :not(#play):not(#sticker-dialog)").forEach((node) => {
             node.inert = on;
@@ -770,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // The sticker book opens over whatever is on screen, the map or a round, and returns there when closed.
     const dialog = $("sticker-dialog");
     let returnFocus = null;
+
     function openStickers() {
         stopAudio();
         renderStickers();
@@ -778,8 +1129,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.classList.add("pa-playing");
         setInert(true);
         play.inert = true;
-        $("close-stickers").focus({ preventScroll: true });
+        $("close-stickers").focus({
+            preventScroll: true
+        });
     }
+
     function closeStickers() {
         dialog.hidden = true;
         play.inert = false;
@@ -787,25 +1141,36 @@ document.addEventListener("DOMContentLoaded", () => {
             setInert(false);
             document.body.classList.remove("pa-playing");
         }
-        returnFocus?.focus({ preventScroll: true });
+        returnFocus?.focus({
+            preventScroll: true
+        });
     }
     // Full screen shows only the game, so page ads cannot appear over a round; the map keeps the normal page.
     const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
     const canFullscreen = Boolean(app.requestFullscreen || app.webkitRequestFullscreen);
+
     function enterFullscreen() {
         if (!canFullscreen || fullscreenElement()) return;
         try {
-            const request = app.requestFullscreen ? app.requestFullscreen({ navigationUI: "hide" }) : app.webkitRequestFullscreen();
+            const request = app.requestFullscreen ? app.requestFullscreen({
+                navigationUI: "hide"
+            }) : app.webkitRequestFullscreen();
             request?.catch?.(() => {});
-        } catch { /* The browser said no; the round still works. */ }
+        } catch {
+            /* The browser said no; the round still works. */
+        }
     }
+
     function exitFullscreen() {
         if (!fullscreenElement()) return;
         try {
             const exit = document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen();
             exit?.catch?.(() => {});
-        } catch { /* Already left. */ }
+        } catch {
+            /* Already left. */
+        }
     }
+
     function syncFullscreen() {
         const on = Boolean(fullscreenElement());
         $("fullscreen-toggle").hidden = !canFullscreen;
@@ -814,11 +1179,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.addEventListener("fullscreenchange", syncFullscreen);
     document.addEventListener("webkitfullscreenchange", syncFullscreen);
+
     function startLevel(index, path = state.path) {
         if (!unlocked(index, path)) return;
         if (state.fullscreen) enterFullscreen();
         syncFullscreen();
-        round = { path, index, tasks: buildRound(path, index), step: 0, mistakes: 0, taskMistakes: 0, busy: false, replay: null };
+        round = {
+            path,
+            index,
+            tasks: buildRound(path, index),
+            step: 0,
+            mistakes: 0,
+            taskMistakes: 0,
+            busy: false,
+            replay: null
+        };
         play.hidden = false;
         document.body.classList.add("pa-playing");
         setInert(true);
@@ -826,11 +1201,21 @@ document.addEventListener("DOMContentLoaded", () => {
         $("close-play").setAttribute("aria-label", t("close"));
         app.querySelector(".pa-sticker-mini").setAttribute("aria-label", t("stickerTitle"));
         $("replay").setAttribute("aria-label", t("replay"));
-        $("replay").focus({ preventScroll: true });
+        $("replay").focus({
+            preventScroll: true
+        });
         const kind = levels(path)[index].kind;
-        const intro = { letters: "line:sounds", small: "line:small", words: "line:words", sentences: "line:sentences", story: "line:storyStart", review: "line:review" }[kind];
+        const intro = {
+            letters: "line:sounds",
+            small: "line:small",
+            words: "line:words",
+            sentences: "line:sentences",
+            story: "line:storyStart",
+            review: "line:review"
+        } [kind];
         showTask(intro);
     }
+
     function closePlay() {
         stopAudio();
         exitFullscreen();
@@ -840,16 +1225,23 @@ document.addEventListener("DOMContentLoaded", () => {
         setInert(false);
         renderMap();
         const current = $("level-map").querySelector(".is-current button") || $("play-next");
-        current.focus({ preventScroll: true });
+        current.focus({
+            preventScroll: true
+        });
     }
+
     function updateProgress() {
         const total = round.tasks.length;
         $("play-progress-fill").style.width = `${(round.step / total) * 100}%`;
         $("play-progress").setAttribute("aria-valuemax", String(total));
         $("play-progress").setAttribute("aria-valuenow", String(round.step));
-        $("play-progress").setAttribute("aria-label", t("progress", { n: Math.min(round.step + 1, total), total }));
+        $("play-progress").setAttribute("aria-label", t("progress", {
+            n: Math.min(round.step + 1, total),
+            total
+        }));
     }
     const renderers = {};
+
     function showTask(lead = null) {
         if (!round) return;
         updateProgress();
@@ -863,6 +1255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const next = round.tasks[round.step + 1];
         if (next) preload(clipsFor(next));
     }
+
     function clipsFor(task) {
         if (["meet", "matchCase", "hunt"].includes(task.type)) return [`in:${task.grapheme}`, `ph:${task.grapheme}`];
         if (task.type === "story") return [`st:${task.story}:${task.page}`];
@@ -870,14 +1263,23 @@ document.addEventListener("DOMContentLoaded", () => {
         if (task.index !== undefined) return [`sn:${task.index}`, `cz:${task.index}`];
         return [task.word && `w:${wordKey(task.word)}`, ...(task.tiles || []).map((tile) => `ph:${tile.toLocaleLowerCase()}`)];
     }
-    const questionLine = (task) => task.type === "pickLetter"
-        ? { start: "line:startQ", end: "line:endQ", in: "line:inQ" }[task.position]
-        : { start: "line:findStart", end: "line:findEnd", in: "line:findIn" }[task.position];
+    const questionLine = (task) => task.type === "pickLetter" ? {
+        start: "line:startQ",
+        end: "line:endQ",
+        in: "line:inQ"
+    } [task.position] : {
+        start: "line:findStart",
+        end: "line:findEnd",
+        in: "line:findIn"
+    } [task.position];
     const lineText = (id) => L().lines[id.slice(5)];
     // Records the first try of each task for the mastery chart and spaced review.
     function record(task, correct) {
         if (!task.key) return;
-        const stat = journey().stats[task.key] ||= { c: 0, w: 0 };
+        const stat = journey().stats[task.key] ||= {
+            c: 0,
+            w: 0
+        };
         if (correct && round.taskMistakes === 0) stat.c += 1;
         if (!correct && round.taskMistakes === 1) stat.w += 1;
     }
@@ -919,6 +1321,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (finishedSaying) say("line:hereItIs");
         } else if (finishedSaying && round?.replay) round.replay();
     }
+
     function burst(anchor) {
         if (reducedMotion()) return;
         const rect = anchor.getBoundingClientRect();
@@ -926,10 +1329,13 @@ document.addEventListener("DOMContentLoaded", () => {
         layer.className = "pa-burst";
         layer.style.left = `${rect.left + rect.width / 2}px`;
         layer.style.top = `${rect.top + rect.height / 2}px`;
-        layer.innerHTML = Array.from({ length: 14 }, (_, i) => `<i style="--a:${(i / 14) * 360}deg;--d:${60 + Math.random() * 50}px"></i>`).join("");
+        layer.innerHTML = Array.from({
+            length: 14
+        }, (_, i) => `<i style="--a:${(i / 14) * 360}deg;--d:${60 + Math.random() * 50}px"></i>`).join("");
         document.body.append(layer);
         setTimeout(() => layer.remove(), 900);
     }
+
     function pulse(node) {
         node.classList.remove("pa-pulse");
         void node.offsetWidth;
@@ -937,9 +1343,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const pictureButton = (word) => `<div class="pa-prompt-picture"><button type="button" class="pa-card pa-card-large" id="prompt-picture" aria-label="${escape(t("hearPicture", { word: shown(word) }))}">${imageHtml(pictureOf(word))}<span class="pa-card-badge" aria-hidden="true"></span></button></div>`;
     // The prompt card shows the letter, or, when it must be found by ear, a speaker that says its name.
-    const listenCard = (grapheme) => (state.sound
-        ? `<div class="pa-prompt-sound"><button type="button" class="pa-big-letter pa-big-letter-small pa-listen-card" id="prompt-sound" aria-label="${escape(t("listen"))}"><span aria-hidden="true"></span></button></div>`
-        : bigLetter(grapheme));
+    const listenCard = (grapheme) => (state.sound ?
+        `<div class="pa-prompt-sound"><button type="button" class="pa-big-letter pa-big-letter-small pa-listen-card" id="prompt-sound" aria-label="${escape(t("listen"))}"><span aria-hidden="true"></span></button></div>` :
+        bigLetter(grapheme));
     const bigLetter = (grapheme, small = true) => `<div class="pa-prompt-sound"><button type="button" class="pa-big-letter ${small ? "pa-big-letter-small" : ""}" id="prompt-sound" aria-label="${escape(t("listen"))}: ${escape(grapheme)}">${escape(grapheme)}</button></div>`;
     // Marks where the letter sits in the example word.
     function highlight(word, grapheme) {
@@ -953,8 +1359,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }).join("");
     }
     // Answer buttons: a right tap solves the task, a wrong one is disabled and explained aloud.
-    function choices(task, { answer, kind, label, right, wrong }) {
-        const cls = { letter: "pa-letter-option", word: "pa-word-option", picture: "pa-card" }[kind];
+    function choices(task, {
+        answer,
+        kind,
+        label,
+        right,
+        wrong
+    }) {
+        const cls = {
+            letter: "pa-letter-option",
+            word: "pa-word-option",
+            picture: "pa-card"
+        } [kind];
         const markup = `<div class="pa-choices pa-${kind}-options">${task.options.map((option) => {
             const text = kind === "picture" ? imageHtml(pictureOf(option)) : escape(label(option));
             const long = kind === "letter" && label(option).length > 2 ? "pa-long" : "";
@@ -966,7 +1382,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }).join("")}</div>`;
         const wire = () => {
             stage.querySelectorAll("[data-hear]").forEach((button) => {
-                button.onclick = () => { pulse(button); say(`w:${wordKey(button.dataset.hear)}`); };
+                button.onclick = () => {
+                    pulse(button);
+                    say(`w:${wordKey(button.dataset.hear)}`);
+                };
             });
             stage.querySelectorAll("[data-option]").forEach(wireOption);
         };
@@ -974,7 +1393,9 @@ document.addEventListener("DOMContentLoaded", () => {
             button.onclick = () => {
                 if (round.busy || button.disabled) return;
                 if (button.dataset.option === answer) {
-                    stage.querySelectorAll("[data-option]").forEach((item) => { item.disabled = true; });
+                    stage.querySelectorAll("[data-option]").forEach((item) => {
+                        item.disabled = true;
+                    });
                     success(task, button, right(button));
                 } else {
                     button.disabled = true;
@@ -983,7 +1404,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             };
         };
-        return { markup, wire };
+        return {
+            markup,
+            wire
+        };
     }
 
     /* Letters path */
@@ -992,7 +1416,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const [example] = L().sounds[task.grapheme];
         setGuide(`${t("meet")}: ${letterShown(task.grapheme)}`);
         const options = choices(task, {
-            answer: task.grapheme, kind: "letter", label: (option) => cased(option),
+            answer: task.grapheme,
+            kind: "letter",
+            label: (option) => cased(option),
             right: () => {
                 showLetter();
                 $("meet-picture").insertAdjacentHTML("beforeend", `<span class="pa-card-word">${highlight(example, task.grapheme)}</span>`);
@@ -1017,16 +1443,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 letter.innerHTML = '<span aria-hidden="true"></span>';
                 letter.setAttribute("aria-label", t("listen"));
             }
-            stage.querySelectorAll("[data-option]").forEach((button) => { button.disabled = false; });
+            stage.querySelectorAll("[data-option]").forEach((button) => {
+                button.disabled = false;
+            });
             round.replay = ask;
         };
         round.replay = () => say([`in:${task.grapheme}`]);
-        letter.onclick = () => { pulse(letter); say(`ph:${task.grapheme}`); };
+        letter.onclick = () => {
+            pulse(letter);
+            say(`ph:${task.grapheme}`);
+        };
         $("meet-picture").onclick = () => say(`w:${wordKey(example)}`);
         options.wire();
         // With sound off there is nothing to listen for, so the letter stays visible and the choices open at once.
         if (!state.sound) return hideLetter();
-        stage.querySelectorAll("[data-option]").forEach((button) => { button.disabled = true; });
+        stage.querySelectorAll("[data-option]").forEach((button) => {
+            button.disabled = true;
+        });
         // Whatever the sound does, the choices never stay locked for long.
         const unlock = setTimeout(hideLetter, 7000);
         (async () => {
@@ -1040,16 +1473,29 @@ document.addEventListener("DOMContentLoaded", () => {
         setGuide(L().lines.smallQ);
         // Arabic has no capitals: the letter is matched to its joined shape (ب to ـبـ) instead.
         const shape = (option) => (L().caseless ? `\u0640${option}\u0640` : option);
-        const options = choices(task, { answer: task.grapheme, kind: "letter", label: shape, right: () => [`ph:${task.grapheme}`] });
+        const options = choices(task, {
+            answer: task.grapheme,
+            kind: "letter",
+            label: shape,
+            right: () => [`ph:${task.grapheme}`]
+        });
         stage.innerHTML = `${bigLetter(task.grapheme.toLocaleUpperCase(), false)}${options.markup}`;
         round.replay = () => say(["line:smallQ", `ph:${task.grapheme}`]);
-        $("prompt-sound").onclick = () => { pulse($("prompt-sound")); say(`ph:${task.grapheme}`); };
+        $("prompt-sound").onclick = () => {
+            pulse($("prompt-sound"));
+            say(`ph:${task.grapheme}`);
+        };
         options.wire();
         say([lead, "line:smallQ", `ph:${task.grapheme}`]);
     };
     renderers.pickLetter = (task, lead) => {
         setGuide(lineText(questionLine(task)));
-        const options = choices(task, { answer: task.grapheme, kind: "letter", label: (option) => cased(option), right: () => [`ph:${task.grapheme}`, `w:${wordKey(task.word)}`] });
+        const options = choices(task, {
+            answer: task.grapheme,
+            kind: "letter",
+            label: (option) => cased(option),
+            right: () => [`ph:${task.grapheme}`, `w:${wordKey(task.word)}`]
+        });
         stage.innerHTML = `${pictureButton(task.word)}${options.markup}`;
         round.replay = () => say([`w:${wordKey(task.word)}`, questionLine(task)]);
         $("prompt-picture").onclick = () => say(`w:${wordKey(task.word)}`);
@@ -1059,7 +1505,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderers.pickPicture = (task, lead) => {
         setGuide(lineText(questionLine(task)));
         const options = choices(task, {
-            answer: task.word, kind: "picture",
+            answer: task.word,
+            kind: "picture",
             right: (button) => {
                 button.insertAdjacentHTML("beforeend", `<span class="pa-card-word">${highlight(task.word, task.grapheme)}</span>`);
                 return [`w:${wordKey(task.word)}`];
@@ -1067,7 +1514,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         stage.innerHTML = `${bigLetter(letterShown(task.grapheme))}${options.markup}`;
         round.replay = () => say([questionLine(task), `ph:${task.grapheme}`]);
-        $("prompt-sound").onclick = () => { pulse($("prompt-sound")); say(`ph:${task.grapheme}`); };
+        $("prompt-sound").onclick = () => {
+            pulse($("prompt-sound"));
+            say(`ph:${task.grapheme}`);
+        };
         options.wire();
         say([lead, questionLine(task), `ph:${task.grapheme}`]);
     };
@@ -1076,7 +1526,10 @@ document.addEventListener("DOMContentLoaded", () => {
         stage.innerHTML = `${listenCard(letterShown(task.grapheme))}
             <div class="pa-hunt">${task.cells.map((cell, i) => `<button type="button" class="pa-hunt-cell ${cell.length > 2 ? "pa-long" : ""}" data-cell="${i}" data-answer="${cell === task.grapheme}" aria-label="${escape(t("letterChoice", { letter: cased(cell) }))}">${escape(cased(cell))}</button>`).join("")}</div>`;
         round.replay = () => say(["line:huntQ", `ph:${task.grapheme}`]);
-        $("prompt-sound").onclick = () => { pulse($("prompt-sound")); say(`ph:${task.grapheme}`); };
+        $("prompt-sound").onclick = () => {
+            pulse($("prompt-sound"));
+            say(`ph:${task.grapheme}`);
+        };
         stage.querySelectorAll("[data-cell]").forEach((button) => {
             button.onclick = () => {
                 if (round.busy || button.disabled) return;
@@ -1095,7 +1548,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* Words path */
     // Slots filled from a bank of pieces; used for letters in words and for words in sentences.
-    function slotPuzzle(task, { target, pieces, sound, finish, typing = false }) {
+    function slotPuzzle(task, {
+        target,
+        pieces,
+        sound,
+        finish,
+        typing = false
+    }) {
         const slots = Array(target.length).fill(null);
         const textOf = (id) => pieces.find((piece) => piece.id === id).text;
         // Compare what the child sees: in capitals mode "M" and "m" are the same tile.
@@ -1135,7 +1594,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 $("slots").querySelectorAll(".pa-slot").forEach((slot, i) => slot.classList.toggle("is-wrong", !same(built[i], target[i])));
                 await sleep(800);
                 if (!round || round.tasks[round.step] !== task) return;
-                built.forEach((text, i) => { if (!same(text, target[i])) slots[i] = null; });
+                built.forEach((text, i) => {
+                    if (!same(text, target[i])) slots[i] = null;
+                });
                 round.busy = false;
                 mistake(task, null, []);
                 sync();
@@ -1150,14 +1611,19 @@ document.addEventListener("DOMContentLoaded", () => {
             say(sound(textOf(id)));
             if (!slots.includes(null)) check();
         };
-        stage.querySelectorAll("[data-tile]").forEach((button) => { button.onclick = () => add(Number(button.dataset.tile)); });
+        stage.querySelectorAll("[data-tile]").forEach((button) => {
+            button.onclick = () => add(Number(button.dataset.tile));
+        });
         if (typing) {
             round.keyboard = (key) => {
                 const free = pieces.filter((piece) => !slots.includes(piece.id));
                 const match = free.find((piece) => piece.text.toLocaleLowerCase() === key) || free.find((piece) => piece.text.toLocaleLowerCase().startsWith(key));
                 if (key === "backspace") {
                     const last = slots.findLastIndex((id) => id !== null);
-                    if (last >= 0 && !round.busy) { slots[last] = null; sync(); }
+                    if (last >= 0 && !round.busy) {
+                        slots[last] = null;
+                        sync();
+                    }
                 } else if (match) add(match.id);
             };
         }
@@ -1169,7 +1635,9 @@ document.addEventListener("DOMContentLoaded", () => {
         round.replay = () => say(["line:build", `w:${wordKey(task.word)}`]);
         $("prompt-picture").onclick = () => say(`w:${wordKey(task.word)}`);
         slotPuzzle(task, {
-            target: task.tiles, pieces: task.bank, typing: true,
+            target: task.tiles,
+            pieces: task.bank,
+            typing: true,
             sound: (text) => `ph:${text.toLocaleLowerCase()}`,
             finish: [...task.tiles.map((tile) => `ph:${tile.toLocaleLowerCase()}`), `w:${wordKey(task.word)}`]
         });
@@ -1178,7 +1646,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderers.missing = (task, lead) => {
         setGuide(L().lines.missingQ);
         const options = choices(task, {
-            answer: task.grapheme, kind: "letter", label: (option) => cased(option),
+            answer: task.grapheme,
+            kind: "letter",
+            label: (option) => cased(option),
             right: () => {
                 $("missing-slot").textContent = cased(task.tiles[task.gap]);
                 $("missing-slot").classList.add("is-right");
@@ -1195,22 +1665,34 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     renderers.read = (task, lead) => {
         setGuide(L().lines.read);
-        const options = choices(task, { answer: task.word, kind: "picture", right: () => [`w:${wordKey(task.word)}`] });
+        const options = choices(task, {
+            answer: task.word,
+            kind: "picture",
+            right: () => [`w:${wordKey(task.word)}`]
+        });
         // Joined scripts are read as one word, the way children will meet them in books.
-        const word = L().connected
-            ? `<span class="pa-read-tile pa-joined">${escape(task.word)}</span>`
-            : task.tiles.map((tile) => `<button type="button" class="pa-read-tile" data-sound="${escape(tile.toLocaleLowerCase())}" aria-label="${escape(t("listen"))}: ${escape(cased(tile))}">${escape(cased(tile))}</button>`).join("");
+        const word = L().connected ?
+            `<span class="pa-read-tile pa-joined">${escape(task.word)}</span>` :
+            task.tiles.map((tile) => `<button type="button" class="pa-read-tile" data-sound="${escape(tile.toLocaleLowerCase())}" aria-label="${escape(t("listen"))}: ${escape(cased(tile))}">${escape(cased(tile))}</button>`).join("");
         stage.innerHTML = `<div class="pa-read-word">${word}</div>${options.markup}`;
         round.replay = () => say("line:read");
         stage.querySelectorAll("[data-sound]").forEach((button) => {
-            button.onclick = () => { pulse(button); say(`ph:${button.dataset.sound}`); };
+            button.onclick = () => {
+                pulse(button);
+                say(`ph:${button.dataset.sound}`);
+            };
         });
         options.wire();
         say([lead, "line:read"]);
     };
     renderers.match = (task, lead) => {
         setGuide(L().lines.matchQ);
-        const options = choices(task, { answer: task.word, kind: "word", label: (option) => cased(shown(option)), right: () => [`w:${wordKey(task.word)}`] });
+        const options = choices(task, {
+            answer: task.word,
+            kind: "word",
+            label: (option) => cased(shown(option)),
+            right: () => [`w:${wordKey(task.word)}`]
+        });
         stage.innerHTML = `${pictureButton(task.word)}${options.markup}`;
         round.replay = () => say(["line:matchQ", `w:${wordKey(task.word)}`]);
         $("prompt-picture").onclick = () => say(`w:${wordKey(task.word)}`);
@@ -1220,7 +1702,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* Stories path */
     // A sentence of tappable words; a gap keeps the punctuation that followed the missing word.
-    function sentenceHtml(tokens, { gapAt = -1, answerKey = null } = {}) {
+    function sentenceHtml(tokens, {
+        gapAt = -1,
+        answerKey = null
+    } = {}) {
         return `<p class="pa-sentence" id="sentence">${tokens.map((token, i) => i === gapAt
             ? `<span class="pa-word pa-gap" id="gap" aria-label="${escape(t("gap"))}"></span>${escape(token.replace(/^[\p{L}']+/u, ""))}`
             : `<button type="button" class="pa-word" data-word="${escape(wordKey(token))}" ${answerKey ? `data-answer="${wordKey(token) === answerKey}"` : ""}>${escape(cased(token))}</button>`).join(" ")}</p>`;
@@ -1228,7 +1713,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Tapping a word reads it; the returned function reads the whole sentence with each word lighting up.
     function wireWords(clipId) {
         stage.querySelectorAll(".pa-word[data-word]:not([data-answer])").forEach((button) => {
-            button.onclick = () => { pulse(button); say(`w:${button.dataset.word}`); };
+            button.onclick = () => {
+                pulse(button);
+                say(`w:${button.dataset.word}`);
+            };
         });
         const timings = clipEntry(clipId)?.[2];
         const nodes = [...stage.querySelectorAll("#sentence .pa-word")];
@@ -1247,7 +1735,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const readButton = (extra = "") => `<div class="pa-story-tools"><button type="button" class="pa-read-aloud" id="read-aloud"><span aria-hidden="true"></span>${t("readToMe")}</button>${extra}</div>`;
     renderers.sentencePic = (task, lead) => {
         setGuide(L().lines.sentencePicQ);
-        const options = choices(task, { answer: task.answer, kind: "picture", right: () => [`sn:${task.index}`] });
+        const options = choices(task, {
+            answer: task.answer,
+            kind: "picture",
+            right: () => [`sn:${task.index}`]
+        });
         stage.innerHTML = `${sentenceHtml(task.tokens)}${readButton()}${options.markup}`;
         $("read-aloud").onclick = wireWords(`sn:${task.index}`);
         round.replay = () => say("line:sentencePicQ");
@@ -1257,7 +1749,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderers.cloze = (task, lead) => {
         setGuide(L().lines.clozeQ);
         const options = choices(task, {
-            answer: task.answer, kind: "word", label: (option) => cased(shown(option)),
+            answer: task.answer,
+            kind: "word",
+            label: (option) => cased(shown(option)),
             right: () => {
                 $("gap").textContent = cased(task.tokens[task.answerAt].match(/[\p{L}']+/u)[0]);
                 $("gap").classList.add("is-right");
@@ -1275,14 +1769,23 @@ document.addEventListener("DOMContentLoaded", () => {
         stage.innerHTML = readButton();
         round.replay = () => say(["line:orderQ", `sn:${task.index}`]);
         $("read-aloud").onclick = () => say(`sn:${task.index}`);
-        slotPuzzle(task, { target: task.tokens, pieces: task.pieces, sound: (text) => `w:${wordKey(text)}`, finish: [`sn:${task.index}`] });
+        slotPuzzle(task, {
+            target: task.tokens,
+            pieces: task.pieces,
+            sound: (text) => `w:${wordKey(text)}`,
+            finish: [`sn:${task.index}`]
+        });
         say([lead, "line:orderQ", `sn:${task.index}`]);
     };
     renderers.question = (task, lead) => {
         const text = L().stories[task.story].questions[task.question].text;
         const id = `q:${task.story}:${task.question}`;
         setGuide(cased(text));
-        const options = choices(task, { answer: task.answer, kind: "picture", right: () => [`w:${wordKey(task.answer)}`] });
+        const options = choices(task, {
+            answer: task.answer,
+            kind: "picture",
+            right: () => [`w:${wordKey(task.answer)}`]
+        });
         stage.innerHTML = `<p class="pa-question">${escape(cased(text))}</p>${options.markup}`;
         round.replay = () => say(id);
         options.wire();
@@ -1307,7 +1810,9 @@ document.addEventListener("DOMContentLoaded", () => {
             button.onclick = async () => {
                 if (round.busy) return;
                 if (button.dataset.answer === "true") {
-                    stage.querySelectorAll(".pa-word").forEach((item) => { item.disabled = true; });
+                    stage.querySelectorAll(".pa-word").forEach((item) => {
+                        item.disabled = true;
+                    });
                     success(task, button, [`w:${button.dataset.word}`, ...(task.page === story.pages.length - 1 ? ["line:theEnd"] : [])]);
                     return;
                 }
@@ -1326,8 +1831,12 @@ document.addEventListener("DOMContentLoaded", () => {
         })();
         if (!state.sound) showHint();
     };
+
     function finishRound() {
-        const { index, path } = round;
+        const {
+            index,
+            path
+        } = round;
         const stars = round.mistakes <= 1 ? 3 : round.mistakes <= 3 ? 2 : 1;
         const first = done(path)[index] === undefined;
         done(path)[index] = Math.max(done(path)[index] || 0, stars);
@@ -1348,7 +1857,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </div></div>`;
         stopAudio();
         tone("fanfare");
-        if (!reducedMotion()) stage.querySelectorAll(".pa-stars-big i.is-on").forEach((star, i) => { star.style.animationDelay = `${0.25 + i * 0.3}s`; });
+        if (!reducedMotion()) stage.querySelectorAll(".pa-stars-big i.is-on").forEach((star, i) => {
+            star.style.animationDelay = `${0.25 + i * 0.3}s`;
+        });
         burst(stage.querySelector(".pa-reward h2"));
         round.replay = null;
         $("reward-next")?.addEventListener("click", () => startLevel(index + 1, path));
@@ -1356,7 +1867,9 @@ document.addEventListener("DOMContentLoaded", () => {
         $("reward-map").onclick = closePlay;
         $("reward-stickers")?.addEventListener("click", openStickers);
         renderStickers();
-        ($("reward-next") || $("reward-map")).focus({ preventScroll: true });
+        ($("reward-next") || $("reward-map")).focus({
+            preventScroll: true
+        });
         // Let the fanfare end before the voice starts.
         const reward = round;
         sleep(state.sound ? 1100 : 0).then(() => {
@@ -1369,7 +1882,9 @@ document.addEventListener("DOMContentLoaded", () => {
         app.lang = state.language;
         document.documentElement.lang = state.language;
         app.dir = L().rtl ? "rtl" : "ltr";
-        app.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
+        app.querySelectorAll("[data-i18n]").forEach((node) => {
+            node.textContent = t(node.dataset.i18n);
+        });
         app.querySelectorAll("[data-language]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.language === state.language)));
         $("path-tabs").setAttribute("aria-label", t("choosePath"));
         $("close-stickers").setAttribute("aria-label", t("closeStickers"));
@@ -1399,12 +1914,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     $("play-next").onclick = () => startLevel(nextLevelIndex());
     $("close-play").onclick = closePlay;
-    app.querySelectorAll("[data-open-stickers]").forEach((button) => { button.onclick = openStickers; });
+    app.querySelectorAll("[data-open-stickers]").forEach((button) => {
+        button.onclick = openStickers;
+    });
     $("close-stickers").onclick = closeStickers;
-    $("replay").onclick = () => { if (round?.replay) round.replay(); };
-    $("slow-voice").onchange = (event) => { state.slow = event.target.checked; save(); };
-    $("unlock-all").onchange = (event) => { state.unlockAll = event.target.checked; save(); renderMap(); };
-    $("auto-fullscreen").onchange = (event) => { state.fullscreen = event.target.checked; save(); };
+    $("replay").onclick = () => {
+        if (round?.replay) round.replay();
+    };
+    $("slow-voice").onchange = (event) => {
+        state.slow = event.target.checked;
+        save();
+    };
+    $("unlock-all").onchange = (event) => {
+        state.unlockAll = event.target.checked;
+        save();
+        renderMap();
+    };
+    $("auto-fullscreen").onchange = (event) => {
+        state.fullscreen = event.target.checked;
+        save();
+    };
     $("fullscreen-toggle").onclick = () => (fullscreenElement() ? exitFullscreen() : enterFullscreen());
     $("reset-progress").onclick = () => {
         if (!window.confirm(t("resetConfirm"))) return;
@@ -1414,14 +1943,26 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     document.addEventListener("keydown", (event) => {
         if (!dialog.hidden) {
-            if (event.key === "Escape") { event.preventDefault(); closeStickers(); }
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeStickers();
+            }
             return;
         }
         if (!round) return;
-        if (event.key === "Escape") { event.preventDefault(); closePlay(); return; }
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closePlay();
+            return;
+        }
         if (!round.keyboard || event.ctrlKey || event.metaKey || event.altKey) return;
-        if (event.key === "Backspace") { event.preventDefault(); round.keyboard("backspace"); }
-        else if (event.key.length === 1 && /\p{L}/u.test(event.key)) { event.preventDefault(); round.keyboard(event.key.toLocaleLowerCase()); }
+        if (event.key === "Backspace") {
+            event.preventDefault();
+            round.keyboard("backspace");
+        } else if (event.key.length === 1 && /\p{L}/u.test(event.key)) {
+            event.preventDefault();
+            round.keyboard(event.key.toLocaleLowerCase());
+        }
     });
     // Keep focus inside the round, or the sticker book, while it is open.
     const trapFocus = (container) => (event) => {
@@ -1429,8 +1970,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const items = [...container.querySelectorAll("button:not(:disabled)")].filter((node) => node.offsetParent !== null);
         if (!items.length) return;
         const [first, last] = [items[0], items[items.length - 1]];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
     };
     dialog.addEventListener("keydown", trapFocus(dialog));
     play.addEventListener("keydown", (event) => {
@@ -1438,10 +1984,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const items = [...play.querySelectorAll("button:not(:disabled)")].filter((node) => node.offsetParent !== null);
         if (!items.length) return;
         const [first, last] = [items[0], items[items.length - 1]];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
     });
-    document.addEventListener("visibilitychange", () => { if (document.hidden) stopAudio(); });
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) stopAudio();
+    });
     if (!window.PhonicsAudio) $("audio-note").textContent = t("audioMissing");
     translate();
     save();

@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/12_git_server",
             "description": "Running your own Git server is about owning your source of truth. Your repos live where you decide, under rules you set, at a pace you control.",
-            "dateModified": "2025-09-13",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/git_notes/12_git_server" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Running your own Git server is about owning your source of truth. Your repos live where you decide, under rules you set, at a pace you control." property="og:description" />
-    <meta content="2025-09-13" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -157,7 +156,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -220,10 +219,12 @@ sudo apt install git</code></pre>
             <p>Create a home for repos and initialize one:</p>
             <div>
                 <pre><code class="language-bash">sudo mkdir -p /opt/git/myrepo.git
-sudo git init --bare /opt/git/myrepo.git
+sudo git init --bare --initial-branch=main /opt/git/myrepo.git
+# without --initial-branch, the server's HEAD may point to "master" and clones end up on the wrong branch
 sudo tree -L 1 /opt/git/myrepo.git 2&gt;/dev/null || ls -1 /opt/git/myrepo.git
 # output (typical top-level contents):
 # HEAD
+# branches
 # config
 # description
 # hooks
@@ -357,12 +358,9 @@ branch=${refname#refs/heads/}
 
 if [ "$branch" = "main" ]; then
   workdir=/var/www/myapp
-  if [ ! -d "$workdir/.git" ]; then
-    git --work-tree="$workdir" --git-dir=/opt/git/myrepo.git checkout -f main
-  else
-    git --work-tree="$workdir" --git-dir=/opt/git/myrepo.git fetch origin main
-    git --work-tree="$workdir" --git-dir=/opt/git/myrepo.git checkout -f main
-  fi
+  mkdir -p "$workdir"
+  # the bare repo already has the pushed commits; just write them into the work tree
+  git --work-tree="$workdir" --git-dir=/opt/git/myrepo.git checkout -f main
   # place build/restart steps here:
   # systemctl restart myapp.service
   echo "Deployed $(git --git-dir=/opt/git/myrepo.git rev-parse --short main) to $workdir"
@@ -373,8 +371,8 @@ sudo chmod +x /opt/git/myrepo.git/hooks/post-receive</code></pre>
             <p>Push to trigger:</p>
             <div>
                 <pre><code class="language-bash">git push origin main
-# output (server hook echoes back):
-# Deployed 9f3a1c2 to /var/www/myapp</code></pre>
+# output (server hook echoes back, prefixed with "remote:"):
+# remote: Deployed 9f3a1c2 to /var/www/myapp</code></pre>
             </div>
             <p>Small mental picture of the flow:</p>
             <div>
@@ -437,6 +435,8 @@ sudo tar -C /opt -czf /backup/myrepos-$(date +%F).tar.gz git</code></pre>
                 <pre><code class="language-bash">sudo chown -R git:git /opt/git
 sudo find /opt/git -type d -exec chmod 755 {} \;
 sudo find /opt/git -type f -exec chmod 644 {} \;
+# 644 removes the execute bit from hooks, and Git silently skips non-executable hooks; restore it:
+sudo chmod 755 /opt/git/myrepo.git/hooks/post-receive
 sudo chmod -R 700 ~git/.ssh
 sudo chmod 600 ~git/.ssh/authorized_keys</code></pre>
             </div>
@@ -536,8 +536,10 @@ server {
         root /opt;
         gzip off;
         include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /usr/lib/git-core/git-http-backend;
         fastcgi_param GIT_HTTP_EXPORT_ALL "";
-        fastcgi_param GIT_PROJECT_ROOT /opt/git;
+        # PATH_INFO is /git/myrepo.git/..., so the project root is /opt (-&gt; /opt/git/myrepo.git)
+        fastcgi_param GIT_PROJECT_ROOT /opt;
         fastcgi_param PATH_INFO $uri;
         fastcgi_pass unix:/run/fcgiwrap.socket;
         # Make sure repos have git-daemon-export-ok or rely on GIT_HTTP_EXPORT_ALL above
@@ -587,6 +589,7 @@ curl -I http://localhost/gitweb/
 sudo chgrp -R git /opt/git
 sudo find /opt/git -type d -exec chmod 755 {} \;
 sudo find /opt/git -type f -exec chmod 644 {} \;
+sudo chmod 755 /opt/git/myrepo.git/hooks/post-receive   # keep hooks executable
 sudo usermod -aG git www-data</code></pre>
             </div>
             <p>Once it’s up, it becomes a pleasant habit: paste a link to a commit in chat, skim a blame line during code review, let PMs browse the changelog without needing Git installed, and hook the feed URL into your release channel. It’s the low-maintenance way to make your on-prem Git feel visible without turning it into a whole new platform.</p>
@@ -595,7 +598,7 @@ sudo usermod -aG git www-data</code></pre>
             <div>
                 <pre><code class="language-bash">sudo apt install git
 sudo mkdir -p /opt/git/myrepo.git
-sudo git init --bare /opt/git/myrepo.git
+sudo git init --bare --initial-branch=main /opt/git/myrepo.git
 sudo chown -R git:git /opt/git</code></pre>
             </div>
             <p>II. Create the <code>git</code> user and load developer keys.</p>

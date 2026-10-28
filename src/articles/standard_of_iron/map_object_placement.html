@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/map_object_placement",
             "description": "An object authored in map JSON has to become two things that agree with each other: a physical body on the ground and a model on the screen.",
-            "dateModified": "2026-09-25",
+            "dateModified": "2026-10-27",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/map_object_placement" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="An object authored in map JSON has to become two things that agree with each other: a physical body on the ground and a model on the screen." property="og:description" />
-    <meta content="2026-09-25" property="article:modified_time" />
+    <meta content="2026-10-27" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -204,7 +203,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 25, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 27, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -226,9 +225,17 @@
             <h1>Map Object Placement</h1>
             <p>An object authored in map JSON has to become two things that agree with each other: a physical body on the ground and a model on the screen. This document explains the coordinate contract that keeps them aligned, how object footprints are validated, and how the placement audit detects geometry that intersects roads, water, steep terrain, or other authored objects.</p>
             <h2 id="dressing-a-repair-is-allowed-to-delete">Dressing a repair is allowed to delete</h2>
-            <p><code>--drop-unplaceable</code> deletes world props and firecamps that no push could place. It never touches a structure or a spawn: a building is a decision, a spawn is a seat in the match, and a wall is geometry a settlement depends on.</p>
-            <p>It exists for generated content. <code>map_aurelia_magna.json</code> carried 1,454 defects and every push the ladder could make left 1,327 of them standing, because a planned city has no slack to push dressing into; 1,556 of the bodies named in those defects were world props — plants on broken ground, tents inside one another, trees over the forum. Deleting a body can only remove defects, never create one, so the pass runs after the pushes and takes the lower-priority side of each pair that is still in conflict. On that map it drops 831 of 2,074 props and brings 1,454 defects down to 145.</p>
-            <p>The 145 that survive are the generator's to fix, not the repair's: 129 fill buildings on ground that breaks under them, 14 spawns standing in water, 6 structures in a road and 5 structure-on-spawn overlaps, none of which has settled ground within 8 m to move to. <code>tools/city_export</code> checks placements with <code>stands_on_ground</code>, which accepts any walkable cell within six tiles of an object's centre — that is why a spawn can sit in a river and a house can straddle a break. A city planner that consulted the heightfield across each footprint, the water it writes and the roads it lays would not need this pass at all.</p>
+            <p><code>--drop-unplaceable</code> deletes world props and firecamps that no push could place. It preserves structures, spawns, magic shrines and cursed gold veins: capturable props become gameplay buildings at runtime and need a valid placement rather than deletion.</p>
+            <p>It exists for generated content. Aurelia's placement repair originally rejected negative world coordinates, so it could not use legal ground near many of the objects it needed to move. With the centred bounds corrected, bounded nudges reduced 1,319 defects to 269 while preserving every object. Removing 195 of 2,421 scenery props and relocating two shrines to clear ground left zero defects, retaining all 1,028 structures, 842 spawns and three capturable shrines.</p>
+            <p>Deleting scenery can only remove defects, so the cleanup runs after the pushes and takes the lower-priority side of each pair still in conflict. The Aurelia repair used travel budgets of 16 m for scenery and 8 m for fill buildings and spawns; its two side shrines were separately moved 34.5 m to clear ground near the capital. Generated maps should pass the engine-backed audit before being committed; <code>tools/city_export</code> uses a nearby walkable cell in <code>stands_on_ground</code>, which does not establish that the entire authored footprint is level and clear.</p>
+            <p>To apply the same bounded repair to a regenerated Aurelia map:</p>
+            <div>
+                <pre><code class="language-sh">PYTHONHASHSEED=0 python3 scripts/fix-map-prop-overlaps.py \
+  assets/maps/map_aurelia_magna.json --surface require \
+  --max-travel 16 --max-travel-structure 8 --max-travel-spawn 8 \
+  --drop-unplaceable</code></pre>
+            </div>
+            <p>Run the reporting audit afterward. Capturable landmarks that still have no valid placement within the travel budget remain reported and need to be placed on clear ground.</p>
             <h2 id="the-goods-yard-beside-a-building">The goods yard beside a building</h2>
             <p>A barracks draws a goods yard beside itself: <code>k_stockpile_center_x</code> in <code>game/systems/resource_stockpile.h</code> puts it 5.20 m along the building's own x with half extents 1.45 x 2.10, and <code>render/entity/barracks_stockpile.cpp</code> lays the crib and the wood, stone and iron bays out from there. The yard reaches 6.65 m while the barracks body itself stops at 4.325, so its last 2.3 m is ground that carries no object in the map file and was invisible to the audit. On <code>map_pinewater_cut</code> a firecamp stood inside the timber camp's yard and nothing reported it; once the yard was modelled, 33 defects of that class appeared across eleven maps, on maps that had audited clean for months.</p>
             <p><code>scripts/fix-map-prop-overlaps.py</code> derives the yard as a body keyed <code>structures[N].stockpile</code>, and two rules keep it honest:</p>
@@ -238,7 +245,7 @@
             </ul>
             <p>When the lower-priority body of an overlapping pair has nowhere legal to go, the repair now asks the other one to yield before giving up. Player 5's camp on <code>map_amber_delta</code> is why: a tent was pinned between a firecamp and a yard on ground where no legal spot existed within twelve metres, and the firecamp could step aside in one push. The tent itself was cleared by moving the barracks 1.5 m west, which is the authored fix — the yard, not the tent, was in the wrong place.</p>
             <h2 id="the-coordinate-contract">The coordinate contract</h2>
-            <p>Map JSON is authored in <strong>grid coordinates</strong>. <code>x</code> and <code>z</code> range from <code>0</code> to <code>grid.width</code> / <code>grid.height</code>, with <code>grid.tile_size</code> metres represented by each cell.</p>
+            <p>Map JSON defaults to <strong>grid coordinates</strong>. <code>x</code> and <code>z</code> range from <code>0</code> to <code>grid.width</code> / <code>grid.height</code>, with <code>grid.tile_size</code> metres represented by each cell. Maps with <code>coord_system: "world"</code> already use metres about the map's centre. Repair candidates on those maps must use the centred bounds on both axes, including negative coordinates; applying grid bounds rejects valid ground across most of Aurelia.</p>
             <p>The rest of the engine reasons in <strong>world coordinates</strong>, centred on the map. The conversion is:</p>
             <div>
                 <pre><code class="language-text">world = (grid - (size × 0.5 - 0.5)) × tile_size</code></pre>
@@ -326,6 +333,7 @@
 python3 scripts/fix-map-prop-overlaps.py</code></pre>
             </div>
             <p>The <code>--check</code> form exits non-zero when defects are found.</p>
+            <p>Spawns explicitly marked <code>on_wall: true</code> may overlap a wall's ground footprint because the engine places them on its deck. This exception does not apply to ordinary ground troops or to overlaps with other buildings.</p>
             <h2 id="ground-shape-must-be-measured-from-the-engine">Ground shape must be measured from the engine</h2>
             <p>Four defect types—body overlap, canopy overlap, roads, and water—can be derived directly from authored map data. <code>slope</code> and <code>ramp</code> cannot.</p>
             <p>Earlier versions of the script approximated each hill as its authored ellipse. The runtime terrain is considerably more complex:</p>

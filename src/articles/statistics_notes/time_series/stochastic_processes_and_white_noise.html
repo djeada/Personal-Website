@@ -23,13 +23,12 @@
         })();
     </script>
     <title>Stochastic Processes and White Noise | Adam Djellouli</title>
-    <meta content="A stochastic process is a collection of random variables indexed by time, and an observed time series is one realized path from that process." name="description" />
+    <meta content="Imagine observing daily demand over the same month under many possible sequences of customer arrivals. Each possible sequence is a path." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -49,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise"
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise",
-            "description": "A stochastic process is a collection of random variables indexed by time, and an observed time series is one realized path from that process.",
-            "dateModified": "2026-10-13",
+            "description": "Imagine observing daily demand over the same month under many possible sequences of customer arrivals. Each possible sequence is a path.",
+            "dateModified": "2026-10-24",
             "image": "https://adamdjellouli.com/resources/article-images/04-white-noise-and-random-walk-65d43ee7a5.webp",
             "inLanguage": "en"
         }
@@ -59,9 +58,9 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/statistics_notes/time_series/stochastic_processes_and_white_noise" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A stochastic process is a collection of random variables indexed by time, and an observed time series is one realized path from that process." property="og:description" />
+    <meta content="Imagine observing daily demand over the same month under many possible sequences of customer arrivals. Each possible sequence is a path." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/04-white-noise-and-random-walk-65d43ee7a5.webp" property="og:image" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-24" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -126,10 +125,13 @@ messageStyle: "none"
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#formula-reference">Formula reference</a></li>
                     <li><a href="#worked-calculation-shocks-versus-accumulated-shocks">Worked calculation: shocks versus accumulated shocks</a></li>
+                    <li><a href="#processes-random-variables-and-observed-paths">Processes, random variables, and observed paths</a></li>
                     <li><a href="#innovations">Innovations</a></li>
-                    <li><a href="#student-guide-random-variables-paths-and-innovations">Student guide: random variables, paths, and innovations</a>
+                    <li><a href="#white-noise">White Noise</a></li>
+                    <li><a href="#white-noise-vs-random-walk">White Noise vs Random Walk</a></li>
+                    <li><a href="#martingale-differences">Martingale Differences</a></li>
+                    <li><a href="#what-zero-autocorrelation-does-and-does-not-tell-us">What zero autocorrelation does and does not tell us</a>
                         <ol>
                             <li><a href="#filtrations-and-predictable-information">Filtrations and predictable information</a></li>
                             <li><a href="#white-noise-conditions">White noise conditions</a></li>
@@ -138,9 +140,7 @@ messageStyle: "none"
                             <li><a href="#residual-use">Residual use</a></li>
                         </ol>
                     </li>
-                    <li><a href="#white-noise">White Noise</a></li>
-                    <li><a href="#white-noise-vs-random-walk">White Noise vs Random Walk</a></li>
-                    <li><a href="#martingale-differences">Martingale Differences</a></li>
+                    <li><a href="#formula-reference">Formula reference</a></li>
                 </ol>
             </div>
             <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/statistics_notes/time_series/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li><li><a href="/articles/statistics_notes/time_series/time_series.html">Time Series Analysis</a></li><li><a href="/articles/statistics_notes/time_series/stationarity.html">Stationarity in Time Series</a></li></ul></section>
@@ -329,7 +329,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 24, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -349,8 +349,133 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Stochastic Processes and White Noise</h1>
-            <p>A stochastic process is a collection of random variables indexed by time, and an observed time series is one realized path from that process. This viewpoint separates the data we actually see from the probabilistic mechanism used to describe possible paths and future uncertainty.</p>
-            <p>White noise is the basic reference process for new, unstructured shocks. It has stable second-order behavior and no linear serial correlation, so many time-series models aim to explain the predictable structure in the data and leave behind innovations that behave approximately like white noise.</p>
+            <p>Imagine observing daily demand over the same month under many possible sequences of customer arrivals. Each possible sequence is a path. At a fixed date, the different possible demands form a random variable. A <strong>stochastic process</strong> specifies how those random variables fit together across dates, including their dependence.</p>
+            <p>The dataset in hand is one path, not the collection of every possible path. A time-series model uses that observed sequence to describe other values the process could have produced and uncertainty about values still to come. This distinction is essential when interpreting a wandering path, a rolling variance, or a model forecast.</p>
+            <p><strong>White noise</strong> is the simplest second-order reference for shocks: a zero mean, a common finite variance, and zero covariance across different dates. Those conditions make linear correlation with past shocks vanish. They do not by themselves make the shocks independent or rule out predictability in their magnitudes. Forecast models need to state whether they assume only these moment conditions or a stronger conditional-mean or distributional property.</p>
+            <h2 id="worked-calculation-shocks-versus-accumulated-shocks">Worked calculation: shocks versus accumulated shocks</h2>
+            <p>Let $\varepsilon_t$ be independent with mean 0 and variance 1. It is white noise because</p>
+            <p>$$
+                \mathrm{Cov}(\varepsilon_t,\varepsilon_{t-h})=0\quad(h\ne0).
+                $$</p>
+            <p>Now define a random walk by $X_t=X_{t-1}+\varepsilon_t$ with fixed $X_0$. After 100 steps,</p>
+            <p>$$
+                X_{100}=X_0+\sum_{j=1}^{100}\varepsilon_j,
+                \qquad
+                \mathrm{Var}(X_{100})=100.
+                $$</p>
+            <p>A new increment adds another independent variance contribution of 1. After 100 increments the level therefore has variance 100, even though the variance of each individual increment is still 1. A typical path can move up or down for an extended period without a deterministic trend in its mean. The nonstationarity is established by the variance calculation, not by deciding whether one plotted path looks like it is trending.</p>
+            <p><img alt="White noise and its accumulated random walk" decoding="async" height="717" loading="lazy" src="../../../resources/article-images/04-white-noise-and-random-walk-65d43ee7a5.webp" width="960" /></p>
+            <p>The figure contrasts the stable spread of the shocks with the increasing dispersion of their cumulative sum. The visual distinction mirrors the variance calculation above.</p>
+            <h2 id="processes-random-variables-and-observed-paths">Processes, random variables, and observed paths</h2>
+            <p>A time series is one observed path from an underlying <strong>stochastic process</strong>: a family of random variables indexed by time,</p>
+            <p>$$
+                \{X_t:t\in T\}.
+                $$</p>
+            <p>Fixing $t$ asks about the distribution of a quantity at one date. Fixing a realization instead gives the sequence $x_1,\ldots,x_n$ observed through time. A histogram pools values from that path and hides their order. It cannot show whether large values cluster, whether a level shift occurred, or whether one observation helps predict the next. Those are properties of the joint time-indexed process.</p>
+            <h2 id="innovations">Innovations</h2>
+            <p>To forecast, separate the part that can be predicted from the part that arrives as new information. The decomposition below expresses that idea, but it becomes mathematically meaningful only after specifying the information used by $m_t$ and the type of prediction it represents:</p>
+            <p>$$
+                X_t=m_t+\varepsilon_t.
+                $$</p>
+            <p>When $m_t=E(X_t\mid\mathcal F_{t-1})$, the predictable term is the conditional mean given the available past, and $\varepsilon_t$ is a <strong>conditional-mean innovation</strong>. In a linear prediction model, an innovation can instead mean the error of the best linear predictor. That error is orthogonal to past linear predictors; a zero conditional mean requires an additional assumption, such as joint Gaussianity or an explicit conditional-mean model.</p>
+            <p>For a conditional-mean innovation, any function of the available past has zero expected product with the innovation, subject to the required integrability. If a past pattern could systematically predict its mean, that pattern should already be included in $m_t$. A linear innovation makes a narrower promise: no remaining linear combination of the chosen past variables improves the prediction. Neither promise implies a constant conditional variance.</p>
+            <h2 id="white-noise">White Noise</h2>
+            <p>A weak white-noise process $\{\varepsilon_t\}$ satisfies</p>
+            <p>$$
+                E[\varepsilon_t]=0,
+                \qquad
+                \mathrm{Var}(\varepsilon_t)=\sigma^2,
+                \qquad
+                \mathrm{Cov}(\varepsilon_t,\varepsilon_{t-h})=0\quad(h\ne0).
+                $$</p>
+            <p>The three conditions play separate roles. Zero mean locates the shocks around zero. Constant finite variance supplies one common scale. Zero nonzero-lag covariance removes linear serial association. Adding independence rules out all cross-time dependence; adding a jointly Gaussian distribution makes covariance sufficient to describe the dependence. Merely giving each marginal shock a normal distribution is not the same as specifying a jointly Gaussian process.</p>
+            <p>Residual checks apply these ideas to estimated errors. A near-zero residual ACF suggests that a fitted mean model has captured much of the linear dependence. It does not establish that large errors arrive independently, that tail probabilities are Gaussian, or that the parameters will remain stable. Examine residual magnitudes and their timing as well as the ordinary ACF.</p>
+            <h2 id="white-noise-vs-random-walk">White Noise vs Random Walk</h2>
+            <p>White noise is weakly stationary, while a random walk accumulates white-noise shocks:</p>
+            <p>$$
+                X_t=X_{t-1}+\varepsilon_t
+                =X_0+\sum_{j=1}^{t}\varepsilon_j.
+                $$</p>
+            <p>Because the variance of the level grows with $t$, the random walk is not weakly stationary even though its first differences are white noise. The worked calculation and figure at the start of the chapter show this contrast directly.</p>
+            <h2 id="martingale-differences">Martingale Differences</h2>
+            <p>If $\mathcal F_{t-1}$ represents the information available before time $t$, a martingale difference satisfies</p>
+            <p>$$
+                E[\varepsilon_t\mid\mathcal F_{t-1}]=0.
+                $$</p>
+            <p>This condition rules out predictable conditional-mean structure. Weak white noise, by contrast, only rules out linear autocorrelation in the unconditional second moments. With finite second moments, a martingale difference is uncorrelated with its own past, but its unconditional variance need not be constant. A martingale difference with constant variance is therefore weak white noise. Weak white noise does not, in the other direction, guarantee a zero conditional mean or independence.</p>
+            <h2 id="what-zero-autocorrelation-does-and-does-not-tell-us">What zero autocorrelation does and does not tell us</h2>
+            <p>The notation $X_t$ and $x_t$ keeps two ideas separate:</p>
+            <ul>
+                <li>$X_t$ is a random variable before the observation is made;</li>
+                <li>$x_t$ is the realized value in one sample path.</li>
+            </ul>
+            <p>This distinction also limits what can be estimated from one record. To treat values observed at different dates as evidence about one common mean or covariance, we need assumptions linking those dates, such as stationarity together with suitable dependence conditions. A long path is not automatically equivalent to many independent observations from one fixed distribution.</p>
+            <h3 id="filtrations-and-predictable-information">Filtrations and predictable information</h3>
+            <p>Let $\mathcal F_t$ contain the observations and predictors available through time $t$. A one-step innovation is the unpredictable part of the next observation:</p>
+            <p>$$
+                \varepsilon_{t+1}=X_{t+1}-E(X_{t+1}\mid\mathcal F_t).
+                $$</p>
+            <p>By construction,</p>
+            <p>$$
+                E(\varepsilon_{t+1}\mid\mathcal F_t)=0.
+                $$</p>
+            <p>A zero conditional mean says that the forecast is calibrated against every usable pattern in $\mathcal F_t$, not just a single lagged observation. Conditional variance can nevertheless change: quiet periods and volatile periods may alternate while the signed innovation remains unpredictable in mean. That combination explains why conditional-variance models can be useful after an apparently adequate mean model has been fitted.</p>
+            <h3 id="white-noise-conditions">White noise conditions</h3>
+            <p>Weak white noise requires</p>
+            <p>$$
+                E(\varepsilon_t)=0,\qquad
+                \mathrm{Var}(\varepsilon_t)=\sigma^2,\qquad
+                \gamma(h)=0\quad(h\ne0).
+                $$</p>
+            <p>Several related terms are used in practice:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>term</th>
+                        <th>additional property</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>weak white noise</td>
+                        <td>constant mean and variance, with zero autocovariances at nonzero lags</td>
+                    </tr>
+                    <tr>
+                        <td>independent white noise</td>
+                        <td>observations are independent across time</td>
+                    </tr>
+                    <tr>
+                        <td>Gaussian white noise</td>
+                        <td>usually independent normal observations with constant variance</td>
+                    </tr>
+                    <tr>
+                        <td>martingale difference</td>
+                        <td>conditional mean is zero given the past</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Read the table as a comparison of assumptions, not a ranking in which every row automatically contains every other row. For example, a martingale difference can have a changing unconditional variance and therefore fail the constant-variance definition of weak white noise. When using a covariance formula, a likelihood, or a prediction interval, identify which properties that particular calculation requires.</p>
+            <h3 id="a-dependence-counterexample">A dependence counterexample</h3>
+            <p>Let $Z_t$ be IID standard-normal random variables, and define</p>
+            <p>$$
+                X_t=Z_tZ_{t-1}.
+                $$</p>
+            <p>The mean is zero and the variance is 1. At lag 1, independence of the $Z$ variables gives $\mathrm{Cov}(X_t,X_{t-1})=E[Z_tZ_{t-1}^2Z_{t-2}]=0$; every other nonzero lag also has zero covariance. Thus $X_t$ is weak white noise.</p>
+            <p>Dependence appears when the observations are squared. The adjacent squares both contain $Z_{t-1}^2$, so a large shared factor can make both observations large in magnitude. For standard-normal $Z$, the fourth moment is 3. Consequently, $E(X_t^2X_{t-1}^2)=1\times3\times1=3$, whereas $E(X_t^2)E(X_{t-1}^2)=1$. Their covariance is 2. The original ACF misses this dependence because the positive and negative signed products cancel in expectation.</p>
+            <h3 id="white-noise-and-random-walk">White noise and random walk</h3>
+            <p>If $\varepsilon_t$ has variance $\sigma^2$ and</p>
+            <p>$$
+                X_t=X_0+\sum_{j=1}^{t}\varepsilon_j,
+                $$</p>
+            <p>then, for fixed $X_0$ and independent increments,</p>
+            <p>$$
+                \mathrm{Var}(X_t\mid X_0)=t\sigma^2.
+                $$</p>
+            <p>With $\sigma^2=4$, the conditional variance after 25 steps is $100$. The increments retain the same variance at every time point, but uncertainty about the level accumulates from one step to the next.</p>
+            <h3 id="residual-use">Residual use</h3>
+            <p>Innovation residuals that resemble white noise are a useful target when checking a conditional-mean model. Regression errors and fitted innovations need not be the same sequence, so identify the residual type before interpreting a diagnostic. If residuals retain autocorrelation, some predictable mean structure remains. If squared residuals retain autocorrelation, the conditional variance may still be time-varying. Heavy-tailed residuals can also make Gaussian prediction intervals too narrow.</p>
+            <p>A finite residual sequence is an estimated diagnostic object, so some sample correlations will be nonzero even under a correct model. Look for coherent lag or variance patterns, relate them to the model's assumptions, and check behavior at later forecast origins. Passing a few diagnostics supports a specification for a particular purpose; it does not prove that every form of temporal structure has been removed.</p>
+            <p>Continue with <a href="stationarity.html">stationarity</a>, <a href="autocovariance_function.html">autocovariance</a>, and <a href="autocorrelation_function.html">autocorrelation</a> to see how these ideas are used in time-series modeling and diagnostics.</p>
             <h2 id="formula-reference">Formula reference</h2>
             <table>
                 <thead>
@@ -418,128 +543,6 @@ messageStyle: "none"
                     </tr>
                 </tbody>
             </table>
-            <h2 id="worked-calculation-shocks-versus-accumulated-shocks">Worked calculation: shocks versus accumulated shocks</h2>
-            <p>Let $\varepsilon_t$ be independent with mean 0 and variance 1. It is white noise because</p>
-            <p>$$
-                \mathrm{Cov}(\varepsilon_t,\varepsilon_{t-h})=0\quad(h\ne0).
-                $$</p>
-            <p>Now define a random walk by $X_t=X_{t-1}+\varepsilon_t$ with fixed $X_0$. After 100 steps,</p>
-            <p>$$
-                X_{100}=X_0+\sum_{j=1}^{100}\varepsilon_j,
-                \qquad
-                \mathrm{Var}(X_{100})=100.
-                $$</p>
-            <p>The individual shocks have constant variance, but the variance of their accumulated sum grows with time. This is the simplest calculation showing why white-noise increments do not make the random-walk level stationary.</p>
-            <p><img alt="White noise and its accumulated random walk" decoding="async" height="717" loading="lazy" src="../../../resources/article-images/04-white-noise-and-random-walk-65d43ee7a5.webp" width="960" /></p>
-            <p>The figure contrasts the stable spread of the shocks with the increasing dispersion of their cumulative sum. The visual distinction mirrors the variance calculation above.</p>
-            <p>A time series is one observed path from an underlying <strong>stochastic process</strong>: a family of random variables indexed by time,</p>
-            <p>$$
-                \{X_t:t\in T\}.
-                $$</p>
-            <p>For a fixed time $t$, $X_t$ is a random variable. After observation, its realized value is written $x_t$. The sequence $x_1,\ldots,x_n$ is one <strong>sample path</strong>, or realization, of the process.</p>
-            <h2 id="innovations">Innovations</h2>
-            <p>Many time-series models separate each observation into a predictable component and a new shock:</p>
-            <p>$$
-                X_t=m_t+\varepsilon_t.
-                $$</p>
-            <p>The term $m_t$ summarizes information available before time $t$, while $\varepsilon_t$ represents new information arriving at time $t$. In ARMA-type models, these shocks are often called <strong>innovations</strong>.</p>
-            <p>This distinction matters because a useful model should explain the predictable structure and leave an innovation that cannot be systematically forecast from the past.</p>
-            <h2 id="student-guide-random-variables-paths-and-innovations">Student guide: random variables, paths, and innovations</h2>
-            <p>The notation $X_t$ and $x_t$ keeps two ideas separate:</p>
-            <ul>
-                <li>$X_t$ is a random variable before the observation is made;</li>
-                <li>$x_t$ is the realized value in one sample path.</li>
-            </ul>
-            <p>A stochastic process is a collection of random variables indexed by time. A dataset gives one path, not every possible path. The model describes a distribution over paths and uses the observed path to infer the underlying mechanism and future uncertainty.</p>
-            <h3 id="filtrations-and-predictable-information">Filtrations and predictable information</h3>
-            <p>Let $\mathcal F_t$ contain the observations and predictors available through time $t$. A one-step innovation is the unpredictable part of the next observation:</p>
-            <p>$$
-                \varepsilon_{t+1}=X_{t+1}-E(X_{t+1}\mid\mathcal F_t).
-                $$</p>
-            <p>By construction,</p>
-            <p>$$
-                E(\varepsilon_{t+1}\mid\mathcal F_t)=0.
-                $$</p>
-            <p>This conditional statement is stronger and more targeted than merely finding a small unconditional sample autocorrelation. A process can have zero linear autocorrelation while its conditional variance or another nonlinear feature still depends on the past.</p>
-            <h3 id="white-noise-conditions">White noise conditions</h3>
-            <p>Weak white noise requires</p>
-            <p>$$
-                E(\varepsilon_t)=0,\qquad
-                \mathrm{Var}(\varepsilon_t)=\sigma^2,\qquad
-                \gamma(h)=0\quad(h\ne0).
-                $$</p>
-            <p>Several related terms are used in practice:</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>term</th>
-                        <th>additional property</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>weak white noise</td>
-                        <td>constant mean and variance, with zero autocovariances at nonzero lags</td>
-                    </tr>
-                    <tr>
-                        <td>independent white noise</td>
-                        <td>observations are independent across time</td>
-                    </tr>
-                    <tr>
-                        <td>Gaussian white noise</td>
-                        <td>usually independent normal observations with constant variance</td>
-                    </tr>
-                    <tr>
-                        <td>martingale difference</td>
-                        <td>conditional mean is zero given the past</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p>These concepts overlap, but they are not interchangeable. State which assumption is being used before drawing conclusions from it.</p>
-            <h3 id="a-dependence-counterexample">A dependence counterexample</h3>
-            <p>Let $Z_t$ be independent with mean zero and finite variance, and define</p>
-            <p>$$
-                X_t=Z_tZ_{t-1}.
-                $$</p>
-            <p>Then $\mathrm{Cov}(X_t,X_{t-1})=E[Z_tZ_{t-1}^2Z_{t-2}]=0$ and every other lag is uncorrelated as well, so $X_t$ is white noise, yet adjacent values share $Z_{t-1}$ and are not independent (for instance, $X_t^2$ and $X_{t-1}^2$ are positively correlated when $Z_t$ is non-degenerate). This illustrates why an ACF close to zero does not by itself establish independence.</p>
-            <h3 id="white-noise-and-random-walk">White noise and random walk</h3>
-            <p>If $\varepsilon_t$ has variance $\sigma^2$ and</p>
-            <p>$$
-                X_t=X_0+\sum_{j=1}^{t}\varepsilon_j,
-                $$</p>
-            <p>then, for fixed $X_0$ and independent increments,</p>
-            <p>$$
-                \mathrm{Var}(X_t\mid X_0)=t\sigma^2.
-                $$</p>
-            <p>With $\sigma^2=4$, the conditional variance after 25 steps is $100$. The increments retain the same variance at every time point, but uncertainty about the level accumulates from one step to the next.</p>
-            <h3 id="residual-use">Residual use</h3>
-            <p>White-noise residuals are a target for a conditional-mean model. If residuals retain autocorrelation, some predictable mean structure remains. If squared residuals retain autocorrelation, the conditional variance may still be time-varying. Heavy-tailed residuals can also make Gaussian prediction intervals too narrow.</p>
-            <p>These diagnostics provide evidence rather than proof. A finite sample can look white by chance, and standard autocorrelation tests have limited power against nonlinear or time-varying alternatives.</p>
-            <h2 id="white-noise">White Noise</h2>
-            <p>A weak white-noise process $\{\varepsilon_t\}$ satisfies</p>
-            <p>$$
-                E[\varepsilon_t]=0,
-                \qquad
-                \mathrm{Var}(\varepsilon_t)=\sigma^2,
-                \qquad
-                \mathrm{Cov}(\varepsilon_t,\varepsilon_{t-h})=0\quad(h\ne0).
-                $$</p>
-            <p>The definition therefore combines a constant mean and variance with the absence of linear serial correlation. It does not require independence. <strong>Independent white noise</strong> adds independence across time, while <strong>Gaussian white noise</strong> is commonly taken to mean independent normal innovations with constant variance.</p>
-            <p>For a fitted time-series model, residuals that resemble white noise indicate that the model has removed the systematic linear dependence it was designed to explain. That is a necessary diagnostic for many models, but not a guarantee that every aspect of the data-generating process has been captured.</p>
-            <h2 id="white-noise-vs-random-walk">White Noise vs Random Walk</h2>
-            <p>White noise is weakly stationary, while a random walk accumulates white-noise shocks:</p>
-            <p>$$
-                X_t=X_{t-1}+\varepsilon_t
-                =X_0+\sum_{j=1}^{t}\varepsilon_j.
-                $$</p>
-            <p>Because the variance of the level grows with $t$, the random walk is not weakly stationary even though its first differences are white noise. The worked calculation and figure at the start of the chapter show this contrast directly.</p>
-            <h2 id="martingale-differences">Martingale Differences</h2>
-            <p>If $\mathcal F_{t-1}$ represents the information available before time $t$, a martingale difference satisfies</p>
-            <p>$$
-                E[\varepsilon_t\mid\mathcal F_{t-1}]=0.
-                $$</p>
-            <p>This condition rules out predictable conditional-mean structure. Weak white noise, by contrast, only rules out linear autocorrelation in the unconditional second moments. A sequence can satisfy one condition without satisfying every stronger notion of independence.</p>
-            <p>Continue with <a href="stationarity.html">stationarity</a>, <a href="autocovariance_function.html">autocovariance</a>, and <a href="autocorrelation_function.html">autocorrelation</a> to see how these ideas are used in time-series modeling and diagnostics.</p>
         </article-section>
     </div>
     </main>

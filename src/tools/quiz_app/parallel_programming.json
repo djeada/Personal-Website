@@ -695,9 +695,9 @@
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/01_basic_terminology.md#L361"
     },
     {
-      "id": "9a6d3de626db",
+      "id": "6a73fc39c910",
       "topic": "basic_terminology",
-      "text": "<p>In this C++ program, is <code>main</code> guaranteed to print <code>1</code>?</p>\n<pre><code class=\"language-cpp\">int x = 0;\n\nint main() {\n    std::thread t([] { x = 1; });\n    t.join();\n    std::cout &lt;&lt; x &lt;&lt; '\\n';\n}\n</code></pre>",
+      "text": "<p>In this C++ program, is <code>main</code> guaranteed to print <code>1</code>?</p>\n<pre><code class=\"language-cpp\">int x = 0;\n\nint main() {\n    std::jthread t([] { x = 1; });\n    t.join();\n    std::cout &lt;&lt; x &lt;&lt; '\\n';\n}\n</code></pre>",
       "options": [
         "No, <code>x</code> must be <code>std::atomic&lt;int&gt;</code> for the write to become visible",
         "No, the program has a data race on <code>x</code>",
@@ -821,9 +821,9 @@
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L61"
     },
     {
-      "id": "814d6980de13",
+      "id": "45646f62a6ae",
       "topic": "threading",
-      "text": "<p>The main thread holds <code>m</code> in shared mode. What does this C++ code print?</p>\n<pre><code class=\"language-cpp\">std::shared_mutex m;\nm.lock_shared();\nbool w = true, r = false;\nstd::thread t([&amp;] {\n    w = m.try_lock();\n    r = m.try_lock_shared();\n    if (r) m.unlock_shared();\n});\nt.join();\nstd::cout &lt;&lt; w &lt;&lt; ' ' &lt;&lt; r &lt;&lt; '\\n';\n</code></pre>",
+      "text": "<p>The main thread holds <code>m</code> in shared mode. What does this C++ code print?</p>\n<pre><code class=\"language-cpp\">std::shared_mutex m;\nstd::shared_lock main_reader(m);\nbool w = true, r = false;\nstd::jthread t([&amp;] {\n    w = m.try_lock();\n    std::shared_lock reader(m);\n    r = reader.owns_lock();\n});\nt.join();\nstd::cout &lt;&lt; w &lt;&lt; ' ' &lt;&lt; r &lt;&lt; '\\n';\n</code></pre>",
       "options": [
         "<code>1 1</code>",
         "<code>1 0</code>",
@@ -831,7 +831,7 @@
         "<code>0 0</code>"
       ],
       "correctOptionIndex": 2,
-      "explanation": "<p>Exclusive ownership needs every reader to leave, so <code>try_lock()</code> fails. Shared ownership can be held by many threads at once, so the second reader's <code>try_lock_shared()</code> succeeds.</p>",
+      "explanation": "<p>Exclusive ownership needs every reader to leave, so <code>try_lock()</code> fails. Shared ownership can be held by many threads at once, so the second scoped shared lock can acquire ownership.</p>",
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L70"
     },
     {
@@ -877,9 +877,9 @@
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L110"
     },
     {
-      "id": "6c81057f8623",
+      "id": "875e9d93ad31",
       "topic": "threading",
-      "text": "<p>In C++, what happens right after a <code>std::thread</code> object is constructed with a callable?</p>",
+      "text": "<p>Legacy comparison: what happens right after a <code>std::thread</code> object is constructed with a callable?</p>",
       "options": [
         "It starts running the callable, subject to OS scheduling",
         "The thread waits until the parent calls <code>start()</code>",
@@ -891,23 +891,23 @@
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L119"
     },
     {
-      "id": "50a18f2831d6",
+      "id": "56aa2eb128d3",
       "topic": "threading",
-      "text": "<p>Why does this C++ program fail to compile, and what fixes it?</p>\n<pre><code class=\"language-cpp\">void add_one(int&amp; x) { ++x; }\n\nint main() {\n    int v = 0;\n    std::thread t(add_one, v);\n    t.join();\n}\n</code></pre>",
+      "text": "<p>Why does this C++ program fail to compile, and what fixes it?</p>\n<pre><code class=\"language-cpp\">void add_one(int&amp; x) { ++x; }\n\nint main() {\n    int v = 0;\n    std::jthread t(add_one, v);\n    t.join();\n}\n</code></pre>",
       "options": [
         "Arguments are copied and passed as rvalues, so pass <code>std::ref(v)</code>",
-        "<code>std::thread</code> cannot run free functions; wrap <code>add_one</code> in a lambda",
+        "<code>std::jthread</code> cannot run free functions; wrap <code>add_one</code> in a lambda",
         "<code>v</code> must be global, because threads cannot use local variables",
         "<code>add_one</code> must return a value; change it to return <code>int</code>"
       ],
       "correctOptionIndex": 0,
-      "explanation": "<p><code>std::thread</code> stores decayed copies of its arguments, which cannot bind to <code>int&amp;</code>, so a static assertion fails. With <code>std::ref(v)</code> the thread changes <code>v</code>, which must outlive the thread.</p>",
+      "explanation": "<p><code>std::jthread</code> stores decayed copies of its arguments, which cannot bind to <code>int&amp;</code>, so a static assertion fails. With <code>std::ref(v)</code> the thread changes <code>v</code>, which must outlive the thread.</p>",
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L128"
     },
     {
-      "id": "1ae20db039a9",
+      "id": "ff3a1033ed2b",
       "topic": "threading",
-      "text": "<p>What happens if a <code>std::thread</code> object is destroyed while it is still joinable?</p>",
+      "text": "<p>Legacy comparison: what happens if a <code>std::thread</code> object is destroyed while it is still joinable?</p>",
       "options": [
         "The thread is detached automatically",
         "The destructor joins the thread automatically",
@@ -929,13 +929,13 @@
         "It forcibly kills the thread without waiting for it to finish"
       ],
       "correctOptionIndex": 1,
-      "explanation": "<p><code>std::jthread</code> calls <code>request_stop()</code> and then <code>join()</code>. The thread function can watch its <code>std::stop_token</code> to exit promptly, which makes RAII-style cleanup safe.</p>",
+      "explanation": "<p><code>std::jthread</code> calls <code>request_stop()</code> and then <code>join()</code>. The thread function can watch its <code>std::stop_token</code> to exit promptly, which provides scoped ownership. A stop request is cooperative; it does not interrupt arbitrary blocking calls.</p>",
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L156"
     },
     {
-      "id": "cef86eefe2e3",
+      "id": "f4af9bea4f60",
       "topic": "threading",
-      "text": "<p>In C++, after calling <code>t.detach()</code>, what does <code>t.joinable()</code> return?</p>",
+      "text": "<p>Legacy comparison: after calling <code>t.detach()</code>, what does <code>t.joinable()</code> return?</p>",
       "options": [
         "<code>true</code>",
         "<code>true</code> until the detached thread finishes",
@@ -947,9 +947,9 @@
       "source": "https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/quizzes/02_threading.md#L165"
     },
     {
-      "id": "c39e034117d2",
+      "id": "b9b0d8a47cab",
       "topic": "threading",
-      "text": "<p>What does this C++ program print?</p>\n<pre><code class=\"language-cpp\">thread_local int n = 0;\nstd::mutex m;\n\nvoid work() {\n    for (int i = 0; i &lt; 3; ++i) ++n;\n    std::lock_guard&lt;std::mutex&gt; g(m);\n    std::cout &lt;&lt; n &lt;&lt; '\\n';\n}\n\nint main() {\n    std::thread a(work), b(work);\n    a.join(); b.join();\n    std::cout &lt;&lt; &quot;main &quot; &lt;&lt; n &lt;&lt; '\\n';\n}\n</code></pre>",
+      "text": "<p>What does this C++ program print?</p>\n<pre><code class=\"language-cpp\">thread_local int n = 0;\nstd::mutex m;\n\nvoid work() {\n    for (int i = 0; i &lt; 3; ++i) ++n;\n    std::lock_guard&lt;std::mutex&gt; g(m);\n    std::cout &lt;&lt; n &lt;&lt; '\\n';\n}\n\nint main() {\n    std::jthread a(work), b(work);\n    a.join(); b.join();\n    std::cout &lt;&lt; &quot;main &quot; &lt;&lt; n &lt;&lt; '\\n';\n}\n</code></pre>",
       "options": [
         "<code>3</code>, <code>6</code>, then <code>main 6</code>",
         "<code>3</code>, <code>3</code>, then <code>main 0</code>",

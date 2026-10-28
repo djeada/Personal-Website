@@ -220,10 +220,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     y = base - bh;
                 let fill = c.ink3,
                     alpha = .42;
-                if (this.visited.has(i)) [fill, alpha] = [c.moon, .85];
-                if (range && (i < range[0] || i > range[1])) [fill, alpha] = [c.rule, 1];
-                if (i === current) [fill, alpha] = [c.gold, 1];
-                if (i === found) [fill, alpha] = [c.verdigris, 1];
+                if (this.visited.has(i))[fill, alpha] = [c.moon, .85];
+                if (range && (i < range[0] || i > range[1]))[fill, alpha] = [c.rule, 1];
+                if (i === current)[fill, alpha] = [c.gold, 1];
+                if (i === found)[fill, alpha] = [c.verdigris, 1];
                 ctx.globalAlpha = alpha;
                 ctx.fillStyle = fill;
                 ctx.fillRect(x, y, bw, bh);

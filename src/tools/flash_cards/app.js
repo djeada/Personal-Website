@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    // Leitner-style schedule: each box is the number of days until the next review.
+
     const INTERVALS = [0, 1, 3, 7, 16, 35, 90];
     const MASTERED_BOX = 4;
     const REQUEUE_GAP = 3;
@@ -45,9 +45,9 @@
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Scheduling
-    // ---------------------------------------------------------------------
+
+
+
 
     function today() {
         const now = new Date();
@@ -57,7 +57,7 @@
     function loadSrs(slug) {
         const srs = store.get(`srs:${slug}`, null);
         if (srs) return srs;
-        // Earlier versions only remembered which cards were "known".
+
         const legacy = store.get(slug, null);
         const migrated = {};
         if (legacy && Array.isArray(legacy.known)) {
@@ -104,9 +104,9 @@
         return days === 1 ? 'Tomorrow' : `In ${formatInterval(days)}`;
     }
 
-    // ---------------------------------------------------------------------
-    // Screens
-    // ---------------------------------------------------------------------
+
+
+
 
     function show(screen) {
         ['setup', 'study', 'summary', 'browse'].forEach((name) => {
@@ -116,9 +116,9 @@
         Learning.scrollIntoFocus(ui.cardsApp);
     }
 
-    // ---------------------------------------------------------------------
-    // Setup
-    // ---------------------------------------------------------------------
+
+
+
 
     async function init() {
         cache$();
@@ -311,9 +311,9 @@
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Study session
-    // ---------------------------------------------------------------------
+
+
+
 
     function start() {
         const {
@@ -526,9 +526,9 @@
         show('setup');
     }
 
-    // ---------------------------------------------------------------------
-    // Browse
-    // ---------------------------------------------------------------------
+
+
+
 
     function cardRow(card, index) {
         const li = el('li');
@@ -598,9 +598,9 @@
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Events
-    // ---------------------------------------------------------------------
+
+
+
 
     function onKeydown(event) {
         if (ui.studyScreen.hidden || !state.session || event.altKey || event.ctrlKey || event.metaKey) return;

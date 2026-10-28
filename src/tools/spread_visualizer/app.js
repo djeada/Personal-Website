@@ -323,8 +323,7 @@ function withAlpha(color, alpha) {
 
 function refreshTheme() {
     const palette = window.ToolShared && typeof window.ToolShared.palette === "function" ?
-        window.ToolShared.palette() :
-        {};
+        window.ToolShared.palette() : {};
     const pick = (key, fallback) => palette[key] || fallback;
     const isDark = Boolean(palette.isDark);
     const seriesColors = {

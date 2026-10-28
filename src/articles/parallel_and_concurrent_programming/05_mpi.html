@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/05_mpi",
             "description": "The Message Passing Interface (MPI) is a standardized, portable interface for message passing across a wide range of parallel-computing systems.",
-            "dateModified": "2026-10-12",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/05_mpi" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="The Message Passing Interface (MPI) is a standardized, portable interface for message passing across a wide range of parallel-computing systems." property="og:description" />
-    <meta content="2026-10-12" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -221,7 +220,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -1316,11 +1315,50 @@ while (!done) {
                 <li>Install an MPI implementation, such as OpenMPI or MPICH.</li>
                 <li>Compile your C/C++ MPI program using the provided wrapper scripts:</li>
                 <li>For C: <code>mpicc mpi_program.c -o mpi_program</code></li>
-                <li>For C++: <code>mpic++ mpi_program.cpp -o mpi_program</code> (some implementations also provide <code>mpiCC</code>)</li>
+                <li>For C++: <code>mpic++ -std=c++20 mpi_program.cpp -o mpi_program</code> (some implementations also provide <code>mpiCC</code>)</li>
                 <li>Run your MPI program using the provided <code>mpiexec</code> or <code>mpirun</code> command:</li>
                 <li><code>mpiexec -n &lt;number_of_processes&gt; ./mpi_program</code></li>
                 <li><code>mpirun -n &lt;number_of_processes&gt; ./mpi_program</code></li>
             </ol>
+            <h5>Modern C++ Ownership with the MPI C Interface</h5>
+            <p>The C++ examples use <strong>C++20</strong> and the supported MPI C API. The <code>MPI_Send</code>,
+                <code>MPI_Allreduce</code>, and other C entry points are current MPI interfaces; their use
+                from C++ does not make an example legacy. The removed <code>MPI::</code> C++ bindings are
+                not used. The earlier <code>c</code> snippets in this chapter expose the MPI operations
+                directly; the executable C++ examples add ownership and error handling.
+            </p>
+            <p><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/common/mpi_support.hpp">mpi_support.hpp</a> owns initialization and
+                finalization, checks MPI return codes, and scopes created communicators and
+                datatypes. Program buffers and owned MPI handles leave scope before MPI
+                finalizes. Unexpected C++ exceptions and MPI errors abort the job so peers are
+                not left waiting after one rank exits. This is a fail-fast teaching policy,
+                rather than distributed fault recovery.</p>
+            <p>Choose a collective that expresses the operation: broadcast configuration with
+                <code>MPI_Bcast</code>, combine results with <code>MPI_Reduce</code> or <code>MPI_Allreduce</code>, and distribute
+                unequal partitions with <code>MPI_Scatterv</code>/<code>MPI_Gatherv</code>. The
+                <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/mpi/parallel_matrix_multiplication.cpp">matrix example</a> handles uneven
+                row counts and ranks with no rows, then validates against a sequential reference.
+                The <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/mpi/derived_data_types.cpp">derived datatype example</a> uses
+                <code>std::array</code>, a standard-layout assertion, and a scoped datatype owner.
+            </p>
+            <p>Nonblocking sends/receives let independent work proceed before completion, but
+                the transfer buffer must remain alive and unchanged until the corresponding
+                request completes. They permit overlap; the runtime and hardware determine
+                whether useful background progress occurs. See the
+                <a href="https://www.mpi-forum.org/docs/mpi-4.1/mpi41-report/node71.htm">MPI nonblocking-communication specification</a>.
+            </p>
+            <p>From the repository root:</p>
+            <div>
+                <pre><code class="language-bash">mpic++ -std=c++20 src/cpp/mpi/hello_world_mpi.cpp -o /tmp/mpi_hello
+mpiexec -n 2 /tmp/mpi_hello
+mpic++ -std=c++20 src/cpp/mpi/parallel_matrix_multiplication.cpp -o /tmp/mpi_matrix
+mpiexec -n 3 /tmp/mpi_matrix</code></pre>
+            </div>
+            <p>Keep <code>src/cpp/common/</code> with the source files. An MPI barrier is a process-level
+                collective; the C++20 in-process <code>std::barrier</code> does not replace it. See the
+                <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/README.md">C++ guide</a> for the separation between application-level
+                solutions, low-level mechanisms, and legacy comparisons.
+            </p>
             <p>The following C/C++ examples demonstrate different aspects of MPI:</p>
             <table>
                 <thead>
@@ -1409,7 +1447,7 @@ while (!done) {
                     <tr>
                         <td>16</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/mpi/parallel_matrix_multiplication.cpp">parallel_matrix_multiplication.cpp</a></td>
-                        <td>Perform parallel matrix multiplication using MPI</td>
+                        <td>Distribute uneven matrix row partitions and validate the gathered result</td>
                     </tr>
                 </tbody>
             </table>
@@ -1498,7 +1536,7 @@ while (!done) {
                     <tr>
                         <td>14</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/python/mpi/parallel_matrix_multiplication.py">parallel_matrix_multiplication.py</a></td>
-                        <td>Perform parallel matrix multiplication using MPI</td>
+                        <td>Distribute uneven matrix row partitions and validate the gathered result</td>
                     </tr>
                 </tbody>
             </table>

@@ -724,7 +724,10 @@
         ctx.lineWidth = 2;
         ctx.strokeRect(40, 40, 1000, 1270);
         ctx.fillStyle = pal.gold;
-        [[40, 40, 1, 1], [1040, 1310, -1, -1]].forEach(([x, y, dx, dy]) => {
+        [
+            [40, 40, 1, 1],
+            [1040, 1310, -1, -1]
+        ].forEach(([x, y, dx, dy]) => {
             ctx.fillRect(dx > 0 ? x : x - 56, y - (dy > 0 ? 0 : 2), 56, 2);
             ctx.fillRect(x - (dx > 0 ? 0 : 2), dy > 0 ? y : y - 56, 2, 56);
         });

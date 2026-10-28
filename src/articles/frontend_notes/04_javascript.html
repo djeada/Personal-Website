@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/frontend_notes/04_javascript",
             "description": "JavaScript is a programming language that is primarily used for client-side scripting (making web pages interactive).",
-            "dateModified": "2026-10-18",
+            "dateModified": "2026-10-23",
             "image": "https://adamdjellouli.com/resources/article-images/form-validation-99e65eb51c.svg",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="JavaScript is a programming language that is primarily used for client-side scripting (making web pages interactive)." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/form-validation-99e65eb51c.svg" property="og:image" />
-    <meta content="2026-10-18" property="article:modified_time" />
+    <meta content="2026-10-23" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -118,6 +117,7 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#skills-every-javascript-developer-should-have">Skills Every JavaScript Developer Should Have</a></li>
+                    <li><a href="#how-javascript-s-responsibilities-grew">How JavaScript's responsibilities grew</a></li>
                     <li><a href="#fundamentals">Fundamentals</a>
                         <ol>
                             <li><a href="#see-what-javascript-changes-in-the-browser">See what JavaScript changes in the browser</a></li>
@@ -236,7 +236,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 23, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -276,6 +276,11 @@
                 <li><strong>Debugging and testing</strong> are critical skills for identifying and resolving issues in JavaScript code. Familiarity with browser developer tools and debugging methods improves development efficiency.</li>
                 <li>Regular use of resources like <strong>MDN</strong> (Mozilla Developer Network) is recommended for up-to-date documentation, learning new JavaScript features, and staying informed about best practices.</li>
             </ol>
+            <h3 id="how-javascript-s-responsibilities-grew">How JavaScript's responsibilities grew</h3>
+            <p>Small scripts can update a page by changing the DOM directly. As interaction grows, the harder problem becomes keeping the DOM, application state, and in-flight requests consistent. Frameworks can organize that work, but the browser's event loop and network behavior still determine what happens.</p>
+            <p><strong>Syntax evolution does not remove ownership problems.</strong> Callbacks, promises, and <code>async</code>/<code>await</code> express asynchronous work differently. Consider a search box: the request for “ca” starts first, the request for “cat” finishes first, and then the older response arrives. Both requests can succeed while the interface displays the wrong results. Cancel obsolete work where possible and/or verify that a response still belongs to the current query before displaying it. <code>await</code> alone provides no ordering between independent calls.</p>
+            <p>For ordinary requests, <code>fetch</code> provides a promise-based API. Older <code>XMLHttpRequest</code> code can still be appropriate where its event API is useful, including <a href="https://xhr.spec.whatwg.org/#the-upload-attribute">upload progress events</a>; its age is not evidence that it is deprecated. Whichever API you use, define cancellation, loading, failure, and stale-result behavior. See <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch">Using Fetch</a>.</p>
+            <p><strong>Imperative versus declarative:</strong> <code>element.textContent = total</code> says how to update one node; a component describing its output from <code>total</code> says what should be visible for that state. Direct DOM code fits small enhancements. Declarative composition can reduce manual synchronization across a larger screen. Mixing both on the same subtree creates competing owners, so establish an integration boundary when adding a framework to an existing page.</p>
             <h3 id="fundamentals">Fundamentals</h3>
             <h4 id="see-what-javascript-changes-in-the-browser">See what JavaScript changes in the browser</h4>
             <p><img alt="A form before input validation and after informative error feedback" decoding="async" loading="lazy" src="../../resources/article-images/form-validation-99e65eb51c.svg" /></p>
@@ -1032,9 +1037,10 @@ console.log(third); // 3</code></pre>
             </ul>
             <p>Let's take a look at aexample: </p>
             <div>
-                <pre><code class="language-javascript">async function getData() { // async function declaration
-  var response = await fetch("https://jsonplaceholder.typicode.com/users"); // awaitings the response of the fetch call
-  var data = await response.json(); // awaitings the response of the json call
+                <pre><code class="language-javascript">async function getData() {
+  const response = await fetch("https://jsonplaceholder.typicode.com/users");
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
   console.log(data);
 }</code></pre>
             </div>
@@ -1071,6 +1077,7 @@ for (var element of array) {
 }</code></pre>
             </div>
             <h4 id="modules">Modules</h4>
+            <p><strong>Historical context:</strong> globals and ordered script tags made dependencies implicit; module systems made imports and exports explicit. Browser ES modules now provide a native option with <code>&lt;script type="module"&gt;</code>, but a bundler can still resolve packages, transform syntax, and optimize delivery. <code>import</code> syntax does not mean a browser can resolve every npm package name by itself. Serve browser examples over HTTP and distinguish native module URLs from imports handled by your build tool. See the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules">MDN module guide</a>.</p>
             <p>Modules are a way to organize code into separate files.</p>
             <p>In the example below we will create a module called <code>person_module</code> and export a function called <code>getFullName</code>:</p>
             <div>
@@ -1144,15 +1151,16 @@ arr = new SpecialArray(1, 2, 3);
 console.log(arr.front()); // 1</code></pre>
             </div>
             <h3 id="typescript">TypeScript</h3>
-            <p>TypeScript is a superset of JavaScript that compiles to plain JavaScript. It introduces many new features such as classes, interfaces, generics, and more.</p>
+            <p>TypeScript adds static type checking and type syntax to JavaScript. Classes are also a JavaScript feature; interfaces and type annotations describe contracts for the checker and are erased from emitted JavaScript.</p>
+            <p><strong>Two reasonable philosophies:</strong> JavaScript with JSDoc/checking can keep a small project's tooling simple; TypeScript can make relationships and refactors easier to check across a larger codebase. Neither eliminates runtime uncertainty. An API returning <code>{ "price": "unknown" }</code> is not fixed by writing <code>data as Product</code>: assertions do not validate data. Validate untrusted values at the boundary and use types to describe the validated result. Reference: <a href="https://www.typescriptlang.org/docs/handbook/2/basic-types.html">TypeScript's basics and type erasure</a>.</p>
             <p>Some of the advantages of using TypeScript are:</p>
             <ul>
                 <li>Type-checking - TypeScript will help you catch errors earlier in the development cycle.</li>
                 <li>Stronger typing - TypeScript will help you avoid bugs caused by type errors.</li>
-                <li>TypeScript always exposes compilation errors during development (pre-compilation). </li>
+                <li>Type errors are reported when the checker runs. Some development tools only strip types, so run a dedicated check such as <code>tsc --noEmit</code> in CI; emitting JavaScript and checking types are distinct operations.</li>
             </ul>
             <h4 id="compilation">Compilation</h4>
-            <p>TypeScript has an integrated development environment that allows you to compile your code and see the errors that are generated.</p>
+            <p>TypeScript provides a compiler and language-service support for editors; it is not itself an integrated development environment.</p>
             <ul>
                 <li><code>tsc</code> - The TypeScript compiler is used to compile TypeScript code into JavaScript.</li>
                 <li><code>tsc --init</code> - This command will create a tsconfig.json file in the current directory.</li>
@@ -1189,17 +1197,19 @@ console.log(arr.front()); // 1</code></pre>
             <ol>
                 <li>Decide on a build tool to use.</li>
             </ol>
-            <p>Popular build tools include Webpack and Gulp. Webpack for example also uses configuration files to specify how to build the project. The configuration files are called <code>webpack.config.js</code> and look something like this:</p>
+            <p>Choose a build tool only if the project needs one. A Webpack project using <code>ts-loader</code> can place the following rule in <code>webpack.config.js</code>; older tutorials may call the rule array <code>loaders</code>:</p>
             <div>
-                <pre><code class="language-javascript">module: {
-    loaders: [
-        { test: /\.ts$/, loader: 'ts-loader' }
-    ]
-}</code></pre>
+                <pre><code class="language-javascript">module.exports = {
+  resolve: { extensions: ['.ts', '.js'] },
+  module: {
+    rules: [{ test: /\.ts$/, exclude: /node_modules/, use: 'ts-loader' }]
+  }
+};</code></pre>
             </div>
+            <p>The ES5/CommonJS compiler configuration above illustrates an older target, not a default for every browser app. Match <code>target</code>, <code>module</code>, libraries, and module resolution to the runtime/build tool; CommonJS output cannot simply be loaded as a native browser module. See <a href="https://webpack.js.org/guides/typescript/">Webpack's TypeScript guide</a>.</p>
             <ol>
-                <li>Change extension of all <code>.js</code> files to <code>.ts</code>.</li>
-                <li>Refactor till you get rid of compilation errors.</li>
+                <li>Migrate a small boundary first; JavaScript and TypeScript can coexist with an appropriate <code>allowJs</code> configuration.</li>
+                <li>Add useful types, preserve behavior, and make type checking part of the build/CI contract. Renaming every file at once is not required.</li>
             </ol>
             <h3 id="package-managers">Package managers</h3>
             <p>Package managers are used to install and manage dependencies. The chances are you won't be working with Vanilla JavaScript only. In fact you will probably be installing packages, libraries, and frameworks all the time. For that you will need a package manager.</p>

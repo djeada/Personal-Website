@@ -11,33 +11,69 @@
     const MAX_PARTICLES = 96;
     const MAX_TRAIL = 10;
     const CONFIG = {
-        easy: { speed: 155, gap: 190, gravity: 900, flap: -340 },
-        normal: { speed: 180, gap: 170, gravity: 980, flap: -365 },
-        hard: { speed: 205, gap: 150, gravity: 1040, flap: -380 },
-        insane: { speed: 230, gap: 136, gravity: 1100, flap: -395 }
+        easy: {
+            speed: 155,
+            gap: 190,
+            gravity: 900,
+            flap: -340
+        },
+        normal: {
+            speed: 180,
+            gap: 170,
+            gravity: 980,
+            flap: -365
+        },
+        hard: {
+            speed: 205,
+            gap: 150,
+            gravity: 1040,
+            flap: -380
+        },
+        insane: {
+            speed: 230,
+            gap: 136,
+            gravity: 1100,
+            flap: -395
+        }
     };
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const rand = (min, max) => min + Math.random() * (max - min);
     const lerp = (from, to, amount) => from + (to - from) * amount;
     const $ = selector => document.querySelector(selector);
     const canvas = $('#canvas');
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d', {
+        alpha: false
+    });
     const ui = {
-        overlay: $('#game-overlay'), title: $('#overlay-title'), copy: $('#overlay-copy'),
-        kicker: $('#overlay-kicker'), start: $('#start-btn'), score: $('#score-label'),
-        best: $('#hs-badge'), pause: $('#pause-btn'), mute: $('#mute-btn'),
-        restart: $('#restart-btn'), difficulty: $('#difficulty'), skin: $('#bird-skin'),
+        overlay: $('#game-overlay'),
+        title: $('#overlay-title'),
+        copy: $('#overlay-copy'),
+        kicker: $('#overlay-kicker'),
+        start: $('#start-btn'),
+        score: $('#score-label'),
+        best: $('#hs-badge'),
+        pause: $('#pause-btn'),
+        mute: $('#mute-btn'),
+        restart: $('#restart-btn'),
+        difficulty: $('#difficulty'),
+        skin: $('#bird-skin'),
         theme: $('#theme-mode')
     };
     const startLabel = ui.start.querySelector('span');
 
-    // Storage can be unavailable in private browsing or embedded pages.
+
     const storage = {
         get(key, fallback) {
-            try { return localStorage.getItem(key) ?? fallback; } catch (_) { return fallback; }
+            try {
+                return localStorage.getItem(key) ?? fallback;
+            } catch (_) {
+                return fallback;
+            }
         },
         set(key, value) {
-            try { localStorage.setItem(key, String(value)); } catch (_) {}
+            try {
+                localStorage.setItem(key, String(value));
+            } catch (_) {}
         }
     };
     const best = Number(storage.get('flappy_highscore', 0));
@@ -46,10 +82,10 @@
         muted: storage.get('moonveil_muted', '0') === '1'
     };
     for (const [name, key, fallback] of [
-        ['difficulty', 'moonveil_difficulty', 'normal'],
-        ['skin', 'flappy_bird_skin', 'ember'],
-        ['theme', 'flappy_theme', 'auto']
-    ]) {
+            ['difficulty', 'moonveil_difficulty', 'normal'],
+            ['skin', 'flappy_bird_skin', 'ember'],
+            ['theme', 'flappy_theme', 'auto']
+        ]) {
         const value = storage.get(key, fallback);
         ui[name].value = Array.from(ui[name].options).some(option => option.value === value) ? value : fallback;
     }
@@ -69,8 +105,10 @@
         return colors;
     })();
     const skins = {
-        ember: [night.gold, night.ember], frost: [night.moon, night['ink-3']],
-        moss: [night.verdigris, night['rule-strong']], spirit: [night.ink, night.moon]
+        ember: [night.gold, night.ember],
+        frost: [night.moon, night['ink-3']],
+        moss: [night.verdigris, night['rule-strong']],
+        spirit: [night.ink, night.moon]
     };
     let birdColors = skins[ui.skin.value];
     const bodyPath = new Path2D();
@@ -91,9 +129,15 @@
 
     const background = new Image();
     const backgroundLayer = document.createElement('canvas');
-    const backgroundCtx = backgroundLayer.getContext('2d', { alpha: false });
-    const particlePool = Array.from({ length: MAX_PARTICLES }, () => ({}));
-    const trailPool = Array.from({ length: MAX_TRAIL }, () => ({}));
+    const backgroundCtx = backgroundLayer.getContext('2d', {
+        alpha: false
+    });
+    const particlePool = Array.from({
+        length: MAX_PARTICLES
+    }, () => ({}));
+    const trailPool = Array.from({
+        length: MAX_TRAIL
+    }, () => ({}));
     const gatePool = [];
     const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionQuery.matches;
@@ -101,14 +145,39 @@
     let endTimer = 0;
     let audio = null;
     const state = {
-        mode: 'ready', score: 0, best: settings.best, runBest: settings.best,
-        time: 0, previousTime: 0, distance: 0, previousDistance: 0,
-        last: null, acc: 0, flash: 0, nextGate: 650, trailClock: 0,
-        gates: [], particles: [], trail: [],
-        fireflies: Array.from({ length: 12 }, () => ({
-            x: rand(0, W), y: rand(30, H - 80), r: rand(1, 2.2), phase: rand(0, TAU)
+        mode: 'ready',
+        score: 0,
+        best: settings.best,
+        runBest: settings.best,
+        time: 0,
+        previousTime: 0,
+        distance: 0,
+        previousDistance: 0,
+        last: null,
+        acc: 0,
+        flash: 0,
+        nextGate: 650,
+        trailClock: 0,
+        gates: [],
+        particles: [],
+        trail: [],
+        fireflies: Array.from({
+            length: 12
+        }, () => ({
+            x: rand(0, W),
+            y: rand(30, H - 80),
+            r: rand(1, 2.2),
+            phase: rand(0, TAU)
         })),
-        bird: { x: 220, y: H * .48, previousY: H * .48, vy: 0, rot: 0, previousRot: 0, wing: 0 }
+        bird: {
+            x: 220,
+            y: H * .48,
+            previousY: H * .48,
+            vy: 0,
+            rot: 0,
+            previousRot: 0,
+            wing: 0
+        }
     };
 
     function requestFrame() {
@@ -176,11 +245,25 @@
         recycleAll(state.particles, particlePool);
         recycleAll(state.trail, trailPool);
         Object.assign(state, {
-            mode: start ? 'playing' : 'ready', score: 0, runBest: state.best,
-            time: 0, previousTime: 0, distance: 0, previousDistance: 0,
-            flash: 0, nextGate: 650, trailClock: 0
+            mode: start ? 'playing' : 'ready',
+            score: 0,
+            runBest: state.best,
+            time: 0,
+            previousTime: 0,
+            distance: 0,
+            previousDistance: 0,
+            flash: 0,
+            nextGate: 650,
+            trailClock: 0
         });
-        Object.assign(state.bird, { y: H * .48, previousY: H * .48, vy: 0, rot: 0, previousRot: 0, wing: 0 });
+        Object.assign(state.bird, {
+            y: H * .48,
+            previousY: H * .48,
+            vy: 0,
+            rot: 0,
+            previousRot: 0,
+            wing: 0
+        });
         ui.score.textContent = '0';
         ui.pause.disabled = !start;
         ui.pause.textContent = 'Pause';
@@ -206,18 +289,23 @@
 
     function spawnGate() {
         const previous = state.gates.at(-1)?.gapY ?? H * .48;
-        const gate = gatePool.pop() || { layer: document.createElement('canvas') };
+        const gate = gatePool.pop() || {
+            layer: document.createElement('canvas')
+        };
         Object.assign(gate, {
-            x: W + 75, previousX: W + 75,
+            x: W + 75,
+            previousX: W + 75,
             gapY: clamp(previous + rand(-125, 125), 135, H - 135),
-            gap: flight.gap, passed: false, seed: Math.random() * 99
+            gap: flight.gap,
+            passed: false,
+            seed: Math.random() * 99
         });
         cacheGate(gate);
         state.gates.push(gate);
         state.nextGate = rand(320, 390);
     }
 
-    // Each gate's stonework is rasterized once, then copied until it leaves the screen.
+
     function cacheGate(gate) {
         const width = GATE_WIDTH + GATE_PADDING * 2;
         gate.layer.width = Math.max(1, Math.ceil(width * canvas.width / W));
@@ -389,14 +477,16 @@
     }
 
     function hideOverlay() {
-        canvas.focus({ preventScroll: true });
+        canvas.focus({
+            preventScroll: true
+        });
         ui.overlay.inert = true;
         ui.overlay.setAttribute('aria-hidden', 'true');
         ui.overlay.classList.remove('is-visible');
     }
 
     function render(alpha) {
-        // The backdrop matches the backing store: no full-screen resampling or tint pass per frame.
+
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.drawImage(backgroundLayer, 0, 0);
         ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
@@ -524,7 +614,7 @@
     function sound(kind) {
         if (settings.muted) return;
         try {
-            audio ||= new (window.AudioContext || window.webkitAudioContext)();
+            audio ||= new(window.AudioContext || window.webkitAudioContext)();
             if (audio.state === 'suspended') audio.resume().catch(() => {});
             const oscillator = audio.createOscillator();
             const gain = audio.createGain();
@@ -535,7 +625,10 @@
             gain.gain.setValueAtTime(.045, now);
             gain.gain.exponentialRampToValueAtTime(.001, now + (kind === 'hit' ? .28 : .11));
             oscillator.connect(gain).connect(audio.destination);
-            oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+            oscillator.onended = () => {
+                oscillator.disconnect();
+                gain.disconnect();
+            };
             oscillator.start();
             oscillator.stop(now + .3);
         } catch (_) {}
@@ -557,7 +650,7 @@
         if (isAnimating()) {
             const elapsed = state.last === null ? 0 : (timestamp - state.last) / 1000;
             state.last = timestamp;
-            // Bound catch-up work after a stall while keeping physics independent of refresh rate.
+
             state.acc = Math.min(state.acc + elapsed, STEP * MAX_STEPS);
             while (state.acc >= STEP && isAnimating()) {
                 update(STEP);
@@ -566,7 +659,10 @@
         }
         render(state.mode === 'playing' ? state.acc / STEP : 1);
         if (isAnimating()) requestFrame();
-        else { state.last = null; state.acc = 0; }
+        else {
+            state.last = null;
+            state.acc = 0;
+        }
     }
 
     function action() {
@@ -577,7 +673,9 @@
     canvas.addEventListener('pointerdown', event => {
         if (!event.isPrimary || event.button !== 0) return;
         event.preventDefault();
-        canvas.focus({ preventScroll: true });
+        canvas.focus({
+            preventScroll: true
+        });
         action();
     });
     ui.start.addEventListener('click', action);
@@ -634,7 +732,10 @@
     });
     window.addEventListener('pageshow', requestFrame);
     new ResizeObserver(resize).observe(canvas);
-    background.onload = () => { cacheBackground(); requestFrame(); };
+    background.onload = () => {
+        cacheBackground();
+        requestFrame();
+    };
     background.src = 'assets/moonveil-background.webp';
     ui.best.textContent = state.best;
     updateMute();

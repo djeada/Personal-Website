@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/file_system",
             "description": "In Unix, files and filesystems are important components of the operating system's structure.",
-            "dateModified": "2026-10-17",
+            "dateModified": "2026-10-25",
             "image": "https://adamdjellouli.com/resources/article-images/b2f741ab-c217-4b48-a2e1-72ca51fe4a00-6bb20fb09e.webp",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="In Unix, files and filesystems are important components of the operating system's structure." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/b2f741ab-c217-4b48-a2e1-72ca51fe4a00-6bb20fb09e.webp" property="og:image" />
-    <meta content="2026-10-17" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -213,7 +212,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 17, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -242,7 +241,7 @@
                 <li><strong>Ordinary files</strong> are the most common type, containing text, data, or program code. They cannot contain other files or directories.</li>
                 <li><strong>Directory files</strong> function as folders to organize other files, with the root directory (<code>/</code>) being the top-level directory of the entire filesystem. Users' files are usually stored in their respective home directories, such as <code>/home/adam/</code>.</li>
                 <li><strong>Device files</strong> represent hardware devices as if they were files. Block-oriented devices, like hard drives, transfer data in large blocks, whereas character-oriented devices, such as keyboards or modems, handle data one byte at a time.</li>
-                <li><strong>Link files</strong> serve as references to other files. Hard links are essentially duplicates of the original file and behave identically, while soft links (or symbolic links) act as indirect pointers to a file or directory, similar to shortcuts in Windows.</li>
+                <li><strong>Link files</strong> serve as references to other files. Hard links are additional names for the same file (the same inode) and behave identically, while soft links (or symbolic links) act as indirect pointers to a file or directory, similar to shortcuts in Windows.</li>
             </ol>
             <p>The <code>file</code> command in Linux is a powerful tool that helps identify and classify these file types by analyzing their content and structure. Below are insights on how the <code>file</code> command interprets and reports on these various classifications:</p>
             <table>
@@ -375,11 +374,11 @@ Offset 0     ┌─────────────────────�
             <h4 id="superblock-group-descriptor-table-block-groups">Superblock → Group Descriptor Table → Block Groups</h4>
             <div>
                 <pre><code class="language-shell">Filesystem Layout (ext4, 4 KiB blocks)
-LBA 0           LBA 124      LBA 125                      LBA 126+  
-┌──────────┬─────────────┬────────────────────┬──────────────────────────┐
-│ Boot     │ Padding     │ Primary Superblock │ Group Descriptor Table   │
-│ Sector   │ (blocks)    │ (block 1024)       │ (blocks 1025…1025+GDT)   │
-└──────────┴─────────────┴────────────────────┴──────────────────────────┘
+Byte 0         Byte 1024              Block 1
+┌──────────────┬──────────────────────┬──────────────────────────┐
+│ Boot area /  │ Primary Superblock   │ Group Descriptor Table   │
+│ padding      │ (1024 bytes, block 0)│ (blocks 1…GDT size)      │
+└──────────────┴──────────────────────┴──────────────────────────┘
                                   │
                                   ▼
               ┌───────────────────────────────────────────┐
@@ -389,7 +388,7 @@ LBA 0           LBA 124      LBA 125                      LBA 126+
               └───────────────────────────────────────────┘</code></pre>
             </div>
             <ul>
-                <li><strong>Superblock</strong> (at block 1024) holds global FS metadata plus a pointer (offset) to the start of the Group Descriptor Table (GDT).</li>
+                <li><strong>Superblock</strong> (at byte offset 1024, inside block 0 when blocks are 4 KiB; backups sit in later block groups, e.g. block 32768) holds global FS metadata plus a pointer (offset) to the start of the Group Descriptor Table (GDT).</li>
                 <li><strong>GDT</strong> is an array of one descriptor per block group; each descriptor records where that group begins, how many free blocks/inodes remain, etc.</li>
                 <li>When the kernel needs to read a block group’s metadata, it indexes into the GDT to find its on-disk location.</li>
             </ul>
@@ -399,9 +398,9 @@ LBA 0           LBA 124      LBA 125                      LBA 126+
     ↓
 Block Group #2 Start
 ┌───────────────────────────────────────────────────────────────────┐
-│ Inode Bitmap    [1 block]                                         │
-├───────────────────────────────────────────────────────────────────┤
 │ Block Bitmap    [1 block]                                         │
+├───────────────────────────────────────────────────────────────────┤
+│ Inode Bitmap    [1 block]                                         │
 ├───────────────────────────────────────────────────────────────────┤
 │ Inode Table     [ (InodesPerGroup×InodeSize)/BlockSize blocks ]   │
 ├───────────────────────────────────────────────────────────────────┤
@@ -466,7 +465,7 @@ Block Group #2 Start
             </div>
             <ul>
                 <li>Write-ahead log capturing <strong>metadata</strong> (and optionally data) before main-area overwrite.</li>
-                <li>Ext3/4 default <strong>ordered</strong> mode: data blocks reach media before the commit → no fs-checker sees stale metadata.</li>
+                <li>Ext3/4 default <strong>ordered</strong> mode: data blocks reach media before the metadata that references them is committed → after a crash, files do not point at blocks holding stale data.</li>
                 <li>Replayed by <code>jbd2</code> on mount after unclean shutdown.</li>
             </ul>
             <h4 id="end-to-end-walk-through">End-to-End Walk-Through</h4>
@@ -496,7 +495,7 @@ RAM phys addr 0x3f7e_0000
             <ul>
                 <li><strong>Fault-on-first-touch</strong>: VFS sees a cache miss, allocates a free page, submits <code>bio</code> to read the 4 KiB block.</li>
                 <li>Subsequent I/O hits the in-RAM page; mmap’d code/data benefit identically — the cache is unified across read(), mmap(), readdir, etc.</li>
-                <li>Indexing: <code>page-&gt;index = logical_block_number</code> allows constant-time lookup in radix-tree/xarray.</li>
+                <li>Indexing: <code>page-&gt;index</code> is the file offset in page units (equal to the logical block number when blocks are 4 KiB), which allows constant-time lookup in radix-tree/xarray.</li>
             </ul>
             <h4 id="dirty-pages-write-back-pipeline">Dirty Pages → Write-back Pipeline</h4>
             <p>Modifications to pages become "dirty" and are eventually written back to disk in optimized batches by the kernel’s write-back machinery.</p>
@@ -512,7 +511,7 @@ RAM phys addr 0x3f7e_0000
             </div>
             <ul>
                 <li>Dirty clustering (<code>writepages()</code>): adjacent dirty pages coalesced into single bio up to the device <code>queue_max_hw_sectors</code>.</li>
-                <li><strong>pdflush / bdi flusher</strong> wakes when <code>vm.dirty_ratio</code> or <code>dirty_expire_centisecs</code> thresholds fire.</li>
+                <li>Per-device (<strong>bdi</strong>) flusher workers, which replaced <code>pdflush</code> in Linux 2.6.32, start background writeback when dirty data exceeds <code>vm.dirty_background_ratio</code> or is older than <code>vm.dirty_expire_centisecs</code>; at <code>vm.dirty_ratio</code> writing processes are throttled.</li>
                 <li><code>sync</code>, <code>fsync</code>, <code>O_SYNC</code>, and journal commit barriers guarantee persistence semantics demanded by databases and userspace logs.</li>
             </ul>
             <h3 id="directory-hierarchy">Directory Hierarchy</h3>

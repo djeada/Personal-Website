@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/regression/multiple_regression",
             "description": "Multiple linear regression is a statistical technique used to model the relationship between a single dependent variable and two or more independent\u2026",
-            "dateModified": "2026-10-13",
+            "dateModified": "2026-10-25",
             "image": "https://adamdjellouli.com/resources/article-images/ee0c3bb1-ce28-4418-9bb9-def7d90f273e-737a8675bc.webp",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Multiple linear regression is a statistical technique used to model the relationship between a single dependent variable and two or more independent…" property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/ee0c3bb1-ce28-4418-9bb9-def7d90f273e-737a8675bc.webp" property="og:image" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -138,7 +137,11 @@ messageStyle: "none"
                             <li><a href="#solution-using-matrix-algebra">Solution Using Matrix Algebra</a></li>
                         </ol>
                     </li>
-                    <li><a href="#interpretation-of-coefficients">Interpretation of Coefficients</a></li>
+                    <li><a href="#interpretation-of-coefficients">Interpretation of Coefficients</a>
+                        <ol>
+                            <li><a href="#what-holding-the-other-predictors-fixed-means">What “holding the other predictors fixed” means</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#assessing-model-fit">Assessing Model Fit</a>
                         <ol>
                             <li><a href="#coefficient-of-determination-r-2">Coefficient of Determination ($R^2$)</a></li>
@@ -395,7 +398,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -444,10 +447,10 @@ messageStyle: "none"
             <h2 id="assumptions-of-the-model">Assumptions of the Model</h2>
             <p>For the multiple linear regression model to provide valid results, several key assumptions must be met:</p>
             <ol>
-                <li><strong>Linearity</strong> means that the relationship between the dependent variable and each independent variable is linear.</li>
+                <li><strong>Linearity in coefficients</strong> means the conditional mean is a linear combination of specified columns of the design matrix. Those columns may include transformations, indicators, or interactions, so the modeled response need not be a straight-line function of every original predictor.</li>
                 <li><strong>Independence</strong> assumes that the observations are independent of one another.</li>
                 <li><strong>Homoscedasticity</strong> ensures that the variance of the error terms remains constant across all levels of the independent variables.</li>
-                <li><strong>Zero-mean errors</strong> requires $E[\varepsilon_i \mid \mathbf{x}_i] = 0$, i.e. the errors are uncorrelated with the predictors.</li>
+                <li><strong>Conditional zero-mean errors</strong> requires $E[\boldsymbol\varepsilon\mid\mathbf X]=0$ for the usual fixed-design unbiasedness argument. This implies appropriate zero correlations when moments exist; zero correlation alone is a weaker condition and does not generally imply a correct conditional mean.</li>
                 <li><strong>Normality</strong> requires that the error terms are normally distributed; it is needed only for exact small-sample $t$ and $F$ inference, not for unbiasedness of OLS.</li>
                 <li>Finally, <strong>no perfect multicollinearity</strong> ensures that no predictor is an exact linear combination of the others (strong but imperfect collinearity is allowed, but inflates standard errors).</li>
             </ol>
@@ -472,11 +475,16 @@ messageStyle: "none"
                 <li>The matrix $\mathbf{X}^\top \mathbf{X}$ must be invertible.</li>
                 <li>This requires that the columns of $\mathbf{X}$ are linearly independent (no perfect multicollinearity).</li>
             </ul>
+            <p>The inverse formula expresses the mathematical solution. Numerical software usually solves least squares through a QR or singular-value decomposition rather than explicitly forming this inverse, which can worsen conditioning. A full-rank design identifies coefficients; positive residual degrees of freedom, $n&gt;p+1$, are additionally needed to estimate the usual error variance from SSE.</p>
             <h2 id="interpretation-of-coefficients">Interpretation of Coefficients</h2>
             <ul>
                 <li>The <strong>intercept ($\hat{\beta}_0$)</strong> represents the expected value of $y$ when all independent variables are zero.</li>
                 <li>The <strong>slope coefficients ($\hat{\beta}_j$)</strong> indicate the expected change in $y$ for a one-unit increase in $x_j$, while holding all other variables constant.</li>
             </ul>
+            <h3 id="what-holding-the-other-predictors-fixed-means">What “holding the other predictors fixed” means</h3>
+            <p>For an additive model without interactions, the partial slope can be computed by removing the other predictors' linear contributions first. Regress $x_j$ on the remaining design columns and retain residuals $r_{x_j}$. Regress $y$ on those same columns and retain $r_y$. Then</p>
+            <div>$$\hat\beta_j=\frac{r_{x_j}^{\top}r_y}{r_{x_j}^{\top}r_{x_j}}.$$</div>
+            <p>This is the Frisch-Waugh-Lovell identity. It explains the conditional comparison: the coefficient uses variation in $x_j$ left after its linear association with the other predictors is removed. If almost no such variation remains, the denominator is small and the slope can be imprecise. If none remains, the coefficient is unidentified. The identity describes adjustment within a model; it does not establish that confounding has been eliminated or that a feasible intervention can vary one predictor while fixing all others.</p>
             <h2 id="assessing-model-fit">Assessing Model Fit</h2>
             <h3 id="coefficient-of-determination-r-2">Coefficient of Determination ($R^2$)</h3>
             <p>$$
@@ -508,7 +516,7 @@ messageStyle: "none"
             </ul>
             <h3 id="testing-overall-model-significance">Testing Overall Model Significance</h3>
             <ul>
-                <li><strong>Null Hypothesis ($H_0$)</strong>: All $\beta_j = 0$</li>
+                <li><strong>Null Hypothesis ($H_0$)</strong>: All slope coefficients $\beta_1,\ldots,\beta_p=0$; the intercept remains free.</li>
                 <li><strong>Alternative Hypothesis ($H_a$)</strong>: At least one $\beta_j \neq 0$</li>
                 <li><strong>F-Statistic</strong>:</li>
             </ul>
@@ -529,6 +537,7 @@ messageStyle: "none"
                 <li>$R_j^2$ is the $R^2$ from regressing $x_j$ on the other predictors.</li>
                 <li>A VIF value greater than 5 or 10 is a common rule of thumb for problematic multicollinearity. With exactly two predictors, $R_j^2 = r_{x_1x_2}^2$.</li>
             </ul>
+            <p>Under homoscedastic errors, the conditional variance of a slope is $\sigma^2/[S_{x_jx_j}(1-R_j^2)]$. The VIF therefore compares it with the variance at the same predictor spread and error variance but zero linear predictability from the other predictors. It is a variance multiplier, not a bias measure. Removing a substantively necessary control merely to reduce VIF can change the target coefficient and introduce omitted-variable bias.</p>
             <h3 id="remedies">Remedies</h3>
             <ul>
                 <li><strong>Remove variables</strong> by excluding one of the correlated variables from the model.</li>
@@ -547,12 +556,14 @@ messageStyle: "none"
                 D = \frac{\sum_{i=2}^n (e_i - e_{i-1})^2}{\sum_{i=1}^n e_i^2}
                 $$</p>
             <p>Values close to 2 indicate no first-order autocorrelation ($D \approx 2(1-\hat\rho_1)$); values near 0 suggest positive and values near 4 negative autocorrelation.</p>
+            <p>The ordering of observations must be meaningful for this diagnostic, typically chronological. Reordering independent cross-sectional rows can change $D$ without changing the regression. A value near two does not rule out every form of dependence, and a formal Durbin-Watson test has assumptions beyond the descriptive formula, including restrictions involving lagged responses.</p>
             <h2 id="extensions">Extensions</h2>
             <h3 id="interaction-terms">Interaction Terms</h3>
             <p>Include products of independent variables to model interactions:</p>
             <p>$$
                 y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 (x_1 x_2) + \varepsilon
                 $$</p>
+            <p>Here the conditional slope for $x_1$ is $\beta_1+\beta_3x_2$. The coefficient $\beta_1$ alone describes that slope at $x_2=0$, not an effect constant across every value of $x_2$. Centering $x_2$ at a meaningful reference can make the main coefficient easier to interpret without changing the fitted interaction surface.</p>
             <h3 id="polynomial-regression">Polynomial Regression</h3>
             <p>Model non-linear relationships by including polynomial terms:</p>
             <p>$$
@@ -622,6 +633,7 @@ messageStyle: "none"
             <p>$$
                 y = \beta_0 + \gamma x_1
                 $$</p>
+            <p>Only the combination $\gamma$ is identified by these observations. For example, $(\beta_1,\beta_2)=(5,0)$ and $(3,4)$ both give $\gamma=5$ and identical fitted values wherever $x_2=x_1/2$. Predictions away from that line would differ, but the observed data provide no basis for choosing between them. A generalized inverse can select one coefficient vector; it cannot create the missing information.</p>
             <p>Now, we can proceed with a simple linear regression of $y$ on $x_1$.</p>
             <h3 id="step-by-step-calculation">Step-by-Step Calculation</h3>
             <h4 id="1-calculate-the-means">1. Calculate the Means</h4>
@@ -673,7 +685,7 @@ messageStyle: "none"
                 $$</p>
             <p>The predicted values match the actual test scores perfectly.</p>
             <p>Plot:</p>
-            <p><img alt="output(16)" decoding="async" height="902" loading="lazy" src="../../../resources/article-images/ee0c3bb1-ce28-4418-9bb9-def7d90f273e-737a8675bc.webp" width="960" /></p>
+            <p><img alt="Figure for 5. Verify the Model with the Data" decoding="async" height="902" loading="lazy" src="../../../resources/article-images/ee0c3bb1-ce28-4418-9bb9-def7d90f273e-737a8675bc.webp" width="960" /></p>
             <h2 id="example-no-perfect-multicollinearity">Example: No Perfect Multicollinearity</h2>
             <p>Suppose we have the following data on the number of hours studied ($x_1$), attendance rate ($x_2$) as a percentage, and test scores ($y$):</p>
             <table>
@@ -883,7 +895,7 @@ messageStyle: "none"
             <ul>
                 <li>The <strong>intercept ($\hat\beta_0 = 49.182$)</strong> represents the estimated test score when both hours studied and attendance rate are zero. While this value may not have practical significance, it is necessary for constructing the mathematical model.</li>
                 <li>The <strong>coefficient of $x_1$ ($\hat\beta_1 = 3.786$)</strong> suggests that for each additional hour studied, the test score increases by approximately 3.786 points, assuming the attendance rate remains constant.</li>
-                <li>The <strong>coefficient of $x_2$ ($\hat\beta_2 = 0.116$)</strong> indicates that for each 1% increase in attendance rate, the test score rises by approximately 0.116 points, holding hours studied constant.</li>
+                <li>The <strong>attendance coefficient ($\hat\beta_2\approx0.116$)</strong> associates a one-percentage-point attendance increase, such as 80% to 81%, with about 0.116 additional score points, holding study hours fixed. A relative 1% increase from 80% would be only 0.8 percentage point, so the distinction matters. These are fitted associations from five students, not established causal changes.</li>
             </ul>
             <h4 id="7-verify-the-model-with-the-data">7. Verify the Model with the Data</h4>
             <p>Compute the predicted test scores ($\hat{y}_i$) and residuals ($e_i = y_i - \hat{y}_i$).</p>
@@ -927,7 +939,7 @@ messageStyle: "none"
                 R^2 = 1 - \frac{1.835}{580} \approx 0.997, \qquad \text{Adjusted } R^2 = 1 - \frac{1.835/2}{580/4} \approx 0.994.
                 $$</p>
             <p>Plot:</p>
-            <p><img alt="output(17)" decoding="async" height="793" loading="lazy" src="../../../resources/article-images/4cd38537-ee4a-4c6c-b788-fa614394967c-8218e659d5.webp" width="960" /></p>
+            <p><img alt="Figure for 7. Verify the Model with the Data" decoding="async" height="793" loading="lazy" src="../../../resources/article-images/4cd38537-ee4a-4c6c-b788-fa614394967c-8218e659d5.webp" width="960" /></p>
             <h3 id="checking-for-multicollinearity">Checking for Multicollinearity</h3>
             <p>Compute the correlation coefficient between $x_1$ and $x_2$:</p>
             <p>$$

@@ -23,13 +23,12 @@
         })();
     </script>
     <title>Evaluation Metrics | Adam Djellouli</title>
-    <meta content="Evaluation metrics are essential tools for assessing the performance of statistical and machine learning models." name="description" />
+    <meta content="An evaluation metric turns predictions and observed outcomes into a numerical answer to a particular question." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -49,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics"
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics",
-            "description": "Evaluation metrics are essential tools for assessing the performance of statistical and machine learning models.",
-            "dateModified": "2026-10-13",
+            "description": "An evaluation metric turns predictions and observed outcomes into a numerical answer to a particular question.",
+            "dateModified": "2026-10-25",
             "image": "https://adamdjellouli.com/resources/article-images/aaf787b6-9b17-41cc-b1a6-54400b410e1b-faa25e520c.webp",
             "inLanguage": "en"
         }
@@ -59,9 +58,9 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/statistics_notes/resampling_and_model_assessment/metrics" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Evaluation metrics are essential tools for assessing the performance of statistical and machine learning models." property="og:description" />
+    <meta content="An evaluation metric turns predictions and observed outcomes into a numerical answer to a particular question." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/aaf787b6-9b17-41cc-b1a6-54400b410e1b-faa25e520c.webp" property="og:image" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -146,6 +145,7 @@ messageStyle: "none"
                                 </ol>
                             </li>
                             <li><a href="#precision-recall-curve-and-auc">Precision-Recall Curve and AUC</a></li>
+                            <li><a href="#probability-quality-log-loss-and-calibration">Probability Quality: Log Loss and Calibration</a></li>
                         </ol>
                     </li>
                     <li><a href="#regression-metrics">Regression Metrics</a>
@@ -361,7 +361,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -381,7 +381,7 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Evaluation Metrics</h1>
-            <p>Evaluation metrics are essential tools for assessing the performance of statistical and machine learning models. They provide quantitative measures that help us understand how well a model is performing and where improvements can be made. In both classification and regression tasks, selecting appropriate evaluation metrics is crucial for model selection, tuning, and validation.</p>
+            <p>An evaluation metric turns predictions and observed outcomes into a numerical answer to a particular question. Accuracy measures correct decisions at a threshold; AUC measures ordering; log loss measures probabilistic predictions; absolute and squared errors assign different costs to numerical misses. No single score answers all of these questions. Choose the target and evaluation sample before comparing models, and keep fitting, tuning, and final assessment separate.</p>
             <h2 id="classification-metrics">Classification Metrics</h2>
             <p>In classification tasks, the goal is to assign input data into predefined categories or classes. Evaluating classification models requires metrics that capture the correctness and reliability of the predictions.</p>
             <h3 id="confusion-matrix">Confusion Matrix</h3>
@@ -410,9 +410,10 @@ messageStyle: "none"
             <ul>
                 <li>A <strong>true positive (TP)</strong> occurs when the model correctly predicts a positive class.</li>
                 <li>A <strong>true negative (TN)</strong> happens when the model correctly predicts a negative class.</li>
-                <li>A <strong>false positive (FP)</strong> means the model incorrectly predicts a positive class, which is also known as a Type I error.</li>
-                <li>A <strong>false negative (FN)</strong> refers to the model incorrectly predicting a negative class, known as a Type II error.</li>
+                <li>A <strong>false positive (FP)</strong> is an actually negative case predicted positive.</li>
+                <li>A <strong>false negative (FN)</strong> is an actually positive case predicted negative.</li>
             </ul>
+            <p>These resemble Type I and Type II decisions when the negative state represents a null hypothesis, but classification counts are not themselves significance levels or test powers. The conditioning populations and decision procedures must be specified before transferring those inferential terms.</p>
             <h3 id="key-metrics-derived-from-the-confusion-matrix">Key Metrics Derived from the Confusion Matrix</h3>
             <h4 id="accuracy">Accuracy</h4>
             <p><strong>Accuracy</strong> measures the proportion of total correct predictions made by the model:</p>
@@ -425,7 +426,7 @@ messageStyle: "none"
             <p>$$
                 \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}
                 $$</p>
-            <p>High precision indicates a low rate of false positives.</p>
+            <p>High precision means a small fraction of predicted positives are false positives. Its complement, $FP/(TP+FP)$, differs from the false-positive rate $FP/(FP+TN)$, which conditions on actually negative cases. Precision can change when prevalence changes even if sensitivity and specificity stay constant.</p>
             <h4 id="recall-sensitivity-or-true-positive-rate">Recall (Sensitivity or True Positive Rate)</h4>
             <p><strong>Recall</strong> measures the model's ability to identify all actual positive cases:</p>
             <p>$$
@@ -438,6 +439,7 @@ messageStyle: "none"
                 \text{Specificity} = \frac{\text{TN}}{\text{TN} + \text{FP}}
                 $$</p>
             <p>High specificity indicates a low rate of false positives.</p>
+            <p>If the positive prevalence is $\pi$, sensitivity is $s$, and false-positive rate is $f$, then precision is $\pi s/[\pi s+(1-\pi)f]$. For example, sensitivity 0.9 and false-positive rate 0.1 give precision 0.9 in a balanced population, but only about 0.083 when prevalence is 0.01. This calculation explains why class balance and the evaluation population must accompany a precision score.</p>
             <h4 id="f1-score">F1 Score</h4>
             <p>The <strong>F1 Score</strong> is the harmonic mean of precision and recall, providing a balance between the two metrics:</p>
             <p>$$
@@ -521,14 +523,14 @@ messageStyle: "none"
                 $$</p>
             <p>The <strong>Area Under the ROC Curve (AUC-ROC)</strong> is a single scalar value summarizing the model's ability to discriminate between positive and negative classes. An AUC of:</p>
             <ul>
-                <li><strong>1.0</strong>: Perfect classifier.</li>
+                <li><strong>1.0</strong>: Perfect ranking on the evaluated cases; this does not imply calibrated probabilities or a suitable chosen threshold.</li>
                 <li><strong>0.5</strong>: No discriminative ability (equivalent to random guessing).</li>
                 <li><strong>Less than 0.5</strong>: Worse than random guessing (the scores may be inverted).</li>
             </ul>
             <h4 id="interpretation">Interpretation</h4>
             <ul>
                 <li>A higher AUC indicates better model performance.</li>
-                <li>The ROC curve helps in selecting the optimal threshold that balances sensitivity and specificity.</li>
+                <li>An ROC curve displays threshold trade-offs, but it does not identify an optimal threshold without costs, prevalence, or an operational constraint. For a score, AUC can be interpreted as $P(S_+&gt;S_-)+\tfrac12P(S_+=S_-)$, giving half credit to ties. It is a ranking property rather than a calibration measure.</li>
             </ul>
             <h3 id="precision-recall-curve-and-auc">Precision-Recall Curve and AUC</h3>
             <p>In cases of imbalanced datasets, the <strong>Precision-Recall (PR) curve</strong> is more informative than the ROC curve. It plots Precision against Recall for different thresholds.</p>
@@ -536,6 +538,12 @@ messageStyle: "none"
                 <li>The <strong>Area Under the PR Curve (AUC-PR)</strong> provides a summary metric that is sensitive to class imbalance. A no-skill classifier has an AUC-PR equal to the positive-class prevalence (not 0.5).</li>
                 <li>A higher area under the PR curve indicates better performance in identifying the positive class.</li>
             </ul>
+            <p>The prevalence baseline is a population-level reference for an uninformative ranking, rather than an exact finite-sample identity for every numerical integration convention. Average precision summarizes precision at recall increments, while trapezoidal PR area interpolates linearly between plotted points. They can produce different values from the same scores, so report the definition. Precision is undefined with no predicted positives, recall with no actual positives, and some AUC calculations require both classes. Any convention that replaces such undefined values should be stated.</p>
+            <h3 id="probability-quality-log-loss-and-calibration">Probability Quality: Log Loss and Calibration</h3>
+            <p>For binary outcomes $y_i$ and predicted probabilities $p_i$, log loss is</p>
+            <div>$$-\frac1n\sum_i\{y_i\log p_i+(1-y_i)\log(1-p_i)\}.$$</div>
+            <p>Lower values are better. A confidently wrong probability incurs a large loss; exact zero assigned to an observed event gives infinite loss. Numerical clipping prevents undefined floating-point operations but changes that boundary behavior and should use a documented convention. The Brier score, $n^{-1}\sum_i(y_i-p_i)^2$, is another probability loss.</p>
+            <p>Calibration asks whether events predicted near probability $p$ occur about fraction $p$ of the time. A model can rank cases well while systematically overstating all probabilities. AUC cannot detect every such distortion because monotonic score transformations preserve ranking. Threshold metrics also discard the distinction between, for example, probabilities 0.51 and 0.99 once both are classified positive.</p>
             <h2 id="regression-metrics">Regression Metrics</h2>
             <p>Evaluation metrics are crucial in assessing the performance of regression models, which predict a continuous outcome variable based on one or more predictor variables. These metrics quantify the discrepancy between the predicted values and the actual observed values, providing insights into the accuracy and reliability of the model.</p>
             <h3 id="evaluating-regression-models">Evaluating Regression Models</h3>
@@ -580,6 +588,7 @@ messageStyle: "none"
                 <li>MAE is robust to outliers compared to MSE because it does not square the errors.</li>
                 <li>It gives a straightforward measure of average error magnitude.</li>
             </ul>
+            <p>Absolute loss targets a conditional median: moving a proposed value slightly upward decreases loss for observations above it and increases loss for observations below it, so a median balances the two sides. Squared loss instead targets a conditional mean. The choice of metric therefore changes the best possible prediction, rather than merely changing the display units of one universal notion of accuracy.</p>
             <h4 id="mean-squared-error-mse">Mean Squared Error (MSE)</h4>
             <p><strong>Definition</strong>:</p>
             <p>The <strong>Mean Squared Error (MSE)</strong> measures the average of the squares of the errors—that is, the average squared difference between the estimated values and the actual value.</p>
@@ -661,7 +670,7 @@ messageStyle: "none"
             </ul>
             <p><strong>Interpretation</strong>:</p>
             <ul>
-                <li>Adjusted $R^2$ increases only if adding a predictor raises $R^2$ by more than would be expected from a pure-noise predictor (equivalently, if the new term has $|t|&gt;1$).</li>
+                <li>For nested OLS models on the same observations with an intercept, adding one coefficient increases adjusted $R^2$ exactly when its partial $F=t^2$ exceeds one. This is a model-comparison threshold, not proof that the predictor contains signal. More generally, the corresponding partial F for the added block must exceed one.</li>
                 <li>It can be negative and is not a substitute for out-of-sample validation.</li>
                 <li>It can be used for model selection, especially when comparing models with different numbers of predictors.</li>
             </ul>
@@ -788,6 +797,7 @@ messageStyle: "none"
                 <li>Perform <strong>residual analysis</strong> by examining residual plots to ensure assumptions of linearity, homoscedasticity (constant variance), and normality of errors are met.</li>
                 <li>Use <strong>adjusted $R^2$</strong> when comparing models with different numbers of predictors, as it accounts for model complexity.</li>
             </ul>
+            <p>When reporting multiclass classification metrics, specify how classes are aggregated. Macro averaging weights classes equally, micro averaging pools the underlying decisions, and support-weighted averaging weights classes by observed frequency. These answer different questions and can conceal different failures. For regression, $R^2$ is undefined when the evaluated outcomes have zero total variation; some software supplies a finite convenience value, which should not be mistaken for the literal ratio in the formula.</p>
         </article-section>
     </div>
     </main>

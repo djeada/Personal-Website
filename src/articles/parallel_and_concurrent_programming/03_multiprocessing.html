@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing",
             "description": "Multiprocessing runs work in several processes, each normally with its own virtual address space.",
-            "dateModified": "2026-10-18",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Multiprocessing runs work in several processes, each normally with its own virtual address space." property="og:description" />
-    <meta content="2026-10-18" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -191,7 +190,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 18, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -695,7 +694,7 @@ signal(sem);        // release slot (increment counter)</code></pre>
                 <li><code>m</code> (a binary semaphore) enforces mutual exclusion on the buffer itself.</li>
             </ul>
             <div>
-                <pre><code class="language-pseudo">sem empty = N;   // free slots available
+                <pre><code class="language-plaintext">sem empty = N;   // free slots available
 sem full  = 0;   // items available
 sem m     = 1;   // mutex for buffer
 
@@ -716,7 +715,7 @@ signal(full)               signal(empty)  // update counters</code></pre>
             </ul>
             <p><strong>Bounded Buffer example (producer/consumer):</strong></p>
             <div>
-                <pre><code class="language-pseudo">monitor BoundedQ {
+                <pre><code class="language-plaintext">monitor BoundedQ {
   queue q; int cap;
   cond not_full, not_empty;
 
@@ -741,7 +740,7 @@ signal(full)               signal(empty)  // update counters</code></pre>
                 <li>In this simple version, <em>readers are favored</em>: many readers can “pile in” and delay a waiting writer.</li>
             </ul>
             <div>
-                <pre><code class="language-pseudo">rw_lock:
+                <pre><code class="language-plaintext">rw_lock:
   read_lock():
     lock(rmutex)
     readers += 1
@@ -807,7 +806,7 @@ Producers→|   QUEUE   |← shared
             <p><strong>“Power of Two Choices” (low-cost balancing)</strong></p>
             <p>Instead of checking <strong>all workers</strong>, each task just samples <strong>two random workers</strong> and goes to the one with the shorter queue.</p>
             <p>$$
-                \text{Assign}(T) = \arg\min{Q(A), Q(B)}
+                \text{Assign}(T) = \arg\min\{Q(A), Q(B)\}
                 $$</p>
             <p>This tiny bit of choice dramatically reduces the maximum queue length compared to pure random assignment.</p>
             <div>
@@ -922,7 +921,9 @@ key→hash(key) -&gt; next node clockwise</code></pre>
             </div>
             <p><em>Fix (pad or align to cache line, e.g. 64B):</em></p>
             <div>
-                <pre><code class="language-c">struct Counters { 
+                <pre><code class="language-c">#include &lt;stdalign.h&gt;  // C11: alignas macro (a keyword in C23 and C++)
+
+struct Counters { 
     alignas(64) int a; 
     alignas(64) int b;  // each on its own cache line
 };</code></pre>
@@ -1251,184 +1252,137 @@ key→hash(key) -&gt; next node clockwise</code></pre>
             </table>
             <h3 id="examples">Examples</h3>
             <h4 id="examples-in-c">Examples in C++</h4>
-            <p>In C++, process creation and management are provided mainly by operating-system APIs rather than by a standard C++ process class. Processes normally have separate virtual address spaces and resources. Unlike threads in one process, they do not share ordinary application memory by default, so IPC or explicitly shared memory is required to exchange data.</p>
-            <h5>Creating Processes</h5>
-            <p>To create a new process, the operating system provides specific APIs. On POSIX-compliant systems like Linux, the <code>fork()</code> system call is commonly used. The <code>fork()</code> call creates a new process by duplicating the calling process. The new process, called the child process, runs concurrently with the parent process.</p>
+            <p>The C++ examples use <strong>C++20 with POSIX APIs</strong>. Modern C++ does not provide a
+                standard process class or make an ordinary <code>std::mutex</code>, <code>std::semaphore</code>, or
+                <code>std::barrier</code> process-shared. Keep the platform API that fits the problem and
+                use scoped C++ ownership around its resources. See the
+                <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/README.md">C++ guide</a>.
+            </p>
+            <h5>Choose a Process API by the Work</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Problem</th>
+                        <th>Starting point</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Launch another executable</td>
+                        <td><code>posix_spawnp</code> with explicit file actions</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/spawn_process.cpp">spawn_process.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Study fork/exec and descriptor inheritance</td>
+                        <td>Checked <code>fork</code>, <code>dup2</code>, and <code>execvp</code></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/exec_process.cpp">exec_process.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Run a few isolated child tasks</td>
+                        <td>Scoped child group and checked child statuses</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/basic_process.cpp">basic_process.cpp</a>, <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/multiple_processes.cpp">multiple_processes.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Reuse a fixed number of worker processes</td>
+                        <td>Persistent workers, task pipes, result IPC, bounded in-flight work</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_pool.cpp">process_pool.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Exchange a byte stream</td>
+                        <td>Owned pipe endpoints and complete-record reads/writes</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/pipe_communication.cpp">pipe_communication.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Exchange messages</td>
+                        <td>POSIX message queue with exclusive creation and checked transfer sizes</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/message_queue.cpp">message_queue.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Share mutable data</td>
+                        <td>Shared mapping plus a process-shared synchronization primitive</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/shared_memory.cpp">shared_memory.cpp</a>, <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_mutex.cpp">process_mutex.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Limit concurrent resource use</td>
+                        <td>POSIX semaphore with scoped permit ownership</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_semaphore.cpp">process_semaphore.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Coordinate phases across processes</td>
+                        <td><code>pthread_barrier_t</code> in shared memory with <code>PTHREAD_PROCESS_SHARED</code></td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_barrier.cpp">process_barrier.cpp</a></td>
+                    </tr>
+                    <tr>
+                        <td>Coordinate file writes</td>
+                        <td>Scoped advisory file lock and complete record writes</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_manager.cpp">process_manager.cpp</a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>posix_spawnp</code> combines program creation and execution without a custom C++ child
+                branch. Use it when launching an existing program. The fork examples illustrate
+                work in a child of a <strong>single-threaded parent</strong>. After a fork in a multithreaded
+                process, the child may call only async-signal-safe functions until an exec; a
+                copied mutex can otherwise remain locked by a thread that no longer exists in
+                the child. See the <a href="https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawn.html">POSIX process-creation specification</a>.</p>
+            <h5>Own Resources and Completion</h5>
+            <p>The examples share small owners in
+                <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/common/posix.hpp">posix.hpp</a>: <code>UniqueFd</code>, <code>Pipe</code>, <code>Mapping</code>,
+                <code>SharedObject&lt;T&gt;</code>, <code>Semaphore</code>, <code>TemporaryDirectory</code>, and <code>ChildGroup</code>. The
+                underlying POSIX calls remain visible so the resource rules can be studied.
+            </p>
+            <p>Construct shared mappings and synchronization objects before child owners.
+                Wait for the children before destroying that shared state. <code>ChildGroup</code> tracks
+                only successfully created children, retries interrupted waits, and checks exit
+                statuses. During a parent exception it terminates and reaps children already
+                started, including workers blocked during an incomplete barrier startup.</p>
+            <p><code>_exit</code> in a forked child skips inherited parent destructors and exit handlers.
+                Finish local scoped work and flush intended output before using it. File
+                descriptors and mappings inherited by a process are released by the operating
+                system when that process exits.</p>
+            <h5>Pipes, Results, and Backpressure</h5>
+            <p>A pipe is a byte stream: a read or write may transfer fewer bytes than requested.
+                The examples use <code>std::span</code> byte views with <code>read_exact</code> and <code>write_all</code>, retry
+                <code>EINTR</code>, and distinguish clean EOF from a truncated record. Close unused
+                endpoints promptly; retaining a write end can prevent the reader from seeing EOF.
+            </p>
+            <p>The process pool reuses workers for multiple tasks, limits in-flight work, and
+                returns full results through a result pipe. Exit codes indicate success or
+                failure; they are not a general result transport and cannot carry arbitrary
+                integers. Its native integer records are a local-machine teaching protocol;
+                network protocols need an agreed byte order and format.</p>
+            <h5>Shared Memory and Process Synchronization</h5>
+            <p>Shared memory shares bytes, not safe concurrent access. The mutex example puts
+                <code>pthread_mutex_t</code> in a shared mapping and initializes it with
+                <code>PTHREAD_PROCESS_SHARED</code>. The barrier uses the matching process-shared platform
+                primitive. POSIX semaphore handles are inherited across the example's forks,
+                and scoped guards release permits when local work ends.
+            </p>
+            <p>Named shared-memory objects and semaphores are created exclusively with private
+                permissions and unlinked after opening, while existing handles remain usable.
+                FIFO and file-manager demos use private temporary directories. Concurrent runs
+                therefore do not reuse or delete one another's resources. For unrelated FIFO
+                processes, pass the same explicit path to both reader and writer modes.</p>
+            <h5>Low-Level Observations and Intentional Failures</h5>
+            <p><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/signals.cpp">signals.cpp</a> teaches signal delivery and
+                safe child reaping; <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/orphan_process.cpp">orphan_process.cpp</a>
+                intentionally lets its parent exit first to observe reparenting. These are
+                platform/lifecycle studies rather than the recommended worker-ownership model.
+                Files named <code>_antipattern.cpp</code> deliberately demonstrate failures; compare their
+                behavior with the scoped, synchronized examples above.</p>
+            <h5>Build and Run</h5>
+            <p>From the repository root:</p>
             <div>
-                <pre><code class="language-cpp">#include &lt;iostream&gt;
-#include &lt;unistd.h&gt;
+                <pre><code class="language-bash">g++ -std=c++20 -pthread src/cpp/multiprocessing/spawn_process.cpp -o /tmp/spawn_process
+/tmp/spawn_process
 
-int main() {
-    pid_t pid = fork();
-    
-    if (pid == 0) {
-        // Child process
-        std::cout &lt;&lt; "Hello from the child process!" &lt;&lt; std::endl;
-    } else if (pid &gt; 0) {
-        // Parent process
-        std::cout &lt;&lt; "Hello from the parent process!" &lt;&lt; std::endl;
-    } else {
-        // Fork failed
-        std::cerr &lt;&lt; "Fork failed!" &lt;&lt; std::endl;
-        return 1;
-    }
-    
-    return 0;
-}</code></pre>
+g++ -std=c++20 -pthread src/cpp/multiprocessing/process_pool.cpp -o /tmp/process_pool
+/tmp/process_pool</code></pre>
             </div>
-            <p>In this example, <code>fork()</code> creates a new process. The return value in the child process is <code>0</code>, while in the parent process, it is the PID of the child.</p>
-            <h5>Process Termination</h5>
-            <p>A process can terminate normally with <code>exit()</code> or by returning from <code>main()</code>. A parent can wait for a child with <code>wait()</code> or <code>waitpid()</code> and then inspect the returned status to determine how the child exited.</p>
-            <div>
-                <pre><code class="language-cpp">#include &lt;cstdlib&gt;
-#include &lt;iostream&gt;
-#include &lt;sys/wait.h&gt;
-#include &lt;unistd.h&gt;
-
-int main() {
-    pid_t pid = fork();
-
-    if (pid == 0) {
-        std::cout &lt;&lt; "Child process terminating." &lt;&lt; std::endl;
-        std::exit(0);
-    } else if (pid &gt; 0) {
-        int status;
-        waitpid(pid, &amp;status, 0);
-        if (WIFEXITED(status)) {
-            std::cout &lt;&lt; "Child process exited with code "
-                      &lt;&lt; WEXITSTATUS(status) &lt;&lt; std::endl;
-        }
-    } else {
-        std::cerr &lt;&lt; "Fork failed!" &lt;&lt; std::endl;
-        return 1;
-    }
-
-    return 0;
-}</code></pre>
-            </div>
-            <p>Here, the parent waits for the child and uses the wait-status macros to obtain the child's normal exit code.</p>
-            <h5>Inter-Process Communication (IPC)</h5>
-            <p>Processes can communicate with each other using IPC mechanisms, such as pipes, message queues, shared memory, and sockets. Pipes are a simple and commonly used IPC method for one-way communication between processes.</p>
-            <div>
-                <pre><code class="language-cpp">#include &lt;iostream&gt;
-#include &lt;cstring&gt;
-#include &lt;unistd.h&gt;
-
-int main() {
-    int pipefd[2];
-    pipe(pipefd);
-    
-    pid_t pid = fork();
-    
-    if (pid == 0) {
-        // Child process
-        close(pipefd[1]); // Close write end
-        char buffer[128];
-        read(pipefd[0], buffer, sizeof(buffer));
-        std::cout &lt;&lt; "Child received: " &lt;&lt; buffer &lt;&lt; std::endl;
-        close(pipefd[0]);
-    } else {
-        // Parent process
-        close(pipefd[0]); // Close read end
-        const char* message = "Hello from parent";
-        write(pipefd[1], message, strlen(message) + 1);
-        close(pipefd[1]);
-    }
-    
-    return 0;
-}</code></pre>
-            </div>
-            <p>In this example, a pipe is used for communication between the parent and child processes. The parent writes a message to the pipe, and the child reads it.</p>
-            <h5>Shared Memory</h5>
-            <p>Shared memory maps the same region into multiple processes, providing a fast way to exchange data without copying it through a pipe or socket. Concurrent access still requires synchronization when operations can conflict.</p>
-            <div>
-                <pre><code class="language-cpp">#include &lt;iostream&gt;
-#include &lt;sys/mman.h&gt;
-#include &lt;sys/wait.h&gt;
-#include &lt;unistd.h&gt;
-#include &lt;cstring&gt;
-
-int main() {
-    const int SIZE = 4096;
-    void* shared_memory = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    pid_t pid = fork();
-    
-    if (pid == 0) {
-        // Child process
-        std::strcpy(static_cast&lt;char*&gt;(shared_memory), "Shared memory message");
-        munmap(shared_memory, SIZE);
-    } else {
-        // Parent process
-        wait(nullptr);
-        std::cout &lt;&lt; "Parent received: " &lt;&lt; static_cast&lt;char*&gt;(shared_memory) &lt;&lt; std::endl;
-        munmap(shared_memory, SIZE);
-    }
-    
-    return 0;
-}</code></pre>
-            </div>
-            <p>Here, <code>mmap</code> is used to create a shared memory region accessible by both the parent and child processes.</p>
-            <h5>Process Synchronization</h5>
-            <p>Processes can be synchronized with primitives such as semaphores or process-shared mutexes. The following example uses a POSIX semaphore to signal that data in shared memory is ready to be read.</p>
-            <div>
-                <pre><code class="language-cpp">#include &lt;cstring&gt;
-#include &lt;iostream&gt;
-#include &lt;semaphore.h&gt;
-#include &lt;sys/mman.h&gt;
-#include &lt;sys/wait.h&gt;
-#include &lt;unistd.h&gt;
-
-int main() {
-    const int SIZE = 4096;
-
-    void* shared_memory = mmap(
-        nullptr, SIZE, PROT_READ | PROT_WRITE,
-        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-    sem_t* sem = static_cast&lt;sem_t*&gt;(mmap(
-        nullptr, sizeof(sem_t), PROT_READ | PROT_WRITE,
-        MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-
-    sem_init(sem, 1, 0); // Shared between processes; initially not signaled
-
-    pid_t pid = fork();
-
-    if (pid == 0) {
-        // Child process: produce data, then signal the parent.
-        std::strcpy(static_cast&lt;char*&gt;(shared_memory),
-                    "Child writes to shared memory");
-        sem_post(sem);
-
-        munmap(shared_memory, SIZE);
-        munmap(sem, sizeof(sem_t));
-        return 0;
-    }
-
-    if (pid &gt; 0) {
-        // Parent process: wait until the child has produced the data.
-        sem_wait(sem);
-        std::cout &lt;&lt; "Parent reads: "
-                  &lt;&lt; static_cast&lt;char*&gt;(shared_memory) &lt;&lt; std::endl;
-
-        waitpid(pid, nullptr, 0);
-        sem_destroy(sem);
-        munmap(shared_memory, SIZE);
-        munmap(sem, sizeof(sem_t));
-        return 0;
-    }
-
-    std::cerr &lt;&lt; "Fork failed!" &lt;&lt; std::endl;
-    return 1;
-}</code></pre>
-            </div>
-            <p>Here, the semaphore provides ordering: the parent blocks until the child has written the shared data and signaled that it is ready.</p>
-            <h5>Performance Considerations and Best Practices</h5>
-            <ul>
-                <li>Creating processes is generally more expensive than creating threads due to the need to allocate separate memory and resources. Minimize process creation by reusing processes when possible.</li>
-                <li>IPC mechanisms like pipes and shared memory involve overhead. Use the most efficient IPC method for the task at hand and minimize the amount of data transferred.</li>
-                <li>Ensure that IPC and synchronization mechanisms are used correctly to avoid deadlocks, where two or more processes are waiting indefinitely for each other.</li>
-                <li>Properly manage resources such as file descriptors and shared memory to avoid resource leaks and ensure that resources are cleaned up when no longer needed.</li>
-            </ul>
+            <p>The shared headers are part of the examples; retain the <code>src/cpp/common/</code>
+                directory when copying or building them. These examples require a compatible
+                POSIX system, including support for the selected process-shared primitive.</p>
             <table>
                 <thead>
                     <tr>
@@ -1442,6 +1396,16 @@ int main() {
                         <td>1</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/basic_process.cpp">basic_process.cpp</a></td>
                         <td>Create and start a basic process</td>
+                    </tr>
+                    <tr>
+                        <td>—</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/spawn_process.cpp">spawn_process.cpp</a></td>
+                        <td>Preferred external-program launch with posix_spawnp and owned output pipe</td>
+                    </tr>
+                    <tr>
+                        <td>—</td>
+                        <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/exec_process.cpp">exec_process.cpp</a></td>
+                        <td>Low-level fork/exec comparison with explicit descriptor redirection</td>
                     </tr>
                     <tr>
                         <td>2</td>
@@ -1476,7 +1440,7 @@ int main() {
                     <tr>
                         <td>8</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_pool.cpp">process_pool.cpp</a></td>
-                        <td>Use a process pool to manage concurrent tasks</td>
+                        <td>Reuse persistent workers, bound in-flight work, and return results through pipes</td>
                     </tr>
                     <tr>
                         <td>9</td>
@@ -1501,7 +1465,7 @@ int main() {
                     <tr>
                         <td>13</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/multiprocessing/process_manager.cpp">process_manager.cpp</a></td>
-                        <td>Manager/worker pattern with fcntl file locking for safe concurrent appends</td>
+                        <td>Scoped fcntl locks and private temporary output for concurrent worker appends</td>
                     </tr>
                     <tr>
                         <td>14</td>
@@ -1684,7 +1648,7 @@ if __name__ == '__main__':
                     <tr>
                         <td>4</td>
                         <td><a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/python/multiprocessing/process_pool.py">process_pool.py</a></td>
-                        <td>Use a process pool to manage concurrent tasks</td>
+                        <td>Reuse persistent workers, bound in-flight work, and return results through pipes</td>
                     </tr>
                     <tr>
                         <td>5</td>

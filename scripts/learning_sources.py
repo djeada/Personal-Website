@@ -71,9 +71,9 @@ class Category:
     sources: Tuple[Source, ...]
     math: bool = False
     language: str = "en"
-    # Language Prism uses for inline code when a subject is about one language.
+
     code_language: Optional[str] = None
-    # Short ASCII/Latin-1 mark shown on the subject tile, e.g. ">_" for Linux.
+
     glyph: str = ""
 
     def to_dict(self, **extra: Any) -> Dict[str, Any]:
@@ -177,10 +177,6 @@ class SourceLoader:
         response.raise_for_status()
         return response.text
 
-
-# --------------------------------------------------------------------------
-# Markdown rendering
-# --------------------------------------------------------------------------
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 LIST_ITEM = re.compile(r"^\s*(?:[*+-]|\d+[.)])\s+\S")
@@ -320,11 +316,6 @@ def render_markdown(
         if single and "<p>" not in single.group(1):
             html = single.group(1)
     return html.strip()
-
-
-# --------------------------------------------------------------------------
-# Small helpers
-# --------------------------------------------------------------------------
 
 
 def slugify(text: str) -> str:

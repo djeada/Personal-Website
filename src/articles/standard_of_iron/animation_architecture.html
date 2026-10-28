@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/animation_architecture",
             "description": "How a creature in Standard of Iron goes from \"this unit is attacking\" to moving geometry on screen \u2014 and why it is fast enough to do for thousands of\u2026",
-            "dateModified": "2026-10-09",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content='How a creature in Standard of Iron goes from "this unit is attacking" to moving geometry on screen — and why it is fast enough to do for thousands of…' property="og:description" />
-    <meta content="2026-10-09" property="article:modified_time" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -160,6 +159,7 @@
                             <li><a href="#continuous-swing-arcs">Continuous swing arcs</a></li>
                             <li><a href="#arm-ik-and-reach-limits">Arm IK and reach limits</a></li>
                             <li><a href="#weapon-orientation">Weapon orientation</a></li>
+                            <li><a href="#clips-follow-the-weapon-in-hand">Clips follow the weapon in hand</a></li>
                             <li><a href="#root-motion-and-hit-reactions">Root motion and hit reactions</a></li>
                         </ol>
                     </li>
@@ -240,7 +240,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 09, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -637,6 +637,18 @@ contact_time = k_melee_contact_fraction * cooldown</code></pre>
             <p>A weapon is a static attachment welded to the <code>HandR</code> bone (<code>sword_make_static_attachment</code>), which means its direction in the world is entirely the hand bone's Y axis. The hand bone takes that axis from <code>pose.grip_axis_r</code>, and nothing set it for sword clips — so through every RTS sword swing the blade pointed at the sky and only the arm moved.</p>
             <p><code>resolve_sword_pose()</code> now authors a blade direction alongside each hand key (guard → chambered behind the shoulder → apex → through the cut → follow-through → guard) and <code>aim_held_weapon()</code> converts it into the grip axis. <code>k_sword_blade_axis_in_grip</code> in <code>sword_renderer.h</code> is the single definition of where the blade sits in the grip frame; the static attachment, the runtime renderer and the bake-time aim all read it. The three infantry sword variants are a right-to-left cut, its mirror, and an overhead chop, and they now look like three different attacks.</p>
             <p>The infantry spear thrust had the same shape of problem in a different place: <code>resolve_infantry_spear_thrust_pose()</code> ignored <code>inputs.variant</code> entirely, so <code>attack_spear_a/b/c</code> baked byte-identical clips. It now offsets hand height, crouch, shaft pitch and reach per variant — a level thrust, a low one, and one over the shield rim.</p>
+            <h3 id="clips-follow-the-weapon-in-hand">Clips follow the weapon in hand</h3>
+            <p>Which melee clips a humanoid plays is decided by what it is holding, through <code>HumanoidAnimationManifest::melee_clip_for_variant</code> (or the single <code>melee_clip_override</code>) in <code>apply_role_specific_combat_clip</code>:</p>
+            <ul>
+                <li><strong>Bow in hand (archers and archer commanders).</strong> <code>Animation::humanoid_archer_melee_clip(attack_variant)</code> cycles three bow strikes: <code>archer_melee</code> (the bow held across both fists and rammed forward at face height), <code>archer_melee_sweep</code> (bow cocked over the right shoulder and swept across the body by its upper limb) and <code>archer_melee_chop</code> (bow raised overhead and chopped down in front). <code>resolve_bow_melee_pose()</code> authors a bow direction with every hand key and <code>bow_melee_strike()</code> aims it with <code>k_baked_bow_axis</code>; the offhand rides the lower limb. Before this there was one clip, the bow kept whatever grip axis the guard left it with, and an archer in melee read as a man pushing at the air. The sweep and the chop are appended at the end of the clip table (101, 102) rather than next to <code>archer_melee</code> (36), because inserting would renumber every later hand-maintained clip index; the selector names the three ids instead of adding the variant to a base.</li>
+                <li><strong>No weapon (builders, healers).</strong> <code>humanoid_unarmed_melee_clip()</code> cycles <code>unarmed_jab/cross/hook</code>. Builders reach the same clips through their variant table. Healers had no rule at all and swung the empty-handed infantry sword clips (<code>attack_sword_b/c</code>, measured in the <code>unarmed_support_brawl</code> arena scenario). Archers never use the fist clips.</li>
+                <li><strong>Sword in hand.</strong> No override; the sword clips play, including the commander's authored <code>rpg_sword_*</code> combo.</li>
+            </ul>
+            <p>Archer commanders (Marcellus, Hasdrubal Barca, Hanno Bomilcar) carry only a bow, so they fight in melee with it in every stance. Their blade-stance combo still runs on the <code>RpgSword*</code> actions (the simulation owns its timing and reach), and <code>apply_role_specific_combat_clip</code> maps each combo step onto a bow strike: slash left is the sweep, slash right and the overhead are the chop, the thrust and the finisher are the ram, each played on the action's own timeline (<code>authored_action_phase</code>). Before, every step resolved to <code>archer_melee(0)</code>, so a three-hit combo was the same ram three times. An earlier attempt gave these commanders a sidearm sword and swapped it into the bow's slot in blade stance; it was removed, because a bowman who fights with a sword he does not carry reads as wrong ("the archer fights in melee with a sword, not with his bow"). Do not add a second weapon to make a combo read: map the combo onto clips for the weapon in hand.</p>
+            <p>Every commander's three sources of truth have to agree: the weapon on his model (<code>unit_equipment_loadouts.json</code>), the renderer he is registered under (swordsman, spearman or archer) and his body troop type, whose spawn type picks the simulation's attack family and therefore his action set. Today there are seven sword commanders (Scipio Africanus, Hannibal, Sempronius, Varro, the elder Scipio, Mago, Hasdrubal the cavalry commander), six spear commanders (Fabius, Hanno the Great, Flaminius, Paullus, Maharbal, Masinissa) and three bow commanders. <code>HumanoidPrepare.EveryCommanderFightsWithTheWeaponHeCarries</code> walks the playable and historical rosters, in both nations' bodies, through every action <code>resolve_commander_action</code> can pick, the signature strike and the plain RTS melee swing, as player and as AI, and checks the clip that reaches the body request belongs to the weapon in his hand. Disabling the bow-strike mapping turns it red for exactly the three bow commanders.</p>
+            <p>A unit in hold mode keeps its stance through an attack only if the attack clip is itself a held pose. Archers firing from hold now play <code>hold_bow_attack</code> (the kneeling draw); before, <code>preserve_base_stance</code> swapped every held shot for the static <code>hold_bow</code> kneel (<code>archer_melee_lock</code>: every shot sample on clip 9). Archers locked in melee rise out of the kneel and fight standing (<code>fights_standing_in_melee</code> in <code>animation_inputs.cpp</code>), where they used to stay frozen in the same kneel for the whole fight. Held spears keep the braced pose.</p>
+            <p>The bow draw (<code>resolve_humanoid_bow_draw_pose</code>) is shaped to read from behind the shooter, which is where the commander's chase camera sits. The old draw kept both hands in front of the chest and moved the string hand 0.29 m toward the sternum, so from behind nothing moved. The draw now nocks low, raises the bow to eye height, pulls the string hand 0.40 m back to the cheek with the elbow lifted up and back (<code>string_elbow_pole</code>, solved with <code>solve_arm_ik</code>), and the release throws the hand back past the ear. The phase windows did not move (nock 0-0.20, draw 0.20-0.50, release 0.50-0.58), so the markers, the archers' release timing and the commander's full-draw hold at the release gate (phase 0.46) still line up.</p>
+            <p>None of this reaches the simulation. <code>weapon_trace_baked.cpp</code> samples the sword and spear clips of <code>humanoid_sword.bpat</code> and <code>humanoid_spear.bpat</code>; the bow and archer-melee clips are not read, and a re-bake leaves every clip the simulation reads byte-identical.</p>
             <h3 id="root-motion-and-hit-reactions">Root motion and hit reactions</h3>
             <p>Everything above picks a clip and a phase; the model matrix is built from the transform alone. That left a melee fight looking like two men tapping each other with spoons — the arms moved and nothing else did. Two pieces now move the root, both resolved by <code>Animation::resolve_combat_root_motion</code> (<code>animation/combat_root_motion_manifest.cpp</code>) and applied in <code>render/humanoid/runtime/instance_prepare.cpp</code> after the model has been grounded:</p>
             <ul>

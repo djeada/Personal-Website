@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/frontend_notes/10_testing",
             "description": "A frontend is not finished when its first demonstration works.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-23",
             "image": "https://adamdjellouli.com/resources/article-images/shipping-before-846caca34a.webp",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A frontend is not finished when its first demonstration works." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/shipping-before-846caca34a.webp" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-23" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -141,7 +140,11 @@
                     </li>
                     <li><a href="#6-visual-regression-did-an-important-appearance-change">6. Visual regression: did an important appearance change?</a></li>
                     <li><a href="#7-accessibility-exploration-security-and-performance">7. Accessibility, exploration, security, and performance</a></li>
-                    <li><a href="#8-deliberately-introduce-a-regression-and-locate-it">8. Deliberately introduce a regression—and locate it</a></li>
+                    <li><a href="#8-deliberately-introduce-a-regression-and-locate-it">8. Deliberately introduce a regression—and locate it</a>
+                        <ol>
+                            <li><a href="#different-philosophies-about-where-confidence-comes-from">Different philosophies about where confidence comes from</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#9-selecting-modern-testing-tools-for-an-existing-application">9. Selecting modern testing tools for an existing application</a></li>
                     <li><a href="#10-make-tests-part-of-development-and-deployment">10. Make tests part of development and deployment</a>
                         <ol>
@@ -173,7 +176,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 23, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -420,6 +423,11 @@ test('free shipping survives a quantity change', async ({ page }) =&gt; {
             <p>Run <code>npm run test:unit</code>: the free-shipping case for three notebooks fails near the source of the bug. Run the API suite and then <code>npm run test:e2e</code>: the wrong rule also changes the JSON response and the amount displayed to a visitor. The three failures represent <strong>one defect at three boundaries</strong>, not three independent defects. Revert the change and rerun. Do not weaken the expectation merely to make the suite green.</p>
             <p>If <strong>only the unit test</strong> fails, inspect the function and test fixture. If the unit test passes but <strong>the API test</strong> fails, inspect request validation, routing, and serialization. If both pass but <strong>the browser test</strong> fails, inspect the request, UI state transitions, selectors, and rendering. This diagnostic sequence is why layering matters; a single large E2E test tells you a workflow is broken but often cannot tell you where.</p>
             <p>When you discover a genuine bug, first write a test that reproduces the failure, confirm that it fails for the expected reason, fix the product, and keep the test. For a requirement that has changed intentionally, update the contract and tests <em>with the product decision</em> and review the resulting diff. Tests are executable agreements, not untouchable historical accidents.</p>
+            <h3 id="different-philosophies-about-where-confidence-comes-from">Different philosophies about where confidence comes from</h3>
+            <p>The <strong>test pyramid</strong> favors many small, fast checks and fewer broad journeys, partly to control feedback time and maintenance. The <strong>testing trophy</strong> gives integration tests more weight so that checks exercise cooperating parts. Read the original discussions of the <a href="https://martinfowler.com/bliki/TestPyramid.html">pyramid</a> and <a href="https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications">trophy</a> as tradeoff models, not mandatory percentages. Neither replaced the need for judgment about your application's failures.</p>
+            <p>The shipping estimator illustrates the tension. Many generated price combinations are cheap to verify as unit tests; only testing arithmetic misses a broken request or an unusable form. Driving every price combination through a browser adds time and more failure points without necessarily adding useful confidence. Put a rule's detailed boundaries near the rule, and use broader checks to verify the connections that matter.</p>
+            <p><a href="https://testing-library.com/docs/guiding-principles/">Testing Library's principles</a> emphasize observable DOM behavior over component instances. A test that inspects private component state can fail after a class-to-function refactor even when the visitor's experience is unchanged. Conversely, a DOM-only test cannot establish real layout behavior. Choose the observation boundary according to the failure you need to detect.</p>
+            <p><strong>Maintenance lesson:</strong> if a test fails intermittently, investigate shared state, uncontrolled time, network dependencies, and ambiguous selectors. A retry can collect evidence, but passing on the third attempt does not explain the defect. <a href="https://playwright.dev/docs/best-practices">Playwright's recommendations</a> cover isolation, user-facing locators, and retrying assertions. When changing runners, preserve important assertions and compare behavior; a green suite with fewer meaningful checks is not a successful migration.</p>
             <h2 id="9-selecting-modern-testing-tools-for-an-existing-application">9. Selecting modern testing tools for an existing application</h2>
             <p>Choose tools by <strong>which boundary you need to observe, your existing stack, and maintenance costs</strong>, not a popularity claim. A runner discovers tests, an assertion library expresses expectations, a DOM/component helper renders or queries components, a request mock controls a dependency, and a browser driver performs genuine browser interactions. Some packages combine roles. This guide uses <code>node:test</code> and Playwright because they match its small Node server and browser workflow, not because every project should copy the stack.</p>
             <p>The following are <strong>documented public examples as of September 2026</strong>, not evidence of an organization's undisclosed internal tooling or market share:</p>

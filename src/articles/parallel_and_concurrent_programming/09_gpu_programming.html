@@ -23,13 +23,12 @@
         })();
     </script>
     <title>GPU Programming | Adam Djellouli</title>
-    <meta content="GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel." name="description" />
+    <meta content="The CUDA and OpenCL listings in this chapter are platform API and kernel mechanics, separate from the C++20 application examples." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -49,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming"
             },
             "url": "https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming",
-            "description": "GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel.",
-            "dateModified": "2026-10-12",
+            "description": "The CUDA and OpenCL listings in this chapter are platform API and kernel mechanics, separate from the C++20 application examples.",
+            "dateModified": "2026-10-28",
             "inLanguage": "en"
         }
     </script>
@@ -58,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel." property="og:description" />
-    <meta content="2026-10-12" property="article:modified_time" />
+    <meta content="The CUDA and OpenCL listings in this chapter are platform API and kernel mechanics, separate from the C++20 application examples." property="og:description" />
+    <meta content="2026-10-28" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -148,6 +147,7 @@ messageStyle: "none"
                     <li><a href="#memory-banking">Memory Banking</a>
                         <ol>
                             <li><a href="#example-shared-memory-bank-conflict">Example: Shared Memory Bank Conflict</a></li>
+                            <li><a href="#cuda-shared-memory-banks-and-padding">CUDA Shared Memory Banks and Padding</a></li>
                         </ol>
                     </li>
                     <li><a href="#vectorizable-loops">Vectorizable Loops</a>
@@ -191,6 +191,7 @@ messageStyle: "none"
                             <li><a href="#block">Block</a></li>
                             <li><a href="#thread">Thread</a></li>
                             <li><a href="#warp-wavefront">Warp / Wavefront</a></li>
+                            <li><a href="#cuda-and-opencl-terminology">CUDA and OpenCL Terminology</a></li>
                         </ol>
                     </li>
                     <li><a href="#warp-based-simd">Warp-Based SIMD</a>
@@ -206,10 +207,14 @@ messageStyle: "none"
                             <li><a href="#allocate-device-memory">Allocate Device Memory</a></li>
                             <li><a href="#copy-data-to-the-gpu">Copy Data to the GPU</a></li>
                             <li><a href="#launch-the-kernel">Launch the Kernel</a></li>
+                            <li><a href="#grid-stride-loops">Grid-Stride Loops</a></li>
                             <li><a href="#copy-results-back-and-free-memory">Copy Results Back and Free Memory</a></li>
+                            <li><a href="#checking-for-errors">Checking for Errors</a></li>
                         </ol>
                     </li>
+                    <li><a href="#pinned-memory-streams-and-overlap">Pinned Memory, Streams, and Overlap</a></li>
                     <li><a href="#shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</a></li>
+                    <li><a href="#atomic-operations">Atomic Operations</a></li>
                     <li><a href="#occupancy-utilization-and-performance">Occupancy, Utilization, and Performance</a></li>
                     <li><a href="#common-cuda-concepts">Common CUDA Concepts</a></li>
                     <li><a href="#performance-checklist">Performance Checklist</a></li>
@@ -233,7 +238,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 12, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -253,6 +258,12 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>GPU Programming</h1>
+            <p>The CUDA and OpenCL listings in this chapter are <strong>platform API and kernel
+                    mechanics</strong>, separate from the <a href="https://github.com/djeada/Parallel-And-Concurrent-Programming/blob/master/src/cpp/README.md">C++20 application examples</a>.
+                CUDA kernels need a CUDA toolchain, and OpenCL examples need its runtime and
+                headers. Raw device allocation, transfer, and launch calls are shown to explain
+                the GPU execution model; application code should keep those resources in scoped
+                owners and may use higher-level device algorithms when they fit the work.</p>
             <p>GPUs (Graphics Processing Units) are throughput-oriented processors designed to apply similar operations across large numbers of data elements in parallel. They were originally built for graphics workloads, where millions of pixels or vertices must be processed, but the same architecture is also effective for scientific simulation, image processing, machine learning, numerical computing, and other data-parallel workloads.</p>
             <p><strong>What makes GPU programming different?</strong></p>
             <ul>
@@ -524,6 +535,14 @@ T2 -&gt; Bank 0
 T3 -&gt; Bank 0</code></pre>
             </div>
             <p>Banked memory increases bandwidth only when access patterns spread requests across banks. Poor strides can create bank conflicts.</p>
+            <h4 id="cuda-shared-memory-banks-and-padding">CUDA Shared Memory Banks and Padding</h4>
+            <p>On NVIDIA GPUs, shared memory has 32 banks, and successive 32-bit words map to successive banks, so word <code>k</code> is in bank <code>k % 32</code>. A conflict occurs when threads of one warp access <em>different</em> words in the same bank. When several threads read the <em>same</em> word, it is broadcast to them, so there is no conflict. If each thread reads <code>s[threadIdx.x * 32]</code> from a <code>float</code> array, every address falls in bank 0 and the 32 accesses are serialized. A stride of 2 words gives a 2-way conflict.</p>
+            <p>A common case is reading a column of a <code>32 x 32</code> tile, for example in a matrix transpose. Adding one padding column shifts each row by one bank, so a column read touches 32 different banks:</p>
+            <div>
+                <pre><code class="language-cpp">__shared__ float tile[32][32];  // tile[t][c] for t = 0..31 all map to one bank
+__shared__ float tile[32][33];  // padded: tile[t][c] is in bank (t * 33 + c) % 32,
+                                //         which differs for every t</code></pre>
+            </div>
             <h3 id="vectorizable-loops">Vectorizable Loops</h3>
             <p>A loop is <strong>vectorizable</strong> when its iterations are sufficiently independent to execute in parallel without changing the program's result.</p>
             <h4 id="vectorizable-loop">Vectorizable Loop</h4>
@@ -820,7 +839,7 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
                 <li>Built-in indices such as <code>threadIdx</code>, <code>blockIdx</code>, and <code>blockDim</code>.</li>
             </ul>
             <h4 id="warp-wavefront">Warp / Wavefront</h4>
-            <p>A warp is a hardware execution group. On NVIDIA GPUs, a warp contains 32 threads. On AMD GPUs, the corresponding group is usually called a wavefront or wave, and its width depends on the architecture and execution mode.</p>
+            <p>A warp is a hardware execution group. On NVIDIA GPUs, a warp contains 32 threads. On AMD GPUs, the corresponding group is usually called a wavefront or wave, and its width depends on the architecture and execution mode: 64 lanes on GCN and CDNA GPUs, and 32 or 64 lanes on RDNA GPUs. Portable code should query the width (for example <code>warpSize</code> in CUDA and HIP) instead of hard-coding 32.</p>
             <div>
                 <pre><code class="language-text">+-------------------------------------------------------------+
 |                         GPU Grid                            |
@@ -839,6 +858,46 @@ Issued:   Warp0  Warp1  Warp2  Warp3  Warp0  Warp1</code></pre>
 |  +------------------+    +------------------+               |
 +-------------------------------------------------------------+</code></pre>
             </div>
+            <h4 id="cuda-and-opencl-terminology">CUDA and OpenCL Terminology</h4>
+            <p>OpenCL uses different names for the same ideas. A CUDA thread corresponds to an OpenCL <strong>work-item</strong>, a block to a <strong>work-group</strong>, and the grid to the <strong>NDRange</strong>. Memory shared by one block, CUDA <code>__shared__</code>, is OpenCL <code>__local</code> memory, while CUDA global memory is OpenCL <code>__global</code> memory. Note that CUDA "local memory" means something else: per-thread storage that physically lives in device memory.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>CUDA</th>
+                        <th>OpenCL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Thread</td>
+                        <td>Work-item</td>
+                    </tr>
+                    <tr>
+                        <td>Block</td>
+                        <td>Work-group</td>
+                    </tr>
+                    <tr>
+                        <td>Grid</td>
+                        <td>NDRange</td>
+                    </tr>
+                    <tr>
+                        <td><code>__shared__</code> memory</td>
+                        <td><code>__local</code> memory</td>
+                    </tr>
+                    <tr>
+                        <td>Global memory</td>
+                        <td><code>__global</code> memory</td>
+                    </tr>
+                    <tr>
+                        <td><code>threadIdx.x</code></td>
+                        <td><code>get_local_id(0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>blockIdx.x * blockDim.x + threadIdx.x</code></td>
+                        <td><code>get_global_id(0)</code></td>
+                    </tr>
+                </tbody>
+            </table>
             <h3 id="warp-based-simd">Warp-Based SIMD</h3>
             <p>A warp executes one instruction across many threads. When all lanes are active and follow the same path, the warp behaves like a SIMD vector operation.</p>
             <h4 id="efficient-warp-execution">Efficient Warp Execution</h4>
@@ -923,12 +982,65 @@ int grid  = (n + block - 1) / block;
 scale&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, 2.0f, n);
 cudaDeviceSynchronize();</code></pre>
             </div>
-            <p>The grid size is rounded up so every element is covered. The bounds check inside the kernel prevents out-of-range memory access.</p>
+            <p>The grid size is rounded up so every element is covered. The bounds check inside the kernel prevents out-of-range memory access. With <code>n = 1000</code> and <code>block = 256</code>, the grid has 4 blocks (1,024 threads), and the last 24 threads fail <code>i &lt; n</code>. Writing <code>grid = n / block</code> instead would launch only 3 blocks and leave elements 768–999 unprocessed.</p>
+            <p>On current GPUs a block may contain at most 1,024 threads. A launch that exceeds a limit fails with a configuration error and the kernel does not run.</p>
+            <h4 id="grid-stride-loops">Grid-Stride Loops</h4>
+            <p>Instead of sizing the grid to the data, a kernel can loop with a stride equal to the total number of threads. Each thread then handles elements <code>i</code>, <code>i + stride</code>, <code>i + 2 * stride</code>, and so on, so a fixed-size grid covers any <code>n</code>.</p>
+            <div>
+                <pre><code class="language-cpp">__global__ void scaleGridStride(float* d, float s, int n) {
+  int stride = blockDim.x * gridDim.x;
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i &lt; n; i += stride) {
+    d[i] *= s;
+  }
+}</code></pre>
+            </div>
+            <p>With 2 blocks of 4 threads and <code>n = 20</code>, the stride is 8, so the thread with global index 5 processes elements 5 and 13.</p>
             <h4 id="copy-results-back-and-free-memory">Copy Results Back and Free Memory</h4>
             <div>
                 <pre><code class="language-cpp">cudaMemcpy(h_data, d_data, bytes, cudaMemcpyDeviceToHost);
 cudaFree(d_data);</code></pre>
             </div>
+            <p><code>cudaMemcpy</code> is synchronous with respect to the host: it returns only after the copy has completed. It is issued to the default stream, and work in one stream runs in issue order, so when the kernel was also launched in the (legacy) default stream, the device-to-host copy waits for it to finish. No extra synchronization is needed for correctness.</p>
+            <h4 id="checking-for-errors">Checking for Errors</h4>
+            <p>A kernel launch does not return an error code, and it is asynchronous: control returns to the host before the kernel runs. Errors therefore show up in two places:</p>
+            <ul>
+                <li><strong>Launch errors</strong>, such as an invalid configuration, are reported by <code>cudaGetLastError()</code> (which also resets the last error) or <code>cudaPeekAtLastError()</code> right after the launch.</li>
+                <li><strong>Execution errors</strong>, such as an invalid memory access inside the kernel, appear only after the kernel has run, in the return value of a later synchronizing call such as <code>cudaDeviceSynchronize()</code> or <code>cudaMemcpy()</code>. Some of these errors leave the context unusable, so later calls keep failing.</li>
+            </ul>
+            <div>
+                <pre><code class="language-cpp">scale&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, 2.0f, n);
+cudaError_t err = cudaGetLastError();        // launch errors
+if (err == cudaSuccess) {
+  err = cudaDeviceSynchronize();             // errors during execution
+}
+if (err != cudaSuccess) {
+  fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+}</code></pre>
+            </div>
+            <p>For the same reason, timing a kernel with a host clock around the launch measures only the launch. Synchronize first, or record <code>cudaEvent_t</code> events in the stream and use <code>cudaEventElapsedTime()</code>.</p>
+            <h3 id="pinned-memory-streams-and-overlap">Pinned Memory, Streams, and Overlap</h3>
+            <p>Ordinary <code>malloc</code> or <code>new</code> memory is <strong>pageable</strong>: the operating system may move or swap it. The GPU's copy engines transfer data by DMA, which needs <strong>page-locked (pinned)</strong> host memory, allocated with <code>cudaMallocHost()</code> or <code>cudaHostAlloc()</code> and released with <code>cudaFreeHost()</code>. Pinned memory often copies faster and is necessary for truly asynchronous transfers with <code>cudaMemcpyAsync()</code>; with pageable memory, the copy is staged through a pinned buffer and generally cannot overlap with other work. Pinning too much memory can degrade overall system performance, because the OS can no longer page it.</p>
+            <p>A <strong>stream</strong> is an ordered queue of GPU work. Operations in one stream run in issue order, while operations in different streams may overlap. Splitting data into chunks and giving each chunk its own stream lets copies for one chunk overlap with kernels for another, depending on the GPU's copy engines and available resources:</p>
+            <div>
+                <pre><code class="language-cpp">// d: device buffer of n floats, allocated with cudaMalloc
+float* h;                                   // pinned host buffer
+cudaMallocHost(&amp;h, bytes);
+
+cudaStream_t s[2];
+for (int k = 0; k &lt; 2; ++k) cudaStreamCreate(&amp;s[k]);
+
+size_t half = n / 2;                        // assume n is even
+for (int k = 0; k &lt; 2; ++k) {
+  size_t off = k * half;
+  cudaMemcpyAsync(d + off, h + off, half * sizeof(float),
+                  cudaMemcpyHostToDevice, s[k]);
+  scale&lt;&lt;&lt;(half + 255) / 256, 256, 0, s[k]&gt;&gt;&gt;(d + off, 2.0f, half);
+  cudaMemcpyAsync(h + off, d + off, half * sizeof(float),
+                  cudaMemcpyDeviceToHost, s[k]);
+}
+cudaDeviceSynchronize();                    // wait for both streams</code></pre>
+            </div>
+            <p>Work launched without a stream argument goes to the <strong>default stream</strong>. By default this is the <em>legacy</em> default stream, which synchronizes implicitly with other blocking streams in the same context: a kernel in it waits for earlier work in those streams, and later work in them waits for it. One stray default-stream launch can therefore serialize an overlapped pipeline. Streams created with <code>cudaStreamCreateWithFlags(&amp;s, cudaStreamNonBlocking)</code>, or compiling with <code>nvcc --default-stream per-thread</code>, avoid this implicit synchronization.</p>
             <h3 id="shared-memory-example-block-reduction">Shared Memory Example: Block Reduction</h3>
             <p>Shared memory lets threads in a block cooperate. The example below computes one partial sum per block.</p>
             <div>
@@ -966,7 +1078,30 @@ blockSum&lt;&lt;&lt;grid, block, sharedBytes&gt;&gt;&gt;(d_in, d_partial, n);</c
                 <li>It checks <code>i &lt; n</code> before reading input.</li>
                 <li>It uses dynamically sized shared memory so the buffer matches the block size.</li>
             </ul>
-            <p>The halving reduction shown here assumes a power-of-two block size, such as the <code>256</code> threads used in the launch example.</p>
+            <p>The halving reduction shown here assumes a power-of-two block size, such as the <code>256</code> threads used in the launch example. With <code>blockDim.x == 192</code>, the strides become 96, 48, 24, 12, 6, 3, 1; after stride 3, <code>buf[2]</code> holds a partial sum that the final stride-1 step never adds to <code>buf[0]</code>, so the result is wrong.</p>
+            <p>The kernel produces one partial sum per block. Combining them needs results from every block, which a block cannot safely wait for inside the same conventional kernel: blocks are not guaranteed to run concurrently or in any order. Launch a second kernel, finish on the host, or use atomics as shown below.</p>
+            <h3 id="atomic-operations">Atomic Operations</h3>
+            <p>When many threads update the same memory location, a plain <code>x += 1</code> is a read-modify-write race: two threads can read the same old value and one update is lost. A histogram written with <code>bins[v] += 1</code> therefore tends to come out too low. <code>__syncthreads()</code> does not fix this, since it only orders threads of one block. <strong>Atomic functions</strong> such as <code>atomicAdd</code>, <code>atomicSub</code>, <code>atomicMin</code>, <code>atomicMax</code>, <code>atomicExch</code> and <code>atomicCAS</code> perform the whole read-modify-write as one indivisible operation.</p>
+            <div>
+                <pre><code class="language-cpp">__global__ void histogram(const int* in, int* bins, int n) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i &lt; n) {
+    atomicAdd(&amp;bins[in[i]], 1);
+  }
+}</code></pre>
+            </div>
+            <p><code>atomicAdd</code> returns the value stored <em>before</em> the addition. This makes it useful for handing out unique slots, for example to compact selected elements into an output array; every thread gets a distinct index, but the order is unspecified:</p>
+            <div>
+                <pre><code class="language-cpp">int slot = atomicAdd(&amp;count, 1);   // count starts at 0
+out[slot] = value;</code></pre>
+            </div>
+            <p>Atomics on the same address are serialized, so having every thread in a large grid update one global counter creates a bottleneck. A common improvement is to reduce within each block first (in registers or shared memory, as in <code>blockSum</code>) and then issue one atomic per block:</p>
+            <div>
+                <pre><code class="language-cpp">if (threadIdx.x == 0) {
+  atomicAdd(total, buf[0]);   // one global atomic per block
+}</code></pre>
+            </div>
+            <p>Atomics with a narrower scope, such as shared-memory atomics within a block, are generally cheaper than device-wide or system-wide ones.</p>
             <h3 id="occupancy-utilization-and-performance">Occupancy, Utilization, and Performance</h3>
             <p><strong>Occupancy</strong> is the number of resident warps on an SM relative to its supported maximum. Registers, shared memory, block size, and hardware limits determine how much work can reside there at once.</p>
             <p>Resident warps are not necessarily executing useful instructions every cycle. <strong>Utilization</strong> describes how actively resources are used, while achieved throughput measures useful work per unit of time. Raising occupancy may help hide latency, but can also require reducing per-thread resources or data reuse. A lower-occupancy kernel can be faster. Compare measured runtime and memory traffic rather than optimizing occupancy alone. See <a href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy">CUDA occupancy guidance</a>.</p>

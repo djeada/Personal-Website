@@ -238,9 +238,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     y = base - barH;
                 let fill = p.ink3,
                     alpha = .42;
-                if (this.completed.has(i)) [fill, alpha] = [p.verdigris, 1];
-                if (special.includes(i)) [fill, alpha] = [p.moon, 1];
-                if (active.includes(i)) [fill, alpha] = [p.gold, 1];
+                if (this.completed.has(i))[fill, alpha] = [p.verdigris, 1];
+                if (special.includes(i))[fill, alpha] = [p.moon, 1];
+                if (active.includes(i))[fill, alpha] = [p.gold, 1];
                 ctx.globalAlpha = alpha;
                 ctx.fillStyle = fill;
                 ctx.fillRect(x, y, barW, barH);

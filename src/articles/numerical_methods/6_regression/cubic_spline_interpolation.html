@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/6_regression/cubic_spline_interpolation",
             "description": "A cubic spline interpolates data with a sequence of cubic polynomials rather than one high-degree polynomial across the entire interval.",
-            "dateModified": "2026-09-21",
+            "dateModified": "2026-10-22",
             "image": "https://adamdjellouli.com/resources/article-images/cubic-spline-piecewise-curve-49081372c5.svg",
             "inLanguage": "en"
         }
@@ -61,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A cubic spline interpolates data with a sequence of cubic polynomials rather than one high-degree polynomial across the entire interval." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/cubic-spline-piecewise-curve-49081372c5.svg" property="og:image" />
-    <meta content="2026-09-21" property="article:modified_time" />
+    <meta content="2026-10-22" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -135,13 +134,21 @@ messageStyle: "none"
                             <li><a href="#4-two-boundary-conditions">4. Two boundary conditions</a></li>
                         </ol>
                     </li>
-                    <li><a href="#solving-with-knot-second-derivatives">Solving with knot second derivatives</a></li>
+                    <li><a href="#solving-with-knot-second-derivatives">Solving with knot second derivatives</a>
+                        <ol>
+                            <li><a href="#deriving-the-tridiagonal-system">Deriving the tridiagonal system</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#recovering-the-cubic-coefficients">Recovering the cubic coefficients</a></li>
                     <li><a href="#why-the-joins-are-smooth">Why the joins are smooth</a></li>
                     <li><a href="#worked-example">Worked example</a></li>
                     <li><a href="#algorithm">Algorithm</a></li>
                     <li><a href="#evaluation-cost">Evaluation cost</a></li>
-                    <li><a href="#boundary-conditions-matter">Boundary conditions matter</a></li>
+                    <li><a href="#boundary-conditions-matter">Boundary conditions matter</a>
+                        <ol>
+                            <li><a href="#polynomial-degree-does-not-override-the-boundary-conditions">Polynomial degree does not override the boundary conditions</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#numerical-behavior-and-limitations">Numerical behavior and limitations</a></li>
                 </ol>
             </div>
@@ -246,7 +253,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 21, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 22, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -277,7 +284,7 @@ messageStyle: "none"
                 $$</p>
             <p>The pieces are joined so that the function, first derivative, and second derivative are continuous at every interior knot. The result is a smooth curve with local low-degree behavior.</p>
             <p><img alt="Natural cubic spline through irregularly spaced knots" decoding="async" loading="lazy" src="../../../resources/article-images/cubic-spline-piecewise-curve-49081372c5.svg" /></p>
-            <h3 id="why-use-piecewise-cubics">Why use piecewise cubics?</h3>
+            <h2 id="why-use-piecewise-cubics">Why use piecewise cubics?</h2>
             <p>A straight-line interpolant is simple and local, but it has slope discontinuities at the nodes. A single high-degree polynomial is smooth, but it can oscillate strongly and becomes increasingly sensitive as the number of nodes grows.</p>
             <p>Cubic splines occupy a useful middle ground:</p>
             <ul>
@@ -286,30 +293,30 @@ messageStyle: "none"
                 <li>the linear system has a sparse tridiagonal structure;</li>
                 <li>after setup, evaluating one query requires only one cubic segment.</li>
             </ul>
-            <h3 id="segment-definition">Segment definition</h3>
+            <h2 id="segment-definition">Segment definition</h2>
             <p>On interval $[x_i,x_{i+1}]$, write</p>
             <p>$$
                 S_i(x) = a_i + b_i(x - x_i) + c_i(x - x_i)^2 + d_i(x - x_i)^3.
                 $$</p>
             <p>For $n$ intervals there are $4n$ segment coefficients.</p>
             <p>They are determined by four types of conditions.</p>
-            <h4 id="1-interpolation">1. Interpolation</h4>
+            <h3 id="1-interpolation">1. Interpolation</h3>
             <p>Each segment matches its endpoint values:</p>
             <p>$$
                 S_i(x_i) = y_i,
                 \qquad S_i(x_{i+1}) = y_{i+1}.
                 $$</p>
-            <h4 id="2-first-derivative-continuity">2. First-derivative continuity</h4>
+            <h3 id="2-first-derivative-continuity">2. First-derivative continuity</h3>
             <p>At an interior knot,</p>
             <p>$$
                 S_{i-1}'(x_i) = S_i'(x_i).
                 $$</p>
-            <h4 id="3-second-derivative-continuity">3. Second-derivative continuity</h4>
+            <h3 id="3-second-derivative-continuity">3. Second-derivative continuity</h3>
             <p>Also require</p>
             <p>$$
                 S_{i-1}''(x_i) = S_i''(x_i).
                 $$</p>
-            <h4 id="4-two-boundary-conditions">4. Two boundary conditions</h4>
+            <h3 id="4-two-boundary-conditions">4. Two boundary conditions</h3>
             <p>The interior conditions alone do not uniquely determine the spline. Two endpoint conditions are required.</p>
             <p>This note focuses on the <strong>natural spline</strong>:</p>
             <p>$$
@@ -318,7 +325,7 @@ messageStyle: "none"
                 $$</p>
             <p>Other common choices are clamped, periodic, and not-a-knot boundary conditions.</p>
             <p>A natural boundary condition sets the endpoint <strong>curvature</strong> to zero; it does not set the endpoint slope to zero.</p>
-            <h3 id="solving-with-knot-second-derivatives">Solving with knot second derivatives</h3>
+            <h2 id="solving-with-knot-second-derivatives">Solving with knot second derivatives</h2>
             <p>A convenient derivation introduces</p>
             <p>$$
                 M_i = S''(x_i).
@@ -342,7 +349,21 @@ messageStyle: "none"
                 i = 1,\ldots,n - 1.
                 $$</p>
             <p>The right-hand side measures the change in neighboring secant slopes. If the data are locally close to a straight line, that difference is small; if the slope changes strongly, the spline needs more curvature.</p>
-            <h3 id="recovering-the-cubic-coefficients">Recovering the cubic coefficients</h3>
+            <h3 id="deriving-the-tridiagonal-system">Deriving the tridiagonal system</h3>
+            <p>A cubic has a linear second derivative. Interpolating that derivative between its endpoint values gives</p>
+            <p>$$
+                S_i''(x)=M_i\frac{x_{i+1}-x}{h_i}+M_{i+1}\frac{x-x_i}{h_i}.
+                $$</p>
+            <p>Integrate twice and choose the integration constants so that $S_i(x_i)=y_i$ and $S_i(x_{i+1})=y_{i+1}$. The endpoint first derivatives are then</p>
+            <p>$$
+                S_i'(x_i)=\frac{y_{i+1}-y_i}{h_i}-\frac{h_i}{6}(2M_i+M_{i+1}),
+                $$</p>
+            <p>$$
+                S_i'(x_{i+1})=\frac{y_{i+1}-y_i}{h_i}+\frac{h_i}{6}(M_i+2M_{i+1}).
+                $$</p>
+            <p>Equating $S_{i-1}'(x_i)$ and $S_i'(x_i)$ and multiplying by six produces the displayed tridiagonal equation. Only three neighboring curvatures appear, explaining the sparse structure.</p>
+            <p>Counting conditions gives the same result: the $2n$ endpoint-value conditions, $n-1$ first-derivative matches, and $n-1$ second-derivative matches total $4n-2$. The two boundary conditions supply the remaining equations for the $4n$ coefficients. With positive interval widths, the natural-spline interior matrix is strictly diagonally dominant, which supports a pivot-free tridiagonal solve.</p>
+            <h2 id="recovering-the-cubic-coefficients">Recovering the cubic coefficients</h2>
             <p>Once the $M_i$ values are known,</p>
             <p>$$
                 a_i = y_i,
@@ -362,7 +383,7 @@ messageStyle: "none"
                 S_i(x) = a_i + b_i\Delta x + c_i\Delta x^2 + d_i\Delta x^3,
                 \qquad \Delta x = x - x_i.
                 $$</p>
-            <h3 id="why-the-joins-are-smooth">Why the joins are smooth</h3>
+            <h2 id="why-the-joins-are-smooth">Why the joins are smooth</h2>
             <p>The second derivative on a segment is</p>
             <p>$$
                 S_i''(x) = 2c_i + 6d_i(x - x_i).
@@ -377,7 +398,7 @@ messageStyle: "none"
                 $$</p>
             <p>Adjacent segments therefore share the same second derivative at each knot. The tridiagonal system was derived from the matching of the first derivatives, so those are continuous as well.</p>
             <p><img alt="First and second derivatives of a natural cubic spline" decoding="async" loading="lazy" src="../../../resources/article-images/cubic-spline-derivatives-768f182246.svg" /></p>
-            <h3 id="worked-example">Worked example</h3>
+            <h2 id="worked-example">Worked example</h2>
             <p>Use</p>
             <p>$$
                 (0,0),
@@ -424,20 +445,21 @@ messageStyle: "none"
             <p>$$
                 \boxed{S(0.5)=0.34375}.
                 $$</p>
-            <h3 id="algorithm">Algorithm</h3>
+            <p>The second piece is $S_1(x)=0.5-0.75(x-1)^2+0.25(x-1)^3$. At the shared knot $x=1$, both pieces have value $0.5$, slope $0$, and second derivative $-1.5$. At $x=0$ and $x=2$, the second derivatives are zero. These checks verify both the interpolation and the natural boundary conditions.</p>
+            <h2 id="algorithm">Algorithm</h2>
             <p>For a natural cubic spline:</p>
-            <p>I. sort the points by increasing $x_i$;</p>
-            <p>II. compute interval widths</p>
+            <p><strong>Step 1.</strong> Sort the points by increasing $x_i$;</p>
+            <p><strong>Step 2.</strong> Compute interval widths</p>
             <p>$$
                 h_i = x_{i+1} - x_i;
                 $$</p>
-            <p>III. assemble the tridiagonal system for $M_1,\ldots,M_{n-1}$;</p>
-            <p>IV. solve that system;</p>
-            <p>V. set $M_0=M_n=0$;</p>
-            <p>VI. compute $(a_i,b_i,c_i,d_i)$ for each interval;</p>
+            <p><strong>Step 3.</strong> Assemble the tridiagonal system for $M_1,\ldots,M_{n-1}$;</p>
+            <p><strong>Step 4.</strong> Solve that system;</p>
+            <p><strong>Step 5.</strong> Set $M_0=M_n=0$;</p>
+            <p><strong>Step 6.</strong> Compute $(a_i,b_i,c_i,d_i)$ for each interval;</p>
             <p>VII. for each query, locate its interval and evaluate the corresponding cubic.</p>
-            <p>The Thomas algorithm solves a nonsingular tridiagonal system in $O(n)$ time and $O(n)$ storage.</p>
-            <h3 id="evaluation-cost">Evaluation cost</h3>
+            <p>For this strictly diagonally dominant natural-spline system, the Thomas algorithm gives a pivot-free solve in $O(n)$ time and $O(n)$ storage. A general nonsingular tridiagonal matrix does not automatically have safe nonzero pivots, so the same claim requires care outside this spline setting.</p>
+            <h2 id="evaluation-cost">Evaluation cost</h2>
             <p>After preprocessing, a query requires:</p>
             <ul>
                 <li>interval search: $O(\log n)$ with binary search;</li>
@@ -447,7 +469,7 @@ messageStyle: "none"
             <p>$$
                 S_i(x) = a_i + \Delta x \left[b_i + \Delta x(c_i + \Delta x d_i) \right].
                 $$</p>
-            <h3 id="boundary-conditions-matter">Boundary conditions matter</h3>
+            <h2 id="boundary-conditions-matter">Boundary conditions matter</h2>
             <p>Different endpoint conditions produce different interpolants even when all interior data are identical.</p>
             <p>Common options include:</p>
             <ul>
@@ -462,7 +484,10 @@ messageStyle: "none"
                 <li><strong>not-a-knot</strong>: the first two and last two cubic pieces are constrained to behave as if the first and last interior knots were not true breaks.</li>
             </ul>
             <p>When comparing with a library, make sure the boundary condition matches. A library default may not be natural.</p>
-            <h3 id="numerical-behavior-and-limitations">Numerical behavior and limitations</h3>
+            <h3 id="polynomial-degree-does-not-override-the-boundary-conditions">Polynomial degree does not override the boundary conditions</h3>
+            <p>A cubic piece can represent a quadratic, but a natural spline does not necessarily reproduce a quadratic exactly: the imposed endpoint second derivatives may disagree with those of the quadratic. For $f(x)=x^2$ sampled at $0,1,2$, the natural conditions set $M_0=M_2=0$, while the interior equation gives $M_1=3$. The first segment is then $S_0(x)=x/2+x^3/2$, so $S(0.5)=0.3125$, compared with $f(0.5)=0.25$.</p>
+            <p>The discrepancy comes from the boundary model, not a failure to interpolate the supplied values. Clamping the endpoint slopes to the true values $0$ and $4$ instead reproduces this quadratic. Boundary conditions should therefore reflect available endpoint information, especially when endpoint derivatives or near-boundary accuracy matter.</p>
+            <h2 id="numerical-behavior-and-limitations">Numerical behavior and limitations</h2>
             <p>Cubic splines usually avoid the dramatic oscillations of high-degree global polynomials, but they are not automatically shape preserving.</p>
             <p>A cubic spline can:</p>
             <ul>

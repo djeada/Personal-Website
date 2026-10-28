@@ -29,7 +29,6 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=optional" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
     <link href="/favicon.ico" rel="icon" />
     <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
@@ -50,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression",
             "description": "Logistic regression is a statistical method used for modeling the probability of a binary outcome based on one or more predictor variables.",
-            "dateModified": "2026-10-13",
+            "dateModified": "2026-10-25",
             "inLanguage": "en"
         }
     </script>
@@ -59,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/statistics_notes/regression/logistic_regression" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Logistic regression is a statistical method used for modeling the probability of a binary outcome based on one or more predictor variables." property="og:description" />
-    <meta content="2026-10-13" property="article:modified_time" />
+    <meta content="2026-10-25" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -363,7 +362,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 13, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 25, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -419,6 +418,7 @@ messageStyle: "none"
                 \text{Odds Ratio for } x_j = e^{\beta_j}
                 $$</p>
             <p>An odds ratio greater than 1 indicates that as $x_j$ increases, the odds of the outcome occurring increase.</p>
+            <p>If a baseline probability is $p$, multiplying its odds by $a=e^{\beta_j}$ gives the new probability $ap/(1-p+ap)$. For an odds ratio of two, a baseline probability of $0.1$ becomes about $0.182$, while $0.5$ becomes about $0.667$. The same odds ratio therefore gives different probability changes. Locally, for an additive predictor, $\partial p/\partial x_j=\beta_jp(1-p)$, so the probability curve is most responsive near its middle.</p>
             <h2 id="estimation-of-coefficients">Estimation of Coefficients</h2>
             <p>Unlike linear regression, logistic regression does not have a closed-form solution for estimating the coefficients. Instead, coefficients are estimated using <strong>Maximum Likelihood Estimation (MLE)</strong>.</p>
             <h3 id="likelihood-function">Likelihood Function</h3>
@@ -432,11 +432,12 @@ messageStyle: "none"
                 \ell(\boldsymbol{\beta}) = \ln L(\boldsymbol{\beta}) = \sum_{i=1}^{n} \left[ y_i \ln p(x_i) + (1 - y_i) \ln (1 - p(x_i)) \right]
                 $$</p>
             <h3 id="maximizing-the-log-likelihood">Maximizing the Log-Likelihood</h3>
+            <p>Writing $\eta_i=\mathbf x_i^\top\boldsymbol\beta$, each contribution is $y_i\eta_i-\log(1+e^{\eta_i})$. Its derivative with respect to $\eta_i$ is $y_i-p_i$, and its second derivative is $-p_i(1-p_i)$. Summing over observations yields the gradient and Hessian used below. The nonpositive curvature explains why a full-rank, nonseparated logistic model has a concave optimization problem. Stable implementations evaluate $\log(1+e^{\eta_i})$ without directly exponentiating a very large $\eta_i$.</p>
             <p>The goal is to find the coefficients $\boldsymbol{\beta}$ that maximize $\ell(\boldsymbol{\beta})$. This is typically done using iterative numerical methods such as:</p>
             <ul>
                 <li>Newton-Raphson method</li>
                 <li>Fisher Scoring</li>
-                <li>Gradient Descent</li>
+                <li>Gradient ascent on the log-likelihood, or gradient descent on the negative log-likelihood</li>
             </ul>
             <h3 id="newton-raphson-method">Newton-Raphson Method</h3>
             <p>An iterative method that updates the coefficient estimates using:</p>
@@ -454,7 +455,7 @@ messageStyle: "none"
                 <li><strong>Independent observations</strong> ensure that each data point is independent of the others.</li>
                 <li><strong>Linearity in log-odds</strong> means that the logit of the outcome is a linear function of the predictor variables.</li>
                 <li><strong>No perfect (and little severe) multicollinearity</strong> among the predictors; otherwise coefficients are unstable.</li>
-                <li><strong>No complete separation</strong>: if a linear combination of predictors perfectly splits the classes, the MLE does not exist.</li>
+                <li><strong>No complete or quasi-complete separation:</strong> if a hyperplane separates the classes strictly, or separates them weakly with some observations on the boundary, one or more unpenalized coefficients can diverge. Full design rank is also needed for coefficient identification. Finite regularized estimates answer a penalized estimation problem and should not be confused with an existing ordinary MLE.</li>
                 <li>A <strong>large sample size</strong> is preferred, as maximum likelihood estimation (MLE) performs better with more data.</li>
             </ol>
             <h2 id="example">Example</h2>
@@ -537,7 +538,7 @@ messageStyle: "none"
                     </tr>
                 </tbody>
             </table>
-            <p>The classes overlap (student 4 passes with 4 hours, student 7 fails with 7 hours), so a finite maximum likelihood estimate exists. If one class could be separated perfectly from the other by a hyperplane (complete separation), the likelihood would increase forever as the coefficients grow and the MLE would not exist; software then reports huge coefficients or a convergence warning.</p>
+            <p>The outcomes are not perfectly ordered by hours studied: student 4 passes with four hours while student 7 fails with seven. That alone does not rule out separation by both predictors together. In this particular design, a converged fit has a finite coefficient vector and positive-definite observed information, with no separating direction. A separation check must consider the full design matrix. Complete or quasi-complete separation can otherwise drive coefficients to infinity while the likelihood approaches its supremum, producing huge estimates or convergence warnings.</p>
             <h3 id="step-by-step-estimation">Step-by-Step Estimation</h3>
             <h4 id="1-initial-setup">1. Initial Setup</h4>
             <p>We need to estimate $\beta_0$, $\beta_1$, and $\beta_2$ in the logistic regression model:</p>
@@ -567,7 +568,7 @@ messageStyle: "none"
             <p>The gradient and Hessian of the log-likelihood are</p>
             <p>$$
                 \mathbf{g}(\boldsymbol{\beta}) = \mathbf{X}^\top(\mathbf{y} - \mathbf{p}), \qquad
-                \mathbf{H}(\boldsymbol{\beta}) = -\mathbf{X}^\top \mathbf{W} \mathbf{X}, \quad \mathbf{W} = \operatorname{diag}\big(p_i(1-p_i)\big).
+                \mathbf{H}(\boldsymbol{\beta}) = -\mathbf{X}^\top \mathbf{W} \mathbf{X}, \quad \mathbf{W} = \mathrm{diag}\big(p_i(1-p_i)\big).
                 $$</p>
             <p>At $\boldsymbol{\beta}^{(0)}$, $\mathbf{y}-\mathbf{p} = \pm 0.5$ and $\mathbf{W} = 0.25\,\mathbf{I}$, so</p>
             <p>$$
@@ -579,7 +580,7 @@ messageStyle: "none"
             <p>$$
                 \hat{\beta}_0 = -4.530, \quad \hat{\beta}_1 = 0.618, \quad \hat{\beta}_2 = 0.613
                 $$</p>
-            <p>with standard errors $\approx 2.90,\ 0.42,\ 0.84$ (from $\sqrt{\operatorname{diag}(\mathbf{X}^\top\mathbf{W}\mathbf{X})^{-1}}$ at the solution). With only 10 observations neither slope is individually significant (Wald $z \approx 1.47$ and $0.73$); the example is meant to show the mechanics, not a strong effect. The maximized log-likelihood is $\ell(\hat{\boldsymbol\beta}) \approx -4.034$, compared with $10 \ln 0.5 \approx -6.931$ for the intercept-only model.</p>
+            <p>with standard errors approximately $2.90,\ 0.42,\ 0.84$. First calculate the estimated covariance matrix $\widehat{\mathrm{Var}}(\hat{\boldsymbol\beta})=(\mathbf X^\top\mathbf W\mathbf X)^{-1}$ at the solution, then take square roots of its diagonal entries. These are asymptotic likelihood standard errors, which can be unreliable in a dataset this small. With only 10 observations neither slope is individually significant (Wald $z \approx 1.47$ and $0.73$); the example is meant to show the mechanics, not a strong effect. The maximized log-likelihood is $\ell(\hat{\boldsymbol\beta}) \approx -4.034$, compared with $10 \ln 0.5 \approx -6.931$ for the intercept-only model.</p>
             <h4 id="6-logistic-regression-equation">6. Logistic Regression Equation</h4>
             <p>$$
                 \hat p(x) = \frac{1}{1 + e^{-(-4.530 + 0.618 x_1 + 0.613 x_2)}}
@@ -608,6 +609,7 @@ messageStyle: "none"
                 \hat p = \frac{1}{1 + e^{-(-4.530 + 0.618 \times 7 + 0.613 \times 3)}} = \frac{1}{1 + e^{-1.635}} \approx 0.837
                 $$</p>
             <p>The estimated probability of passing is about 83.7%.</p>
+            <p>Student 7 has this predictor combination and actually failed. That is compatible with a probability model: a predicted chance of 83.7% still assigns about 16.3% to failure. Logistic regression does not claim that every observation lies on its most probable class. Assessing its probabilities requires calibration or probability losses as well as a threshold-based confusion matrix.</p>
             <p>A plot of the fitted probability surface and the 0.5 decision boundary is produced by <a href="https://github.com/djeada/Statistics-Notes/blob/main/scripts/regression/logistic_regression.py">logistic_regression.py</a>.</p>
             <h3 id="model-evaluation">Model Evaluation</h3>
             <h4 id="confusion-matrix">Confusion Matrix</h4>
