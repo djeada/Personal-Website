@@ -138,6 +138,7 @@
                     <li><a href="#graphics-profile-contract">Graphics profile contract</a></li>
                     <li><a href="#low-profile">Low profile</a>
                         <ol>
+                            <li><a href="#anti-aliasing">Anti-aliasing</a></li>
                             <li><a href="#low-on-an-old-or-software-gpu">Low on an old or software GPU</a></li>
                         </ol>
                     </li>
@@ -174,6 +175,7 @@
                             <li><a href="#rock-projection-snow-and-ground-patchwork">Rock projection, snow and ground patchwork</a></li>
                             <li><a href="#curvature-without-a-height-or-field-texture">Curvature without a height or field texture</a></li>
                             <li><a href="#building-foot">Building foot</a></li>
+                            <li><a href="#opaque-and-ghost-buildings">Opaque and ghost buildings</a></li>
                         </ol>
                     </li>
                     <li><a href="#directional-shadows">Directional shadows</a></li>
@@ -208,7 +210,11 @@
                             <li><a href="#presentation-cache-is-stale">Presentation cache is stale</a></li>
                         </ol>
                     </li>
-                    <li><a href="#testing-and-review-surfaces">Testing and review surfaces</a></li>
+                    <li><a href="#testing-and-review-surfaces">Testing and review surfaces</a>
+                        <ol>
+                            <li><a href="#creature-pipeline-goldens">Creature pipeline goldens</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#architectural-invariants">Architectural invariants</a></li>
                     <li><a href="#source-map">Source map</a></li>
                 </ol>
@@ -435,7 +441,7 @@ set_frame_budget(...)</code></pre>
                 <li><code>High</code>; and</li>
                 <li><code>Ultra</code>.</li>
             </ul>
-            <p>A graphics profile contains many decisions beyond shader quality: LOD/culling, shadow cascades, post effects, batching, MSAA, weather density, grass density, and resource budgets.</p>
+            <p>A graphics profile contains many decisions beyond shader quality: LOD/culling, shadow cascades, post effects, batching, weather density, grass density, and resource budgets.</p>
             <p><code>High</code> is the current default through <code>k_default_graphics_quality</code>.</p>
             <h2 id="graphics-profile-contract">Graphics profile contract</h2>
             <p>A profile controls:</p>
@@ -447,7 +453,6 @@ set_frame_budget(...)</code></pre>
                 <li>directional-shadow settings;</li>
                 <li>post-processing switches;</li>
                 <li>weather-particle scale;</li>
-                <li>MSAA sample count;</li>
                 <li>template/prewarm budget; and</li>
                 <li>grass density.</li>
             </ul>
@@ -464,11 +469,12 @@ set_frame_budget(...)</code></pre>
                 <li>god rays disabled;</li>
                 <li>ambient occlusion disabled;</li>
                 <li>FXAA disabled;</li>
-                <li>MSAA disabled;</li>
                 <li>weather-particle scale <code>0.30</code>; and</li>
                 <li>grass density <code>0.30</code>.</li>
             </ul>
             <p>Low is therefore not merely “High with smaller textures.” It changes several rendering features and content densities together.</p>
+            <h3 id="anti-aliasing">Anti-aliasing</h3>
+            <p>Every frame renders the world into the post-process scene target, a single-sample float texture, and only the final composite reaches the Qt framebuffer. Multisampling that framebuffer therefore smoothed nothing but one fullscreen triangle while Qt resolved it every frame, so the presets carry no MSAA setting; edges are smoothed by the FXAA pass. Multisampled world edges would need a multisampled scene target and a resolve before the post chain.</p>
             <h3 id="low-on-an-old-or-software-gpu">Low on an old or software GPU</h3>
             <p>Low is the preset that has to run on a GL 3.3 Core driver with no 4.x features. That covers old Intel and AMD integrated GPUs, and Mesa llvmpipe.</p>
             <ul>
@@ -502,7 +508,6 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li>ambient occlusion enabled;</li>
                 <li>FXAA enabled;</li>
                 <li>god rays disabled;</li>
-                <li>2× MSAA;</li>
                 <li>weather-particle scale <code>0.60</code>; and</li>
                 <li>grass density <code>0.65</code>.</li>
             </ul>
@@ -519,7 +524,6 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li>god rays enabled;</li>
                 <li>ambient occlusion enabled;</li>
                 <li>FXAA enabled;</li>
-                <li>4× MSAA;</li>
                 <li>full weather-particle scale; and</li>
                 <li>full grass density.</li>
             </ul>
@@ -530,8 +534,7 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li>Ultra shader tier;</li>
                 <li>the same full creature-detail policy;</li>
                 <li>the same four-cascade directional-shadow envelope;</li>
-                <li>the full post-processing chain;</li>
-                <li>8× MSAA; and</li>
+                <li>the full post-processing chain; and</li>
                 <li>full weather/grass density.</li>
             </ul>
             <p>The exact profile tables in <code>render/graphics_settings.h</code> are authoritative. Articles should not preserve older preset descriptions when the code table changes.</p>
@@ -730,6 +733,8 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
             <p><code>terrain_chunk.frag</code> takes curvature from the baked field texture or the height texture. Meshes with neither (the boundary mountain ring drawn with <code>horizon_dressing</code>) fell back to <code>curvature_from_normal_field()</code>, the screen-space derivative of interpolated vertex normals. On a coarse mesh that derivative is constant per triangle, so the gully mask shaded each concave triangle as a dark wedge and the ring read as vertical streaks. <code>k_soi_normal_field_curvature_trust</code> scales that fallback to zero. Terrain chunks with baked fields are unaffected.</p>
             <h3 id="building-foot">Building foot</h3>
             <p><code>building_merged.vert</code> passes each merged building's instance origin (its ground contact) as <code>v_ground_height</code>, and <code>basic_instanced.frag</code> darkens and warms wall faces within <code>k_plinth_height</code> of it, so houses sit in the soil instead of on it. <code>basic_instanced.vert</code> draws individual parts whose origin is not the ground, so it passes <code>k_no_ground_contact</code> and the effect is off. Buildings outside the static batch (under construction, damaged, or on a backend without it) do not get the foot.</p>
+            <h3 id="opaque-and-ghost-buildings">Opaque and ghost buildings</h3>
+            <p>The static batch draws first so the terrain behind buildings fails the depth test. That only pays if building pixels themselves pass through early depth testing, and a <code>discard</code> anywhere in a program turns early testing off for it. Ghost instances (construction previews and fading buildings, <code>state[2]</code> coverage above zero) need the Bayer-dither <code>discard</code> in <code>soi_resolve_ghost_alpha</code>; opaque instances never take that branch. The batch therefore links <code>basic_instanced.frag</code> twice: <code>building_merged</code> with <code>SOI_OPAQUE_ONLY</code> defined, which compiles the dither out, and a ghost program with it. <code>StaticBuildingBatch::finish_frame</code> sorts ghosts after the opaque instances and gives them their own draws. On Siege of Aurelia Magna at 1920x1080 Ultra the building pass fell from 5.5 to 3.3 ms of GPU time.</p>
             <h2 id="directional-shadows">Directional shadows</h2>
             <p>Directional shadows are configured by <code>DirectionalShadowSettings</code> in the active graphics profile.</p>
             <p>Current profile behavior is:</p>
@@ -766,6 +771,7 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
             </table>
             <p>Cascade fitting, bias, filtering, light-space culling, and sampling are implemented in <code>render/gl/</code> and shared shader includes.</p>
             <p><code>max_rigged_casters_per_cascade</code> caps how many soldiers, horses and elephants cast into each cascade. For every cascade the pass ranks the rigged commands that fall in that cascade's range by distance to the camera and keeps the nearest ones, across all rigged batches, so the budget is spent on the soldiers that are large on screen; the rest keep only their contact shadow, which is blended against the directional term anyway and reads as the same grounding at that size. A duel or a small fight never reaches the cap, so nothing changes there. On the Sepulcher Bridge's last rising (about 280 soldiers in view at preset High, 1280x720) the unlimited shadow pass cost 4.6 ms average and 7.6 ms at the 95th percentile; at 220 casters it was 3.2 / 3.9, at 120 it was 2.7 / 3.2 and at 60 it was 2.6 / 3.0, where the remaining cost is static casters and terrain. The benchmark report counts the dropped casters in <code>shadow_rigged_casters_dropped</code>.</p>
+            <p>Terrain scatter (trees, plants, rocks and camp props) casts with its own colour shaders, because their vertex stages place and sway each instance. The pass uploads <code>FrameData</code> with <code>u_frame_depth_only</code> set, and every scatter fragment shader returns through <code>soi_depth_only_pass()</code> before its lighting, keeping only the cutouts that shape the shadow: plant leaves and the trunk base of pines and olives. Without that, each 4096² cascade ran the full foliage lighting per shadow texel; on Cannae at 1920x1080 Ultra the scatter shadows cost 4.4 ms of a 5.8 ms shadow pass and 0.8 ms after. Each scatter command also carries its chunk's bounding sphere, so a chunk is drawn only into the cascades whose receivers its shadow can reach; on Crossing the Alps that took scatter shadows from 0.46 to 0.26 ms.</p>
             <p>Those implementation sources are the correct place to read exact shadow mechanics. The profile table documents the quality envelope rather than duplicating every internal shadow constant into multiple articles.</p>
             <h2 id="contact-shadows-and-grounding">Contact shadows and grounding</h2>
             <p>Creature/world grounding also uses contact-shadow presentation with its own <code>ContactShadowBudget</code>.</p>
@@ -891,7 +897,6 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
             <p>A quality change may require operations such as:</p>
             <ul>
                 <li>shader recompilation/reselection;</li>
-                <li>MSAA target recreation;</li>
                 <li>shadow resource changes;</li>
                 <li>LOD/cull policy changes;</li>
                 <li>post-process chain changes; or</li>
@@ -953,6 +958,27 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li>screenshot/video/manual review for visual changes that are inherently perceptual.</li>
             </ul>
             <p>Arena is especially useful because it can isolate a known authored state without requiring a full campaign path to reproduce it.</p>
+            <h3 id="creature-pipeline-goldens">Creature pipeline goldens</h3>
+            <p><code>HumanoidGoldenParity</code> and <code>QuadrupedGoldenParity</code> replay fixed poses through the
+                creature pipeline and compare every rigged draw with
+                <code>tests/render/creature/golden/*_pipeline_golden.txt</code> (regenerate with
+                <code>SOI_WRITE_HUMANOID_GOLDEN=1</code> / <code>SOI_WRITE_QUADRUPED_GOLDEN=1</code>, run from the
+                repository root). Each <code>draw</code> line carries:
+            </p>
+            <ul>
+                <li><code>topology</code>, a hash of vertex and index counts and the index buffer;</li>
+                <li><code>binding</code>, a hash of each vertex's bone indices and colour role, all integers;</li>
+                <li><code>weights</code>, two moments of the skin weights (the bone-index-weighted mean and the
+                    mean square per vertex), compared with the scalar tolerance like the matrices.</li>
+            </ul>
+            <p>The weights used to be rounded to 1/4096 and hashed. That made the golden depend on
+                the build type: the bake's weights are dyadic fractions (2308.5/4096, 15/16) and
+                float blends, so thousands of them sit on or next to a rounding boundary, and the
+                last bit that Debug and Release codegen disagree on decided the hash. CI (Debug) and
+                local Release builds recorded different <code>binding</code> values, and either golden failed
+                on the other build. No rounding grid or offset avoided it (every one tried left
+                weights within float noise of a boundary), which is why the weights are compared as
+                tolerant moments instead. Any golden change must still pass under both build types.</p>
             <h2 id="architectural-invariants">Architectural invariants</h2>
             <p>The current renderer depends on these invariants:</p>
             <ul>

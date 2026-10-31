@@ -738,7 +738,10 @@
         const modeKey = MODES[options.mode || state.settings.mode] ? options.mode || state.settings.mode : "classic";
         const mode = MODES[modeKey];
         const sentencePool = mode.sentences ? options.sentences || Sentences.pool(state.settings.articleType, state.settings.grammaticalCase) : [];
-        const pools = mode.sentences ? { pool: sentencePool, fixed: Sentences.deck(sentencePool) } : buildPool(options);
+        const pools = mode.sentences ? {
+            pool: sentencePool,
+            fixed: Sentences.deck(sentencePool)
+        } : buildPool(options);
         if (!pools.pool.length) return null;
         return {
             key: modeKey,
@@ -1186,9 +1189,18 @@
         if (!g || !g.mode.sentences || !["playing", "frozen"].includes(g.status)) return;
         const due = g.retry.findIndex((item) => item.at <= g.spawned);
         let pick;
-        if (due >= 0) pick = { entry: g.retry.splice(due, 1)[0].entry, source: "retry" };
-        else if (g.unique.size < g.budget && g.pools.fixed.length) pick = { entry: g.pools.fixed.shift(), source: g.source || "new" };
-        else if (g.retry.length) pick = { entry: g.retry.shift().entry, source: "retry" };
+        if (due >= 0) pick = {
+            entry: g.retry.splice(due, 1)[0].entry,
+            source: "retry"
+        };
+        else if (g.unique.size < g.budget && g.pools.fixed.length) pick = {
+            entry: g.pools.fixed.shift(),
+            source: g.source || "new"
+        };
+        else if (g.retry.length) pick = {
+            entry: g.retry.shift().entry,
+            source: "retry"
+        };
         else {
             endGame("done");
             return;
@@ -1228,7 +1240,9 @@
             choices.appendChild(button);
         });
         updateHud();
-        $("sentenceInput").focus({ preventScroll: true });
+        $("sentenceInput").focus({
+            preventScroll: true
+        });
         announce(`${entry.before}blank${entry.after} ${entry.translation}`);
     }
 
@@ -1241,14 +1255,24 @@
         if (!Sentences.choices(g.articleType).includes(chosen)) {
             $("sentenceValidation").textContent = "Type or choose one of the article forms below.";
             input.setAttribute("aria-invalid", "true");
-            input.focus({ preventScroll: true });
+            input.focus({
+                preventScroll: true
+            });
             return;
         }
-        const { entry, source } = g.sentence;
+        const {
+            entry,
+            source
+        } = g.sentence;
         const correct = chosen === entry.answer;
         g.answers += 1;
         state.totals.answers += 1;
-        g.history.push({ entry, chosen, correct, source });
+        g.history.push({
+            entry,
+            chosen,
+            correct,
+            source
+        });
         Srs.record(state.sentenceProgress, entry.id, correct, Srs.today());
         if (correct) {
             g.right += 1;
@@ -1259,11 +1283,17 @@
             Sound.right(g.streak);
         } else {
             g.streak = 0;
-            if (!g.missed.has(entry.id)) g.missed.set(entry.id, { entry, chosen });
-            g.retry.push({ entry, at: g.spawned + 3 });
+            if (!g.missed.has(entry.id)) g.missed.set(entry.id, {
+                entry,
+                chosen
+            });
+            g.retry.push({
+                entry,
+                at: g.spawned + 3
+            });
             Sound.wrong();
         }
-        // Both outcomes wait for an explicit Next, so explanations stay readable.
+
         g.status = "frozen";
         $("sentenceBlank").textContent = Sentences.displayAnswer(entry);
         $("sentenceBlank").removeAttribute("aria-label");
@@ -1276,10 +1306,14 @@
         $("sentenceValidation").textContent = "";
         input.disabled = true;
         $("sentenceCheck").disabled = true;
-        $("sentenceChoices").querySelectorAll("button").forEach((button) => { button.disabled = true; });
+        $("sentenceChoices").querySelectorAll("button").forEach((button) => {
+            button.disabled = true;
+        });
         $("sentenceNext").hidden = false;
         if (g.unique.size >= g.budget && !g.retry.length) $("sentenceNext").textContent = "See results";
-        $("sentenceNext").focus({ preventScroll: true });
+        $("sentenceNext").focus({
+            preventScroll: true
+        });
         updateHud();
         renderRecap();
         persist();
@@ -1654,7 +1688,11 @@
             s.meaning = value;
             persist();
         });
-        segmented($("articleControl"), "articleType", [["definite", "Definite"], ["indefinite", "Indefinite"], ["mixed", "Mixed"]], s.articleType, (value) => {
+        segmented($("articleControl"), "articleType", [
+            ["definite", "Definite"],
+            ["indefinite", "Indefinite"],
+            ["mixed", "Mixed"]
+        ], s.articleType, (value) => {
             s.articleType = value;
             persist();
             renderSummary();

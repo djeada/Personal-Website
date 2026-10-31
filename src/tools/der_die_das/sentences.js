@@ -11,19 +11,60 @@
         dative: "Dative",
         genitive: "Genitive"
     };
-    const GENDERS = { m: "masculine", f: "feminine", n: "neuter", p: "plural" };
+    const GENDERS = {
+        m: "masculine",
+        f: "feminine",
+        n: "neuter",
+        p: "plural"
+    };
     const FORMS = {
         definite: {
-            nominative: { m: "der", f: "die", n: "das", p: "die" },
-            accusative: { m: "den", f: "die", n: "das", p: "die" },
-            dative: { m: "dem", f: "der", n: "dem", p: "den" },
-            genitive: { m: "des", f: "der", n: "des", p: "der" }
+            nominative: {
+                m: "der",
+                f: "die",
+                n: "das",
+                p: "die"
+            },
+            accusative: {
+                m: "den",
+                f: "die",
+                n: "das",
+                p: "die"
+            },
+            dative: {
+                m: "dem",
+                f: "der",
+                n: "dem",
+                p: "den"
+            },
+            genitive: {
+                m: "des",
+                f: "der",
+                n: "des",
+                p: "der"
+            }
         },
         indefinite: {
-            nominative: { m: "ein", f: "eine", n: "ein" },
-            accusative: { m: "einen", f: "eine", n: "ein" },
-            dative: { m: "einem", f: "einer", n: "einem" },
-            genitive: { m: "eines", f: "einer", n: "eines" }
+            nominative: {
+                m: "ein",
+                f: "eine",
+                n: "ein"
+            },
+            accusative: {
+                m: "einen",
+                f: "eine",
+                n: "ein"
+            },
+            dative: {
+                m: "einem",
+                f: "einer",
+                n: "einem"
+            },
+            genitive: {
+                m: "eines",
+                f: "einer",
+                n: "eines"
+            }
         }
     };
     const CHOICES = {
@@ -31,9 +72,9 @@
         indefinite: ["ein", "eine", "einen", "einem", "einer", "eines"]
     };
 
-    // Each authored context supplies the noun's actual inflection, including
-    // genitive -s/-es and dative plural -n. Articles are derived from the table.
-    // Singular contexts have both a definite and an indefinite translation.
+
+
+
     const CONTEXTS = {
         nominative: [
             ["m", "", " Mann wartet vor der Tür.", "Mann", "The man is waiting outside the door.", "A man is waiting outside the door.", "The man is the subject: who is waiting?"],
@@ -128,7 +169,7 @@
         return result;
     }
 
-    // Rotate cases and gender/family groups so short rounds cover the table.
+
     function deck(entries, random = Math.random) {
         const cases = shuffle(Object.keys(CASES), random).map((grammaticalCase) => {
             const groups = new Map();
@@ -140,13 +181,17 @@
             const queues = shuffle(Array.from(groups.values()), random).map((group) => shuffle(group, random));
             const result = [];
             while (queues.some((queue) => queue.length)) {
-                queues.forEach((queue) => { if (queue.length) result.push(queue.shift()); });
+                queues.forEach((queue) => {
+                    if (queue.length) result.push(queue.shift());
+                });
             }
             return result;
         });
         const result = [];
         while (cases.some((queue) => queue.length)) {
-            cases.forEach((queue) => { if (queue.length) result.push(queue.shift()); });
+            cases.forEach((queue) => {
+                if (queue.length) result.push(queue.shift());
+            });
         }
         return result;
     }
@@ -169,5 +214,16 @@
         return `${CASES[entry.case]} · ${GENDERS[entry.gender]} · ${entry.family}. ${entry.reason} ${base} ${entry.noun} → ${entry.answer} ${form}.`;
     }
 
-    return { CASES, GENDERS, FORMS, exercises, pool, deck, choices, displayAnswer, sentence, explain };
+    return {
+        CASES,
+        GENDERS,
+        FORMS,
+        exercises,
+        pool,
+        deck,
+        choices,
+        displayAnswer,
+        sentence,
+        explain
+    };
 });
