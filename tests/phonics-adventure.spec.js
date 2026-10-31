@@ -22,7 +22,7 @@ async function unlockAll(page) {
 const taskType = (page) => page.locator("#stage").evaluate((stage) => (stage.className.match(/pa-task-(\w+)/) || [])[1]);
 
 // Answers whatever task is on screen correctly, checks it offered real choices, and waits for the next one.
-async function solve(page) {
+async function solve(page, { fast = false } = {}) {
   const type = await taskType(page);
   const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
   if (type === "build" || type === "order") {
@@ -39,12 +39,13 @@ async function solve(page) {
     expect(new Set(options).size, type).toBe(3);
     await page.locator("#stage [data-answer='true']").first().click();
   }
+  if (fast) await page.clock.fastForward(1000);
   await expect(page.locator("#play-progress")).not.toHaveAttribute("aria-valuenow", before, { timeout: 8000 });
   return type;
 }
-async function playLevel(page) {
+async function playLevel(page, options) {
   const types = [];
-  while ((await taskType(page)) !== "reward") types.push(await solve(page));
+  while ((await taskType(page)) !== "reward") types.push(await solve(page, options));
   return types;
 }
 async function openLevel(page, path, level) {
@@ -339,6 +340,10 @@ test("every level of every path in every language can be played to the end", asy
   test.setTimeout(1500000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // Exercise the whole curriculum without spending CI minutes on each success animation.
+  // The individual interaction and narration tests keep using real time.
+  await page.clock.install();
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await start(page);
   for (const language of ["en", "de", "ar"]) {
     await page.locator(`[data-language="${language}"]`).click();
@@ -347,7 +352,7 @@ test("every level of every path in every language can be played to the end", asy
       const count = await page.locator(".pa-node").count();
       for (let level = 0; level < count; level += 1) {
         await page.locator("#play-next").click();
-        await playLevel(page);
+        await playLevel(page, { fast: true });
         await page.locator("#reward-map").click();
       }
       await expect(page.locator(".pa-node.is-done")).toHaveCount(count);
