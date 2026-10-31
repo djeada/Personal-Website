@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Eventual Consistency | Adam Djellouli</title>
-    <meta content="Imagine a distributed system with multiple nodes—servers or databases—that share data." name="description" />
+    <meta content="Eventual consistency is a convergence guarantee: if updates stop and replicas can communicate and repair their states, they eventually agree on the value…" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency",
-            "description": "Imagine a distributed system with multiple nodes\u2014servers or databases\u2014that share data.",
-            "dateModified": "2026-09-30",
+            "description": "Eventual consistency is a convergence guarantee: if updates stop and replicas can communicate and repair their states, they eventually agree on the value\u2026",
+            "dateModified": "2026-10-30",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Imagine a distributed system with multiple nodes—servers or databases—that share data." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="Eventual consistency is a convergence guarantee: if updates stop and replicas can communicate and repair their states, they eventually agree on the value…" property="og:description" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -135,13 +135,7 @@
                             </li>
                         </ol>
                     </li>
-                    <li><a href="#practical-examples-of-eventual-consistency">Practical Examples of Eventual Consistency</a>
-                        <ol>
-                            <li><a href="#social-media-platforms">Social Media Platforms</a></li>
-                            <li><a href="#collaborative-editing-tools">Collaborative Editing Tools</a></li>
-                            <li><a href="#content-delivery-networks-cdns">Content Delivery Networks (CDNs)</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#where-delayed-propagation-can-be-acceptable">Where delayed propagation can be acceptable</a></li>
                     <li><a href="#benefits-of-eventual-consistency">Benefits of Eventual Consistency</a></li>
                     <li><a href="#considerations-when-using-eventual-consistency">Considerations When Using Eventual Consistency</a>
                         <ol>
@@ -382,7 +376,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -402,7 +396,7 @@
                     </button></div>
             </div>
             <h1>Eventual Consistency</h1>
-            <p>Imagine a distributed system with multiple nodes—servers or databases—that share data. When an update occurs on one node, it doesn't instantly reflect on the others due to factors like network latency or processing delays. Eventual consistency requires convergence when writes stop and communication and reconciliation can complete. It does not set a fixed convergence deadline or guarantee that every conflicting update survives.</p>
+            <p><strong>Eventual consistency</strong> is a convergence guarantee: if updates stop and replicas can communicate and repair their states, they eventually agree on the value selected by the system's reconciliation policy. It does not promise a maximum delay, a read-your-writes experience, or preservation of every concurrent update. Propagation and conflict resolution are part of the contract, not details to assume away.</p>
             <div>
                 <pre><code class="language-shell">Initial State:
 +-----------+   +-----------+   +-----------+
@@ -469,20 +463,41 @@ Time T3:
                 <li><strong>Merge functions</strong> employ application-specific logic to combine or reconcile conflicting updates.</li>
                 <li><strong>CRDTs (Conflict-Free Replicated Data Types)</strong> leverage specialized data structures to handle concurrent updates without introducing conflicts.</li>
             </ul>
-            <h2 id="practical-examples-of-eventual-consistency">Practical Examples of Eventual Consistency</h2>
-            <p>Eventual consistency is well-suited for applications where immediate consistency is not critical, but high availability and responsiveness are essential.</p>
-            <h3 id="social-media-platforms">Social Media Platforms</h3>
-            <p>On platforms like Twitter or Facebook, when a user posts a new update, it might not appear instantly on all friends' feeds due to propagation delays. However, the post will eventually become visible to everyone. This delay is generally acceptable in exchange for the ability to handle millions of users simultaneously.</p>
-            <h3 id="collaborative-editing-tools">Collaborative Editing Tools</h3>
-            <p>In tools like Google Docs, multiple users can edit the same document concurrently. Changes made by one user might not appear immediately to others, but over time, all edits are synchronized, and the document reflects all contributions. The system ensures eventual consistency while allowing users to work without interruption.</p>
-            <h3 id="content-delivery-networks-cdns">Content Delivery Networks (CDNs)</h3>
-            <p>CDNs cache content at various nodes around the world to serve users with low latency. When content is updated, the new version needs to propagate to all cache nodes. Until the update reaches a particular node, users served by that node might receive the older version. Over time, as caches refresh, all users receive the updated content.</p>
+            <h2 id="where-delayed-propagation-can-be-acceptable">Where delayed propagation can be acceptable</h2>
+            <p>Consider three <strong>generic</strong> workloads, rather than assuming the internals of a particular product:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Workload</th>
+                        <th>What readers might observe</th>
+                        <th>Design question</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Social feed projection</td>
+                        <td>A new post appears to some viewers before others</td>
+                        <td>Is delayed visibility acceptable, and can the feed catch up after replay?</td>
+                    </tr>
+                    <tr>
+                        <td>Replicated collaborative state</td>
+                        <td>Two edits arrive in different orders</td>
+                        <td>What merge semantics preserve intended user changes?</td>
+                    </tr>
+                    <tr>
+                        <td>Edge content cache</td>
+                        <td>An old asset remains until refresh or invalidation</td>
+                        <td>What maximum staleness, purge, and versioning contract is offered?</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Some collaborative editors use stronger coordination, operational transformation, or CRDTs for particular features; <strong>eventual consistency alone does not explain their conflict behavior</strong>. Likewise, a CDN cache is not automatically an eventually consistent database with the same API guarantees.</p>
             <h2 id="benefits-of-eventual-consistency">Benefits of Eventual Consistency</h2>
-            <p>Embracing eventual consistency allows distributed systems to achieve:</p>
+            <p>Eventual consistency can support these goals <strong>when the replication and failure model permits them</strong>:</p>
             <ul>
-                <li><strong>High throughput</strong> is achieved as the system avoids immediate synchronization, allowing for a greater volume of operations.</li>
-                <li><strong>Fault tolerance</strong> enables the system to remain operational even when some nodes are unreachable, with updates propagating once connectivity is restored.</li>
-                <li><strong>User experience</strong> improves through continuous availability, particularly in scenarios where slight delays in achieving data consistency are acceptable.</li>
+                <li><strong>Throughput and latency:</strong> acknowledging writes before all replicas coordinate may reduce write latency, at the cost of stale reads and reconciliation work.</li>
+                <li><strong>Availability during failures:</strong> some requests can continue at reachable replicas, but this depends on routing, write durability, conflict handling, and how the system behaves when capacity is lost.</li>
+                <li><strong>User experience:</strong> eventual consistency fits workflows that tolerate delayed visibility; it is not appropriate by default for decisions requiring a current authoritative value, such as unique seat allocation.</li>
             </ul>
             <h2 id="considerations-when-using-eventual-consistency">Considerations When Using Eventual Consistency</h2>
             <p>Applications relying on eventual consistency need to account for its characteristics in their design.</p>
@@ -501,16 +516,16 @@ Time T3:
             <p>Updates can be propagated using various methods:</p>
             <ul>
                 <li><strong>Gossip protocols</strong> enable nodes to randomly share information with peers, gradually disseminating updates across the network.</li>
-                <li><strong>Asynchronous replication</strong> allows updates to be sent to other nodes without waiting for acknowledgments, ensuring the originating node can continue handling requests.</li>
-                <li><strong>Publish-subscribe systems</strong> ensure nodes receive updates by subscribing to changes, with updates broadcast to all subscribers.</li>
+                <li><strong>Asynchronous replication</strong> can acknowledge a local write before other replicas receive it. This lowers coordination but risks lag or loss of a recent write if the acknowledged copy fails before durable propagation, depending on failure and durability policy.</li>
+                <li><strong>Publish-subscribe systems</strong> distribute change events to subscribers, but delivery, replay, duplicate handling, and durable consumer progress must be implemented; subscription alone does not guarantee eventual convergence.</li>
             </ul>
             <h3 id="handling-conflicts-with-version-vectors">Handling Conflicts with Version Vectors</h3>
-            <p>Version vectors help track the history of data updates to resolve conflicts.</p>
+            <p>Version vectors summarize observed causal history. They can distinguish “this version followed that one” from “these updates were concurrent,” but <strong>they do not select a winner or merge values</strong>. Resolution is a separate application or storage-policy decision.</p>
             <h4 id="example-of-version-vectors">Example of Version Vectors:</h4>
             <ul>
                 <li><strong>Node A</strong> updates the data, creating a version vector <code>[A:1, B:0, C:0]</code>, indicating its update.</li>
                 <li><strong>Node B</strong> simultaneously updates the same data, resulting in a version vector <code>[A:0, B:1, C:0]</code>.</li>
-                <li>During synchronization, the nodes compare version vectors to identify conflicting updates and merge changes according to predefined rules.</li>
+                <li>During synchronization, the vectors reveal that neither version causally dominates the other. A defined merge function, retained sibling versions, or a deliberate last-writer-wins rule must then resolve the concurrent values.</li>
             </ul>
             <h2 id="review-questions">Review questions</h2>
             <ol>

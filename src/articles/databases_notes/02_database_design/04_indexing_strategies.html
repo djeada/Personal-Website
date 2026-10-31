@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies",
             "description": "An index is an additional structure that helps the database find selected rows.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="An index is an additional structure that helps the database find selected rows." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -117,6 +117,7 @@
                     <li><a href="#begin-with-the-question-the-application-asks">Begin with the question the application asks</a></li>
                     <li><a href="#start-with-one-useful-index">Start with one useful index</a></li>
                     <li><a href="#column-order-changes-the-access-path">Column order changes the access path</a></li>
+                    <li><a href="#keep-indexed-columns-usable-in-a-predicate">Keep indexed columns usable in a predicate</a></li>
                     <li><a href="#match-the-amount-of-data-requested">Match the amount of data requested</a></li>
                     <li><a href="#other-index-choices-after-the-basics">Other index choices, after the basics</a></li>
                     <li><a href="#every-extra-index-has-a-write-cost">Every extra index has a write cost</a></li>
@@ -351,7 +352,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -432,6 +433,7 @@ ORDER BY order_date, order_id;</code></pre>
                 </tbody>
             </table>
             <p>Without a suitable index, the engine may examine the orders table to find matching rows. With millions of orders and only a few belonging to this customer, avoiding that work can matter. With three rows, a scan may be simpler and faster.</p>
+            <p>The query intentionally sorts <strong>oldest first</strong>. For a newest-first order-history page, use <code>ORDER BY order_date DESC, order_id DESC</code>. An ordered B-tree can often be scanned backward for a matching reverse order; a separate descending index is not automatically necessary.</p>
             <p>The <strong>optimizer</strong> is the part of the DBMS that chooses an execution strategy. Declaring an index makes another strategy possible; it does not force the engine to use it.</p>
             <h2 id="start-with-one-useful-index">Start with one useful index</h2>
             <p>For customer lookup:</p>
@@ -448,6 +450,24 @@ ON orders (customer_id, order_date, order_id);</code></pre>
             <h2 id="column-order-changes-the-access-path">Column order changes the access path</h2>
             <p>Imagine an address book sorted first by country and then by surname. It is easy to find Smiths within one country, but all Smiths across countries are scattered.</p>
             <p>Similarly, <code>(customer_id, order_date)</code> and <code>(order_date, customer_id)</code> are different indexes. The first fits one customer's date range; the second may fit all orders in a date range. Engine-specific optimizations can help with other patterns, but the order is still a design decision.</p>
+            <h2 id="keep-indexed-columns-usable-in-a-predicate">Keep indexed columns usable in a predicate</h2>
+            <p>For the SQLite bookstore, <code>order_date</code> is ISO-formatted <code>YYYY-MM-DD</code> text. With an index on <code>(customer_id, order_date, order_id)</code>, both of these queries ask for customer 1's orders from January 2025, but they expose different access opportunities.</p>
+            <p><strong>Less index-friendly — transform the date for each matching customer row:</strong></p>
+            <div>
+                <pre><code class="language-sql">SELECT order_id, order_date
+FROM orders
+WHERE customer_id = 1
+  AND substr(order_date, 1, 7) = '2025-01';</code></pre>
+            </div>
+            <p><strong>Better for this schema — compare the indexed value directly:</strong></p>
+            <div>
+                <pre><code class="language-sql">SELECT order_id, order_date
+FROM orders
+WHERE customer_id = 1
+  AND order_date &gt;= '2025-01-01'
+  AND order_date &lt; '2025-02-01';</code></pre>
+            </div>
+            <p>Both return orders 101 and 102 from the sample. The second predicate lets an ordinary composite B-tree use the customer equality followed by a date <strong>range</strong>; the first can still use the customer prefix but generally cannot use the date portion for a range without an appropriate expression index. Confirm with <code>EXPLAIN QUERY PLAN</code> on your actual engine. The lexical range works here because the sample stores consistently formatted ISO dates; timestamps with times or zones require correctly chosen boundaries.</p>
             <h2 id="match-the-amount-of-data-requested">Match the amount of data requested</h2>
             <p>A query returning one email match may benefit greatly from an index. A query returning almost every customer may benefit little: it still needs to retrieve almost every row.</p>
             <p><strong>Selectivity</strong> describes how much a condition narrows the data. Look at how many rows the actual predicate matches rather than assuming a column is useful because it has an index. A boolean status may still be valuable in a partial index for a rare status.</p>
@@ -488,7 +508,9 @@ ON orders (customer_id, order_date, order_id);</code></pre>
             <p>When an order is inserted, the database may need to insert its index entries too. Updating an indexed customer or date can require index maintenance. More indexes use more storage and memory and can increase write work.</p>
             <p>A primary or unique constraint may already have a supporting index. Check the existing definitions before adding another identical one. A foreign-key declaration does not universally create an index on the referencing columns.</p>
             <h2 id="verify-with-a-plan-and-a-representative-workload">Verify with a plan and a representative workload</h2>
-            <p>An <strong>execution plan</strong> shows how a query will or did access data. Use the chosen engine's plan tools to check rows examined, sorting, estimates, and elapsed time. Some analysis commands execute the query, so understand the tool before applying it to a write.</p>
+            <p>An <strong>execution plan</strong> shows how a query will or did access data. Use the chosen engine's plan tools to check rows examined, sorting, estimates, and elapsed time.</p>
+            <p><strong>Incorrect:</strong> assume that creating an index always improves the query just because its name sounds relevant.</p>
+            <p><strong>Correct:</strong> compare the same query before and after the index, then measure with realistic row counts. Start from a fresh SQLite bookstore <strong>without any earlier optional index examples</strong> (the indexes shown above are alternatives, not a sequence to accumulate). Run <code>EXPLAIN QUERY PLAN SELECT order_id, order_date FROM orders WHERE customer_id = 1 ORDER BY order_date, order_id;</code> before creating <code>idx_design_customer_history</code> below, and again after. Without a supporting index, a scan is expected; afterward the engine can use a covering index. The exact chosen plan remains an optimizer decision, not a fixed output to memorize. Some analysis commands execute the query, so understand the tool before applying it to a write.</p>
             <p>Compare the read improvement with insertion and update costs. Test customers with a few orders and customers with many; one convenient test value can hide a different workload.</p>
             <h2 id="read-a-b-tree-lookup-as-a-sequence-of-choices">Read a B-tree lookup as a sequence of choices</h2>
             <p>SQLite and PostgreSQL support ordered B-tree-family indexes. A simplified index on customer and date keeps keys ordered by customer first, then date. The engine follows upper-level entries toward a relevant leaf range rather than examining every table row.</p>
@@ -530,7 +552,7 @@ ORDER BY order_date, order_id;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <p>Plan wording and identifiers vary by SQLite version. PostgreSQL's index-only scans have additional visibility requirements; containing the columns alone does not guarantee zero heap visits. The source of the result remains the table's logical data, not a new authoritative customer history.</p>
+            <p>Plan wording and identifiers vary by SQLite version. SQLite's <code>INTEGER PRIMARY KEY</code> is a rowid alias in this sample, so the rowid can already be carried by a secondary index; explicit inclusion of <code>order_id</code> is mainly pedagogical here. PostgreSQL's index-only scans have additional visibility requirements; containing the columns alone does not guarantee zero heap visits. The source of the result remains the table's logical data, not a new authoritative customer history.</p>
             <p>If the application primarily needs open orders, a partial index can omit completed and cancelled orders:</p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_design_open_orders

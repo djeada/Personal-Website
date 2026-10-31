@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Database Types: Compare the Operations, Not Just the Names</title>
-    <meta content="The first note used tables to connect customers and orders. Other databases represent data as documents, keyed values, or graph relationships." name="description" />
+    <meta content="The first note connected customers and orders through relational keys." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases",
-            "description": "The first note used tables to connect customers and orders. Other databases represent data as documents, keyed values, or graph relationships.",
-            "dateModified": "2026-10-04",
+            "description": "The first note connected customers and orders through relational keys.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="The first note used tables to connect customers and orders. Other databases represent data as documents, keyed values, or graph relationships." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="The first note connected customers and orders through relational keys." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,7 +114,7 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#relational-databases-combine-independently-stored-facts">Relational databases: combine independently stored facts</a>
+                    <li><a href="#relational-model-shared-facts-and-flexible-joins">Relational model: shared facts and flexible joins</a>
                         <ol>
                             <li><a href="#create-and-query-a-relational-example">Create and query a relational example</a></li>
                             <li><a href="#why-this-mechanism-fits-and-where-it-costs">Why this mechanism fits, and where it costs</a></li>
@@ -146,8 +146,8 @@
                         </ol>
                     </li>
                     <li><a href="#historical-and-object-oriented-families">Historical and object-oriented families</a></li>
-                    <li><a href="#keep-model-deployment-and-workload-separate">Keep model, deployment, and workload separate</a></li>
-                    <li><a href="#choose-using-one-complete-workflow">Choose using one complete workflow</a></li>
+                    <li><a href="#separate-logical-model-storage-layout-and-deployment">Separate logical model, storage layout, and deployment</a></li>
+                    <li><a href="#choose-by-tracing-a-complete-workflow">Choose by tracing a complete workflow</a></li>
                     <li><a href="#practice-and-check-your-understanding">Practice and check your understanding</a></li>
                 </ol>
             </div>
@@ -371,7 +371,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -391,9 +391,9 @@
                     </button></div>
             </div>
             <h1>Database Types: Compare the Operations, Not Just the Names</h1>
-            <p>The first note used tables to connect customers and orders. Other databases represent data as documents, keyed values, or graph relationships. Each representation changes what is easy to read, what must be maintained during a write, and which operations need additional structures.</p>
+            <p>The first note connected customers and orders through relational keys. Other systems organize access around nested documents, exact keys, partitions, graph edges, or analytical columns. These are <strong>model and workload choices</strong>, not a ranking of modernity or scalability. Compare a concrete read and its update/failure behavior before choosing a product.</p>
             <p>This note compares database families through named technologies and concrete operations. Each executable example has its own setup. The SQL examples use SQLite unless another engine is named; MongoDB, Redis, Cassandra, and Neo4j examples require their respective services and clients. You can understand the comparisons without installing every product.</p>
-            <h2 id="relational-databases-combine-independently-stored-facts">Relational databases: combine independently stored facts</h2>
+            <h2 id="relational-model-shared-facts-and-flexible-joins">Relational model: shared facts and flexible joins</h2>
             <p><strong>SQLite, PostgreSQL, MySQL, SQL Server, and Oracle Database</strong> are relational DBMSs. They expose tables, keys, constraints, and SQL. Their deployment and storage details differ, but they can express relationships and calculations without forcing the application to fetch every record and combine it itself.</p>
             <p>A bookstore account page needs customer names and orders. A finance report needs amounts by date. Relational tables let those requests combine the same base facts in different ways.</p>
             <h3 id="create-and-query-a-relational-example">Create and query a relational example</h3>
@@ -545,7 +545,7 @@ db.products.find(
                         <td>SQL on the Move</td>
                         <td>audio</td>
                         <td>2500</td>
-                        <td>NULL</td>
+                        <td><em>(field absent)</em></td>
                     </tr>
                 </tbody>
             </table>
@@ -568,6 +568,7 @@ db.products.find(
             <div>
                 <pre><code class="language-json">{ "_id": 10, "title": "Database Basics" }</code></pre>
             </div>
+            <p>The audiobook's <code>attributes</code> has no <code>language</code> property; the input table displays <strong>field absent</strong>, not SQL <code>NULL</code>. A missing BSON field and a field explicitly set to BSON <code>null</code> are different representations, even though some MongoDB queries match both. The shown equality filter selects only the book whose nested language is <code>"en"</code>.</p>
             <p><code>use</code> is a <code>mongosh</code> command selecting the database, rather than ordinary JavaScript. The insertion creates the collection if necessary. <code>_id</code> identifies each document. Dot notation accesses the nested language field, and the second argument selects returned fields.</p>
             <p>Add an index for a recurring language lookup:</p>
             <div>
@@ -576,6 +577,33 @@ db.products.find(
             <p>The <code>1</code> specifies ascending index order. This makes a language-field access path available; whether the planner chooses it depends on the data and query. MongoDB's <a href="https://www.mongodb.com/docs/manual/reference/method/db.collection.insertone/">insertion documentation</a> describes collection creation and identifiers, and its <a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/index-single/create-embedded-object-index/">embedded-field indexing guide</a> distinguishes whole-object indexes from indexes on specific nested fields.</p>
             <h3 id="embedding-is-a-modeling-decision">Embedding is a modeling decision</h3>
             <p>An order document can embed its bounded list of purchased lines because they are often read together. Embedding a customer's entire lifelong order history is different: that array can grow without bound, and independent order queries become awkward.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Workload</th>
+                        <th>Better starting boundary</th>
+                        <th>Less suitable starting boundary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Fetch one order and its few purchased lines</td>
+                        <td>Order document with its bounded lines</td>
+                        <td>Separate lookups for each line without a demonstrated need</td>
+                    </tr>
+                    <tr>
+                        <td>Search or update a customer's growing order history</td>
+                        <td>Independently identified orders with <code>customer_id</code></td>
+                        <td>One customer document containing every past order forever</td>
+                    </tr>
+                    <tr>
+                        <td>Change a product's current catalog price</td>
+                        <td>Update the authoritative product record</td>
+                        <td>Copy the current price into every customer's stored profile</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>These are modeling starting points, not universal rules: actual document size limits, query patterns, consistency needs, and indexing decide the final design.</p>
             <p><strong>Embedding</strong> places related values inside a document; <strong>referencing</strong> stores another record's identifier. Repeating a current price in many documents creates an update obligation. A price charged in a historical order is intentionally a separate fact and should not follow later catalog edits.</p>
             <p>A flexible document structure still needs a schema contract. The application must understand missing fields and expected types, and the DBMS may enforce document validation. MongoDB also supports multi-document transactions in suitable deployments. “Document” does not automatically mean “no rules” or “no transactions.”</p>
             <h2 id="key-value-databases-address-a-value-directly">Key-value databases: address a value directly</h2>
@@ -860,7 +888,7 @@ ORDER BY recommended_title;</code></pre>
             <h2 id="historical-and-object-oriented-families">Historical and object-oriented families</h2>
             <p>The main operational examples above are not an exhaustive taxonomy. <strong>IBM IMS</strong> uses a hierarchical segment model, and <strong>IDMS</strong> is associated with the network model. <strong>ObjectDB</strong> persists Java objects through object-oriented APIs. These families matter when maintaining an existing system or evaluating a workload organized around their structures.</p>
             <p>The <a href="04_data_models.html">data-models note</a> explains hierarchical, network, entity-relationship, and object-oriented structures with examples and distinguishes them from modern documents and graphs. Do not interpret “NoSQL” as a synonym for every non-relational historical system.</p>
-            <h2 id="keep-model-deployment-and-workload-separate">Keep model, deployment, and workload separate</h2>
+            <h2 id="separate-logical-model-storage-layout-and-deployment">Separate logical model, storage layout, and deployment</h2>
             <p>A product can fit several descriptions at once:</p>
             <table>
                 <thead>
@@ -904,7 +932,7 @@ ORDER BY recommended_title;</code></pre>
                 </tbody>
             </table>
             <p>“In-memory,” “distributed,” and “time-series” are not mutually exclusive alternatives to “relational.” PostgreSQL can use JSON fields, a graph can run on a server, and an analytical engine can be embedded. <strong>NoSQL</strong> groups several model families; it does not establish one universal transaction, scaling, or consistency guarantee.</p>
-            <h2 id="choose-using-one-complete-workflow">Choose using one complete workflow</h2>
+            <h2 id="choose-by-tracing-a-complete-workflow">Choose by tracing a complete workflow</h2>
             <p>For checkout, identify the reads, stock reservation, order writes, immediate confirmation, and failure cases together. Ask what must be atomic and what a retry can duplicate. For reporting, identify scan volume, required freshness, joins, and the cost of loading analytical data.</p>
             <p>Compare candidates against those requirements:</p>
             <ul>

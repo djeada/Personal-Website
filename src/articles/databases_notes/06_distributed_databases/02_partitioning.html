@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Partitioning | Adam Djellouli</title>
-    <meta content="Partitioning involves dividing a large database table into smaller, more manageable pieces called partitions." name="description" />
+    <meta content="Partitioning splits one logical table into smaller physical pieces according to a declared key." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning",
-            "description": "Partitioning involves dividing a large database table into smaller, more manageable pieces called partitions.",
-            "dateModified": "2026-09-30",
+            "description": "Partitioning splits one logical table into smaller physical pieces according to a declared key.",
+            "dateModified": "2026-10-30",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Partitioning involves dividing a large database table into smaller, more manageable pieces called partitions." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="Partitioning splits one logical table into smaller physical pieces according to a declared key." property="og:description" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -133,7 +133,7 @@
                             <li><a href="#querying-with-partition-pruning">Querying with Partition Pruning</a></li>
                             <li><a href="#adding-next-year-s-partition">Adding Next Year’s Partition</a></li>
                             <li><a href="#dropping-an-out-of-scope-year">Dropping an Out-of-Scope Year</a></li>
-                            <li><a href="#automating-with-events">Automating with EVENTS</a></li>
+                            <li><a href="#automate-partition-maintenance-without-fake-static-ddl">Automate partition maintenance without fake static DDL</a></li>
                             <li><a href="#effects-on-normal-queries">Effects on “Normal” Queries</a></li>
                         </ol>
                     </li>
@@ -361,7 +361,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -381,7 +381,7 @@
                     </button></div>
             </div>
             <h1>Partitioning</h1>
-            <p>Partitioning involves dividing a large database table into smaller, more manageable pieces called partitions. This method helps improve query performance because the database can access only the relevant partitions when executing queries, rather than scanning the entire table. It also simplifies data management tasks like backups, archiving, and purging old data.</p>
+            <p>Partitioning splits one logical table into smaller physical pieces according to a declared key. <strong>Partition pruning</strong> can reduce query work when the filter identifies relevant pieces; it is not automatic for every query and does not replace suitable indexes. Partition management can also make retention and bulk removal simpler, subject to engine-specific locking, storage, and backup behavior.</p>
             <h2 id="what-do-we-mean-by-partitioning">What do we mean by Partitioning?</h2>
             <p>Imagine a colossal table that stores millions of rows. Searching through this massive table every time can be time-consuming and inefficient. Partitioning slices the table into smaller sections based on specific criteria, allowing the database engine to quickly locate and retrieve the data it needs.</p>
             <div>
@@ -892,20 +892,21 @@
             <p>Composite partitioning combines two or more partitioning methods, such as range-hash or range-list partitioning. This approach is suitable for complex data and query requirements, allowing for more granular data management and performance optimization.</p>
             <p>For example, a table might first be range-partitioned by date and then hash-partitioned within each date range partition. This method provides the benefits of both partitioning strategies, catering to specific query patterns and data distribution needs.</p>
             <h2 id="example-table-historical-stock-prices">Example Table: Historical Stock Prices</h2>
-            <p>When managing large volumes of time-series financial data, partitioning can dramatically improve query performance and maintenance operations. Below is an example of how to set up a partitioned MySQL/MariaDB table for daily OHLC (Open-High-Low-Close) stock prices by year.</p>
+            <p>When managing large volumes of time-series financial data, partitioning can dramatically improve query performance and maintenance operations. The following example targets <strong>MySQL 8.x</strong> and stores daily OHLC (Open-High-Low-Close) prices by year. MariaDB has related but not identical partitioning and event behavior; test its syntax separately.</p>
             <h3 id="create-the-partitioned-table">Create the Partitioned Table</h3>
             <p>Begin by defining your main table schema and specifying a partitioning strategy. Here we use <strong>RANGE</strong> partitioning on the integer expression <code>YEAR(trade_date)</code>, creating one partition per calendar year plus a catch-all for future dates.</p>
             <div>
                 <pre><code class="language-sql">DROP TABLE IF EXISTS stock_prices;
 CREATE TABLE stock_prices (
-  id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+  id            BIGINT NOT NULL AUTO_INCREMENT,
   ticker        VARCHAR(10)   NOT NULL,
   trade_date    DATE          NOT NULL,
   open_price    DECIMAL(10,4),
   high_price    DECIMAL(10,4),
   low_price     DECIMAL(10,4),
   close_price   DECIMAL(10,4),
-  volume        BIGINT
+  volume        BIGINT,
+  PRIMARY KEY (id, trade_date)
 )
 PARTITION BY RANGE ( YEAR(trade_date) ) (
   PARTITION p2018 VALUES LESS THAN (2019),
@@ -919,8 +920,9 @@ PARTITION BY RANGE ( YEAR(trade_date) ) (
 );</code></pre>
             </div>
             <ul>
-                <li><strong>Partition key</strong>: <code>YEAR(trade_date)</code> must appear in every UNIQUE/PRIMARY index (it’s already in the primary key).</li>
-                <li><strong>Partitions</strong>: p2018…p2024 cover past years; p_future holds any dates from 2025 onward.</li>
+                <li><strong>Primary-key rule:</strong> MySQL requires every <code>PRIMARY KEY</code> and <code>UNIQUE</code> key on a partitioned table to contain all columns referenced by the partition expression. Because the expression uses <code>trade_date</code>, <code>PRIMARY KEY (id)</code> would make this <code>CREATE TABLE</code> fail; <code>PRIMARY KEY (id, trade_date)</code> satisfies the rule while keeping <code>id</code> first for <code>AUTO_INCREMENT</code>. This means <code>id</code> alone is <strong>not</strong> guaranteed globally unique by this table's declared primary key.</li>
+                <li><strong>Partitions:</strong> p2018…p2024 cover past years; p_future holds dates from 2025 onward, and earlier dates fall into the first partition. Add a lower-bound strategy or validation if pre-2018 data must be rejected.</li>
+                <li><strong>Reference:</strong> <a href="https://dev.mysql.com/doc/refman/8.4/en/partitioning-limitations-partitioning-keys-unique-keys.html">MySQL partitioning keys and unique keys</a>.</li>
             </ul>
             <h3 id="show-create-table">SHOW CREATE TABLE</h3>
             <p>After creating the table, verify that the partitioning clause is in place by inspecting the full DDL. This ensures your partition definitions are correctly applied.</p>
@@ -972,13 +974,13 @@ WHERE TABLE_SCHEMA = DATABASE()
             <h3 id="querying-with-partition-pruning">Querying with Partition Pruning</h3>
             <p>Partition pruning tells the optimizer to scan only relevant partitions based on the <code>WHERE</code> clause. This avoids full-table scans and speeds up queries dramatically for time-restricted filters.</p>
             <div>
-                <pre><code class="language-sql">EXPLAIN PARTITIONS
+                <pre><code class="language-sql">EXPLAIN
 SELECT ticker, close_price
 FROM stock_prices
 WHERE trade_date BETWEEN '2022-01-01' AND '2022-12-31'
   AND ticker = 'AAPL';</code></pre>
             </div>
-            <p>The <code>EXPLAIN</code> output will show <code>partitions: p2022</code>, indicating only that partition is scanned before applying the <code>ticker='AAPL'</code> filter.</p>
+            <p>Inspect the <code>partitions</code> field in MySQL's <code>EXPLAIN</code> result to see which partitions are considered. The optimizer can prune to <code>p2022</code> for this date range, but <strong>check the actual plan</strong> instead of assuming the partitioning key forces pruning in every SQL expression. The ticker predicate still needs its own useful access path if that lookup is selective.</p>
             <h3 id="adding-next-year-s-partition">Adding Next Year’s Partition</h3>
             <p>As the calendar rolls over, you need to split the catch-all partition to include a new yearly partition and maintain the future placeholder. Execute this once at the start of each year.</p>
             <div>
@@ -989,45 +991,20 @@ WHERE trade_date BETWEEN '2022-01-01' AND '2022-12-31'
   );</code></pre>
             </div>
             <h3 id="dropping-an-out-of-scope-year">Dropping an Out-of-Scope Year</h3>
-            <p>To remove historical data in bulk (e.g., before 2018), drop the corresponding partition. This operation is instantaneous and avoids expensive row-by-row deletes.</p>
+            <p>To remove historical data in bulk (e.g., before 2018), drop the corresponding partition. This can remove many rows without issuing individual <code>DELETE</code> statements, but it can still require metadata locks, storage work, and a retention/backup decision. Do not describe it as universally instantaneous.</p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE stock_prices
   DROP PARTITION p2018;</code></pre>
             </div>
-            <h3 id="automating-with-events">Automating with EVENTS</h3>
-            <p>MariaDB EVENTS can execute partition management tasks on a schedule, reducing manual overhead. Here are two example events:</p>
-            <ol>
-                <li><strong>Add new year’s partition</strong> every January 1st.</li>
-                <li><strong>Drop partitions older than N years</strong> (e.g., keep only the last 7 years), implemented via a stored procedure.</li>
-            </ol>
-            <div>
-                <pre><code class="language-sql">-- 1. Add partition
-CREATE EVENT ev_add_stock_year
-ON SCHEDULE EVERY 1 YEAR
-  STARTS '2025-01-01 00:00:00'
-DO
-  ALTER TABLE stock_prices
-    REORGANIZE PARTITION p_future INTO (
-      PARTITION p{YEAR(CURDATE())} VALUES LESS THAN (YEAR(CURDATE())+1),
-      PARTITION p_future VALUES LESS THAN MAXVALUE
-    );
-
--- 2. Drop old partitions
-CREATE EVENT ev_drop_old_stock
-ON SCHEDULE EVERY 1 YEAR
-  STARTS '2025-01-01 01:00:00'
-DO
-  SET @cutoff := YEAR(CURDATE()) - 7;
-  -- dynamic SQL: drop each partition pYYYY where YYYY &lt;= @cutoff
-  -- implement via prepared statements or stored procedure
-  CALL drop_old_stock_partitions(@cutoff);</code></pre>
-            </div>
+            <h3 id="automate-partition-maintenance-without-fake-static-ddl">Automate partition maintenance without fake static DDL</h3>
+            <p>The yearly <code>ALTER TABLE</code> shown above names a literal partition and boundary. It cannot be turned into valid dynamic DDL merely by writing placeholders such as <code>p{YEAR(CURDATE())}</code> inside an event; that is <strong>not valid MySQL partition syntax</strong>. A similarly named <code>drop_old_stock_partitions()</code> procedure must exist before an event can call it.</p>
+            <p>For a real maintenance job, calculate the next boundary and partition name in application or stored-procedure code, quote and validate the identifier, construct the DDL, and run it through the engine's supported dynamic-SQL mechanism. Schedule it <em>ahead</em> of the first insert into the new year; check existing partitions, monitor locks and failures, and test it in staging. Deleting old partitions must follow explicit retention and backup policy. The static <code>REORGANIZE PARTITION</code> example above is the <strong>runnable exercise</strong>; no unimplemented event template is presented as executable SQL.</p>
             <h3 id="effects-on-normal-queries">Effects on “Normal” Queries</h3>
             <ul>
                 <li><strong>No query syntax change</strong>: You still <code>SELECT * FROM stock_prices WHERE …</code>.</li>
-                <li>Date‐range filters only scan relevant partitions.</li>
+                <li>Date-range filters <strong>may</strong> prune partitions when the optimizer can infer the partition-key range; verify the plan.</li>
                 <li>Secondary indexes (e.g. on <code>ticker</code>) are local to each partition.</li>
-                <li><strong>Fast maintenance</strong>: Archiving or deleting old data is a single <code>DROP PARTITION</code>.</li>
+                <li><strong>Retention maintenance</strong>: Dropping old partitions can avoid row-by-row deletes, but still requires operational planning.</li>
             </ul>
             <h2 id="best-practices-for-partitioning">Best Practices for Partitioning</h2>
             <p>To make the most of partitioning, it's important to consider your data characteristics and query patterns.</p>
@@ -1036,16 +1013,18 @@ DO
                 <li>Include the partitioning key in all PRIMARY KEY and UNIQUE constraints.</li>
                 <li>Avoid non-deterministic functions on the partition key in WHERE clauses to enable pruning.</li>
                 <li>Write queries to leverage partition pruning so the engine skips irrelevant partitions.</li>
-                <li>Verify pruning with <code>EXPLAIN PARTITIONS</code> whenever you introduce new filters.</li>
+                <li>Verify pruning with MySQL <code>EXPLAIN</code> and its <code>partitions</code> field whenever you introduce new filters.</li>
                 <li>Monitor your partitioning scheme and adjust or redistribute partitions as data volume and access patterns evolve.</li>
-                <li>Periodically reorganize or rebuild partitions to prevent imbalance and optimize storage.</li>
+                <li>Reorganize partitions when measurements or retention boundaries justify it; rebuilding everything periodically is not a universal requirement.</li>
                 <li>Balance partition sizes—if annual data becomes too large, switch to monthly ranges, for example:</li>
             </ul>
+            <p>For a <strong>different, new table</strong>, MySQL can range-partition directly by dates with <code>RANGE COLUMNS(trade_date)</code>; its unique keys must still include <code>trade_date</code>:</p>
             <div>
-                <pre><code class="language-sql">PARTITION BY RANGE (TO_DAYS(trade_date)) (
-  PARTITION p2024_01 VALUES LESS THAN (TO_DAYS('2024-02-01')),
-  PARTITION p2024_02 VALUES LESS THAN (TO_DAYS('2024-03-01')),
-  …
+                <pre><code class="language-sql">PARTITION BY RANGE COLUMNS (trade_date) (
+  PARTITION p_before_2024 VALUES LESS THAN ('2024-01-01'),
+  PARTITION p2024_01 VALUES LESS THAN ('2024-02-01'),
+  PARTITION p2024_02 VALUES LESS THAN ('2024-03-01'),
+  PARTITION p_future VALUES LESS THAN (MAXVALUE)
 );</code></pre>
             </div>
             <h2 id="review-questions">Review questions</h2>

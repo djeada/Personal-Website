@@ -143,7 +143,6 @@ DENY = {
     "Denken",
     "Reisen",
     "Englisch",
-
     "Nutte",
     "Kacke",
     "Muschi",
@@ -166,7 +165,6 @@ DENY = {
     "Miststück",
     "Mistkerl",
     "Arsch",
-
     "Henry",
     "Lee",
     "Kate",

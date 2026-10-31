@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Stored Procedures and Functions: Name Reusable Database Work</title>
-    <meta content="A view names a query. A stored routine names database code that can accept inputs and perform work. Two common kinds are procedures and functions." name="description" />
+    <meta content="A stored routine gives database logic a callable interface." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions",
-            "description": "A view names a query. A stored routine names database code that can accept inputs and perform work. Two common kinds are procedures and functions.",
-            "dateModified": "2026-10-04",
+            "description": "A stored routine gives database logic a callable interface.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A view names a query. A stored routine names database code that can accept inputs and perform work. Two common kinds are procedures and functions." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A stored routine gives database logic a callable interface." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -130,8 +130,8 @@ messageStyle: "none"
                     <li><a href="#return-a-table-when-the-result-contains-several-rows">Return a table when the result contains several rows</a></li>
                     <li><a href="#define-and-call-a-procedure">Define and call a procedure</a></li>
                     <li><a href="#make-the-cancellation-contract-report-a-rejected-operation">Make the cancellation contract report a rejected operation</a></li>
-                    <li><a href="#a-routine-is-not-a-transaction-boundary-by-itself">A routine is not a transaction boundary by itself</a></li>
-                    <li><a href="#decide-whether-the-database-is-the-right-home">Decide whether the database is the right home</a></li>
+                    <li><a href="#keep-routine-execution-separate-from-transaction-ownership">Keep routine execution separate from transaction ownership</a></li>
+                    <li><a href="#decide-when-server-side-code-is-worth-maintaining">Decide when server-side code is worth maintaining</a></li>
                     <li><a href="#see-how-sql-server-expresses-an-output-parameter">See how SQL Server expresses an output parameter</a></li>
                     <li><a href="#choose-the-interface-by-the-caller-s-needs">Choose the interface by the caller's needs</a></li>
                     <li><a href="#version-routines-as-part-of-the-schema">Version routines as part of the schema</a></li>
@@ -358,7 +358,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -378,7 +378,7 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Stored Procedures and Functions: Name Reusable Database Work</h1>
-            <p>A view names a query. A <strong>stored routine</strong> names database code that can accept inputs and perform work. Two common kinds are procedures and functions. Their syntax, return values, transaction rules, and privileges depend on the engine.</p>
+            <p>A <strong>stored routine</strong> gives database logic a callable interface. Use a function when a query needs a calculated value or set; use a procedure for an explicitly invoked operation. This chapter uses PostgreSQL because routine signatures, privileges, side effects, and transaction behavior are <strong>dialect-specific</strong>. Start with the ordinary query before introducing a reusable wrapper.</p>
             <p>Read <a href="06_joins_subqueries_and_views.html">joins, subqueries, and views</a> first. This note uses <strong>PostgreSQL</strong>, because SQLite does not provide SQL <code>CREATE PROCEDURE</code> or <code>CREATE FUNCTION</code> commands. SQLite applications can register functions through their programming-language API, which is a different mechanism.</p>
             <h2 id="start-with-the-work-you-want-to-reuse">Start with the work you want to reuse</h2>
             <p>The bookstore often needs an order's total: multiply each line's quantity by its purchase price, then add the amounts. A plain query is already sufficient. A function can give that calculation a reusable name and accept the order identifier as an argument.</p>
@@ -464,7 +464,27 @@ SELECT bookstore_order_total(101) AS total_cents;</code></pre>
                 <li><code>::BIGINT</code> converts the price before multiplication, avoiding the smaller integer type's multiplication range.</li>
                 <li><code>COALESCE(..., 0)</code> chooses zero when <code>SUM</code> has no input values.</li>
             </ul>
-            <p>This function also returns zero for an identifier with no items. That policy does <strong>not</strong> distinguish a missing order from an existing empty order. A production design must choose the intended behavior, perhaps checking an orders table or returning null.</p>
+            <p>This function also returns zero for an identifier with no items. For example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT bookstore_order_total(101) AS existing_order_total,
+       bookstore_order_total(999) AS unknown_id_total;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>existing_order_total</th>
+                        <th>unknown_id_total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>5500</td>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Incorrect assumption:</strong> a zero returned by this function proves order 999 exists and has no purchases. It proves only that no item rows matched.</p>
+            <p><strong>Correct contract:</strong> distinguish “known order with zero items” from “order does not exist” <em>if the caller needs that distinction</em>. A production design can check an authoritative <code>orders</code> table and return <code>NULL</code> or raise an explicitly documented error for a missing identifier. The small teaching table has only items, so it cannot make that decision by itself.</p>
             <p>PostgreSQL functions can return scalars or sets and can do more than arithmetic. Their allowed effects and declarations matter; do not assume every function is pure or evaluated just once. See the official <a href="https://www.postgresql.org/docs/current/sql-createfunction.html">function documentation</a>.</p>
             <h2 id="return-a-table-when-the-result-contains-several-rows">Return a table when the result contains several rows</h2>
             <p>Continue with the PostgreSQL <code>routine_order_items</code> setup. A table-returning function can expose a report with an input threshold:</p>
@@ -615,10 +635,10 @@ SELECT order_id, status FROM routine_orders WHERE order_id = 104;</code></pre>
             </table>
             <p><code>FOUND</code> records whether the preceding update affected a row. Calling this checked procedure again raises an exception. Its contract treats an already cancelled order as an error; another workflow could intentionally report “already cancelled” as a successful idempotent outcome. Decide that policy before naming the interface.</p>
             <p>Run the failing call separately. If it occurs inside a transaction, recover with rollback before continuing. PL/pgSQL's <code>BEGIN ... END</code> groups procedural statements; it does not commit the update on its own. The caller can still roll back a successful call.</p>
-            <h2 id="a-routine-is-not-a-transaction-boundary-by-itself">A routine is not a transaction boundary by itself</h2>
+            <h2 id="keep-routine-execution-separate-from-transaction-ownership">Keep routine execution separate from transaction ownership</h2>
             <p>Calling a routine happens within database transaction rules. These examples do not contain an internal <code>COMMIT</code>; callers can group their calls with other statements using a transaction.</p>
             <p>Procedural languages add variables, branches, loops, and error handling. PostgreSQL's <strong>PL/pgSQL</strong> is one such language. Its <code>BEGIN ... END</code> groups code; it is distinct from the SQL <code>BEGIN</code> that starts a transaction. PostgreSQL permits transaction control inside procedures only under specified calling conditions. See the official <a href="https://www.postgresql.org/docs/current/sql-createprocedure.html">procedure documentation</a>.</p>
-            <h2 id="decide-whether-the-database-is-the-right-home">Decide whether the database is the right home</h2>
+            <h2 id="decide-when-server-side-code-is-worth-maintaining">Decide when server-side code is worth maintaining</h2>
             <p>A routine can centralize behavior used by several applications and reduce network round trips. It also introduces database code to version, deploy, debug, and test. An ordinary parameterized query or view may already be enough.</p>
             <p>Do not assume a routine is faster because it is “precompiled.” Planning and plan reuse depend on the engine, language, and query. A routine still needs suitable indexes and efficient SQL.</p>
             <p>Privileges also require an explicit design. PostgreSQL normally runs a routine with the caller's privileges (<code>SECURITY INVOKER</code>). <code>SECURITY DEFINER</code> uses the owner's privileges and needs careful control of object resolution and access. Merely moving a query into a routine does not automatically bypass table permissions or prevent injection in dynamically assembled SQL.</p>

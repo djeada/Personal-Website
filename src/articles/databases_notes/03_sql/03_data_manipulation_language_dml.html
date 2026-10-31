@@ -23,7 +23,7 @@
         })();
     </script>
     <title>DML: Read, Add, Change, and Remove Rows | Adam Djellouli</title>
-    <meta content="Data Manipulation Language (DML) works with table data. SELECT reads rows, INSERT adds them, UPDATE changes them, and DELETE removes them." name="description" />
+    <meta content="DML changes rows with INSERT, UPDATE, and DELETE; SELECT reads data and is sometimes classified separately as query language." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml",
-            "description": "Data Manipulation Language (DML) works with table data. SELECT reads rows, INSERT adds them, UPDATE changes them, and DELETE removes them.",
-            "dateModified": "2026-10-04",
+            "description": "DML changes rows with INSERT, UPDATE, and DELETE; SELECT reads data and is sometimes classified separately as query language.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Data Manipulation Language (DML) works with table data. SELECT reads rows, INSERT adds them, UPDATE changes them, and DELETE removes them." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="DML changes rows with INSERT, UPDATE, and DELETE; SELECT reads data and is sometimes classified separately as query language." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -119,13 +119,13 @@
                     <li><a href="#change-a-targeted-row-with-update">Change a targeted row with UPDATE</a></li>
                     <li><a href="#use-current-values-for-a-relative-change">Use current values for a relative change</a></li>
                     <li><a href="#remove-a-row-with-delete">Remove a row with DELETE</a></li>
-                    <li><a href="#distinguish-the-common-outcomes">Distinguish the common outcomes</a></li>
+                    <li><a href="#interpret-the-outcome-before-committing-a-workflow">Interpret the outcome before committing a workflow</a></li>
                     <li><a href="#transform-values-in-a-result-before-deciding-to-store-them">Transform values in a result before deciding to store them</a></li>
                     <li><a href="#insert-a-result-set-not-just-literal-rows">Insert a result set, not just literal rows</a></li>
                     <li><a href="#handle-an-existing-key-deliberately">Handle an existing key deliberately</a></li>
                     <li><a href="#get-values-from-the-write-itself">Get values from the write itself</a></li>
                     <li><a href="#understand-how-null-changes-a-condition">Understand how null changes a condition</a></li>
-                    <li><a href="#bind-values-and-check-the-write-s-outcome">Bind values and check the write's outcome</a></li>
+                    <li><a href="#parameterize-input-and-verify-the-write-result">Parameterize input and verify the write result</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -349,7 +349,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -369,7 +369,7 @@
                     </button></div>
             </div>
             <h1>DML: Read, Add, Change, and Remove Rows</h1>
-            <p><strong>Data Manipulation Language (DML)</strong> works with table data. <code>SELECT</code> reads rows, <code>INSERT</code> adds them, <code>UPDATE</code> changes them, and <code>DELETE</code> removes them. The table's structure remains in place unless a separate schema-changing command alters it.</p>
+            <p><strong>DML</strong> changes rows with <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code>; <code>SELECT</code> reads data and is sometimes classified separately as query language. This chapter treats them together because applications must reason about both the targeted rows and the outcome. A successfully executed statement may affect <strong>zero</strong> rows, which is often a business failure rather than a SQL error.</p>
             <p>Use the SQLite bookstore setup from the <a href="01_intro_to_sql.html">SQL introduction</a>. The write examples below are independent exercises wrapped in a transaction and rolled back, so they do not leave the sample database changed. A transaction is a group of database work; <a href="05_transaction_control_language_tcl.html">TCL</a> explains it in detail.</p>
             <p>The bookstore rows used by these examples are:</p>
             <p><strong><code>products</code></strong></p>
@@ -547,6 +547,24 @@ SET stock = stock - 1
 WHERE product_id = 30 AND stock &gt; 0;</code></pre>
             </div>
             <p>Product 30 has zero stock, so this affects <strong>zero rows</strong>. It is not a SQL error. The application must inspect the affected-row count and avoid recording a sale when the decrement did not happen.</p>
+            <p>In SQLite, execute the following immediately after the guarded update to inspect the statement's result:</p>
+            <div>
+                <pre><code class="language-sql">SELECT changes() AS rows_updated;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>rows_updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Incorrect:</strong> update <code>stock = stock - 1</code> without the <code>stock &gt; 0</code> condition. On this schema that attempts to make product 30's stock negative and fails the <code>CHECK (stock &gt;= 0)</code> constraint. Depending on the schema, a less-protected table might accept the invalid stock instead.</p>
+            <p><strong>Correct:</strong> keep the stock condition in the database update, inspect the affected-row count on the same connection, and create the order only if the checkout's stock reservation succeeds within the intended transaction. A zero-row result is not permission to proceed.</p>
             <h2 id="remove-a-row-with-delete">Remove a row with DELETE</h2>
             <p>Try deletion on a newly inserted practice customer:</p>
             <div>
@@ -569,7 +587,7 @@ ROLLBACK;</code></pre>
                 </thead>
             </table>
             <p>The customer table still exists. Deleting a customer with referenced orders is different: the foreign-key policy decides whether the deletion is rejected or another declared action happens.</p>
-            <h2 id="distinguish-the-common-outcomes">Distinguish the common outcomes</h2>
+            <h2 id="interpret-the-outcome-before-committing-a-workflow">Interpret the outcome before committing a workflow</h2>
             <table>
                 <thead>
                     <tr>
@@ -866,7 +884,7 @@ SELECT contact_id FROM dml_optional_contacts WHERE phone &lt;&gt; '12345';</code
             </table>
             <p>A null phone does not satisfy <code>phone &lt;&gt; '12345'</code>; that comparison is unknown. If the business question includes missing phones, write <code>phone IS NULL OR phone &lt;&gt; '12345'</code> explicitly. Replacing nulls with empty strings silently erases the distinction between “unknown” and “known to be empty.”</p>
             <p>The same issue affects <code>NOT IN</code> when its list or subquery contains a null. An anti-match with <code>NOT EXISTS</code> is often clearer, as demonstrated in the joins note.</p>
-            <h2 id="bind-values-and-check-the-write-s-outcome">Bind values and check the write's outcome</h2>
+            <h2 id="parameterize-input-and-verify-the-write-result">Parameterize input and verify the write result</h2>
             <p>This Python helper assumes an existing SQLite connection containing the bookstore. Call it when that connection has no unrelated transaction in progress:</p>
             <div>
                 <pre><code class="language-python">def change_price(connection, product_id, price_cents):

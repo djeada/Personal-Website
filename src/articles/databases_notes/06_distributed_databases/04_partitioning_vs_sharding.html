@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Partitioning vs. Sharding | Adam Djellouli</title>
-    <meta content="Partitioning divides data into pieces." name="description" />
+    <meta content="Partitioning divides a logical dataset into pieces." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding",
-            "description": "Partitioning divides data into pieces.",
-            "dateModified": "2026-09-30",
+            "description": "Partitioning divides a logical dataset into pieces.",
+            "dateModified": "2026-10-30",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Partitioning divides data into pieces." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="Partitioning divides a logical dataset into pieces." property="og:description" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -139,9 +139,9 @@ messageStyle: "none"
                             <li><a href="#hands-on-mongodb-hash-sharding">Hands-On: MongoDB Hash Sharding</a></li>
                         </ol>
                     </li>
-                    <li><a href="#side-by-side-comparison">Side-by-Side Comparison</a></li>
+                    <li><a href="#side-by-side-comparison">Side-by-side comparison</a></li>
                     <li><a href="#blending-the-two">Blending the Two</a></li>
-                    <li><a href="#practical-guidance">Practical Guidance</a></li>
+                    <li><a href="#choose-using-the-bottleneck-and-failure-model">Choose using the bottleneck and failure model</a></li>
                     <li><a href="#review-questions">Review questions</a></li>
                 </ol>
             </div>
@@ -365,7 +365,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -385,7 +385,7 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Partitioning vs. Sharding</h1>
-            <p>Partitioning divides data into pieces. Sharding is horizontal partitioning across separate database nodes, with routing to the node responsible for each key. Local table partitions can improve pruning and maintenance without distributing work across servers.</p>
+            <p><strong>Partitioning</strong> divides a logical dataset into pieces. <strong>Sharding</strong> places horizontal pieces on separate nodes or clusters and introduces distributed routing and coordination. They are not mutually exclusive terms: a sharded system may also use date partitions inside each shard. The operational boundary—one engine versus multiple independently failing participants—is usually the useful comparison.</p>
             <h2 id="partitioning">Partitioning</h2>
             <p>Before diving into syntax or strategies, picture a single table stretching far beyond your screen. By splitting that table into <em>partitions</em> the database can prune irrelevant chunks during a query and treat maintenance tasks like backups or index rebuilds piece-by-piece rather than all-at-once. Think of it as shelving volumes in a giant library rather than piling every book on one table.</p>
             <div>
@@ -586,53 +586,59 @@ Shard shard0001: 55% data</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h2 id="side-by-side-comparison">Side-by-Side Comparison</h2>
+            <h2 id="side-by-side-comparison">Side-by-side comparison</h2>
             <table>
                 <thead>
                     <tr>
                         <th>Dimension</th>
-                        <th>Partitioning</th>
-                        <th>Sharding</th>
+                        <th>Local table partitioning</th>
+                        <th>Sharding across nodes</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Where data lives</td>
-                        <td>One database engine, multiple internal segments</td>
-                        <td>Many engines, each a self-contained database</td>
+                        <td>Data location</td>
+                        <td>Partitions managed by one database instance or coordinated engine</td>
+                        <td>Partition owners spread across separate nodes; a routing layer locates them</td>
                     </tr>
                     <tr>
-                        <td>Primary goal</td>
-                        <td>Speed up queries and maintenance</td>
-                        <td>Add capacity beyond a single server</td>
+                        <td>Primary benefit</td>
+                        <td>Pruning, retention, and manageability of a large table</td>
+                        <td>Distribute capacity and isolate some resource demands</td>
                     </tr>
                     <tr>
                         <td>Transaction scope</td>
-                        <td>Usually local and ACID-compliant across partitions</td>
-                        <td>Cross-shard transactions require 2PC or application logic</td>
+                        <td>Often supported within the same engine's normal transaction model</td>
+                        <td>Cross-shard transactions require engine support or application coordination; <strong>not every operation needs 2PC</strong></td>
                     </tr>
                     <tr>
-                        <td>Operational complexity</td>
-                        <td>Moderate—DDL and monitoring remain centralized</td>
-                        <td>Higher—orchestration, failover, and backups multiply</td>
+                        <td>Failure behavior</td>
+                        <td>The database can still be one failure domain</td>
+                        <td>Individual shards can fail independently; availability depends on replication and routing</td>
                     </tr>
                     <tr>
-                        <td>Growth path</td>
-                        <td>Vertical (bigger box) until vertical limits hit</td>
-                        <td>Horizontal from day one</td>
+                        <td>Key constraint</td>
+                        <td>Unique keys and partitioning rules may interact (engine-specific)</td>
+                        <td>Global uniqueness, joins, and cross-shard invariants may need extra design</td>
+                    </tr>
+                    <tr>
+                        <td>Ongoing cost</td>
+                        <td>Partition boundaries, metadata, pruning, and maintenance</td>
+                        <td>Rebalancing, routing, multi-shard backups, fan-out, and operational overhead</td>
                     </tr>
                 </tbody>
             </table>
+            <p><strong>Neither technique guarantees lower latency.</strong> A query without the relevant partition or shard key may still visit all pieces; a hot key may overload one shard even when total bytes are balanced.</p>
             <h2 id="blending-the-two">Blending the Two</h2>
             <p>Large platforms often partition <em>inside</em> every shard, marrying the easy pruning of partitions with the elastic headroom of shards. For example, an e-commerce company might hash-shard by user ID and range-partition each shard’s <code>orders</code> table by month, yielding fast user look-ups <em>and</em> swift archival of old months.</p>
-            <h2 id="practical-guidance">Practical Guidance</h2>
-            <ul>
-                <li>Start with partitioning if the bottleneck is query latency over a single giant table or if maintenance tasks have become unwieldy.</li>
-                <li>Plan for sharding once you foresee the primary server exhausting resources even after aggressive tuning.</li>
-                <li>Prototype tooling and disaster-recovery workflows early; complexity compounds quickly once dozens of shards are in play.</li>
-                <li>Keep the sharding key stable—re-sharding live traffic is far more painful than migrating partitions.</li>
-                <li>Monitor chunk or partition skew by calculating the coefficient of variation ${\sigma}/{\mu}$; when that value drifts upward, rebalance before hotspots burn users.</li>
-            </ul>
+            <h2 id="choose-using-the-bottleneck-and-failure-model">Choose using the bottleneck and failure model</h2>
+            <ol>
+                <li>If the problem is <strong>retention or scanning dated data on one engine</strong>, prototype date partitioning and verify pruning with the engine's plan tool.</li>
+                <li>If the problem is <strong>total write capacity or storage beyond one node</strong>, identify a routing key, estimate per-key skew, and test cross-shard reads before sharding.</li>
+                <li>If the problem is <strong>availability</strong>, first specify replica placement, election, and failover behavior; sharding alone does not replicate a lost row.</li>
+                <li>Before either migration, inventory primary/unique constraints, backup/recovery steps, and application queries that do not carry the chosen key.</li>
+            </ol>
+            <p>Monitor bytes <strong>and</strong> requests per partition or shard, hot keys, and migration latency. A single coefficient of variation of partition sizes does not reveal read hot spots or determine an automatic rebalance threshold.</p>
             <h2 id="review-questions">Review questions</h2>
             <ol>
                 <li>In plain language, how does partition pruning differ from query routing in a sharded setup?</li>

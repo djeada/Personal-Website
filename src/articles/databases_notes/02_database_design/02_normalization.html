@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization",
             "description": "Normalization is a way to organize related facts so a change does not require editing many copies of the same information.",
-            "dateModified": "2026-09-30",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Normalization is a way to organize related facts so a change does not require editing many copies of the same information." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -120,7 +120,7 @@
                     <li><a href="#understand-a-dependency-with-a-question">Understand a dependency with a question</a></li>
                     <li><a href="#second-normal-form-use-the-whole-key">Second normal form: use the whole key</a></li>
                     <li><a href="#third-normal-form-remove-the-extra-hop">Third normal form: remove the extra hop</a></li>
-                    <li><a href="#create-the-separated-customer-and-order-facts">Create the separated customer and order facts</a></li>
+                    <li><a href="#implement-the-corrected-design-in-sqlite">Implement the corrected design in SQLite</a></li>
                     <li><a href="#purchase-price-is-not-unnecessary-duplication">Purchase price is not unnecessary duplication</a></li>
                     <li><a href="#split-tables-without-inventing-combinations">Split tables without inventing combinations</a></li>
                     <li><a href="#more-precise-definitions-and-higher-forms">More precise definitions and higher forms</a></li>
@@ -352,7 +352,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -462,9 +462,55 @@ GROUP BY customer_id;</code></pre>
             </table>
             <p>The update succeeded because the raw table has no rule connecting the repeated names. Yet the business rule <code>customer_id → customer_name</code> has been broken. Normalization changes the representation so this fact is stored at its proper owner rather than trusting every writer to repair every copy.</p>
             <h2 id="first-normal-form-represent-separate-facts-separately">First normal form: represent separate facts separately</h2>
-            <p>A column such as <code>products = '10,20,30'</code> bundles several independently meaningful product references into one value. To find one product or attach a quantity, the application must parse that string.</p>
-            <p>Use an order-items table with one row per line instead. This removes the repeating list and gives each value a clear role. That is the practical idea behind <strong>first normal form</strong>, or <strong>1NF</strong>.</p>
-            <p>“Atomic” values are values used as one value in the chosen model. A date is not invalid because it contains a year, month, and day. The issue is how a fact is represented and used, not whether it can ever be subdivided.</p>
+            <p>Suppose the bookstore needs to find each ordered product and record its quantity. A column such as <code>products = '10,20,30'</code> bundles several independently meaningful product references into one value. Parsing this string to find product 20 or attach quantities is a warning sign.</p>
+            <p><strong>Incorrect for this requirement — a repeating list inside one value:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>customer_id</th>
+                        <th>products</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>1</td>
+                        <td><code>10,20</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Correct 1NF shape — one row for each order line:</strong></p>
+            <div>
+                <pre><code class="language-text">orders(order_id, customer_id)
+order_items(order_id, line_number, product_id, quantity)</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>order_id</th>
+                        <th>line_number</th>
+                        <th>product_id</th>
+                        <th>quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>1</td>
+                        <td>10</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>101</td>
+                        <td>2</td>
+                        <td>20</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Each cell now carries one value <em>for this model</em>, and a line has an identifiable key. This is the practical idea behind <strong>first normal form (1NF)</strong>. It does <strong>not</strong> yet establish 2NF or 3NF; the earlier combined table has single values in every cell and still repeats customer and product facts.</p>
+            <p>“Atomic” does not mean physically indivisible: a date can remain one value despite containing a year, month, and day. A list or JSON document can also be a legitimate opaque value for a different requirement. The problem here is that the application treats its elements as independently related products.</p>
             <h2 id="understand-a-dependency-with-a-question">Understand a dependency with a question</h2>
             <p>A <strong>functional dependency</strong> <code>X → Y</code> means that knowing X determines Y. Ask: “if two rows have the same X, must they have the same Y?”</p>
             <p>In our bookstore:</p>
@@ -476,65 +522,117 @@ order_id → customer_id
             </div>
             <p>These are assumed business rules. A sample with no contradictions does not prove a rule. Product titles, for example, need not determine product IDs because several products can share a title.</p>
             <h2 id="second-normal-form-use-the-whole-key">Second normal form: use the whole key</h2>
-            <p>Our combined table has a two-column key. But the customer for an order depends on <code>order_id</code> alone, without needing <code>line_number</code>.</p>
-            <p>Move order-level facts into <code>orders</code>. Keep line-level facts in <code>order_items</code>:</p>
+            <p>Our combined table has a two-column key <code>(order_id, line_number)</code>. But <code>order_id → customer_id</code>: finding the customer needs only part of that key.</p>
+            <p><strong>Incorrect — 1NF but not 2NF:</strong></p>
+            <div>
+                <pre><code class="language-text">order_items(order_id, line_number, customer_id, product_id, quantity)</code></pre>
+            </div>
+            <p><strong>Correct for 2NF — put order facts with the order:</strong></p>
             <div>
                 <pre><code class="language-text">orders(order_id, customer_id, customer_name)
-order_items(order_id, line_number, product_id, product_title, quantity, purchase_price)</code></pre>
+order_items(order_id, line_number, product_id, product_title, quantity, purchase_price_cents)</code></pre>
             </div>
-            <p>This removes a <strong>partial dependency</strong>: a non-key fact depending on only part of a candidate key. <strong>2NF</strong> requires 1NF and no such dependency on a proper subset of any candidate key.</p>
-            <p>A <strong>candidate key</strong> is a minimal identifier: removing any of its columns would stop it identifying the row. Consider all candidate keys, not only the one chosen as primary.</p>
+            <p>The <code>orders</code> row represents each order once; line-specific quantity and charged price stay with the line. This is an <em>intermediate</em> 2NF design, <strong>not yet 3NF</strong>: customer names and product titles still live in tables identified by something other than their natural owner.</p>
+            <p>A <strong>candidate key</strong> is a minimal set of attributes identifying a row: removing any column stops it being a key. <strong>2NF</strong> requires 1NF and that no non-prime attribute depend on a proper subset of <strong>any</strong> candidate key. A <em>prime attribute</em> belongs to at least one candidate key; for this example, <code>customer_id</code> is not prime in the combined line table. A single-column candidate key cannot have this kind of partial dependency.</p>
             <h2 id="third-normal-form-remove-the-extra-hop">Third normal form: remove the extra hop</h2>
-            <p>The new <code>orders</code> table still repeats Alice's name. The dependency is indirect:</p>
+            <p>The 2NF <code>orders</code> table still repeats Alice's name across her orders. The dependency has an extra hop:</p>
             <div>
                 <pre><code class="language-text">order_id → customer_id → customer_name</code></pre>
             </div>
-            <p>The name belongs with the customer. Move it there. Likewise, keep product titles in <code>products</code>:</p>
+            <p>Similarly, in the 2NF line table, <code>(order_id, line_number) → product_id → product_title</code>.</p>
+            <p><strong>Incorrect — still duplicated in the 2NF tables:</strong> <code>orders(order_id, customer_id, customer_name)</code> and <code>order_items(..., product_id, product_title, ...)</code>.</p>
+            <p><strong>Correct 3NF design — each shared fact has one owner:</strong></p>
             <div>
                 <pre><code class="language-text">customers(customer_id, customer_name)
-products(product_id, product_title, current_price)
+products(product_id, product_title, current_price_cents)
 orders(order_id, customer_id)
-order_items(order_id, line_number, product_id, quantity, purchase_price)</code></pre>
+order_items(order_id, line_number, product_id, quantity, purchase_price_cents)</code></pre>
             </div>
-            <p>Now renaming Alice changes one row. Orders still identify her by <code>customer_id</code>. A join reconstructs the customer name when a report needs it.</p>
-            <p>This illustrates <strong>3NF</strong>: in this simple design, non-key facts should not depend on another non-key fact rather than directly on the relevant identifier. Designs with several overlapping candidate keys need the more precise definition below.</p>
-            <h2 id="create-the-separated-customer-and-order-facts">Create the separated customer and order facts</h2>
+            <p>Now renaming Alice changes one customer row, and changing a catalog title changes one product row. Joins reconstruct the display for each order, rather than storing repeated names or titles.</p>
+            <p>This illustrates <strong>3NF</strong>: in this example, a non-key attribute must not depend transitively on the key through another non-key attribute. This is a teaching shortcut, not the full definition for overlapping candidate keys; the formal criterion appears below.</p>
+            <h2 id="implement-the-corrected-design-in-sqlite">Implement the corrected design in SQLite</h2>
+            <p>Run this after the raw-table experiment in the same SQLite database (with <code>PRAGMA foreign_keys = ON</code>). These four tables are the <strong>correct</strong> counterpart of <code>norm_raw_lines</code>. The primary and foreign keys make row identity and references explicit. Prices are integer cents.</p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE norm_customers (
     customer_id INTEGER PRIMARY KEY,
     customer_name TEXT NOT NULL
 );
+CREATE TABLE norm_products (
+    product_id INTEGER PRIMARY KEY,
+    product_title TEXT NOT NULL,
+    current_price_cents INTEGER NOT NULL CHECK (current_price_cents &gt;= 0)
+);
 CREATE TABLE norm_orders (
     order_id INTEGER PRIMARY KEY,
     customer_id INTEGER NOT NULL REFERENCES norm_customers(customer_id)
 );
-INSERT INTO norm_customers VALUES (1, 'Alice Smith');
-INSERT INTO norm_orders VALUES (101, 1), (102, 1);
+CREATE TABLE norm_order_items (
+    order_id INTEGER NOT NULL REFERENCES norm_orders(order_id),
+    line_number INTEGER NOT NULL,
+    product_id INTEGER NOT NULL REFERENCES norm_products(product_id),
+    quantity INTEGER NOT NULL CHECK (quantity &gt; 0),
+    purchase_price_cents INTEGER NOT NULL CHECK (purchase_price_cents &gt;= 0),
+    PRIMARY KEY (order_id, line_number)
+);
 
-SELECT o.order_id, c.customer_name
+INSERT INTO norm_customers VALUES (1, 'Alice Smith');
+INSERT INTO norm_products VALUES
+    (10, 'Database Basics', 1800),
+    (20, 'SQL Practice', 2500);
+INSERT INTO norm_orders VALUES (101, 1), (102, 1);
+INSERT INTO norm_order_items VALUES
+    (101, 1, 10, 2, 1500),
+    (101, 2, 20, 1, 2500),
+    (102, 1, 10, 1, 1500);
+
+SELECT o.order_id, i.line_number, c.customer_name,
+       p.product_title, i.quantity, i.purchase_price_cents
 FROM norm_orders AS o
 JOIN norm_customers AS c ON c.customer_id = o.customer_id
-ORDER BY o.order_id;</code></pre>
+JOIN norm_order_items AS i ON i.order_id = o.order_id
+JOIN norm_products AS p ON p.product_id = i.product_id
+ORDER BY o.order_id, i.line_number;</code></pre>
             </div>
             <table>
                 <thead>
                     <tr>
                         <th>order_id</th>
+                        <th>line_number</th>
                         <th>customer_name</th>
+                        <th>product_title</th>
+                        <th>quantity</th>
+                        <th>purchase_price_cents</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>101</td>
+                        <td>1</td>
                         <td>Alice Smith</td>
+                        <td>Database Basics</td>
+                        <td>2</td>
+                        <td>1500</td>
+                    </tr>
+                    <tr>
+                        <td>101</td>
+                        <td>2</td>
+                        <td>Alice Smith</td>
+                        <td>SQL Practice</td>
+                        <td>1</td>
+                        <td>2500</td>
                     </tr>
                     <tr>
                         <td>102</td>
+                        <td>1</td>
                         <td>Alice Smith</td>
+                        <td>Database Basics</td>
+                        <td>1</td>
+                        <td>1500</td>
                     </tr>
                 </tbody>
             </table>
-            <p>The corrected name was chosen deliberately; blindly using <code>SELECT DISTINCT</code> on conflicting source records would not decide which name was authoritative. A migration needs conflict resolution before it can safely add keys and populate the new tables. The complete customer/product/order/item implementation is in <a href="../01_introduction_to_databases/04_data_models.html">data models</a>.</p>
+            <p>The <em>join output</em> repeats names and titles to display each purchase, but the <strong>stored data</strong> has only one customer name and one title per product. <code>norm_order_items</code> owns each line's historical price, while <code>norm_products</code> owns the current catalog price.</p>
+            <p>The corrected name was chosen deliberately; blindly using <code>SELECT DISTINCT</code> on contradictory source records cannot decide which name is authoritative. A migration must resolve conflicts before adding keys and populating these tables. For a broader bookstore schema, see <a href="../01_introduction_to_databases/04_data_models.html">data models</a>.</p>
             <h2 id="purchase-price-is-not-unnecessary-duplication">Purchase price is not unnecessary duplication</h2>
             <p>A product's current price and the price charged on an order line are different facts. If product 10 now costs 18.00 but a past sale charged 15.00, storing both values is correct.</p>
             <p>Normalization asks what a value means before deciding where it belongs. Removing purchase price and substituting a join to the current price would destroy historical information.</p>
@@ -608,7 +706,50 @@ ORDER BY o.order_id;</code></pre>
                 </tbody>
             </table>
             <p><code>teacher → subject</code> holds under the business rule. Teacher alone is not a superkey because Lee has several students. Thus the relation can meet 3NF's prime-attribute exception while violating <strong>Boyce–Codd normal form (BCNF)</strong>.</p>
-            <p>Decompose it into <code>(teacher, subject)</code> and <code>(student, teacher)</code>. Their shared teacher determines the teacher/subject part, so joining reconstructs the associations without inventing extra subjects for a teacher. However, nothing in those two tables' simple keys prevents Alice from being assigned two teachers who both teach Databases. Enforcing one teacher per student and subject now needs an additional cross-table rule. This is a concrete reason dependency preservation matters alongside losslessness.</p>
+            <p><strong>Correct BCNF decomposition for <code>teacher → subject</code>:</strong> keep each teacher's subject once and record student–teacher assignments separately.</p>
+            <p><code>teacher_subject</code> (key: <code>teacher</code>):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>teacher</th>
+                        <th>subject</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Lee</td>
+                        <td>Databases</td>
+                    </tr>
+                    <tr>
+                        <td>Rao</td>
+                        <td>Networks</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>student_teacher</code> (key: <code>(student, teacher)</code>):</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>student</th>
+                        <th>teacher</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Alice</td>
+                        <td>Lee</td>
+                    </tr>
+                    <tr>
+                        <td>Bob</td>
+                        <td>Lee</td>
+                    </tr>
+                    <tr>
+                        <td>Alice</td>
+                        <td>Rao</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The shared <code>teacher</code> determines the subject, making the join lossless. <strong>But this does not automatically preserve every original rule:</strong> assigning a new teacher Chen to Databases, then assigning Alice to Chen, would pass the individual table keys but break the rule that Alice has only one teacher for Databases. The corrected <em>BCNF structure</em> therefore still needs a cross-table constraint or transaction-safe validation for that business rule. This is why lossless decomposition and dependency preservation are distinct questions.</p>
             <p>BCNF is useful when repeated facts remain because of overlapping keys. It is not a command to split every table further regardless of enforcement costs.</p>
             <h2 id="4nf-independent-lists-create-repeated-combinations">4NF: independent lists create repeated combinations</h2>
             <p>Suppose a customer can have several preferred languages and several favorite categories, and these lists are independent. Storing <code>(customer, language, category)</code> requires every language/category pairing:</p>
@@ -644,7 +785,8 @@ ORDER BY o.order_id;</code></pre>
                 </tbody>
             </table>
             <p>These are <strong>multivalued dependencies</strong>: <code>customer →→ language</code> and <code>customer →→ category</code>. Adding a language requires a row for every category; deleting one combination can falsely suggest that a language is associated with only one category.</p>
-            <p>Create two independent tables instead:</p>
+            <p><strong>Incorrect 4NF design:</strong> the combined table above stores four rows for just two independent lists.</p>
+            <p><strong>Correct 4NF design:</strong> represent each list once, using two tables:</p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE norm_languages (
     customer_name TEXT NOT NULL,
@@ -701,13 +843,57 @@ ORDER BY l.language, c.category;</code></pre>
 (S2, P1, J2)</code></pre>
             </div>
             <p>Projecting them into pairs permits joining <code>(S1, P1)</code>, <code>(S1, J2)</code>, and <code>(P1, J2)</code> into <code>(S1, P1, J2)</code>, which was never approved. That is a <strong>spurious tuple</strong>: an invented combination. A naive three-way decomposition is lossy with respect to the intended association even if every original tuple can be recovered.</p>
+            <p><strong>Incorrect decomposition:</strong> replacing the three original triples with only their pairwise projections would admit <code>(S1, P1, J2)</code>, so it changes the meaning of the data.</p>
+            <p><strong>Correct decomposition in a <em>different</em> business situation:</strong> suppose the rules explicitly guarantee that every supplier/product/project triple permitted by all three pairs is approved. For pairwise rows <code>supplier_product = {(S1, P1)}</code>, <code>supplier_project = {(S1, J1), (S1, J2)}</code>, and <code>product_project = {(P1, J1), (P1, J2)}</code>, the only valid triples are <code>(S1, P1, J1)</code> and <code>(S1, P1, J2)</code>. Joining the pairwise tables reconstructs exactly those two facts, so the split is lossless <strong>under that rule</strong>.</p>
             <p><strong>5NF</strong> addresses join dependencies: when can projections be joined without changing the facts? It is useful for genuine multiway relationship rules, but a diagram with three pairwise edges is not enough evidence to remove the triple table.</p>
             <h2 id="6nf-and-temporal-facts">6NF and temporal facts</h2>
             <p>Some temporal designs split independently changing facts into very small relations. A customer's address and credit limit may have different validity intervals. Keeping them in one versioned row can require copying one whenever only the other changes.</p>
             <p>For example, separate address history <code>(customer_id, valid_from, address)</code> and credit-limit history <code>(customer_id, valid_from, limit_cents)</code> let each fact have its own timeline. Queries must still define interval endpoints, gaps, overlap rules, and how facts are combined at a chosen time. Timestamped tables are not automatically 6NF; the formal criterion concerns irreducible join dependencies.</p>
             <p>Most operational designs begin with 3NF or a carefully reasoned BCNF design, then inspect actual rules that motivate higher forms. PostgreSQL and other relational engines implement the resulting tables and constraints; there is no <code>NORMALIZE TABLE</code> command that discovers your business dependencies for you.</p>
             <h2 id="a-design-review-procedure">A design review procedure</h2>
-            <p>List candidate keys and dependencies from requirements, check insertion/update/deletion anomalies, choose decompositions, and verify joins against awkward cases. Identify constraints that remain local and rules that become cross-table checks. Keep historical facts distinct from current facts. Only then discuss deliberate redundancy for a measured read workload.</p>
+            <p>Use a small <strong>incorrect-versus-correct</strong> checklist before declaring a schema normalized:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Incorrect or unproven</th>
+                        <th>Correct approach</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Business dependencies</td>
+                        <td>Infer <code>title → product_id</code> from a few rows</td>
+                        <td>Confirm rules with the domain; several products may share a title</td>
+                    </tr>
+                    <tr>
+                        <td>Keys</td>
+                        <td>Inspect only the chosen primary key</td>
+                        <td>Identify all candidate keys and test partial and transitive dependencies</td>
+                    </tr>
+                    <tr>
+                        <td>Lossless joins</td>
+                        <td>Split a triple into pairs because each pair looks valid</td>
+                        <td>Join projections and check for missing or spurious tuples</td>
+                    </tr>
+                    <tr>
+                        <td>Constraints</td>
+                        <td>Assume a lossless split preserves every rule</td>
+                        <td>List which rules remain local and which require cross-table enforcement</td>
+                    </tr>
+                    <tr>
+                        <td>Historical facts</td>
+                        <td>Replace past charged price with current catalog price</td>
+                        <td>Keep distinct facts with their actual owner and time meaning</td>
+                    </tr>
+                    <tr>
+                        <td>Performance</td>
+                        <td>Duplicate customer names to avoid an unmeasured join</td>
+                        <td>Measure first; plan maintenance if redundancy is justified</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Check insertion, update, and deletion anomalies using counterexamples, not only happy-path data. Finally compare any proposed decomposition against the application's real business rules.</p>
             <p>Normalization protects representation; concurrency control protects overlapping changes. A normalized schema can still suffer a lost update if the application uses unsafe read-and-write logic.</p>
             <h2 id="check-your-understanding">Check your understanding</h2>
             <ol>

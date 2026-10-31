@@ -23,7 +23,7 @@
         })();
     </script>
     <title>The CAP Theorem | Adam Djellouli</title>
-    <meta content="The CAP theorem describes what happens to a distributed read/write service when parts of the system can no longer communicate." name="description" />
+    <meta content="CAP constrains a distributed read/write service during network partitions." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem",
-            "description": "The CAP theorem describes what happens to a distributed read/write service when parts of the system can no longer communicate.",
-            "dateModified": "2026-10-04",
+            "description": "CAP constrains a distributed read/write service during network partitions.",
+            "dateModified": "2026-10-30",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="The CAP theorem describes what happens to a distributed read/write service when parts of the system can no longer communicate." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="CAP constrains a distributed read/write service during network partitions." property="og:description" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,79 +114,118 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#start-with-the-actual-problem-information-is-missing">Start with the actual problem: information is missing</a></li>
-                    <li><a href="#what-does-cap-consistency-mean">What does CAP consistency mean?</a></li>
-                    <li><a href="#linearizability-does-not-require-simultaneous-physical-updates">Linearizability does not require simultaneous physical updates</a></li>
-                    <li><a href="#cap-consistency-is-not-acid-consistency">CAP consistency is not ACID consistency</a></li>
-                    <li><a href="#what-does-cap-availability-mean">What does CAP availability mean?</a></li>
-                    <li><a href="#cap-availability-is-not-five-nines">CAP availability is not "five nines"</a></li>
-                    <li><a href="#what-does-partition-tolerance-mean">What does partition tolerance mean?</a></li>
-                    <li><a href="#why-cap-is-impossible-the-two-world-argument">Why CAP is impossible: the two-world argument</a>
+                    <li><a href="#the-scope-and-vocabulary-of-cap">The scope and vocabulary of CAP</a>
                         <ol>
-                            <li><a href="#world-1-no-write-happened">World 1 — no write happened</a></li>
+                            <li><a href="#start-with-the-actual-problem-information-is-missing">Start with the actual problem: information is missing</a></li>
+                            <li><a href="#what-does-cap-consistency-mean">What does CAP consistency mean?</a></li>
+                            <li><a href="#linearizability-does-not-require-simultaneous-physical-updates">Linearizability does not require simultaneous physical updates</a></li>
+                            <li><a href="#cap-consistency-is-not-acid-consistency">CAP consistency is not ACID consistency</a></li>
+                            <li><a href="#what-does-cap-availability-mean">What does CAP availability mean?</a></li>
+                            <li><a href="#cap-availability-is-not-five-nines">CAP availability is not "five nines"</a></li>
+                            <li><a href="#what-does-partition-tolerance-mean">What does partition tolerance mean?</a></li>
                         </ol>
                     </li>
-                    <li><a href="#world-2-a-successful-write-happened">World 2 — a successful write happened</a></li>
-                    <li><a href="#what-does-b-know">What does B know?</a></li>
-                    <li><a href="#why-b-cannot-simply-guess">Why B cannot simply guess</a></li>
-                    <li><a href="#timeouts-do-not-solve-cap">Timeouts do not solve CAP</a></li>
-                    <li><a href="#what-a-consistency-first-system-does">What a consistency-first system does</a></li>
-                    <li><a href="#what-an-availability-first-system-does">What an availability-first system does</a></li>
-                    <li><a href="#the-real-cap-choice-during-a-partition">The real CAP choice during a partition</a></li>
-                    <li><a href="#why-p-is-not-an-ordinary-feature-toggle">Why "P" is not an ordinary feature toggle</a></li>
-                    <li><a href="#what-about-ca">What about "CA"?</a></li>
-                    <li><a href="#a-single-database-server-is-not-a-cap-counterexample">A single database server is not a CAP counterexample</a></li>
-                    <li><a href="#quorums-make-the-trade-off-concrete">Quorums make the trade-off concrete</a></li>
-                    <li><a href="#why-the-minority-must-stop-accepting-authoritative-writes">Why the minority must stop accepting authoritative writes</a></li>
-                    <li><a href="#quorums-do-not-beat-cap">Quorums do not "beat CAP"</a></li>
-                    <li><a href="#concrete-cp-style-example-etcd">Concrete CP-style example: etcd</a></li>
-                    <li><a href="#etcd-can-also-perform-weaker-local-reads">etcd can also perform weaker local reads</a></li>
-                    <li><a href="#per-operation-behavior-is-more-useful-than-product-labels">Per-operation behavior is more useful than product labels</a></li>
-                    <li><a href="#cassandra-tunable-consistency">Cassandra: tunable consistency</a></li>
-                    <li><a href="#cassandra-with-one">Cassandra with ONE</a></li>
-                    <li><a href="#cassandra-with-quorum">Cassandra with QUORUM</a></li>
-                    <li><a href="#stronger-consistency-reduces-which-failures-an-operation-can-tolerate">Stronger consistency reduces which failures an operation can tolerate</a></li>
-                    <li><a href="#quorum-consistency-is-not-a-magic-synonym-for-every-strong-consistency-model">Quorum consistency is not a magic synonym for every strong consistency model</a></li>
-                    <li><a href="#availability-first-designs-create-a-second-problem-divergence">Availability-first designs create a second problem: divergence</a></li>
-                    <li><a href="#convergence-needs-a-reconciliation-rule">Convergence needs a reconciliation rule</a></li>
-                    <li><a href="#last-write-wins">Last-write-wins</a></li>
-                    <li><a href="#convergence-and-preservation-are-different-properties">Convergence and preservation are different properties</a></li>
-                    <li><a href="#vector-clocks-detect-concurrent-histories">Vector clocks detect concurrent histories</a></li>
-                    <li><a href="#the-original-dynamo-shopping-cart-example">The original Dynamo shopping-cart example</a></li>
-                    <li><a href="#dynamo-used-more-than-eventual-consistency">Dynamo used more than eventual consistency</a></li>
-                    <li><a href="#hinted-handoff-does-not-solve-cap">Hinted handoff does not solve CAP</a></li>
-                    <li><a href="#read-repair-does-not-solve-cap-either">Read repair does not solve CAP either</a></li>
-                    <li><a href="#anti-entropy">Anti-entropy</a></li>
-                    <li><a href="#eventual-consistency">Eventual consistency</a></li>
-                    <li><a href="#mvcc-does-not-solve-cap">MVCC does not solve CAP</a></li>
-                    <li><a href="#dynamo-and-dynamodb-are-not-the-same-system">Dynamo and DynamoDB are not the same system</a></li>
-                    <li><a href="#dynamodb-itself-demonstrates-why-product-cap-labels-are-weak">DynamoDB itself demonstrates why product CAP labels are weak</a></li>
-                    <li><a href="#current-dynamodb-global-tables-make-the-distinction-even-clearer">Current DynamoDB global tables make the distinction even clearer</a></li>
-                    <li><a href="#dynamodb-mrec-availability-oriented-regional-behavior">DynamoDB MREC: availability-oriented regional behavior</a></li>
-                    <li><a href="#dynamodb-mrsc-stronger-coordination">DynamoDB MRSC: stronger coordination</a></li>
-                    <li><a href="#mrsc-also-makes-the-availability-trade-off-visible">MRSC also makes the availability trade-off visible</a></li>
-                    <li><a href="#pacelc-cap-describes-failures-but-systems-make-trade-offs-when-healthy-too">PACELC: CAP describes failures, but systems make trade-offs when healthy too</a></li>
-                    <li><a href="#pacelc-with-two-regions">PACELC with two regions</a></li>
-                    <li><a href="#cap-and-pacelc-together">CAP and PACELC together</a></li>
-                    <li><a href="#not-every-operation-needs-the-same-consistency">Not every operation needs the same consistency</a></li>
-                    <li><a href="#why-some-data-merges-easily-and-some-does-not">Why some data merges easily and some does not</a></li>
-                    <li><a href="#crdts-help-only-when-the-semantics-fit">CRDTs help only when the semantics fit</a></li>
-                    <li><a href="#conflict-resolution-is-a-business-decision-too">Conflict resolution is a business decision too</a></li>
-                    <li><a href="#cap-does-not-say-weak-consistency-is-bad">CAP does not say weak consistency is bad</a></li>
-                    <li><a href="#cap-does-not-say-strong-consistency-is-always-better">CAP does not say strong consistency is always better</a></li>
-                    <li><a href="#cap-does-not-say-eventual-consistency-means-random">CAP does not say eventual consistency means "random"</a></li>
-                    <li><a href="#cap-does-not-classify-an-entire-architecture-forever">CAP does not classify an entire architecture forever</a></li>
-                    <li><a href="#technology-summary">Technology summary</a></li>
-                    <li><a href="#common-cap-mistakes">Common CAP mistakes</a></li>
-                    <li><a href="#how-to-analyze-a-real-system">How to analyze a real system</a></li>
-                    <li><a href="#a-complete-three-node-example">A complete three-node example</a>
+                    <li><a href="#why-the-guarantee-is-impossible">Why the guarantee is impossible</a>
                         <ol>
-                            <li><a href="#consistency-first-configuration">Consistency-first configuration</a></li>
-                            <li><a href="#availability-first-configuration">Availability-first configuration</a></li>
+                            <li><a href="#why-cap-is-impossible-the-two-world-argument">Why CAP is impossible: the two-world argument</a>
+                                <ol>
+                                    <li><a href="#world-1-no-write-happened">World 1 — no write happened</a></li>
+                                    <li><a href="#world-2-a-successful-write-happened">World 2 — a successful write happened</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#what-does-b-know">What does B know?</a></li>
+                            <li><a href="#why-b-cannot-simply-guess">Why B cannot simply guess</a></li>
+                            <li><a href="#timeouts-do-not-solve-cap">Timeouts do not solve CAP</a></li>
                         </ol>
                     </li>
-                    <li><a href="#the-deepest-cap-insight">The deepest CAP insight</a></li>
-                    <li><a href="#final-mental-model">Final mental model</a></li>
+                    <li><a href="#two-choices-during-a-partition">Two choices during a partition</a>
+                        <ol>
+                            <li><a href="#what-a-consistency-first-system-does">What a consistency-first system does</a></li>
+                            <li><a href="#what-an-availability-first-system-does">What an availability-first system does</a></li>
+                            <li><a href="#the-real-cap-choice-during-a-partition">The real CAP choice during a partition</a></li>
+                            <li><a href="#why-p-is-not-an-ordinary-feature-toggle">Why "P" is not an ordinary feature toggle</a></li>
+                            <li><a href="#what-about-ca">What about "CA"?</a></li>
+                            <li><a href="#a-single-database-server-is-not-a-cap-counterexample">A single database server is not a CAP counterexample</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#quorums-depend-on-operation-semantics">Quorums depend on operation semantics</a>
+                        <ol>
+                            <li><a href="#quorums-make-the-trade-off-concrete">Quorums make the trade-off concrete</a></li>
+                            <li><a href="#why-the-minority-must-stop-accepting-authoritative-writes">Why the minority must stop accepting authoritative writes</a></li>
+                            <li><a href="#quorums-do-not-beat-cap">Quorums do not "beat CAP"</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#compare-actual-system-behavior">Compare actual system behavior</a>
+                        <ol>
+                            <li><a href="#concrete-cp-style-example-etcd">Concrete CP-style example: etcd</a></li>
+                            <li><a href="#etcd-can-also-perform-weaker-local-reads">etcd can also perform weaker local reads</a></li>
+                            <li><a href="#per-operation-behavior-is-more-useful-than-product-labels">Per-operation behavior is more useful than product labels</a></li>
+                            <li><a href="#cassandra-tunable-consistency">Cassandra: tunable consistency</a></li>
+                            <li><a href="#cassandra-with-one">Cassandra with ONE</a></li>
+                            <li><a href="#cassandra-with-quorum">Cassandra with QUORUM</a></li>
+                            <li><a href="#stronger-consistency-reduces-which-failures-an-operation-can-tolerate">Stronger consistency reduces which failures an operation can tolerate</a></li>
+                            <li><a href="#quorum-consistency-is-not-a-magic-synonym-for-every-strong-consistency-model">Quorum consistency is not a magic synonym for every strong consistency model</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#propagation-and-reconciliation">Propagation and reconciliation</a>
+                        <ol>
+                            <li><a href="#availability-first-designs-create-a-second-problem-divergence">Availability-first designs create a second problem: divergence</a></li>
+                            <li><a href="#convergence-needs-a-reconciliation-rule">Convergence needs a reconciliation rule</a></li>
+                            <li><a href="#last-write-wins">Last-write-wins</a></li>
+                            <li><a href="#convergence-and-preservation-are-different-properties">Convergence and preservation are different properties</a></li>
+                            <li><a href="#vector-clocks-detect-concurrent-histories">Vector clocks detect concurrent histories</a></li>
+                            <li><a href="#the-original-dynamo-shopping-cart-example">The original Dynamo shopping-cart example</a></li>
+                            <li><a href="#dynamo-used-more-than-eventual-consistency">Dynamo used more than eventual consistency</a></li>
+                            <li><a href="#hinted-handoff-does-not-solve-cap">Hinted handoff does not solve CAP</a></li>
+                            <li><a href="#read-repair-does-not-solve-cap-either">Read repair does not solve CAP either</a></li>
+                            <li><a href="#anti-entropy">Anti-entropy</a></li>
+                            <li><a href="#eventual-consistency">Eventual consistency</a></li>
+                            <li><a href="#mvcc-does-not-solve-cap">MVCC does not solve CAP</a></li>
+                            <li><a href="#dynamo-and-dynamodb-are-not-the-same-system">Dynamo and DynamoDB are not the same system</a></li>
+                            <li><a href="#dynamodb-itself-demonstrates-why-product-cap-labels-are-weak">DynamoDB itself demonstrates why product CAP labels are weak</a></li>
+                            <li><a href="#current-dynamodb-global-tables-make-the-distinction-even-clearer">Current DynamoDB global tables make the distinction even clearer</a></li>
+                            <li><a href="#dynamodb-mrec-availability-oriented-regional-behavior">DynamoDB MREC: availability-oriented regional behavior</a></li>
+                            <li><a href="#dynamodb-mrsc-stronger-coordination">DynamoDB MRSC: stronger coordination</a></li>
+                            <li><a href="#mrsc-also-makes-the-availability-trade-off-visible">MRSC also makes the availability trade-off visible</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#healthy-network-latency-and-consistency">Healthy-network latency and consistency</a>
+                        <ol>
+                            <li><a href="#pacelc-cap-describes-failures-but-systems-make-trade-offs-when-healthy-too">PACELC: CAP describes failures, but systems make trade-offs when healthy too</a></li>
+                            <li><a href="#pacelc-with-two-regions">PACELC with two regions</a></li>
+                            <li><a href="#cap-and-pacelc-together">CAP and PACELC together</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#choose-guarantees-by-business-invariant">Choose guarantees by business invariant</a>
+                        <ol>
+                            <li><a href="#not-every-operation-needs-the-same-consistency">Not every operation needs the same consistency</a></li>
+                            <li><a href="#why-some-data-merges-easily-and-some-does-not">Why some data merges easily and some does not</a></li>
+                            <li><a href="#crdts-help-only-when-the-semantics-fit">CRDTs help only when the semantics fit</a></li>
+                            <li><a href="#conflict-resolution-is-a-business-decision-too">Conflict resolution is a business decision too</a></li>
+                            <li><a href="#cap-does-not-say-weak-consistency-is-bad">CAP does not say weak consistency is bad</a></li>
+                            <li><a href="#cap-does-not-say-strong-consistency-is-always-better">CAP does not say strong consistency is always better</a></li>
+                            <li><a href="#cap-does-not-say-eventual-consistency-means-random">CAP does not say eventual consistency means "random"</a></li>
+                            <li><a href="#cap-does-not-classify-an-entire-architecture-forever">CAP does not classify an entire architecture forever</a></li>
+                            <li><a href="#technology-summary">Technology summary</a></li>
+                            <li><a href="#common-cap-mistakes">Common CAP mistakes</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#review-a-concrete-failure-scenario">Review a concrete failure scenario</a>
+                        <ol>
+                            <li><a href="#how-to-analyze-a-real-system">How to analyze a real system</a></li>
+                            <li><a href="#a-complete-three-node-example">A complete three-node example</a>
+                                <ol>
+                                    <li><a href="#consistency-first-configuration">Consistency-first configuration</a></li>
+                                    <li><a href="#availability-first-configuration">Availability-first configuration</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#the-core-decision">The core decision</a>
+                        <ol>
+                            <li><a href="#the-deepest-cap-insight">The deepest CAP insight</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#references">References</a></li>
                 </ol>
             </div>
@@ -410,7 +449,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -430,7 +469,8 @@
                     </button></div>
             </div>
             <h1>The CAP Theorem</h1>
-            <p>The CAP theorem describes what happens to a distributed read/write service when parts of the system can no longer communicate.</p>
+            <p><strong>CAP</strong> constrains a distributed read/write service <strong>during network partitions</strong>. When a request reaches a live node that cannot communicate with another portion of the system, maintaining a single linearizable history can require refusing or delaying some operations. This chapter develops the information argument, then examines quorum settings, reconciliation, and healthy-network latency.</p>
+            <p><strong>Reading path:</strong> definitions → two-world proof → partition-time choices → quorum/product behavior → convergence → PACELC → design questions. CAP does not classify a database permanently as “CP” or “AP”; analyze an operation and configuration.</p>
             <p>Its central result is:</p>
             <blockquote>
                 <p>During a network partition, a distributed read/write service cannot guarantee both linearizable consistency and availability for every request reaching a non-failing node.</p>
@@ -471,7 +511,8 @@ Network partitioned:
         and accept that separated copies may diverge.</code></pre>
             </div>
             <p>Gilbert and Lynch's formal treatment proved that an asynchronous distributed system cannot simultaneously guarantee atomic/linearizable consistency, availability, and tolerance of arbitrary message loss.</p>
-            <h2 id="start-with-the-actual-problem-information-is-missing">Start with the actual problem: information is missing</h2>
+            <h2 id="the-scope-and-vocabulary-of-cap">The scope and vocabulary of CAP</h2>
+            <h3 id="start-with-the-actual-problem-information-is-missing">Start with the actual problem: information is missing</h3>
             <p>Consider two database nodes:</p>
             <div>
                 <pre><code class="language-text">              replication
@@ -512,7 +553,7 @@ price = 12                       price = 10</code></pre>
             </div>
             <p>What should B return?</p>
             <p>That simple question contains the CAP theorem.</p>
-            <h2 id="what-does-cap-consistency-mean">What does CAP consistency mean?</h2>
+            <h3 id="what-does-cap-consistency-mean">What does CAP consistency mean?</h3>
             <p>The <code>C</code> in CAP refers to a strong consistency model usually expressed as linearizability.</p>
             <p>Linearizability gives the application the illusion that there is one authoritative copy of the object and that each completed operation took effect at one instant between its invocation and response.</p>
             <p>Consider:</p>
@@ -543,7 +584,7 @@ Client 2:
             <p>or a value written even later.</p>
             <p>This real-time requirement is important.</p>
             <p>If the write completed before the read began, the system cannot pretend that the read occurred before the write.</p>
-            <h2 id="linearizability-does-not-require-simultaneous-physical-updates">Linearizability does not require simultaneous physical updates</h2>
+            <h3 id="linearizability-does-not-require-simultaneous-physical-updates">Linearizability does not require simultaneous physical updates</h3>
             <p>A common misunderstanding is:</p>
             <div>
                 <pre><code class="language-text">linearizable
@@ -575,7 +616,7 @@ other coordination</code></pre>
             </div>
             <p>and a later linearizable read occurs, that read must behave consistently with the completed write.</p>
             <p>The physical implementation may be complicated while the client experiences the illusion of one copy.</p>
-            <h2 id="cap-consistency-is-not-acid-consistency">CAP consistency is not ACID consistency</h2>
+            <h3 id="cap-consistency-is-not-acid-consistency">CAP consistency is not ACID consistency</h3>
             <p>The word consistency is unfortunately overloaded.</p>
             <table>
                 <thead>
@@ -620,7 +661,7 @@ other coordination</code></pre>
             <p>It is not what CAP's <code>C</code> means.</p>
             <p>Likewise, a transaction system can be serializable internally while replication between two regions has weaker visibility semantics.</p>
             <p>These properties answer different questions.</p>
-            <h2 id="what-does-cap-availability-mean">What does CAP availability mean?</h2>
+            <h3 id="what-does-cap-availability-mean">What does CAP availability mean?</h3>
             <p>CAP availability is also stronger and more specific than everyday use of the word "available. "</p>
             <p>Informally, the CAP requirement is:</p>
             <blockquote>
@@ -642,7 +683,7 @@ other coordination</code></pre>
                 <pre><code class="language-text">wait forever</code></pre>
             </div>
             <p>does not satisfy availability.</p>
-            <h2 id="cap-availability-is-not-five-nines">CAP availability is not "five nines"</h2>
+            <h3 id="cap-availability-is-not-five-nines">CAP availability is not "five nines"</h3>
             <p>This is a different meaning from operational availability metrics such as:</p>
             <div>
                 <pre><code class="language-text">99.9% uptime
@@ -666,7 +707,7 @@ SLA availability
 ≠
 latency target</code></pre>
             </div>
-            <h2 id="what-does-partition-tolerance-mean">What does partition tolerance mean?</h2>
+            <h3 id="what-does-partition-tolerance-mean">What does partition tolerance mean?</h3>
             <p>A network partition means some nodes cannot communicate with other nodes.</p>
             <p>For example:</p>
             <div>
@@ -704,7 +745,8 @@ A -------- B       X       C -------- D</code></pre>
                 <pre><code class="language-text">A can reach C but C cannot reach A</code></pre>
             </div>
             <p>Distributed protocols must operate despite that uncertainty.</p>
-            <h2 id="why-cap-is-impossible-the-two-world-argument">Why CAP is impossible: the two-world argument</h2>
+            <h2 id="why-the-guarantee-is-impossible">Why the guarantee is impossible</h2>
+            <h3 id="why-cap-is-impossible-the-two-world-argument">Why CAP is impossible: the two-world argument</h3>
             <p>This is the heart of the theorem.</p>
             <p>Return to:</p>
             <div>
@@ -714,7 +756,7 @@ price = 10                       price = 10</code></pre>
             </div>
             <p>B cannot communicate with A.</p>
             <p>Now consider two possible worlds.</p>
-            <h3 id="world-1-no-write-happened">World 1 — no write happened</h3>
+            <h4 id="world-1-no-write-happened">World 1 — no write happened</h4>
             <p>Nothing happened at A.</p>
             <p>The correct current value remains:</p>
             <div>
@@ -728,7 +770,7 @@ price = 10                       price = 10</code></pre>
             <div>
                 <pre><code class="language-text">10</code></pre>
             </div>
-            <h2 id="world-2-a-successful-write-happened">World 2 — a successful write happened</h2>
+            <h4 id="world-2-a-successful-write-happened">World 2 — a successful write happened</h4>
             <p>While B was isolated, Client 1 sent to A:</p>
             <div>
                 <pre><code class="language-text">SET price = 12</code></pre>
@@ -745,7 +787,7 @@ price = 10                       price = 10</code></pre>
             <div>
                 <pre><code class="language-text">12</code></pre>
             </div>
-            <h2 id="what-does-b-know">What does B know?</h2>
+            <h3 id="what-does-b-know">What does B know?</h3>
             <p>From B's perspective, the two executions look identical.</p>
             <p>In both cases B has:</p>
             <div>
@@ -776,7 +818,7 @@ price = 12 was successfully written</code></pre>
             <p>That is the fundamental CAP problem.</p>
             <p>It is not primarily a database implementation problem.</p>
             <p>It is an information problem.</p>
-            <h2 id="why-b-cannot-simply-guess">Why B cannot simply guess</h2>
+            <h3 id="why-b-cannot-simply-guess">Why B cannot simply guess</h3>
             <p>Suppose B guesses:</p>
             <div>
                 <pre><code class="language-text">12</code></pre>
@@ -802,7 +844,7 @@ price = 12 was successfully written</code></pre>
             <p>The operation was not served.</p>
             <p>Again, CAP availability is lost.</p>
             <p>There is no clever cache algorithm hiding somewhere that provides the missing information.</p>
-            <h2 id="timeouts-do-not-solve-cap">Timeouts do not solve CAP</h2>
+            <h3 id="timeouts-do-not-solve-cap">Timeouts do not solve CAP</h3>
             <p>Suppose B waits:</p>
             <div>
                 <pre><code class="language-text">500 ms</code></pre>
@@ -828,7 +870,8 @@ price = 12 was successfully written</code></pre>
             <p>These are different facts.</p>
             <p>A timeout is useful operationally because it puts an upper bound on waiting.</p>
             <p>It does not solve the information problem.</p>
-            <h2 id="what-a-consistency-first-system-does">What a consistency-first system does</h2>
+            <h2 id="two-choices-during-a-partition">Two choices during a partition</h2>
+            <h3 id="what-a-consistency-first-system-does">What a consistency-first system does</h3>
             <p>Suppose we require:</p>
             <div>
                 <pre><code class="language-text">Never return a result that could violate
@@ -852,7 +895,7 @@ ERROR / unavailable</code></pre>
             <div>
                 <pre><code class="language-text">CP</code></pre>
             </div>
-            <h2 id="what-an-availability-first-system-does">What an availability-first system does</h2>
+            <h3 id="what-an-availability-first-system-does">What an availability-first system does</h3>
             <p>Another design says:</p>
             <div>
                 <pre><code class="language-text">Even while partitioned,
@@ -872,7 +915,7 @@ SUCCESS                          returns 10</code></pre>
                 <pre><code class="language-text">AP</code></pre>
             </div>
             <p>The copies may need to reconcile after communication is restored.</p>
-            <h2 id="the-real-cap-choice-during-a-partition">The real CAP choice during a partition</h2>
+            <h3 id="the-real-cap-choice-during-a-partition">The real CAP choice during a partition</h3>
             <p>The most useful representation is therefore:</p>
             <table>
                 <thead>
@@ -901,7 +944,7 @@ or
 pick A + P</code></pre>
             </div>
             <p>because the actual issue is what the system does when communication needed for coordination is unavailable.</p>
-            <h2 id="why-p-is-not-an-ordinary-feature-toggle">Why "P" is not an ordinary feature toggle</h2>
+            <h3 id="why-p-is-not-an-ordinary-feature-toggle">Why "P" is not an ordinary feature toggle</h3>
             <p>The phrase:</p>
             <div>
                 <pre><code class="language-text">choose partition tolerance</code></pre>
@@ -915,7 +958,7 @@ pick A + P</code></pre>
             <p>A design can decide that a partition makes part of the system unavailable.</p>
             <p>That is a valid design.</p>
             <p>But it has not somehow prevented the partition from existing.</p>
-            <h2 id="what-about-ca">What about "CA"?</h2>
+            <h3 id="what-about-ca">What about "CA"?</h3>
             <p>You will often see:</p>
             <div>
                 <pre><code class="language-text">CA
@@ -933,7 +976,7 @@ AP</code></pre>
             <p>essentially describes a model where partitions are excluded or treated as a failure from which the distributed service does not promise to continue operating.</p>
             <p>That may be perfectly reasonable.</p>
             <p>It just does not solve the partition case addressed by CAP.</p>
-            <h2 id="a-single-database-server-is-not-a-cap-counterexample">A single database server is not a CAP counterexample</h2>
+            <h3 id="a-single-database-server-is-not-a-cap-counterexample">A single database server is not a CAP counterexample</h3>
             <p>Consider:</p>
             <div>
                 <pre><code class="language-text">Application
@@ -953,7 +996,8 @@ PostgreSQL server</code></pre>
             <p>availability disappears.</p>
             <p>That does not violate CAP and does not defeat CAP.</p>
             <p>It is simply a different failure model.</p>
-            <h2 id="quorums-make-the-trade-off-concrete">Quorums make the trade-off concrete</h2>
+            <h2 id="quorums-depend-on-operation-semantics">Quorums depend on operation semantics</h2>
+            <h3 id="quorums-make-the-trade-off-concrete">Quorums make the trade-off concrete</h3>
             <p>Now consider three replicas:</p>
             <div>
                 <pre><code class="language-text">A
@@ -988,7 +1032,7 @@ strong reads and writes</code></pre>
                 <pre><code class="language-text">A side</code></pre>
             </div>
             <p>This is a common consistency-first pattern.</p>
-            <h2 id="why-the-minority-must-stop-accepting-authoritative-writes">Why the minority must stop accepting authoritative writes</h2>
+            <h3 id="why-the-minority-must-stop-accepting-authoritative-writes">Why the minority must stop accepting authoritative writes</h3>
             <p>Suppose both sides accepted authoritative writes.</p>
             <p>A receives:</p>
             <div>
@@ -1010,7 +1054,7 @@ strong reads and writes</code></pre>
             </div>
             <p>Any two majorities intersect in at least one node.</p>
             <p>That intersection is one of the key building blocks used in quorum and consensus systems.</p>
-            <h2 id="quorums-do-not-beat-cap">Quorums do not "beat CAP"</h2>
+            <h3 id="quorums-do-not-beat-cap">Quorums do not "beat CAP"</h3>
             <p>Sometimes CAP is explained badly as:</p>
             <div>
                 <pre><code class="language-text">CAP says you cannot have C and A,
@@ -1025,7 +1069,8 @@ but quorum solves that.</code></pre>
             <p>the A side cannot reach two replicas.</p>
             <p>Therefore an operation requiring quorum must fail or wait there.</p>
             <p>That is exactly the consistency-over-availability behavior predicted by CAP.</p>
-            <h2 id="concrete-cp-style-example-etcd">Concrete CP-style example: etcd</h2>
+            <h2 id="compare-actual-system-behavior">Compare actual system behavior</h2>
+            <h3 id="concrete-cp-style-example-etcd">Concrete CP-style example: etcd</h3>
             <p>etcd is a useful concrete example because its client API exposes the distinction directly.</p>
             <p>etcd uses Raft-based coordination and its normal key-value operations provide strict-serializable/linearizable semantics. Its documentation states that ordinary range operations are linearizable by default and that this coordination has higher cost because current cluster consensus must be established.</p>
             <p>Suppose the cluster is:</p>
@@ -1042,7 +1087,7 @@ etcd C</code></pre>
             <p>A cannot.</p>
             <p>A strong operation that requires current consensus cannot simply allow isolated A to invent an authoritative current answer.</p>
             <p>That is the CAP trade-off made concrete.</p>
-            <h2 id="etcd-can-also-perform-weaker-local-reads">etcd can also perform weaker local reads</h2>
+            <h3 id="etcd-can-also-perform-weaker-local-reads">etcd can also perform weaker local reads</h3>
             <p>etcd also supports what its API calls a:</p>
             <div>
                 <pre><code class="language-text">serializable</code></pre>
@@ -1064,7 +1109,7 @@ etcd C</code></pre>
                 <p>"etcd is CP"</p>
             </blockquote>
             <p>is much less informative than explaining the particular operation being performed.</p>
-            <h2 id="per-operation-behavior-is-more-useful-than-product-labels">Per-operation behavior is more useful than product labels</h2>
+            <h3 id="per-operation-behavior-is-more-useful-than-product-labels">Per-operation behavior is more useful than product labels</h3>
             <p>A database may support:</p>
             <div>
                 <pre><code class="language-text">strong read
@@ -1089,7 +1134,7 @@ asynchronous regional replication</code></pre>
             <blockquote>
                 <p>For this operation, under this replication topology and consistency configuration, what happens when the required nodes cannot communicate?</p>
             </blockquote>
-            <h2 id="cassandra-tunable-consistency">Cassandra: tunable consistency</h2>
+            <h3 id="cassandra-tunable-consistency">Cassandra: tunable consistency</h3>
             <p>Apache Cassandra illustrates this extremely well.</p>
             <p>Suppose a Cassandra partition has:</p>
             <div>
@@ -1106,7 +1151,7 @@ LOCAL_QUORUM</code></pre>
             </div>
             <p>rather than imposing one universal setting on every operation.</p>
             <p>The current Cassandra documentation explicitly describes this as tunable consistency.</p>
-            <h2 id="cassandra-with-one">Cassandra with <code>ONE</code></h2>
+            <h3 id="cassandra-with-one">Cassandra with <code>ONE</code></h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">RF = 3</code></pre>
@@ -1124,7 +1169,7 @@ availability under replica failure</code></pre>
             <p>relative to waiting for every replica.</p>
             <p>But replicas can temporarily contain different versions.</p>
             <p>Cassandra has mechanisms for replica convergence and repair.</p>
-            <h2 id="cassandra-with-quorum">Cassandra with <code>QUORUM</code></h2>
+            <h3 id="cassandra-with-quorum">Cassandra with <code>QUORUM</code></h3>
             <p>For:</p>
             <div>
                 <pre><code class="language-text">RF = 3</code></pre>
@@ -1166,7 +1211,7 @@ B</code></pre>
             <div>
                 <pre><code class="language-text">"Cassandra is AP."</code></pre>
             </div>
-            <h2 id="stronger-consistency-reduces-which-failures-an-operation-can-tolerate">Stronger consistency reduces which failures an operation can tolerate</h2>
+            <h3 id="stronger-consistency-reduces-which-failures-an-operation-can-tolerate">Stronger consistency reduces which failures an operation can tolerate</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">RF = 3</code></pre>
@@ -1198,7 +1243,7 @@ B</code></pre>
 without becoming unavailable.</code></pre>
             </div>
             <p>Cassandra exposes this choice on a per-operation basis.</p>
-            <h2 id="quorum-consistency-is-not-a-magic-synonym-for-every-strong-consistency-model">Quorum consistency is not a magic synonym for every strong consistency model</h2>
+            <h3 id="quorum-consistency-is-not-a-magic-synonym-for-every-strong-consistency-model">Quorum consistency is not a magic synonym for every strong consistency model</h3>
             <p>Be careful with statements such as:</p>
             <div>
                 <pre><code class="language-text">R + W &gt; N
@@ -1216,7 +1261,8 @@ clock/timestamp behavior</code></pre>
             <p>For example, Cassandra resolves ordinary conflicting mutations using timestamp-based last-write-wins behavior. Its current documentation explicitly describes this versioning model.</p>
             <p>So quorum intersection is an important tool.</p>
             <p>It is not a replacement for understanding the complete consistency protocol.</p>
-            <h2 id="availability-first-designs-create-a-second-problem-divergence">Availability-first designs create a second problem: divergence</h2>
+            <h2 id="propagation-and-reconciliation">Propagation and reconciliation</h2>
+            <h3 id="availability-first-designs-create-a-second-problem-divergence">Availability-first designs create a second problem: divergence</h3>
             <p>Return to:</p>
             <div>
                 <pre><code class="language-text">Node A             X             Node B</code></pre>
@@ -1239,7 +1285,7 @@ clock/timestamp behavior</code></pre>
             </div>
             <p>The communication problem has ended.</p>
             <p>A conflict-resolution problem remains.</p>
-            <h2 id="convergence-needs-a-reconciliation-rule">Convergence needs a reconciliation rule</h2>
+            <h3 id="convergence-needs-a-reconciliation-rule">Convergence needs a reconciliation rule</h3>
             <p>Some common reconciliation strategies are:</p>
             <table>
                 <thead>
@@ -1273,7 +1319,7 @@ clock/timestamp behavior</code></pre>
                 </tbody>
             </table>
             <p>The network healing itself does not choose the correct business outcome.</p>
-            <h2 id="last-write-wins">Last-write-wins</h2>
+            <h3 id="last-write-wins">Last-write-wins</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">A:
@@ -1296,7 +1342,7 @@ timestamp = 10:00:00.200</code></pre>
             </div>
             <p>One value lost the conflict.</p>
             <p>Clock-based LWW schemes also need carefully defined timestamp and tie-breaking behavior.</p>
-            <h2 id="convergence-and-preservation-are-different-properties">Convergence and preservation are different properties</h2>
+            <h3 id="convergence-and-preservation-are-different-properties">Convergence and preservation are different properties</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">Replica A = X
@@ -1319,7 +1365,7 @@ Replica B = Y</code></pre>
                 <p>Eventual convergence does not imply that every concurrent update survives reconciliation.</p>
             </blockquote>
             <p>That distinction matters enormously in availability-oriented systems.</p>
-            <h2 id="vector-clocks-detect-concurrent-histories">Vector clocks detect concurrent histories</h2>
+            <h3 id="vector-clocks-detect-concurrent-histories">Vector clocks detect concurrent histories</h3>
             <p>The original Amazon Dynamo system provides a classic example.</p>
             <p>It associated versions with vector clocks containing <code>(node, counter)</code> information.</p>
             <p>That metadata allowed Dynamo to determine whether:</p>
@@ -1339,7 +1385,7 @@ Replica B = Y</code></pre>
             <div>
                 <pre><code class="language-text">What does the business want the merged value to be?</code></pre>
             </div>
-            <h2 id="the-original-dynamo-shopping-cart-example">The original Dynamo shopping-cart example</h2>
+            <h3 id="the-original-dynamo-shopping-cart-example">The original Dynamo shopping-cart example</h3>
             <p>The 2007 Dynamo paper deliberately targeted services for which rejecting updates was undesirable.</p>
             <p>Amazon's shopping-cart example treated availability as particularly important: customers should continue adding or removing items even during failures. Divergent cart versions could later be reconciled using application knowledge.</p>
             <p>Conceptually:</p>
@@ -1372,7 +1418,7 @@ keyboard</code></pre>
             <div>
                 <pre><code class="language-text">"eventually consistent"</code></pre>
             </div>
-            <h2 id="dynamo-used-more-than-eventual-consistency">Dynamo used more than eventual consistency</h2>
+            <h3 id="dynamo-used-more-than-eventual-consistency">Dynamo used more than eventual consistency</h3>
             <p>The original Dynamo design combined several techniques.</p>
             <table>
                 <thead>
@@ -1415,7 +1461,7 @@ keyboard</code></pre>
             <p>The Dynamo paper documents these mechanisms as components of its availability-oriented architecture.</p>
             <p>The important point is that none of them violates CAP.</p>
             <p>They help the system operate usefully after choosing weaker consistency behavior during certain failures.</p>
-            <h2 id="hinted-handoff-does-not-solve-cap">Hinted handoff does not solve CAP</h2>
+            <h3 id="hinted-handoff-does-not-solve-cap">Hinted handoff does not solve CAP</h3>
             <p>Suppose the normal replica for key <code>K</code> is unavailable.</p>
             <p>A Dynamo-style architecture can temporarily store the update elsewhere:</p>
             <div>
@@ -1440,7 +1486,7 @@ eventual convergence</code></pre>
             <p>But while B lacks the update, a local read from B cannot magically know that update happened.</p>
             <p>Hinted handoff helps repair state after failures.</p>
             <p>It does not remove CAP's missing-information problem.</p>
-            <h2 id="read-repair-does-not-solve-cap-either">Read repair does not solve CAP either</h2>
+            <h3 id="read-repair-does-not-solve-cap-either">Read repair does not solve CAP either</h3>
             <p>Suppose a read contacts:</p>
             <div>
                 <pre><code class="language-text">A = version 7
@@ -1465,7 +1511,7 @@ C = version 7</code></pre>
 ≠
 CAP loophole</code></pre>
             </div>
-            <h2 id="anti-entropy">Anti-entropy</h2>
+            <h3 id="anti-entropy">Anti-entropy</h3>
             <p>Systems can also periodically compare replica state in the background.</p>
             <p>For example, they may exchange compact summaries of data ranges and discover:</p>
             <div>
@@ -1478,7 +1524,7 @@ range 3: different</code></pre>
             <p>Apache Cassandra retains similar repair ideas and documents hinted handoff, read repair, and anti-entropy repair as mechanisms helping replicas converge.</p>
             <p>Again, these mechanisms repair after or around divergence.</p>
             <p>They do not allow an isolated node to know information it has not received.</p>
-            <h2 id="eventual-consistency">Eventual consistency</h2>
+            <h3 id="eventual-consistency">Eventual consistency</h3>
             <p>A useful simplified definition is:</p>
             <blockquote>
                 <p>If new updates stop, communication succeeds, and the reconciliation/repair mechanisms continue to run, replicas eventually converge toward the system's resolved state.</p>
@@ -1501,7 +1547,7 @@ range 3: different</code></pre>
                 <pre><code class="language-text">business invariants can never be temporarily violated</code></pre>
             </div>
             <p>Eventual consistency is therefore a convergence statement, not a complete application semantics specification.</p>
-            <h2 id="mvcc-does-not-solve-cap">MVCC does not solve CAP</h2>
+            <h3 id="mvcc-does-not-solve-cap">MVCC does not solve CAP</h3>
             <p>MVCC solves a different problem.</p>
             <p>Suppose one database server has concurrent transactions:</p>
             <div>
@@ -1527,7 +1573,7 @@ T3</code></pre>
                 <pre><code class="language-text">network-information uncertainty</code></pre>
             </div>
             <p>The problems exist at different layers.</p>
-            <h2 id="dynamo-and-dynamodb-are-not-the-same-system">Dynamo and DynamoDB are not the same system</h2>
+            <h3 id="dynamo-and-dynamodb-are-not-the-same-system">Dynamo and DynamoDB are not the same system</h3>
             <p>This distinction is important.</p>
             <p>Dynamo refers to the internal Amazon key-value architecture described in the 2007 SOSP paper:</p>
             <div>
@@ -1549,7 +1595,7 @@ consistent hashing</code></pre>
                 <pre><code class="language-text">"DynamoDB internally works this way."</code></pre>
             </div>
             <p>unless current DynamoDB documentation says so.</p>
-            <h2 id="dynamodb-itself-demonstrates-why-product-cap-labels-are-weak">DynamoDB itself demonstrates why product CAP labels are weak</h2>
+            <h3 id="dynamodb-itself-demonstrates-why-product-cap-labels-are-weak">DynamoDB itself demonstrates why product CAP labels are weak</h3>
             <p>Current DynamoDB provides several different consistency behaviors.</p>
             <p>For ordinary DynamoDB tables and local secondary indexes, applications can request either eventually consistent or strongly consistent reads.</p>
             <p>Global secondary indexes support eventually consistent reads only.</p>
@@ -1614,7 +1660,7 @@ consistent hashing</code></pre>
                 <pre><code class="language-text">CP</code></pre>
             </div>
             <p>hides that distinction.</p>
-            <h2 id="current-dynamodb-global-tables-make-the-distinction-even-clearer">Current DynamoDB global tables make the distinction even clearer</h2>
+            <h3 id="current-dynamodb-global-tables-make-the-distinction-even-clearer">Current DynamoDB global tables make the distinction even clearer</h3>
             <p>As of the current AWS documentation, DynamoDB Global Tables support two multi-Region consistency modes:</p>
             <div>
                 <pre><code class="language-text">MREC
@@ -1629,7 +1675,7 @@ Multi-Region Strong Consistency</code></pre>
             <blockquote>
                 <p>classify the configuration and operation, not the product logo.</p>
             </blockquote>
-            <h2 id="dynamodb-mrec-availability-oriented-regional-behavior">DynamoDB MREC: availability-oriented regional behavior</h2>
+            <h3 id="dynamodb-mrec-availability-oriented-regional-behavior">DynamoDB MREC: availability-oriented regional behavior</h3>
             <p>With MREC:</p>
             <div>
                 <pre><code class="language-text">Region A             Region B
@@ -1645,7 +1691,7 @@ SUCCESS
             <p>AWS documents that MREC changes propagate asynchronously and that concurrent updates can be resolved using last-writer-wins behavior.</p>
             <p>This architecture favors lower cross-Region coordination latency.</p>
             <p>The consequence is weaker immediate cross-Region consistency.</p>
-            <h2 id="dynamodb-mrsc-stronger-coordination">DynamoDB MRSC: stronger coordination</h2>
+            <h3 id="dynamodb-mrsc-stronger-coordination">DynamoDB MRSC: stronger coordination</h3>
             <p>MRSC changes the design.</p>
             <p>Conceptually:</p>
             <div>
@@ -1667,7 +1713,7 @@ SUCCESS</code></pre>
             <p>That coordination has a latency cost because cross-Region communication is now on the critical path.</p>
             <p>AWS explicitly notes that MRSC write and strongly consistent read latency depends on the participating Regions and their network round-trip latency.</p>
             <p>That leads directly into PACELC.</p>
-            <h2 id="mrsc-also-makes-the-availability-trade-off-visible">MRSC also makes the availability trade-off visible</h2>
+            <h3 id="mrsc-also-makes-the-availability-trade-off-visible">MRSC also makes the availability trade-off visible</h3>
             <p>AWS's MRSC documentation says the local Region can continue servicing read/write operations while it can establish the required coordination with another replica or witness.</p>
             <p>If it cannot establish that quorum, strongly consistent operations cannot simply continue as though nothing happened; eventually consistent reads remain a different option.</p>
             <p>That is CAP-style behavior made concrete:</p>
@@ -1678,7 +1724,8 @@ requires coordination
 coordination unavailable
 → strong operation may become unavailable</code></pre>
             </div>
-            <h2 id="pacelc-cap-describes-failures-but-systems-make-trade-offs-when-healthy-too">PACELC: CAP describes failures, but systems make trade-offs when healthy too</h2>
+            <h2 id="healthy-network-latency-and-consistency">Healthy-network latency and consistency</h2>
+            <h3 id="pacelc-cap-describes-failures-but-systems-make-trade-offs-when-healthy-too">PACELC: CAP describes failures, but systems make trade-offs when healthy too</h3>
             <p>CAP concentrates on the partition case.</p>
             <p>But distributed databases spend most of their time without a severe partition.</p>
             <p>There is still an important design trade-off during normal operation:</p>
@@ -1703,7 +1750,7 @@ ELSE:
     Consistency</code></pre>
             </div>
             <p>Abadi introduced PACELC specifically to emphasize that CAP does not describe the important latency/consistency trade-offs that continue during normal operation.</p>
-            <h2 id="pacelc-with-two-regions">PACELC with two regions</h2>
+            <h3 id="pacelc-with-two-regions">PACELC with two regions</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">Frankfurt &lt;-------- network --------&gt; Sydney</code></pre>
@@ -1744,7 +1791,7 @@ SUCCESS
                 <pre><code class="language-text">Else no partition:
 Latency versus Consistency.</code></pre>
             </div>
-            <h2 id="cap-and-pacelc-together">CAP and PACELC together</h2>
+            <h3 id="cap-and-pacelc-together">CAP and PACELC together</h3>
             <p>A good mental model is:</p>
             <table>
                 <thead>
@@ -1766,7 +1813,8 @@ Latency versus Consistency.</code></pre>
             </table>
             <p>This explains why distributed database design does not suddenly become trivial when there is no outage.</p>
             <p>Global coordination always has a cost.</p>
-            <h2 id="not-every-operation-needs-the-same-consistency">Not every operation needs the same consistency</h2>
+            <h2 id="choose-guarantees-by-business-invariant">Choose guarantees by business invariant</h2>
+            <h3 id="not-every-operation-needs-the-same-consistency">Not every operation needs the same consistency</h3>
             <p>Consider an e-commerce application.</p>
             <table>
                 <thead>
@@ -1808,7 +1856,7 @@ Latency versus Consistency.</code></pre>
             </table>
             <p>The application should choose consistency based on the invariant being protected.</p>
             <p>There is no reason every piece of data must necessarily use the same distributed consistency model.</p>
-            <h2 id="why-some-data-merges-easily-and-some-does-not">Why some data merges easily and some does not</h2>
+            <h3 id="why-some-data-merges-easily-and-some-does-not">Why some data merges easily and some does not</h3>
             <p>Suppose two regions independently modify a set of tags.</p>
             <p>Region A:</p>
             <div>
@@ -1837,7 +1885,7 @@ room 101 booked by Bob</code></pre>
             </div>
             <p>does not solve the business problem.</p>
             <p>The data type and business invariant determine whether concurrent updates are safely mergeable.</p>
-            <h2 id="crdts-help-only-when-the-semantics-fit">CRDTs help only when the semantics fit</h2>
+            <h3 id="crdts-help-only-when-the-semantics-fit">CRDTs help only when the semantics fit</h3>
             <p>A Conflict-Free Replicated Data Type (CRDT) is designed so independently produced states or operations can converge deterministically according to mathematically defined rules.</p>
             <p>For suitable data structures this can be extremely useful.</p>
             <p>For example:</p>
@@ -1858,7 +1906,7 @@ collaborative structures</code></pre>
 the last available concert ticket</code></pre>
             </div>
             <p>unless the application's semantics have been deliberately modeled to resolve that problem.</p>
-            <h2 id="conflict-resolution-is-a-business-decision-too">Conflict resolution is a business decision too</h2>
+            <h3 id="conflict-resolution-is-a-business-decision-too">Conflict resolution is a business decision too</h3>
             <p>Suppose two disconnected regions update:</p>
             <div>
                 <pre><code class="language-text">credit_limit = €10,000</code></pre>
@@ -1886,7 +1934,7 @@ prevent concurrent changes through coordination</code></pre>
             <p>All are technically possible.</p>
             <p>They have completely different business consequences.</p>
             <p>Distributed-system design cannot choose the correct business semantics automatically.</p>
-            <h2 id="cap-does-not-say-weak-consistency-is-bad">CAP does not say weak consistency is bad</h2>
+            <h3 id="cap-does-not-say-weak-consistency-is-bad">CAP does not say weak consistency is bad</h3>
             <p>An availability-oriented choice may be exactly correct.</p>
             <p>For example, if a social network temporarily shows:</p>
             <div>
@@ -1907,7 +1955,7 @@ assign a globally unique scarce resource</code></pre>
             </div>
             <p>CAP does not tell you which business trade-off to choose.</p>
             <p>It tells you the distributed-system constraint you must design around.</p>
-            <h2 id="cap-does-not-say-strong-consistency-is-always-better">CAP does not say strong consistency is always better</h2>
+            <h3 id="cap-does-not-say-strong-consistency-is-always-better">CAP does not say strong consistency is always better</h3>
             <p>Strong consistency has costs:</p>
             <div>
                 <pre><code class="language-text">coordination
@@ -1919,7 +1967,7 @@ higher tail latency</code></pre>
             <p>Or they may not.</p>
             <p>The correct choice depends on what can happen if data is stale or conflicting.</p>
             <p>A product catalog and a distributed lock service are not the same problem.</p>
-            <h2 id="cap-does-not-say-eventual-consistency-means-random">CAP does not say eventual consistency means "random"</h2>
+            <h3 id="cap-does-not-say-eventual-consistency-means-random">CAP does not say eventual consistency means "random"</h3>
             <p>Eventually consistent systems are not necessarily chaotic.</p>
             <p>They may implement very specific guarantees around:</p>
             <div>
@@ -1937,7 +1985,7 @@ repair</code></pre>
             </div>
             <p>alone does not specify all of those properties.</p>
             <p>You need to know the actual consistency model.</p>
-            <h2 id="cap-does-not-classify-an-entire-architecture-forever">CAP does not classify an entire architecture forever</h2>
+            <h3 id="cap-does-not-classify-an-entire-architecture-forever">CAP does not classify an entire architecture forever</h3>
             <p>Suppose an application uses:</p>
             <div>
                 <pre><code class="language-text">etcd</code></pre>
@@ -1959,7 +2007,7 @@ repair</code></pre>
             <p>There is no particularly useful single answer.</p>
             <p>Different operations intentionally make different trade-offs.</p>
             <p>Even one datastore can provide several choices.</p>
-            <h2 id="technology-summary">Technology summary</h2>
+            <h3 id="technology-summary">Technology summary</h3>
             <table>
                 <thead>
                     <tr>
@@ -2011,7 +2059,7 @@ repair</code></pre>
                 </tbody>
             </table>
             <p>etcd documents the difference between its default linearizable reads and lower-cost potentially stale member-local reads. Cassandra documents per-operation tunable consistency and quorum behavior. The original Dynamo paper documents its availability-oriented design and reconciliation mechanisms. Current DynamoDB documentation describes table/index read consistency and separate MREC/MRSC global-table modes.</p>
-            <h2 id="common-cap-mistakes">Common CAP mistakes</h2>
+            <h3 id="common-cap-mistakes">Common CAP mistakes</h3>
             <table>
                 <thead>
                     <tr>
@@ -2062,7 +2110,8 @@ repair</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h2 id="how-to-analyze-a-real-system">How to analyze a real system</h2>
+            <h2 id="review-a-concrete-failure-scenario">Review a concrete failure scenario</h2>
+            <h3 id="how-to-analyze-a-real-system">How to analyze a real system</h3>
             <p>Instead of asking:</p>
             <div>
                 <pre><code class="language-text">Is this database CP or AP?</code></pre>
@@ -2096,7 +2145,7 @@ What guarantee exists after communication returns?
 What latency does normal coordination add?</code></pre>
             </div>
             <p>Those questions reveal the real distributed-system design.</p>
-            <h2 id="a-complete-three-node-example">A complete three-node example</h2>
+            <h3 id="a-complete-three-node-example">A complete three-node example</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">RF = 3
@@ -2121,7 +2170,7 @@ C</code></pre>
             <div>
                 <pre><code class="language-text">GET price</code></pre>
             </div>
-            <h3 id="consistency-first-configuration">Consistency-first configuration</h3>
+            <h4 id="consistency-first-configuration">Consistency-first configuration</h4>
             <p>The system requires:</p>
             <div>
                 <pre><code class="language-text">2 of 3</code></pre>
@@ -2142,7 +2191,7 @@ C</code></pre>
             </div>
             <p>and can continue.</p>
             <p>The service preserved the strong consistency protocol but sacrificed availability for strong operations on A's side.</p>
-            <h3 id="availability-first-configuration">Availability-first configuration</h3>
+            <h4 id="availability-first-configuration">Availability-first configuration</h4>
             <p>A is allowed to write locally:</p>
             <div>
                 <pre><code class="language-text">A = 12</code></pre>
@@ -2163,7 +2212,8 @@ C</code></pre>
             </div>
             <p>must be reconciled according to the system's version/conflict rules.</p>
             <p>That is CAP in one example.</p>
-            <h2 id="the-deepest-cap-insight">The deepest CAP insight</h2>
+            <h2 id="the-core-decision">The core decision</h2>
+            <h3 id="the-deepest-cap-insight">The deepest CAP insight</h3>
             <p>CAP is often taught as a triangle:</p>
             <div>
                 <pre><code class="language-text">        C
@@ -2192,51 +2242,6 @@ respect a single real-time global history?</code></pre>
             </div>
             <p>If operations on one side can change the correct answer on the other side, and communication is impossible, then the other side lacks the information needed to guarantee both.</p>
             <p>That information gap is the core of CAP.</p>
-            <h2 id="final-mental-model">Final mental model</h2>
-            <p>Remember CAP like this:</p>
-            <div>
-                <pre><code class="language-text">NORMAL OPERATION
-
-A &lt;-----------&gt; B
-
-Communication works.
-
-The system may coordinate to provide
-strong consistency and availability.</code></pre>
-            </div>
-            <p>Now:</p>
-            <div>
-                <pre><code class="language-text">PARTITION
-
-A       X       B</code></pre>
-            </div>
-            <p>A successful operation can occur on one side.</p>
-            <p>The other side cannot learn about it.</p>
-            <p>If the other side must remain fully available:</p>
-            <div>
-                <pre><code class="language-text">it may operate on incomplete information
-→ linearizability may be lost</code></pre>
-            </div>
-            <p>If linearizability must be preserved:</p>
-            <div>
-                <pre><code class="language-text">it must avoid operations whose correctness
-depends on unavailable information
-→ availability is lost for those operations</code></pre>
-            </div>
-            <p>Then add PACELC:</p>
-            <div>
-                <pre><code class="language-text">PARTITION:
-    Availability ↔ Consistency
-
-ELSE:
-    Latency ↔ Consistency</code></pre>
-            </div>
-            <p>Finally, do not classify databases by slogans.</p>
-            <p>Ask:</p>
-            <blockquote>
-                <p>For this particular operation, replica topology, consistency setting, and network failure, which nodes must communicate before the operation succeeds—and what happens when they cannot?</p>
-            </blockquote>
-            <p>That question turns CAP from an interview slogan into a practical distributed-systems design tool.</p>
             <h2 id="references">References</h2>
             <p>Gilbert and Lynch formally proved Brewer's conjecture for an asynchronous distributed model, establishing the impossibility of simultaneously guaranteeing atomic/linearizable consistency, availability, and partition tolerance.</p>
             <p>Daniel Abadi's PACELC discussion explains why CAP primarily constrains systems during partitions while distributed databases also face a normal-operation trade-off between latency and consistency.</p>

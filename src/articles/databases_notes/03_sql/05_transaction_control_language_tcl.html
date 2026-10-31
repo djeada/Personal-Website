@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Transactions: Make Related Changes Succeed Together</title>
-    <meta content="A checkout involves more than one write. The bookstore must record an order, record its lines, and reduce stock." name="description" />
+    <meta content="A checkout combines stock reservation, order creation, and line items." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl",
-            "description": "A checkout involves more than one write. The bookstore must record an order, record its lines, and reduce stock.",
-            "dateModified": "2026-10-04",
+            "description": "A checkout combines stock reservation, order creation, and line items.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A checkout involves more than one write. The bookstore must record an order, record its lines, and reduce stock." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A checkout combines stock reservation, order creation, and line items." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,15 +116,15 @@
                 <ol>
                     <li><a href="#follow-a-successful-purchase">Follow a successful purchase</a></li>
                     <li><a href="#follow-a-rollback">Follow a rollback</a></li>
-                    <li><a href="#handle-the-failure-explicitly">Handle the failure explicitly</a></li>
+                    <li><a href="#check-business-failures-as-well-as-sql-exceptions">Check business failures as well as SQL exceptions</a></li>
                     <li><a href="#savepoints-undo-a-part-of-the-work">Savepoints: undo a part of the work</a></li>
                     <li><a href="#autocommit-and-connection-state">Autocommit and connection state</a></li>
-                    <li><a href="#atomicity-does-not-mean-complete-isolation">Atomicity does not mean complete isolation</a></li>
+                    <li><a href="#isolation-and-external-effects-need-separate-controls">Isolation and external effects need separate controls</a></li>
                     <li><a href="#follow-a-transfer-all-the-way-through-failure">Follow a transfer all the way through failure</a></li>
                     <li><a href="#know-whether-the-connection-starts-a-transaction-for-you">Know whether the connection starts a transaction for you</a></li>
                     <li><a href="#a-savepoint-is-a-recovery-boundary-inside-a-transaction">A savepoint is a recovery boundary inside a transaction</a></li>
                     <li><a href="#keep-slow-external-work-outside-the-database-transaction">Keep slow external work outside the database transaction</a></li>
-                    <li><a href="#retry-the-operation-with-a-way-to-recognize-it">Retry the operation, with a way to recognize it</a></li>
+                    <li><a href="#retry-with-an-operation-identity-to-avoid-duplicate-orders">Retry with an operation identity to avoid duplicate orders</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -348,7 +348,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -368,7 +368,7 @@
                     </button></div>
             </div>
             <h1>Transactions: Make Related Changes Succeed Together</h1>
-            <p>A checkout involves more than one write. The bookstore must record an order, record its lines, and reduce stock. If an application stops between those operations, a partially recorded purchase can be misleading.</p>
+            <p>A checkout combines stock reservation, order creation, and line items. A transaction supplies an atomic commit boundary, <strong>not</strong> a complete checkout algorithm: the caller must still check affected-row counts, handle errors, and coordinate external effects. This lesson distinguishes what <code>COMMIT</code>, <code>ROLLBACK</code>, and <code>SAVEPOINT</code> actually guarantee.</p>
             <p>A <strong>transaction</strong> groups database work. <code>COMMIT</code> accepts its transactional changes; <code>ROLLBACK</code> undoes them. This all-or-nothing property is called <strong>atomicity</strong>. It protects the group, but the application must still decide which statements belong together and when the workflow has failed.</p>
             <p>Use the SQLite bookstore from the <a href="01_intro_to_sql.html">SQL introduction</a>. Keep one connection open for each transaction example.</p>
             <h2 id="follow-a-successful-purchase">Follow a successful purchase</h2>
@@ -448,7 +448,7 @@ SELECT stock FROM products WHERE product_id = 20;</code></pre>
                 </tbody>
             </table>
             <p>A transaction reads its own changes before committing them. Rollback does not undo commits made by unrelated transactions.</p>
-            <h2 id="handle-the-failure-explicitly">Handle the failure explicitly</h2>
+            <h2 id="check-business-failures-as-well-as-sql-exceptions">Check business failures as well as SQL exceptions</h2>
             <p>An application should start the transaction, perform the steps and required checks, then commit only when all succeed. On a relevant error or invalid result, it should roll back.</p>
             <p>This Python function demonstrates the affected-row check with the same SQLite schema. <code>conn</code> is an existing connection with the sample tables and foreign-key checks enabled. Call it when no other transaction is open; the connection context commits on normal exit and rolls back if an exception leaves the block.</p>
             <div>
@@ -497,9 +497,41 @@ ROLLBACK;</code></pre>
             <h2 id="autocommit-and-connection-state">Autocommit and connection state</h2>
             <p><strong>Autocommit</strong> means statements are committed without an explicit multi-statement transaction around them, according to the engine and driver's rules. Drivers can also open transactions implicitly.</p>
             <p>Know which behavior your connection uses. Starting a transaction on one connection and doing the next write on another does not create one shared transaction. Returning an unfinished transaction to a connection pool can also surprise the next borrower.</p>
-            <h2 id="atomicity-does-not-mean-complete-isolation">Atomicity does not mean complete isolation</h2>
+            <h2 id="isolation-and-external-effects-need-separate-controls">Isolation and external effects need separate controls</h2>
             <p>Two buyers can both read “one copy remains.” A transaction does not automatically make every read-and-later-write pattern safe against that race. Use conditional updates, constraints, locking, or suitable isolation to protect the relevant decision.</p>
             <p>A transaction also does not undo an email or remote payment already sent. External effects need their own coordination or retry-safe design.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Checkout attempt</th>
+                        <th>Incorrect assumption</th>
+                        <th>Correct check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Two buyers both previously read stock = 1</td>
+                        <td>Both may safely write an order because they used transactions</td>
+                        <td>Each must win a guarded stock decrement or another appropriate serialization mechanism</td>
+                    </tr>
+                    <tr>
+                        <td><code>UPDATE ... WHERE stock &gt; 0</code> changes zero rows</td>
+                        <td>No exception means the purchase succeeded</td>
+                        <td>Verify the affected-row count; roll back the checkout</td>
+                    </tr>
+                    <tr>
+                        <td>An insert fails after decrementing stock</td>
+                        <td>Keep the earlier stock change</td>
+                        <td>Roll back the complete transaction</td>
+                    </tr>
+                    <tr>
+                        <td>Payment provider accepted a charge, then the DB transaction failed</td>
+                        <td>SQL <code>ROLLBACK</code> reverses the charge</td>
+                        <td>Reconcile the external payment using an idempotent, documented recovery workflow</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Transactions provide atomicity for <strong>database changes in their scope</strong>. They do not automatically give exactly-once behavior across unrelated systems.</p>
             <h2 id="follow-a-transfer-all-the-way-through-failure">Follow a transfer all the way through failure</h2>
             <p>Two updates can form one business operation. Use a separate pair of accounts:</p>
             <p>Input (<code>tcl_accounts</code>):</p>
@@ -640,7 +672,7 @@ ROLLBACK;</code></pre>
             <h2 id="keep-slow-external-work-outside-the-database-transaction">Keep slow external work outside the database transaction</h2>
             <p>A transaction that waits for a customer to click a button or for an email server to respond can hold locks for seconds or minutes. Collect input and perform work that does not require protected database state before beginning. Inside the transaction, read the necessary state, validate it using an appropriate concurrency strategy, write, and commit promptly.</p>
             <p>An email is not undone by <code>ROLLBACK</code>. If an order and a notification request must persist together, insert the order and an outbox row in one transaction. A separate worker sends the message after commit and records its progress. That worker still needs duplicate-handling because it might send successfully and fail before marking the row sent.</p>
-            <h2 id="retry-the-operation-with-a-way-to-recognize-it">Retry the operation, with a way to recognize it</h2>
+            <h2 id="retry-with-an-operation-identity-to-avoid-duplicate-orders">Retry with an operation identity to avoid duplicate orders</h2>
             <p>A deadlock or serialization failure may require rerunning the complete transaction against fresh state. Repeating only the last statement can reuse decisions made from an obsolete read. Use bounded retries for errors the driver identifies as retriable; do not retry a bad email address or an insufficient balance as though it were temporary.</p>
             <p>A broken connection during commit is different: the server might have committed even though the client did not receive the reply. Use a unique operation identifier for a checkout or payment instruction, and look up its outcome after reconnecting. Blindly submitting the same operation under a new identifier can create a duplicate. Transaction control and idempotency address related but distinct failures.</p>
             <p>References: <a href="https://docs.python.org/3/library/sqlite3.html#transaction-control">Python SQLite transaction control</a> and <a href="https://www.postgresql.org/docs/current/sql-savepoint.html">PostgreSQL savepoints</a>.</p>

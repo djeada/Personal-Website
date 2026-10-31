@@ -23,7 +23,7 @@
         })();
     </script>
     <title>How Tables and Indexes Reach Storage | Adam Djellouli</title>
-    <meta content="The SQL table is a logical view of data. The engine must represent its rows, indexes, and recovery information as bytes." name="description" />
+    <meta content="SQL exposes tables and indexes as logical objects, but the DBMS reads and writes pages, files, and recovery records." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk",
-            "description": "The SQL table is a logical view of data. The engine must represent its rows, indexes, and recovery information as bytes.",
-            "dateModified": "2026-10-02",
+            "description": "SQL exposes tables and indexes as logical objects, but the DBMS reads and writes pages, files, and recovery records.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="The SQL table is a logical view of data. The engine must represent its rows, indexes, and recovery information as bytes." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="SQL exposes tables and indexes as logical objects, but the DBMS reads and writes pages, files, and recovery records." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
                     <li><a href="#separate-logical-objects-from-physical-files">Separate logical objects from physical files</a></li>
                     <li><a href="#tables-can-use-different-organizations">Tables can use different organizations</a></li>
                     <li><a href="#an-index-is-stored-data-too">An index is stored data too</a></li>
-                    <li><a href="#memory-changes-the-read-cost">Memory changes the read cost</a></li>
+                    <li><a href="#page-cache-changes-the-cost-of-an-access-path">Page cache changes the cost of an access path</a></li>
                     <li><a href="#writes-involve-recovery-information">Writes involve recovery information</a></li>
                     <li><a href="#space-needs-maintenance-over-time">Space needs maintenance over time</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
@@ -342,7 +342,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -362,7 +362,7 @@
                     </button></div>
             </div>
             <h1>How Tables and Indexes Reach Storage</h1>
-            <p>The SQL table is a logical view of data. The engine must represent its rows, indexes, and recovery information as bytes. Understanding that representation helps explain why returning a few rows can require many reads, why indexes cost space, and why committed data can survive a crash.</p>
+            <p>SQL exposes tables and indexes as logical objects, but the DBMS reads and writes pages, files, and recovery records. This chapter follows a single row lookup through those layers. The key distinction is that <strong>rows returned</strong>, <strong>pages touched</strong>, and <strong>physical disk reads</strong> are different quantities; the cache and access path determine how much work occurs.</p>
             <p>Read <a href="../04_acid_properties_and_transactions/01_transactions_intro.html">transactions</a> first. This chapter introduces the main layers; the later <a href="04_database_pages.html">page</a> and <a href="05_indexing.html">index</a> notes explain their details.</p>
             <h2 id="start-with-the-path-of-a-product-lookup">Start with the path of a product lookup</h2>
             <p>When the bookstore runs <code>SELECT title FROM products WHERE product_id = 10</code>, a typical engine:</p>
@@ -433,12 +433,12 @@
             <p>A B-tree-family index keeps searchable keys in a tree of pages. Upper levels guide the search; leaf pages hold entries or row data according to the engine's design. Finding one key follows a route through the tree instead of scanning every table row.</p>
             <p>That route still costs work. A non-covering index may lead to additional table-page reads. Matching many rows can make those reads more expensive than scanning. Changes to indexed values require maintaining the index and can sometimes split a full page into additional pages.</p>
             <p>A <strong>secondary index</strong> supplies another access path, such as finding customers by email rather than their identifier. The <a href="03_primary_key_vs_secondary_key.html">key comparison</a> separates the logical meaning of a key from the physical role of an index.</p>
-            <h2 id="memory-changes-the-read-cost">Memory changes the read cost</h2>
+            <h2 id="page-cache-changes-the-cost-of-an-access-path">Page cache changes the cost of an access path</h2>
             <p>Database engines commonly keep pages in a <strong>buffer pool</strong> or <strong>page cache</strong>. Repeated access can reuse a page already in memory. A new or larger workload may need to load pages that are absent.</p>
             <p>This is why the same query can take different times with a cold cache and a warm cache. An operating-system cache adds another layer, so a database's reported storage read does not always imply a physical device access.</p>
             <p>An application's cache of query results is a different layer. It can skip a database request, but needs its own freshness policy. See <a href="../08_database_performance/03_database_caching.html">caching</a>.</p>
             <h2 id="writes-involve-recovery-information">Writes involve recovery information</h2>
-            <p>The engine may modify a page in memory before writing that page back to a data file. A <strong>dirty page</strong> is a modified cached page whose changes have not yet been flushed to its persistent data location.</p>
+            <p>A write commonly changes a cached page before the page's next data-file flush. Such a <strong>dirty page</strong> has a newer in-memory state than its current persisted data-page image. That is not necessarily an uncommitted transaction: the commit can already be durable through the log. Keep <em>committed</em>, <em>logged</em>, and <em>data page flushed</em> separate.</p>
             <p>With <strong>write-ahead logging (WAL)</strong>, the engine persists the required recovery information before the corresponding data-page changes. Durable commit can depend on persisting log records rather than immediately flushing every changed data page. Recovery uses that information to reconstruct the accepted state after a crash.</p>
             <p>The implementation differs by engine, and some engines use other journal arrangements. Do not infer a universal on-disk sequence from the high-level idea. <a href="../04_acid_properties_and_transactions/05_durability.html">Durability</a> connects persistence ordering to transaction guarantees.</p>
             <h2 id="space-needs-maintenance-over-time">Space needs maintenance over time</h2>

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>DDL: Define and Change the Database Structure | Adam Djellouli</title>
-    <meta content="Data Definition Language (DDL) defines database objects." name="description" />
+    <meta content="Data Definition Language (DDL) changes database structure, not just the current rows." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl",
-            "description": "Data Definition Language (DDL) defines database objects.",
-            "dateModified": "2026-10-04",
+            "description": "Data Definition Language (DDL) changes database structure, not just the current rows.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Data Definition Language (DDL) defines database objects." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="Data Definition Language (DDL) changes database structure, not just the current rows." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -119,15 +119,15 @@
                     <li><a href="#give-new-rows-a-default">Give new rows a default</a></li>
                     <li><a href="#connect-tables-with-a-foreign-key">Connect tables with a foreign key</a></li>
                     <li><a href="#add-an-access-path">Add an access path</a></li>
-                    <li><a href="#remove-data-or-remove-the-object">Remove data or remove the object?</a></li>
+                    <li><a href="#distinguish-deleting-rows-from-removing-a-table">Distinguish deleting rows from removing a table</a></li>
                     <li><a href="#why-production-changes-need-a-migration">Why production changes need a migration</a></li>
                     <li><a href="#transaction-behavior-differs-by-engine">Transaction behavior differs by engine</a></li>
                     <li><a href="#inspect-the-schema-before-changing-it">Inspect the schema before changing it</a></li>
-                    <li><a href="#rehearse-a-small-migration-from-old-data-to-new-data">Rehearse a small migration from old data to new data</a></li>
+                    <li><a href="#rehearse-expansion-backfill-and-reader-migration">Rehearse expansion, backfill, and reader migration</a></li>
                     <li><a href="#rebuild-a-table-to-strengthen-a-rule">Rebuild a table to strengthen a rule</a></li>
                     <li><a href="#create-a-view-and-remove-only-its-access-path">Create a view and remove only its access path</a></li>
                     <li><a href="#treat-defaults-checks-and-unique-constraints-as-separate-rules">Treat defaults, checks, and unique constraints as separate rules</a></li>
-                    <li><a href="#plan-changes-around-readers-and-writers">Plan changes around readers and writers</a></li>
+                    <li><a href="#coordinate-schema-changes-with-active-readers-and-writers">Coordinate schema changes with active readers and writers</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -351,7 +351,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -371,7 +371,7 @@
                     </button></div>
             </div>
             <h1>DDL: Define and Change the Database Structure</h1>
-            <p><strong>Data Definition Language (DDL)</strong> defines database objects. A table definition says which columns exist, what kinds of values they accept, and which rules apply. It is different from inserting the current rows into that table.</p>
+            <p><strong>Data Definition Language (DDL)</strong> changes database structure, not just the current rows. Schema work must protect existing data and dependent code: <code>CREATE TABLE</code> on an empty database is straightforward, while changing a populated table is a migration with compatibility, validation, and rollback requirements.</p>
             <p>This note assumes you have worked through the <a href="01_intro_to_sql.html">SQL introduction</a>. Examples use SQLite unless another engine is named. The existing bookstore tables remain available.</p>
             <h2 id="read-a-table-definition">Read a table definition</h2>
             <p>This creates a separate practice table:</p>
@@ -488,7 +488,7 @@ customer_id INTEGER NOT NULL REFERENCES customers(customer_id)</code></pre>
             </div>
             <p>An index helps some queries find rows. It does not add a new business record or change what an order means. It also consumes space and adds maintenance work during writes.</p>
             <p>Use <a href="../02_database_design/04_indexing_strategies.html">indexing strategies</a> to decide whether an index supports a measured access pattern.</p>
-            <h2 id="remove-data-or-remove-the-object">Remove data or remove the object?</h2>
+            <h2 id="distinguish-deleting-rows-from-removing-a-table">Distinguish deleting rows from removing a table</h2>
             <p>These operations have different scopes:</p>
             <table>
                 <thead>
@@ -521,6 +521,33 @@ customer_id INTEGER NOT NULL REFERENCES customers(customer_id)</code></pre>
             <p>A <strong>migration</strong> is a controlled change from the current schema to a new one. Adding a required column to a table with existing rows raises a question: where will those existing values come from?</p>
             <p>One approach is to add an optional column, fill its values with a <strong>backfill</strong>, update application writers, validate the data, and then require the value using the chosen engine's supported procedure. Large backfills and constraint checks can take time or block work.</p>
             <p>The migration must describe the existing data, the new rule, how writers remain compatible during the transition, and how failures are handled. Merely showing a fresh <code>CREATE TABLE</code> does not explain changing a live system.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Unsafe shortcut</th>
+                        <th>Safer progression</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Add an immediately required column with no value for existing rows</td>
+                        <td>Add a nullable column or an appropriate default, then backfill and validate</td>
+                    </tr>
+                    <tr>
+                        <td>Backfill once and assume all future rows will have the value</td>
+                        <td>Update every active writer or provide compatible database-side behavior</td>
+                    </tr>
+                    <tr>
+                        <td>Drop the old column before readers are updated</td>
+                        <td>Check application versions, dependent views and triggers, then remove the old field</td>
+                    </tr>
+                    <tr>
+                        <td>Assume a rollback undoes DDL in every DBMS</td>
+                        <td>Rehearse failure and rollback behavior on the target engine</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A correct migration preserves both <strong>existing data</strong> and <strong>work in progress</strong>. The examples below practice an expansion and backfill on a disposable table.</p>
             <h2 id="transaction-behavior-differs-by-engine">Transaction behavior differs by engine</h2>
             <p>SQLite supports transactional schema changes with documented restrictions. PostgreSQL supports rollback for most DDL, while commands such as <code>CREATE DATABASE</code> cannot run inside a transaction block. MySQL DDL commonly causes implicit commits.</p>
             <p>An <strong>implicit commit</strong> means the engine commits without the application issuing <code>COMMIT</code> at that point. Therefore, do not assume a later rollback will undo every schema change and surrounding write in every engine.</p>
@@ -651,7 +678,7 @@ PRAGMA index_list(order_items);</code></pre>
             </table>
             <p>These are definitions, not a list of the rows currently stored.</p>
             <p>PostgreSQL and MySQL expose much of this metadata through <code>information_schema</code>; SQL Server also has <code>sys</code> catalog views. Their schemas are not identical, so use the catalog intended for the engine you are inspecting.</p>
-            <h2 id="rehearse-a-small-migration-from-old-data-to-new-data">Rehearse a small migration from old data to new data</h2>
+            <h2 id="rehearse-expansion-backfill-and-reader-migration">Rehearse expansion, backfill, and reader migration</h2>
             <p>Use a separate table so this exercise does not change the bookstore:</p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE ddl_contacts (
@@ -871,7 +898,7 @@ SELECT code, fee_cents FROM ddl_delivery_methods;</code></pre>
             </table>
             <p>A negative explicit fee would fail the check; repeating <code>pickup</code> would fail uniqueness. Without <code>NOT NULL</code>, a check such as <code>fee_cents &gt;= 0</code> would not by itself reject a null, because SQL checks accept an unknown result. A definition should express both presence and validity when the requirement needs both.</p>
             <p>Use stable keys for relationships. A display name can change or be shared; a primary key must still identify one row. An autogenerated key alone does not enforce a separate business rule such as “one delivery method per code,” which is why this table has both a primary key and a unique code.</p>
-            <h2 id="plan-changes-around-readers-and-writers">Plan changes around readers and writers</h2>
+            <h2 id="coordinate-schema-changes-with-active-readers-and-writers">Coordinate schema changes with active readers and writers</h2>
             <p>A migration that rewrites a large table or builds an index can consume disk, generate transaction logs, and hold locks. PostgreSQL's <code>CREATE INDEX CONCURRENTLY</code> reduces some blocking but has its own restrictions and failure cleanup; it cannot run inside a transaction block. MySQL's supported online DDL operations depend on the operation and engine. Do not translate “online” into “no effect on live traffic.”</p>
             <p>For a required field, a common sequence is: add a compatible optional field, deploy writers, backfill old rows in controlled batches, verify completeness, then enforce the requirement. Keep the invariant explicit at each step. If restoring the previous application would no longer understand the new schema, an application rollback and a database rollback are different recovery plans.</p>
             <p>References: <a href="https://www.sqlite.org/lang_altertable.html">SQLite ALTER TABLE</a>, <a href="https://www.sqlite.org/schematab.html">SQLite schema table</a>, and <a href="https://www.postgresql.org/docs/current/sql-createindex.html">PostgreSQL CREATE INDEX</a>.</p>

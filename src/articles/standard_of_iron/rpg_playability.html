@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rpg_playability",
             "description": "This document is the permanent contract for direct commander control: what playable means, how the mode is validated, and which runtime rules make the\u2026",
-            "dateModified": "2026-10-28",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/rpg_playability" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="This document is the permanent contract for direct commander control: what playable means, how the mode is validated, and which runtime rules make the…" property="og:description" />
-    <meta content="2026-10-28" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -230,7 +230,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 28, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -337,7 +337,7 @@ scripts/run-rpg-gates.sh --enforce-performance</code></pre>
             <p><code>expected_red</code> is a ratchet, not an exemption. If every repeat passes, the gate reports <code>FIXED</code> and exits 4; the same change must promote the scenario to <code>required_green</code>. Thresholds are changed only for an explicit design reason, never simply to make a row green.</p>
             <h2 id="verdicts">Verdicts</h2>
             <p>Completion, behavior, and performance are separate axes.</p>
-            <p><code>completed: false</code> means watchdog termination, crash, or missing report. It is <code>INCOMPLETE</code>, or <code>TIMEOUT</code> when <code>timeout.txt</code> identifies the wall-clock watchdog, and it always fails the gate.</p>
+            <p><code>completed: false</code> means cancellation, watchdog termination, crash, or missing report. It is <code>INCOMPLETE</code>, or <code>TIMEOUT</code> when <code>timeout.txt</code> identifies the wall-clock watchdog, and it always fails the gate. Manual takeover is explicitly marked <code>cancelled: true</code>.</p>
             <p>Behavior covers every non-performance issue code and is hardware-independent enough for normal CI enforcement.</p>
             <p>Performance covers <code>frame_budget_exceeded</code>, the <code>performance_*</code> codes, and frame-time percentiles. It is always reported and is enforced only with <code>--enforce-performance</code> on named reference hardware.</p>
             <table>
@@ -512,7 +512,7 @@ scripts/run-rpg-gates.sh --enforce-performance</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <p>Each expectation has synthetic positive and negative coverage in <code>ArenaCommanderMetricsTest</code>. Retraction itself is not treated as a discontinuity because collision safety requires the camera to shorten quickly when necessary. It is rate-limited to 20 m/s (a third of a metre per frame at 60 Hz) rather than instant: a boom that sweeps across a wall corner while the player turns used to move the lens 2.6 m in one frame, which reads as a camera snap; now it closes over a few frames, and the depenetration step below keeps the eye out of the body in the meantime. Tiny boom reversals below 5 mm are numerical noise rather than pumping.</p>
+            <p>Each expectation has synthetic positive and negative coverage in <code>ArenaCommanderMetricsTest</code>. Retraction is immediate: easing it allowed the lens to enter a wall during a sharp turn. Outward release remains damped and bounded in metres per second. The close-quarters regression checks clearance on the first frame of a turn at 30, 60, and 144 Hz, including a facade closer than the preferred minimum boom. Tiny boom reversals below 5 mm are numerical noise rather than pumping.</p>
             <p>Per-frame geometric budgets scale by <code>frame_time * 60</code>, with a minimum scale of 1, so the same physical-rate limit applies to ordinary frames and authored hitch frames.</p>
             <h2 id="input-ownership">Input ownership</h2>
             <p>Physical input has one authoritative path from the GUI into the simulation tick. Input handlers only record state and edges; they do not execute combat or guard state directly against the world.</p>
@@ -521,6 +521,14 @@ scripts/run-rpg-gates.sh --enforce-performance</code></pre>
             <p>View angles are intentionally outside the input mutex. <code>m_view_yaw</code> and <code>m_view_pitch</code> participate in input, camera, lock-on, and simulation paths; locking them would put the camera path behind the input mutex. Edge latches, where loss is possible, remain synchronized.</p>
             <p>Focus loss, menu transitions, Arena focus-out, and interactive exit all route through <code>release_all_input()</code>. This releases held movement and mouse actions rather than dropping a local key map while leaving simulation state held.</p>
             <p>Arena scripted attacks use real press edges. Interactive takeover keeps the viewport as the raw-key owner by making <code>ArenaViewport::focusNextPrevChild</code> refuse Tab focus navigation. With <code>SOI_ARENA_RPG_TRACE=1</code>, interactive mode logs commander position, view angles, and input-edge counters once per second so manual takeover remains observable.</p>
+            <p>Interactive takeover cancels the scenario runner before the next scripted command.
+                Cancellation freezes its report and does not count as completion or success; the
+                world continues to simulate for manual play. Scenario fixture initialization is
+                separate from control activation, so entering control does not refill stamina or
+                clear posture and guard-break penalties.</p>
+            <p>Soldier diagnostics record the selected animation clip as well as its semantic
+                state. The hold-pose check accepts the authored kneeling bow attack even though its
+                state is <code>AttackRanged</code>, and still rejects ordinary standing attacks.</p>
             <h2 id="presented-pose">Presented pose</h2>
             <p>The simulation ticks at 60 Hz while presentation can run at a different rate. <code>CommanderPresentationSampleComponent</code> carries the authoritative previous and current pose, tick duration, tick sequence, and the resolved presentation sample used by both camera and renderer.</p>
             <p>Presentation age is measured from the previous sample's tick. On a new sequence, the resolver subtracts the tick that just ended rather than resetting the clock. A frame on a simulation tick reads the authoritative pose at alpha 1; a frame between ticks may extrapolate into the current tick with alpha in <code>[1, 2)</code>, subject to the resolver's cap.</p>
@@ -610,12 +618,20 @@ scripts/run-rpg-gates.sh --enforce-performance</code></pre>
             <p>Person-scale building bodies are used for lock acquisition, melee line of sight, and bow aim.</p>
             <p>The lock still writes <code>m_view_yaw</code>, which is also the player's stored free-look yaw. Separating lock framing yaw from persistent free-look yaw remains open work.</p>
             <h2 id="combat-input-and-buffering">Combat input and buffering</h2>
-            <p>One physical press requests one melee attack. Holding the primary attack button does not auto-repeat.</p>
+            <p>One physical press requests one melee attack. Holding the primary button queues
+                the next sword or spear attack at the authored recovery window and restarts after
+                a short delay when idle. Bow stance uses the held button to draw and release.</p>
             <p><code>CombatIntentQueueComponent</code> uses an authored 0.15 s buffer and counts every outcome class: accepted, buffered, refused, expired, and overflow. <code>expire_stale_intents</code> records expiration, and <code>push</code> records overflow when the queue exceeds its supported pending capacity.</p>
             <p><code>rpg_attack_buffer_window</code> exercises a clean press, a press late enough to carry into the next action, and a press early enough to expire before the legal window.</p>
             <p>Plain attacks play at their authored timeline speed. <code>resolve_melee_intent</code> starts from a <code>swing_speed</code> of 1.0 and clamps it to <code>[0.85, 1.35]</code>; look/swipe input may accelerate a light attack within that range. Heavy attacks cap at 1.0, so their weight comes from authored duration and stagger rather than an additional slowdown multiplier. The tired-swing penalty remains independent.</p>
             <p>The render-side attack visual may outlive <code>action_running</code> by <code>exit_blend_duration</code> of 0.10 s; that interval is the blend into the base stance rather than part of the mechanical action.</p>
             <h2 id="strike-direction-and-commitment">Strike direction and commitment</h2>
+            <p>Only an accepted held bow shot starts a draw. Power shots and evasive shots follow
+                their authored release events without entering the held-draw state. Guard, dodge,
+                stagger, weapon switching, and completed actions clear the transient bow state
+                through <code>clear_bow_draw</code>; stopped actions cannot advance a draw or drain stamina.
+                The overhold latch remains set until the player releases the button. Camera zoom,
+                movement restrictions, and both HUDs read this same state.</p>
             <p><code>melee_interruption_at</code> publishes phase-specific <code>redirect_authority</code>: full authority in windup, reduced authority in the early strike, and zero authority once the strike is committed. Body yaw follows view yaw only by that authored amount, so the player can aim the startup without rotating an active committed blade arbitrarily through the camera.</p>
             <p>A committed action therefore owns its direction while still allowing explicit redirect windows.</p>
             <p>A strike lunges toward its target: the authored step, plus whatever is needed to close the rest of the gap, spread over the strike's carry window. That extra is capped at 1.2 m (<code>k_strike_max_gap_close</code>). Uncapped, it closed the whole gap to the locked enemy, and the carry window is only a few ticks long, so a swing at a lock-on target eight metres away slid the commander seven metres in 0.12 s (about 100 m/s). At the Sepulcher Bridge that carried him from the spear line onto the bridge deck into the middle of a rising, where he was pinned against the parapet and killed. A target further away than the capped lunge is simply missed; the player walks or uses Vanguard Rush to close.</p>

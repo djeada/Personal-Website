@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Clustered Indexes, Heap Tables, and Row Locality | Adam Djellouli</title>
-    <meta content="A table's primary key does not imply one universal physical layout." name="description" />
+    <meta content="A table's primary key does not determine one universal physical layout." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality",
-            "description": "A table's primary key does not imply one universal physical layout.",
-            "dateModified": "2026-10-02",
+            "description": "A table's primary key does not determine one universal physical layout.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/09_clustered_indexes_heap_tables_and_row_locality" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A table's primary key does not imply one universal physical layout." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="A table's primary key does not determine one universal physical layout." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -112,29 +112,49 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#heap-table">Heap table</a></li>
-                    <li><a href="#clustered-index-organized-table">Clustered/index-organized table</a></li>
-                    <li><a href="#why-clustered-is-overloaded">Why "clustered" is overloaded</a></li>
-                    <li><a href="#postgresql-heap-layout">PostgreSQL heap layout</a></li>
-                    <li><a href="#innodb-clustered-primary-key">InnoDB clustered primary key</a></li>
-                    <li><a href="#wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</a></li>
-                    <li><a href="#sql-server-clustered-index">SQL Server clustered index</a></li>
-                    <li><a href="#sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</a></li>
-                    <li><a href="#sqlite-rowid-table">SQLite rowid table</a></li>
-                    <li><a href="#sqlite-without-rowid">SQLite WITHOUT ROWID</a></li>
-                    <li><a href="#runnable-sqlite-comparison">Runnable SQLite comparison</a></li>
-                    <li><a href="#locality">Locality</a></li>
-                    <li><a href="#secondary-lookup-cost">Secondary lookup cost</a></li>
-                    <li><a href="#primary-key-lookup-advantage">Primary-key lookup advantage</a></li>
-                    <li><a href="#range-access-advantage">Range access advantage</a></li>
-                    <li><a href="#random-identifiers">Random identifiers</a></li>
-                    <li><a href="#clustering-key-stability">Clustering key stability</a></li>
-                    <li><a href="#surrogate-versus-natural-key">Surrogate versus natural key</a></li>
-                    <li><a href="#physical-clustering-in-postgresql">Physical clustering in PostgreSQL</a></li>
-                    <li><a href="#re-clustering-cost">Re-clustering cost</a></li>
-                    <li><a href="#correlation-statistics">Correlation statistics</a></li>
-                    <li><a href="#row-locality-versus-columnar-storage">Row locality versus columnar storage</a></li>
-                    <li><a href="#choosing-a-clustering-key">Choosing a clustering key</a></li>
+                    <li><a href="#where-the-base-rows-live">Where the base rows live</a>
+                        <ol>
+                            <li><a href="#heap-table">Heap table</a></li>
+                            <li><a href="#clustered-index-organized-table">Clustered/index-organized table</a></li>
+                            <li><a href="#why-clustered-is-overloaded">Why "clustered" is overloaded</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#how-common-engines-implement-that-choice">How common engines implement that choice</a>
+                        <ol>
+                            <li><a href="#postgresql-heap-layout">PostgreSQL heap layout</a></li>
+                            <li><a href="#innodb-clustered-primary-key">InnoDB clustered primary key</a></li>
+                            <li><a href="#wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</a></li>
+                            <li><a href="#sql-server-clustered-index">SQL Server clustered index</a></li>
+                            <li><a href="#sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</a></li>
+                            <li><a href="#sqlite-rowid-table">SQLite rowid table</a></li>
+                            <li><a href="#sqlite-without-rowid">SQLite WITHOUT ROWID</a></li>
+                            <li><a href="#runnable-sqlite-comparison">Runnable SQLite comparison</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#why-locality-changes-query-cost">Why locality changes query cost</a>
+                        <ol>
+                            <li><a href="#locality">Locality</a></li>
+                            <li><a href="#secondary-lookup-cost">Secondary lookup cost</a></li>
+                            <li><a href="#primary-key-lookup-advantage">Primary-key lookup advantage</a></li>
+                            <li><a href="#range-access-advantage">Range access advantage</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#choosing-a-stable-and-useful-clustering-key">Choosing a stable and useful clustering key</a>
+                        <ol>
+                            <li><a href="#random-identifiers">Random identifiers</a></li>
+                            <li><a href="#clustering-key-stability">Clustering key stability</a></li>
+                            <li><a href="#surrogate-versus-natural-key">Surrogate versus natural key</a></li>
+                            <li><a href="#physical-clustering-in-postgresql">Physical clustering in PostgreSQL</a></li>
+                            <li><a href="#re-clustering-cost">Re-clustering cost</a></li>
+                            <li><a href="#correlation-statistics">Correlation statistics</a></li>
+                            <li><a href="#row-locality-versus-columnar-storage">Row locality versus columnar storage</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#apply-the-choice-to-the-workload">Apply the choice to the workload</a>
+                        <ol>
+                            <li><a href="#choosing-a-clustering-key">Choosing a clustering key</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#common-mistakes">Common mistakes</a>
                         <ol>
                             <li><a href="#primary-key-means-clustered">"Primary key means clustered"</a></li>
@@ -367,7 +387,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -387,7 +407,7 @@
                     </button></div>
             </div>
             <h1>Clustered Indexes, Heap Tables, and Row Locality</h1>
-            <p>A table's primary key does not imply one universal physical layout.</p>
+            <p>A table's primary key does not determine one universal physical layout. This chapter separates the <strong>logical key</strong>, the physical location of base rows, and the row locator used by secondary indexes. Those decisions affect read locality, key width, and write amplification.</p>
             <p>Different engines organize base-table rows differently, and that changes how secondary indexes behave.</p>
             <p>The two broad patterns are:</p>
             <p>~~~text
@@ -398,7 +418,8 @@
                 clustered/index-organized table
                 ~~~</p>
             <p>Understanding the difference explains why the same schema can have different storage and performance characteristics across PostgreSQL, InnoDB, SQL Server, and SQLite.</p>
-            <h2 id="heap-table">Heap table</h2>
+            <h2 id="where-the-base-rows-live">Where the base rows live</h2>
+            <h3 id="heap-table">Heap table</h3>
             <p>In a heap-style table, rows are stored independently of a particular logical index order.</p>
             <p>Conceptually:</p>
             <p>~~~text
@@ -412,7 +433,7 @@
                 ~~~</p>
             <p>The index locates a row; the table stores the full row separately.</p>
             <p>PostgreSQL normally uses this model.</p>
-            <h2 id="clustered-index-organized-table">Clustered/index-organized table</h2>
+            <h3 id="clustered-index-organized-table">Clustered/index-organized table</h3>
             <p>In a clustered structure, the row data is organized by an index key.</p>
             <p>~~~text
                 B-tree leaves:
@@ -424,12 +445,13 @@
             <p>InnoDB uses the primary key as the clustered index.</p>
             <p>SQLite WITHOUT ROWID tables are organized by their primary key.</p>
             <p>SQL Server allows one clustered index per table; it does not have to be the primary key.</p>
-            <h2 id="why-clustered-is-overloaded">Why "clustered" is overloaded</h2>
+            <h3 id="why-clustered-is-overloaded">Why "clustered" is overloaded</h3>
             <p>Different products use the term differently.</p>
             <p>In PostgreSQL, CLUSTER can physically reorder a table using an index, but that order is not automatically maintained after future writes.</p>
             <p>In SQL Server and InnoDB, clustered indexing is a persistent storage organization concept.</p>
             <p>Always read the engine-specific meaning.</p>
-            <h2 id="postgresql-heap-layout">PostgreSQL heap layout</h2>
+            <h2 id="how-common-engines-implement-that-choice">How common engines implement that choice</h2>
+            <h3 id="postgresql-heap-layout">PostgreSQL heap layout</h3>
             <p>PostgreSQL index:</p>
             <p>~~~text
                 B-tree leaf entry
@@ -447,7 +469,7 @@
                 <li>visibility checks.</li>
             </ol>
             <p>Index-only scans can avoid some heap visits when the index covers the query and visibility-map conditions are satisfied.</p>
-            <h2 id="innodb-clustered-primary-key">InnoDB clustered primary key</h2>
+            <h3 id="innodb-clustered-primary-key">InnoDB clustered primary key</h3>
             <p>InnoDB's clustered index leaf stores the row.</p>
             <p>~~~text
                 PRIMARY KEY B-tree
@@ -467,7 +489,7 @@
                 clustered lookup
                 ~~~</p>
             <p>This makes primary-key width relevant to every secondary index.</p>
-            <h2 id="wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</h2>
+            <h3 id="wide-primary-key-cost-in-clustered-engines">Wide primary-key cost in clustered engines</h3>
             <p>Suppose primary key is:</p>
             <p>~~~text
                 long VARCHAR
@@ -478,11 +500,11 @@
                 ~~~</p>
             <p>If every secondary index stores that primary-key value, wider keys can multiply storage and cache cost.</p>
             <p>Primary-key design can therefore affect the entire index set.</p>
-            <h2 id="sql-server-clustered-index">SQL Server clustered index</h2>
+            <h3 id="sql-server-clustered-index">SQL Server clustered index</h3>
             <p>SQL Server permits one clustered index because table rows can only be physically ordered through one clustered structure at a time.</p>
             <p>A primary key constraint may create a clustered index by default in some common cases, but primary key and clustering are conceptually separate choices.</p>
             <p>A table without a clustered index is a heap.</p>
-            <h2 id="sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</h2>
+            <h3 id="sql-server-nonclustered-row-locator">SQL Server nonclustered row locator</h3>
             <p>For a clustered table, a nonclustered index uses the clustering key to locate rows.</p>
             <p>For a heap, it uses a row identifier.</p>
             <p>This mirrors the general trade-off:</p>
@@ -492,7 +514,7 @@
                 or
                 -&gt; heap row locator
                 ~~~</p>
-            <h2 id="sqlite-rowid-table">SQLite rowid table</h2>
+            <h3 id="sqlite-rowid-table">SQLite rowid table</h3>
             <p>Most SQLite tables are rowid tables.</p>
             <p>If the schema declares:</p>
             <p>~~~sql
@@ -500,7 +522,7 @@
                 ~~~</p>
             <p>id becomes an alias for rowid.</p>
             <p>Secondary indexes can use rowid to locate the table row.</p>
-            <h2 id="sqlite-without-rowid">SQLite WITHOUT ROWID</h2>
+            <h3 id="sqlite-without-rowid">SQLite WITHOUT ROWID</h3>
             <p>A WITHOUT ROWID table stores rows according to the declared PRIMARY KEY.</p>
             <p>Example:</p>
             <p>~~~sql
@@ -513,7 +535,7 @@
                 ~~~</p>
             <p>This can avoid maintaining a separate hidden rowid for schemas whose natural primary key is already the access key.</p>
             <p>It is not always faster; row width and query patterns matter.</p>
-            <h2 id="runnable-sqlite-comparison">Runnable SQLite comparison</h2>
+            <h3 id="runnable-sqlite-comparison">Runnable SQLite comparison</h3>
             <p>This chapter adds:</p>
             <p>~~~text
                 scripts/indexing/sqlite_rowid_vs_without_rowid.py
@@ -529,7 +551,8 @@
                 <li>local repeated lookup timing.</li>
             </ul>
             <p>The numbers are local measurements only.</p>
-            <h2 id="locality">Locality</h2>
+            <h2 id="why-locality-changes-query-cost">Why locality changes query cost</h2>
+            <h3 id="locality">Locality</h3>
             <p>If related rows are physically close, range scans can need fewer pages.</p>
             <p>Suppose orders are clustered by:</p>
             <p>~~~text
@@ -543,7 +566,7 @@
                 <li>sequential I/O.</li>
             </ul>
             <p>But maintaining strict physical order during arbitrary writes has cost.</p>
-            <h2 id="secondary-lookup-cost">Secondary lookup cost</h2>
+            <h3 id="secondary-lookup-cost">Secondary lookup cost</h3>
             <p>Heap model:</p>
             <p>~~~text
                 secondary index
@@ -569,11 +592,11 @@
                 <li>result count,</li>
                 <li>key width.</li>
             </ul>
-            <h2 id="primary-key-lookup-advantage">Primary-key lookup advantage</h2>
+            <h3 id="primary-key-lookup-advantage">Primary-key lookup advantage</h3>
             <p>In a clustered table, primary-key lookup lands directly on the row-containing leaf.</p>
             <p>That is excellent for workloads dominated by primary-key access.</p>
             <p>But secondary-key workloads can pay for the second lookup.</p>
-            <h2 id="range-access-advantage">Range access advantage</h2>
+            <h3 id="range-access-advantage">Range access advantage</h3>
             <p>Clustering by a range key can make related rows contiguous.</p>
             <p>Example:</p>
             <p>~~~text
@@ -582,7 +605,8 @@
             <p>can support account-history reads efficiently.</p>
             <p>But a single table only has one primary clustering order.</p>
             <p>Other access paths need secondary indexes or separate projections.</p>
-            <h2 id="random-identifiers">Random identifiers</h2>
+            <h2 id="choosing-a-stable-and-useful-clustering-key">Choosing a stable and useful clustering key</h2>
+            <h3 id="random-identifiers">Random identifiers</h3>
             <p>Random clustered keys can spread insertion across many pages.</p>
             <p>This may:</p>
             <ul>
@@ -592,11 +616,11 @@
             </ul>
             <p>Sequential clustered keys can do the reverse.</p>
             <p>The right choice depends on concurrency and engine behavior.</p>
-            <h2 id="clustering-key-stability">Clustering key stability</h2>
+            <h3 id="clustering-key-stability">Clustering key stability</h3>
             <p>Changing a clustered/index-organized primary key can require moving the row and updating secondary references.</p>
             <p>Therefore clustered keys should usually be stable.</p>
             <p>A mutable natural identifier is often a poor clustering key.</p>
-            <h2 id="surrogate-versus-natural-key">Surrogate versus natural key</h2>
+            <h3 id="surrogate-versus-natural-key">Surrogate versus natural key</h3>
             <p>A narrow surrogate key can reduce clustered and secondary index width.</p>
             <p>A natural key can avoid an extra uniqueness structure if it is already compact and stable.</p>
             <p>Consider:</p>
@@ -608,7 +632,7 @@
                 <li>join ergonomics.</li>
             </ul>
             <p>There is no universal winner.</p>
-            <h2 id="physical-clustering-in-postgresql">Physical clustering in PostgreSQL</h2>
+            <h3 id="physical-clustering-in-postgresql">Physical clustering in PostgreSQL</h3>
             <p>PostgreSQL can reorder a table with:</p>
             <p>~~~sql
                 CLUSTER orders USING idx_orders_customer_date;
@@ -616,7 +640,7 @@
             <p>This rewrites the table according to the index at that moment.</p>
             <p>Later inserts/updates do not automatically preserve that physical order.</p>
             <p>Therefore PostgreSQL CLUSTER is not equivalent to an InnoDB clustered index.</p>
-            <h2 id="re-clustering-cost">Re-clustering cost</h2>
+            <h3 id="re-clustering-cost">Re-clustering cost</h3>
             <p>Physically rewriting a large table can consume:</p>
             <ul>
                 <li>disk space,</li>
@@ -626,11 +650,11 @@
                 <li>maintenance time.</li>
             </ul>
             <p>Use it only when measured locality benefits justify the operational cost.</p>
-            <h2 id="correlation-statistics">Correlation statistics</h2>
+            <h3 id="correlation-statistics">Correlation statistics</h3>
             <p>PostgreSQL tracks correlation between physical row order and column values.</p>
             <p>High physical correlation can make an index range scan cheaper because heap visits are more sequential.</p>
             <p>This is one reason physical locality can influence the optimizer.</p>
-            <h2 id="row-locality-versus-columnar-storage">Row locality versus columnar storage</h2>
+            <h3 id="row-locality-versus-columnar-storage">Row locality versus columnar storage</h3>
             <p>Clustering rows by key is still row-oriented organization.</p>
             <p>It is different from columnar storage, where values of each column are stored together.</p>
             <p>Do not confuse:</p>
@@ -641,7 +665,8 @@
             <p>~~~text
                 column-oriented analytical storage
                 ~~~</p>
-            <h2 id="choosing-a-clustering-key">Choosing a clustering key</h2>
+            <h2 id="apply-the-choice-to-the-workload">Apply the choice to the workload</h2>
+            <h3 id="choosing-a-clustering-key">Choosing a clustering key</h3>
             <p>Ask:</p>
             <ol>
                 <li>Which range reads matter?</li>

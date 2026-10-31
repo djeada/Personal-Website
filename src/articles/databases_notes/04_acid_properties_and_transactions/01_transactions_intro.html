@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro",
             "description": "A bookstore checkout changes several facts: stock decreases, an order is created, and the purchased items are recorded.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A bookstore checkout changes several facts: stock decreases, an order is created, and the purchased items are recorded." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -115,12 +115,12 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#follow-one-checkout">Follow one checkout</a></li>
-                    <li><a href="#four-questions-behind-acid">Four questions behind ACID</a></li>
+                    <li><a href="#acid-four-different-guarantees">ACID: four different guarantees</a></li>
                     <li><a href="#why-isolation-needs-its-own-chapter">Why isolation needs its own chapter</a></li>
                     <li><a href="#keep-the-transaction-boundary-deliberate">Keep the transaction boundary deliberate</a></li>
                     <li><a href="#inspect-the-accepted-operation-not-just-the-last-statement">Inspect the accepted operation, not just the last statement</a></li>
                     <li><a href="#contrast-one-transaction-with-separate-autocommitted-changes">Contrast one transaction with separate autocommitted changes</a></li>
-                    <li><a href="#follow-the-transaction-s-states">Follow the transaction's states</a></li>
+                    <li><a href="#understand-the-transaction-lifecycle">Understand the transaction lifecycle</a></li>
                     <li><a href="#read-only-work-can-also-need-a-transaction">Read-only work can also need a transaction</a></li>
                     <li><a href="#separate-business-operations-from-database-statements">Separate business operations from database statements</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
@@ -346,7 +346,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -369,7 +369,7 @@
             <p>A bookstore checkout changes several facts: stock decreases, an order is created, and the purchased items are recorded. Those changes belong together. An order without its items is incomplete; a stock reduction without an order loses inventory.</p>
             <p>A <strong>transaction</strong> groups database operations so they can be committed together or rolled back together. <strong>Commit</strong> accepts the changes. <strong>Rollback</strong> discards the transaction's changes. These operations apply to the database work in that transaction; they do not undo an email or an external payment.</p>
             <h2 id="follow-one-checkout">Follow one checkout</h2>
-            <p>Use the fresh bookstore database from <a href="../03_sql/01_intro_to_sql.html">Introduction to SQL</a>. Product 10 starts with five copies in stock. This example records one copy for Bob, customer 2.</p>
+            <p>Use a <strong>fresh</strong> bookstore database from <a href="../03_sql/01_intro_to_sql.html">Introduction to SQL</a>. Product 10 starts with five copies in stock. This is a <em>happy-path demonstration</em>, not a safe production checkout: the SQL below does not inspect the affected-row count and would continue inserting the order even if the stock update matched no row. The complete application must abort on that condition.</p>
             <div>
                 <pre><code class="language-sql">BEGIN;
 
@@ -386,9 +386,9 @@ VALUES (104, 1, 10, 1, 1500);
 
 COMMIT;</code></pre>
             </div>
-            <p>On the starting data, the update changes one row, stock becomes four, and order 104 has one item. The application must check that the update changed exactly one row <strong>before continuing</strong>. Zero changed rows means the product is missing or unavailable; it is not a SQL error. In that case, roll back instead of creating the order. The <a href="../03_sql/05_transaction_control_language_tcl.html">transaction control note</a> implements this check in Python.</p>
+            <p>On the stated starting data, the update matches one row, stock becomes four, and order 104 has one item. <strong>Do not commit if the stock reservation affects zero rows.</strong> That result is not a SQL exception; application code must check it before executing the inserts. The <a href="../03_sql/05_transaction_control_language_tcl.html">transaction control note</a> implements this missing step with Python. Test failure branches separately, rather than treating an example script containing an unconditional <code>COMMIT</code> as a complete checkout implementation.</p>
             <p>If an insert fails, the application must also roll back the whole checkout. Engines differ in whether an error cancels a statement or leaves the transaction unusable. Do not assume that catching an exception makes earlier changes disappear.</p>
-            <h2 id="four-questions-behind-acid">Four questions behind ACID</h2>
+            <h2 id="acid-four-different-guarantees">ACID: four different guarantees</h2>
             <p><strong>ACID</strong> names four properties used to reason about transactions. Each addresses a different problem.</p>
             <table>
                 <thead>
@@ -528,7 +528,7 @@ SELECT step_id FROM tx_demo_steps ORDER BY step_id;</code></pre>
             </table>
             <p>In a SQLite shell with no enclosing transaction, the initial insert commits as its own statement. Rollback undoes the pending transaction; it cannot undo an earlier independent commit merely because the commands were part of the same script.</p>
             <p>A driver might implicitly begin a transaction for that first insert. Before reproducing the shell behavior through Python, commit the setup and initial insert, or configure explicit transaction handling. A script is a sequence of commands, while a transaction is a database boundary. They are not synonyms.</p>
-            <h2 id="follow-the-transaction-s-states">Follow the transaction's states</h2>
+            <h2 id="understand-the-transaction-lifecycle">Understand the transaction lifecycle</h2>
             <p>A useful conceptual lifecycle is:</p>
             <div>
                 <pre><code class="language-text">No active transaction

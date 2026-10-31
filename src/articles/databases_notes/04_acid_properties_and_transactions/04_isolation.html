@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Isolation in Database Transactions | Adam Djellouli</title>
-    <meta content="Isolation defines how concurrent transactions interact." name="description" />
+    <meta content="Isolation describes what overlapping transactions can observe and how their effects interact." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation",
-            "description": "Isolation defines how concurrent transactions interact.",
-            "dateModified": "2026-09-30",
+            "description": "Isolation describes what overlapping transactions can observe and how their effects interact.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Isolation defines how concurrent transactions interact." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="Isolation describes what overlapping transactions can observe and how their effects interact." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -115,7 +115,7 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#picture-two-checkouts-running-together">Picture two checkouts running together</a></li>
-                    <li><a href="#recognizing-anomalies">Recognizing anomalies</a></li>
+                    <li><a href="#recognize-anomalies-by-their-transaction-schedule">Recognize anomalies by their transaction schedule</a></li>
                     <li><a href="#isolation-levels">Isolation levels</a></li>
                     <li><a href="#how-engines-enforce-isolation">How engines enforce isolation</a></li>
                     <li><a href="#example-reserve-the-last-unit-safely">Example: reserve the last unit safely</a></li>
@@ -125,11 +125,11 @@
                     <li><a href="#watch-a-stale-calculation-lose-a-decrement">Watch a stale calculation lose a decrement</a></li>
                     <li><a href="#write-skew-changes-different-rows-and-breaks-one-shared-rule">Write skew changes different rows and breaks one shared rule</a></li>
                     <li><a href="#protect-the-shared-decision-not-just-each-doctor-s-row">Protect the shared decision, not just each doctor's row</a></li>
-                    <li><a href="#sqlite-has-its-own-concurrency-model">SQLite has its own concurrency model</a></li>
+                    <li><a href="#sqlite-is-not-a-miniature-postgresql-isolation-implementation">SQLite is not a miniature PostgreSQL isolation implementation</a></li>
                     <li><a href="#references">References</a></li>
                 </ol>
             </div>
-            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency: Preserve the Rules That Make Data Valid</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity: Commit the Whole Operation or None of It</a></li></ul></section>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency: Preserve the Rules That Make Data Valid</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability: What a Successful Commit Really Promises</a></li><li><a href="/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity: Commit the Whole Operation or None of It</a></li></ul></section>
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/databases_notes/quizes.html">Quizes</a></li>
@@ -349,7 +349,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -369,12 +369,12 @@
                     </button></div>
             </div>
             <h1>Isolation in Database Transactions</h1>
-            <p>Isolation defines how concurrent transactions interact. The strongest common level, Serializable, makes their committed outcome equivalent to some serial execution. Lower levels permit certain anomalies to reduce coordination costs; simply wrapping statements in <code>BEGIN</code> and <code>COMMIT</code> does not make all races safe.</p>
+            <p><strong>Isolation</strong> describes what overlapping transactions can observe and how their effects interact. At <strong>Serializable</strong>, committed transactions have an outcome equivalent to some serial order (not necessarily the order they started). Lower levels permit additional interaction to reduce coordination costs. <code>BEGIN</code> and <code>COMMIT</code> alone do not make an unsafe read–then–write sequence safe.</p>
             <h2 id="picture-two-checkouts-running-together">Picture two checkouts running together</h2>
             <p><strong>Concurrent</strong> transactions overlap in time. Suppose the bookstore has one copy left. Alice and Bob each read that value before either finishes buying. Their earlier reads do not reserve the book. The system needs a write that checks and reserves stock together, or another coordination mechanism that preserves the rule.</p>
             <p>An <strong>anomaly</strong> is an interaction that breaks the workflow's expected behavior. A <strong>snapshot</strong> is the set of row versions a read is allowed to see. Depending on the engine and isolation level, a new statement can get a new snapshot or reuse one established for the transaction. Reading a snapshot is not the same thing as locking every row against changes.</p>
             <p>Read <a href="01_transactions_intro.html">Transactions</a> first. The table below names common anomalies; the isolation levels then describe protections against them.</p>
-            <h2 id="recognizing-anomalies">Recognizing anomalies</h2>
+            <h2 id="recognize-anomalies-by-their-transaction-schedule">Recognize anomalies by their transaction schedule</h2>
             <table>
                 <thead>
                     <tr>
@@ -606,10 +606,9 @@ INSERT INTO isolation_on_call VALUES (1, TRUE), (2, TRUE);</code></pre>
             <h2 id="protect-the-shared-decision-not-just-each-doctor-s-row">Protect the shared decision, not just each doctor's row</h2>
             <p>Another design locks one shared coordination row for the duty roster before reading and changing its doctors. All writers must acquire that same lock, then validate the invariant under the appropriate snapshot rules. Locking only the current doctor's row would not coordinate decisions made about the other doctor.</p>
             <p>Serializable avoids making the application manually identify every such dependency, but introduces retry requirements and can add overhead. A uniqueness constraint is often simpler for “one booking per seat,” while a conditional update fits “reserve one unit from this row.” Choose the narrow mechanism that actually expresses and protects the workflow's invariant.</p>
-            <h2 id="sqlite-has-its-own-concurrency-model">SQLite has its own concurrency model</h2>
+            <h2 id="sqlite-is-not-a-miniature-postgresql-isolation-implementation">SQLite is not a miniature PostgreSQL isolation implementation</h2>
             <p>SQLite normally isolates separate connections and serializes writes. WAL mode permits readers to retain a snapshot while another connection writes. A reader trying to upgrade an obsolete WAL snapshot into a writer can get <code>SQLITE_BUSY_SNAPSHOT</code>; it should finish the old transaction and retry against current state. A busy timeout helps some lock waits, but does not make an obsolete snapshot valid.</p>
-            <p>Shared-cache connections with <code>read_uncommitted</code> enabled are a special case; do not use that exception to describe ordinary SQLite reads. PostgreSQL, InnoDB, and SQL Server have different snapshot and locking rules. Record the engine, level, session schedule, and final invariant when testing concurrency.</p>
-            <p>References: <a href="https://www.postgresql.org/docs/current/transaction-iso.html">PostgreSQL transaction isolation</a>, <a href="https://www.postgresql.org/docs/current/explicit-locking.html">PostgreSQL explicit locking</a>, and <a href="https://www.sqlite.org/isolation.html">SQLite isolation</a>.</p>
+            <p>Shared-cache connections with <code>read_uncommitted</code> enabled are a special case; do not use that exception to describe ordinary SQLite reads. PostgreSQL, InnoDB, and SQL Server have different snapshot and locking rules. Record the engine, level, session schedule, and final invariant when testing concurrency. The engine references below are the appropriate source for the precise exception and locking behavior.</p>
             <h2 id="references">References</h2>
             <ul>
                 <li><a href="https://www.postgresql.org/docs/current/transaction-iso.html">PostgreSQL transaction isolation</a></li>

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Sharding | Adam Djellouli</title>
-    <meta content="Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data." name="description" />
+    <meta content="Sharding distributes horizontally partitioned rows across separate nodes or clusters." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding",
-            "description": "Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data.",
-            "dateModified": "2026-09-30",
+            "description": "Sharding distributes horizontally partitioned rows across separate nodes or clusters.",
+            "dateModified": "2026-10-30",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="Sharding distributes horizontally partitioned rows across separate nodes or clusters." property="og:description" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -142,20 +142,13 @@
                     </li>
                     <li><a href="#practical-implementation-with-mongodb">Practical Implementation with MongoDB</a>
                         <ol>
-                            <li><a href="#will-this-work-out-of-the-box">Will This Work Out of the Box?</a></li>
+                            <li><a href="#what-the-routing-layer-handles-and-what-it-does-not">What the routing layer handles—and what it does not</a></li>
                             <li><a href="#example-commands">Example Commands</a></li>
                             <li><a href="#query-routing-examples">Query Routing Examples</a></li>
                         </ol>
                     </li>
-                    <li><a href="#real-world-use-case-twitter-s-timeline-storage">Real-World Use Case: Twitter's Timeline Storage</a>
-                        <ol>
-                            <li><a href="#challenges">Challenges</a></li>
-                            <li><a href="#sharding-strategy">Sharding Strategy</a></li>
-                            <li><a href="#handling-cross-shard-operations">Handling Cross-Shard Operations</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#best-practices-for-sharding">Best Practices for Sharding</a></li>
-                    <li><a href="#challenges-of-sharding">Challenges of Sharding</a></li>
+                    <li><a href="#design-exercise-a-hypothetical-social-timeline">Design exercise: a hypothetical social timeline</a></li>
+                    <li><a href="#operational-review-trade-offs-not-a-checklist-of-promises">Operational review: trade-offs, not a checklist of promises</a></li>
                     <li><a href="#review-questions">Review questions</a></li>
                 </ol>
             </div>
@@ -379,7 +372,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -399,7 +392,7 @@
                     </button></div>
             </div>
             <h1>Sharding</h1>
-            <p>Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data. This approach allows a database to scale by distributing data across multiple servers or clusters, effectively handling large datasets and high traffic loads.</p>
+            <p><strong>Sharding</strong> distributes horizontally partitioned rows across separate nodes or clusters. A routing layer decides which shard owns a key; replication separately determines how many copies exist. Sharding can add storage or write capacity, but it also makes cross-shard reads, uniqueness rules, transactions, and failure recovery more expensive. Use it to solve a measured bottleneck, not as an automatic performance upgrade.</p>
             <h2 id="how-sharding-works">How Sharding Works</h2>
             <p>Imagine you have a vast library of books that no longer fits on a single bookshelf. To manage this, you distribute the books across multiple bookshelves based on genres or authors. Similarly, sharding splits your database into smaller, more manageable pieces.</p>
             <p>At its core, sharding involves breaking up a large database table into smaller chunks called shards. Each shard operates as an independent database, containing its portion of the data.</p>
@@ -749,11 +742,11 @@
             </ul>
             <h2 id="practical-implementation-with-mongodb">Practical Implementation with MongoDB</h2>
             <p>MongoDB provides <strong>native</strong> support for sharding, which automates many tasks such as data distribution, balancing, and routing. However, understanding how it works behind the scenes helps you design and operate a sharded cluster effectively.</p>
-            <h3 id="will-this-work-out-of-the-box">Will This Work Out of the Box?</h3>
+            <h3 id="what-the-routing-layer-handles-and-what-it-does-not">What the routing layer handles—and what it does not</h3>
             <p>I. <strong>Automated Routing</strong></p>
             <ul>
                 <li>MongoDB’s query router (mongos) automatically determines which shard(s) hold the relevant data.</li>
-                <li>If the query’s filter uses the shard key (e.g., <code>user_id</code>), MongoDB routes the request to the appropriate shard only.</li>
+                <li>A predicate containing an equality on the full shard key can often target one shard; partial keys, ranges, routing metadata, and migration state affect targeting.</li>
                 <li>If the query does not filter on the shard key, MongoDB sends a “scatter-gather” operation to all shards, and then merges the results.</li>
             </ul>
             <p>II. <strong>Balancer</strong></p>
@@ -793,108 +786,71 @@
                 <pre><code class="language-javascript">db.users.find({ "age": {$gte: 18 } })</code></pre>
             </div>
             <p>Since <code>age</code> is not the shard key, MongoDB must <strong>broadcast</strong> this query to all shards, collect partial results, and merge them before returning the final result.</p>
-            <h2 id="real-world-use-case-twitter-s-timeline-storage">Real-World Use Case: Twitter's Timeline Storage</h2>
-            <p>Twitter processes <strong>millions</strong> of tweets per day and needs to store and retrieve them efficiently. Sharding is a important part of making sure low-latency access and high availability.</p>
-            <h3 id="challenges">Challenges</h3>
-            <p>I. <strong>Massive Data Ingestion</strong></p>
-            <ul>
-                <li>During peak events (e.g., breaking news, sports), Twitter sees huge spikes in tweet volume.</li>
-                <li>The underlying data storage layer must handle high write throughput without degrading performance.</li>
-            </ul>
-            <p>II. <strong>Rapid Retrieval</strong></p>
-            <ul>
-                <li>Users expect to see their timeline updates in near real-time.</li>
-                <li>Systemic delays or failures in retrieving tweets would negatively impact the user experience.</li>
-            </ul>
-            <h3 id="sharding-strategy">Sharding Strategy</h3>
-            <p>I. <strong>User-Based Sharding</strong></p>
-            <ul>
-                <li>Tweets are distributed across shards based on <code>UserID</code>.</li>
-                <li>All tweets from a specific user reside on the same shard, making it easy to fetch a user’s entire tweet history quickly.</li>
-            </ul>
-            <p>II. <strong>Even Load Distribution</strong></p>
-            <ul>
-                <li>Because Twitter’s user base is massive and users are fairly well-distributed, using <code>UserID</code> helps balance storage across shards.</li>
-                <li>However, “power users” (accounts with extremely high tweet volume) can still create hotspots, so Twitter may have additional strategies to handle these cases.</li>
-            </ul>
-            <h3 id="handling-cross-shard-operations">Handling Cross-Shard Operations</h3>
-            <p>I. <strong>Aggregation Services</strong></p>
-            <ul>
-                <li>A specialized aggregation service compiles tweets from various shards to build a user’s home timeline (tweets from users they follow).</li>
-                <li>This aggregator queries the relevant shards in parallel and merges results, adding filtering or ranking logic as needed.</li>
-            </ul>
-            <p>II. <strong>Caching Layers</strong></p>
-            <ul>
-                <li>Caches like Redis store recently generated or frequently accessed timelines.</li>
-                <li>This caching mechanism reduces read pressure on the underlying shard infrastructure and speeds up user-facing queries.</li>
-            </ul>
-            <h2 id="best-practices-for-sharding">Best Practices for Sharding</h2>
-            <p>Carrying out a sharded architecture effectively requires <strong>strategic planning</strong> and <strong>ongoing maintenance</strong> to make sure that performance, consistency, and operational costs are well-managed.</p>
-            <p>I. Understand Your Data and Access Patterns</p>
-            <ul>
-                <li>Analyzing common queries helps identify which fields your application frequently filters or sorts on.</li>
-                <li>Determining natural partitions involves assessing if your data naturally segments by time, region, user, or other criteria.</li>
-                <li>Recognizing data skew allows you to anticipate potential hotspots, such as specific months, users, or regions.</li>
-            </ul>
-            <p>II. Plan for Scalability</p>
-            <ul>
-                <li>Selecting a flexible shard key ensures that your data can expand gracefully as it changes over time.</li>
-                <li>Utilizing automated scaling tools enables your database solution to support shard addition and rebalancing with minimal manual intervention, reducing human error and downtime.</li>
-            </ul>
-            <p>III. Monitor and Optimize</p>
-            <ul>
-                <li>Tracking key metrics like query latency, throughput, shard disk usage, CPU/RAM utilization, and network traffic provides insights into system performance.</li>
-                <li>Performing rebalancing shards periodically ensures that data distribution remains even, which may involve splitting or merging shards or adjusting chunk sizes.</li>
-                <li>Refining shard keys may be necessary if usage patterns shift drastically, potentially requiring partial re-sharding.</li>
-            </ul>
-            <p>IV. Handle Failures Gracefully</p>
-            <ul>
-                <li>Implementing redundancy through replication within shards ensures high availability in case a primary node fails.</li>
-                <li>Establishing failover mechanisms allows automatic switching to replicas or backups, preventing downtime from hardware or network issues.</li>
-                <li>Developing a disaster recovery strategy for restoring backups in a sharded environment is essential, and regularly testing these procedures ensures their effectiveness.</li>
-            </ul>
-            <h2 id="challenges-of-sharding">Challenges of Sharding</h2>
-            <p>While sharding improves scalability and performance for high-volume applications, it also introduces <strong>new complexities</strong> that must be carefully managed.</p>
-            <p>I. Increased System Complexity</p>
-            <ul>
-                <li>Managing application logic becomes more intricate as the system must handle routing queries to the appropriate shards.</li>
-                <li>Ensuring scalability requires careful planning to distribute data evenly across shards.</li>
-                <li>Implementing failure detection mechanisms is necessary to identify and respond to shard outages promptly.</li>
-                <li>Coordinating schema changes across multiple shards demands meticulous synchronization to maintain consistency.</li>
-                <li>Designing load balancing strategies is essential to prevent any single shard from becoming a bottleneck.</li>
-            </ul>
-            <p>II. Data Consistency</p>
-            <ul>
-                <li>Maintaining referential integrity across shards complicates the enforcement of relationships between different data sets.</li>
-                <li>Achieving synchronization of data updates requires efficient protocols to minimize inconsistencies.</li>
-                <li>Implementing conflict resolution strategies is necessary when concurrent updates occur on different shards.</li>
-                <li>Monitoring data replication ensures that all shards have the most recent and accurate information.</li>
-                <li>Establishing version control for data helps track changes and maintain consistency across the system.</li>
-            </ul>
-            <p>III. Operational Overhead</p>
-            <ul>
-                <li>Coordinating deployment processes across multiple shards increases the complexity of releasing updates.</li>
-                <li>Managing resource allocation requires monitoring each shard's performance to optimize usage.</li>
-                <li>Ensuring security measures are uniformly applied across all shards protects the system from vulnerabilities.</li>
-                <li>Automating maintenance tasks helps reduce the manual effort required to keep each shard operational.</li>
-                <li>Tracking system metrics from various shards provides comprehensive insights into overall system health.</li>
-            </ul>
-            <p>IV. Performance Challenges</p>
-            <ul>
-                <li>Optimizing query performance across shards demands efficient indexing and caching strategies.</li>
-                <li>Minimizing latency involves strategically placing shards to reduce data retrieval times.</li>
-                <li>Balancing read and write operations ensures that neither overwhelms any single shard.</li>
-                <li>Implementing parallel processing can enhance performance but requires careful coordination.</li>
-                <li>Monitoring throughput rates helps identify and address performance bottlenecks promptly.</li>
-            </ul>
-            <p>V. Cost Implications</p>
-            <ul>
-                <li>Scaling infrastructure to accommodate multiple shards can lead to increased operational costs.</li>
-                <li>Investing in automation tools may be necessary to manage the complexity of a sharded system efficiently.</li>
-                <li>Allocating budget for monitoring ensures that all shards are consistently tracked for performance and issues.</li>
-                <li>Balancing resource utilization helps manage costs by optimizing the use of existing infrastructure.</li>
-                <li>Planning for future expansion involves budgeting for additional shards as data grows.</li>
-            </ul>
+            <h2 id="design-exercise-a-hypothetical-social-timeline">Design exercise: a hypothetical social timeline</h2>
+            <p>Consider a social application storing posts under <code>(author_id, post_id)</code>. A key based on <code>author_id</code> may keep one author's recent posts targetable, but the user's <strong>home feed</strong> combines posts from many authors and can require fan-out, a separate read model, or cached feed materialization. This is a workload example, <strong>not a claim about the internal architecture of any named social network</strong>.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query or failure</th>
+                        <th>Consequence of sharding by <code>author_id</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Read one author's posts</td>
+                        <td>Targeted if routing and indexing support the key</td>
+                    </tr>
+                    <tr>
+                        <td>Read a home feed from hundreds of followed accounts</td>
+                        <td>Cross-shard fan-out or a separately maintained feed projection</td>
+                    </tr>
+                    <tr>
+                        <td>One prolific author receives a huge spike</td>
+                        <td>A hot logical key can overload its owning shard despite even global distribution</td>
+                    </tr>
+                    <tr>
+                        <td>One shard's primary fails</td>
+                        <td>Replication and recovery policy determine whether that author's data remains writable</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Before selecting a shard key, test <strong>largest tenant</strong>, <strong>hottest key</strong>, <strong>cross-tenant reports</strong>, and <strong>failure during resharding</strong>, not just average bytes per shard.</p>
+            <h2 id="operational-review-trade-offs-not-a-checklist-of-promises">Operational review: trade-offs, not a checklist of promises</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concern</th>
+                        <th>What to measure or enforce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Skew and hotspots</td>
+                        <td>Bytes, requests per second, and write rate per shard <strong>and per key</strong>; even bytes do not imply even load</td>
+                    </tr>
+                    <tr>
+                        <td>Routing and fan-out</td>
+                        <td>Fraction of targeted queries, scatter/gather latency, and merge cost</td>
+                    </tr>
+                    <tr>
+                        <td>Cross-shard consistency</td>
+                        <td>Which invariants can be enforced locally, which operations coordinate transactions, and where retries are safe</td>
+                    </tr>
+                    <tr>
+                        <td>Rebalancing</td>
+                        <td>Data moved, temporary load, long-running migrations, and routing metadata convergence</td>
+                    </tr>
+                    <tr>
+                        <td>Recovery</td>
+                        <td>Replica placement, failover behavior, shard-by-shard backup consistency, and restoration tests</td>
+                    </tr>
+                    <tr>
+                        <td>Cost</td>
+                        <td>Additional nodes, orchestration, network traffic, indexes, observability, and on-call complexity</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A shard key is a schema-level operational commitment. Changing it later can require moving data and updating routing assumptions. Replication within shards improves resilience, but does not automatically create a consistent global backup or make cross-shard writes atomic. Compare these costs to vertical scaling, better queries, and local partitioning before distributing the workload.</p>
             <h2 id="review-questions">Review questions</h2>
             <ol>
                 <li>What is sharding and how does it enhance database scalability?</li>

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>B-Tree Index Internals and Page Splits | Adam Djellouli</title>
-    <meta content="B-tree-family indexes are the default general-purpose index in many relational databases because they support ordered search efficiently." name="description" />
+    <meta content="B-tree-family indexes are commonly used for equality lookup, ranges, and ordered access because they keep keys in a balanced, page-oriented structure." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits",
-            "description": "B-tree-family indexes are the default general-purpose index in many relational databases because they support ordered search efficiently.",
-            "dateModified": "2026-10-02",
+            "description": "B-tree-family indexes are commonly used for equality lookup, ranges, and ordered access because they keep keys in a balanced, page-oriented structure.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/06_btree_internals_and_page_splits" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="B-tree-family indexes are the default general-purpose index in many relational databases because they support ordered search efficiently." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="B-tree-family indexes are commonly used for equality lookup, ranges, and ordered access because they keep keys in a balanced, page-oriented structure." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -112,28 +112,44 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#tree-shape">Tree shape</a></li>
-                    <li><a href="#why-trees-stay-shallow">Why trees stay shallow</a></li>
-                    <li><a href="#leaf-entries-and-row-locators">Leaf entries and row locators</a></li>
-                    <li><a href="#equality-lookup">Equality lookup</a></li>
-                    <li><a href="#range-scan">Range scan</a></li>
-                    <li><a href="#order-by-and-limit">ORDER BY and LIMIT</a></li>
-                    <li><a href="#inserting-into-a-leaf">Inserting into a leaf</a></li>
-                    <li><a href="#page-split">Page split</a></li>
-                    <li><a href="#root-split">Root split</a></li>
-                    <li><a href="#sequential-keys">Sequential keys</a></li>
-                    <li><a href="#random-keys">Random keys</a></li>
-                    <li><a href="#fill-factor">Fill factor</a></li>
-                    <li><a href="#key-width-matters">Key width matters</a></li>
-                    <li><a href="#duplicate-keys">Duplicate keys</a></li>
-                    <li><a href="#engine-specific-compression-deduplication">Engine-specific compression/deduplication</a></li>
-                    <li><a href="#deletes-and-updates">Deletes and updates</a></li>
-                    <li><a href="#b-tree-is-not-a-binary-search-tree">B-tree is not a binary search tree</a></li>
-                    <li><a href="#b-tree-terminology">B+ tree terminology</a></li>
-                    <li><a href="#buffer-cache-interaction">Buffer-cache interaction</a></li>
-                    <li><a href="#clustered-versus-secondary-b-tree">Clustered versus secondary B-tree</a></li>
-                    <li><a href="#a-split-is-not-automatically-fragmentation">A split is not automatically "fragmentation"</a></li>
-                    <li><a href="#runnable-exercise">Runnable exercise</a></li>
+                    <li><a href="#how-searches-reach-leaf-pages">How searches reach leaf pages</a>
+                        <ol>
+                            <li><a href="#tree-shape">Tree shape</a></li>
+                            <li><a href="#why-trees-stay-shallow">Why trees stay shallow</a></li>
+                            <li><a href="#leaf-entries-and-row-locators">Leaf entries and row locators</a></li>
+                            <li><a href="#equality-lookup">Equality lookup</a></li>
+                            <li><a href="#range-scan">Range scan</a></li>
+                            <li><a href="#order-by-and-limit">ORDER BY and LIMIT</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#how-writes-reshape-the-tree">How writes reshape the tree</a>
+                        <ol>
+                            <li><a href="#inserting-into-a-leaf">Inserting into a leaf</a></li>
+                            <li><a href="#page-split">Page split</a></li>
+                            <li><a href="#root-split">Root split</a></li>
+                            <li><a href="#sequential-keys">Sequential keys</a></li>
+                            <li><a href="#random-keys">Random keys</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#layout-and-performance-trade-offs">Layout and performance trade-offs</a>
+                        <ol>
+                            <li><a href="#fill-factor">Fill factor</a></li>
+                            <li><a href="#key-width-matters">Key width matters</a></li>
+                            <li><a href="#duplicate-keys">Duplicate keys</a></li>
+                            <li><a href="#engine-specific-compression-deduplication">Engine-specific compression/deduplication</a></li>
+                            <li><a href="#deletes-and-updates">Deletes and updates</a></li>
+                            <li><a href="#b-tree-is-not-a-binary-search-tree">B-tree is not a binary search tree</a></li>
+                            <li><a href="#b-tree-terminology">B+ tree terminology</a></li>
+                            <li><a href="#buffer-cache-interaction">Buffer-cache interaction</a></li>
+                            <li><a href="#clustered-versus-secondary-b-tree">Clustered versus secondary B-tree</a></li>
+                            <li><a href="#a-split-is-not-automatically-fragmentation">A split is not automatically "fragmentation"</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#verify-the-model-with-a-database">Verify the model with a database</a>
+                        <ol>
+                            <li><a href="#runnable-exercise">Runnable exercise</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#design-checklist">Design checklist</a></li>
                     <li><a href="#common-mistakes">Common mistakes</a></li>
                     <li><a href="#related-notes">Related notes</a></li>
@@ -359,7 +375,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -379,9 +395,10 @@
                     </button></div>
             </div>
             <h1>B-Tree Index Internals and Page Splits</h1>
-            <p>B-tree-family indexes are the default general-purpose index in many relational databases because they support ordered search efficiently.</p>
+            <p>B-tree-family indexes are commonly used for equality lookup, ranges, and ordered access because they keep keys in a balanced, page-oriented structure. Their cost has two parts: finding an entry and visiting enough leaf or table pages to return all qualifying rows. This chapter follows both search and update paths.</p>
             <p>They are useful for equality lookups, range predicates, ordered traversal, and top-N access paths. The important idea is not merely "lookup is logarithmic." A real B-tree is a set of storage pages that must stay balanced while rows are inserted, updated, and deleted.</p>
-            <h2 id="tree-shape">Tree shape</h2>
+            <h2 id="how-searches-reach-leaf-pages">How searches reach leaf pages</h2>
+            <h3 id="tree-shape">Tree shape</h3>
             <p>A simplified B-tree:</p>
             <p>~~~text
                 root
@@ -392,7 +409,7 @@
                 leaf leaf leaf leaf leaf leaf
                 ~~~</p>
             <p>Internal pages guide navigation. Leaf pages contain index entries in key order.</p>
-            <h2 id="why-trees-stay-shallow">Why trees stay shallow</h2>
+            <h3 id="why-trees-stay-shallow">Why trees stay shallow</h3>
             <p>If one internal page can point to hundreds of child pages, even a very large index can have only a few levels.</p>
             <p>Fan-out depends on:</p>
             <ul>
@@ -402,7 +419,7 @@
                 <li>engine implementation.</li>
             </ul>
             <p>Narrow keys generally fit more entries per page.</p>
-            <h2 id="leaf-entries-and-row-locators">Leaf entries and row locators</h2>
+            <h3 id="leaf-entries-and-row-locators">Leaf entries and row locators</h3>
             <p>For an index on customer_id:</p>
             <p>~~~sql
                 CREATE INDEX idx_orders_customer
@@ -419,7 +436,7 @@
                 <li>SQLite rowid-table secondary indexes use rowid to identify the row.</li>
             </ul>
             <p>That physical difference affects index size and lookup cost.</p>
-            <h2 id="equality-lookup">Equality lookup</h2>
+            <h3 id="equality-lookup">Equality lookup</h3>
             <p>Query:</p>
             <p>~~~sql
                 SELECT *
@@ -439,7 +456,7 @@
                 table rows if required
                 ~~~</p>
             <p>Finding the first matching leaf can be cheap while returning many matching rows is still expensive.</p>
-            <h2 id="range-scan">Range scan</h2>
+            <h3 id="range-scan">Range scan</h3>
             <p>Query:</p>
             <p>~~~sql
                 WHERE order_date &gt;= '2026-10-01'
@@ -454,7 +471,7 @@
                 |
                 stop
                 ~~~</p>
-            <h2 id="order-by-and-limit">ORDER BY and LIMIT</h2>
+            <h3 id="order-by-and-limit">ORDER BY and LIMIT</h3>
             <p>Candidate index:</p>
             <p>~~~sql
                 CREATE INDEX idx_orders_customer_date
@@ -470,7 +487,8 @@
                 ~~~</p>
             <p>The engine may seek to customer 42 and return the first 20 entries without sorting a much larger result.</p>
             <p>Always verify with the execution plan.</p>
-            <h2 id="inserting-into-a-leaf">Inserting into a leaf</h2>
+            <h2 id="how-writes-reshape-the-tree">How writes reshape the tree</h2>
+            <h3 id="inserting-into-a-leaf">Inserting into a leaf</h3>
             <p>If a page has free space:</p>
             <p>~~~text
                 [10, 20, 30, free, free]
@@ -480,7 +498,7 @@
                 [10, 20, 25, 30, free]
                 ~~~</p>
             <p>No structural change is needed.</p>
-            <h2 id="page-split">Page split</h2>
+            <h3 id="page-split">Page split</h3>
             <p>If a leaf is full:</p>
             <p>~~~text
                 [10, 20, 30, 40, 50]
@@ -502,7 +520,7 @@
                 <li>recovery/log writes.</li>
             </ul>
             <p>Splits are normal B-tree maintenance.</p>
-            <h2 id="root-split">Root split</h2>
+            <h3 id="root-split">Root split</h3>
             <p>If the root fills, the tree can gain another level:</p>
             <p>~~~text
                 old root
@@ -514,7 +532,7 @@
                 old A old B
                 ~~~</p>
             <p>This keeps the tree balanced.</p>
-            <h2 id="sequential-keys">Sequential keys</h2>
+            <h3 id="sequential-keys">Sequential keys</h3>
             <p>An increasing identity or timestamp often inserts near the right edge.</p>
             <p>Possible advantages:</p>
             <ul>
@@ -527,7 +545,7 @@
                 <li>a hot range in some distributed range-sharded systems.</li>
             </ul>
             <p>The architecture matters.</p>
-            <h2 id="random-keys">Random keys</h2>
+            <h3 id="random-keys">Random keys</h3>
             <p>Random keys spread insert targets across more leaf pages.</p>
             <p>Possible effects:</p>
             <ul>
@@ -537,7 +555,8 @@
             </ul>
             <p>But random distribution can be useful in some distributed systems.</p>
             <p>There is no universal "sequential good, random bad" rule.</p>
-            <h2 id="fill-factor">Fill factor</h2>
+            <h2 id="layout-and-performance-trade-offs">Layout and performance trade-offs</h2>
+            <h3 id="fill-factor">Fill factor</h3>
             <p>Some engines can intentionally leave free space in pages.</p>
             <p>~~~text
                 packed:
@@ -552,7 +571,7 @@
                 <li>more pages to cache/read.</li>
             </ul>
             <p>Tune only from measured behavior.</p>
-            <h2 id="key-width-matters">Key width matters</h2>
+            <h3 id="key-width-matters">Key width matters</h3>
             <p>Compare a narrow integer key with a long text or wide composite key.</p>
             <p>Wider entries mean fewer entries per page.</p>
             <p>That can increase:</p>
@@ -563,7 +582,7 @@
                 <li>write amplification.</li>
             </ul>
             <p>This matters especially in engines where secondary indexes also carry the clustered primary key.</p>
-            <h2 id="duplicate-keys">Duplicate keys</h2>
+            <h3 id="duplicate-keys">Duplicate keys</h3>
             <p>A non-unique index can contain many entries for the same value.</p>
             <p>Example:</p>
             <p>~~~text
@@ -572,10 +591,10 @@
             <p>for nearly every row.</p>
             <p>Finding the first entry is cheap. Reading almost the whole table is not.</p>
             <p>Low selectivity can make a table scan cheaper.</p>
-            <h2 id="engine-specific-compression-deduplication">Engine-specific compression/deduplication</h2>
+            <h3 id="engine-specific-compression-deduplication">Engine-specific compression/deduplication</h3>
             <p>Database engines can reduce repeated index-key storage with techniques such as prefix compression or deduplication.</p>
             <p>The conceptual B-tree model is useful, but physical entries are not necessarily naive full copies of every key.</p>
-            <h2 id="deletes-and-updates">Deletes and updates</h2>
+            <h3 id="deletes-and-updates">Deletes and updates</h3>
             <p>Deletes may leave reusable space without immediately shrinking the index file.</p>
             <p>If an indexed key changes:</p>
             <p>~~~text
@@ -583,7 +602,7 @@
                 new key -&gt; insert new entry
                 ~~~</p>
             <p>Updating indexed columns therefore has write cost.</p>
-            <h2 id="b-tree-is-not-a-binary-search-tree">B-tree is not a binary search tree</h2>
+            <h3 id="b-tree-is-not-a-binary-search-tree">B-tree is not a binary search tree</h3>
             <p>A binary tree has two children per node.</p>
             <p>A database B-tree page can have many children.</p>
             <p>~~~text
@@ -593,7 +612,7 @@
                 many child pointers per storage page
                 ~~~</p>
             <p>High fan-out reduces the number of page accesses.</p>
-            <h2 id="b-tree-terminology">B+ tree terminology</h2>
+            <h3 id="b-tree-terminology">B+ tree terminology</h3>
             <p>Many database implementations are technically B+ tree variants:</p>
             <ul>
                 <li>internal pages primarily guide navigation,</li>
@@ -601,10 +620,10 @@
                 <li>leaves support ordered traversal.</li>
             </ul>
             <p>Documentation often uses B-tree as the family name.</p>
-            <h2 id="buffer-cache-interaction">Buffer-cache interaction</h2>
+            <h3 id="buffer-cache-interaction">Buffer-cache interaction</h3>
             <p>Upper levels are small and frequently accessed, so they are often cached.</p>
             <p>A real lookup can therefore spend most of its I/O on leaf and table pages rather than repeatedly reading the root.</p>
-            <h2 id="clustered-versus-secondary-b-tree">Clustered versus secondary B-tree</h2>
+            <h3 id="clustered-versus-secondary-b-tree">Clustered versus secondary B-tree</h3>
             <p>Clustered/index-organized:</p>
             <p>~~~text
                 B-tree leaf
@@ -621,7 +640,7 @@
                 table/heap page
                 ~~~</p>
             <p>The second layout can require an additional page lookup.</p>
-            <h2 id="a-split-is-not-automatically-fragmentation">A split is not automatically "fragmentation"</h2>
+            <h3 id="a-split-is-not-automatically-fragmentation">A split is not automatically "fragmentation"</h3>
             <p>Page splitting preserves order and balance.</p>
             <p>Frequent splits may increase write work or reduce page density, but observing splits alone is not a reason to rebuild an index.</p>
             <p>Measure:</p>
@@ -632,7 +651,8 @@
                 <li>write rate,</li>
                 <li>engine diagnostics.</li>
             </ul>
-            <h2 id="runnable-exercise">Runnable exercise</h2>
+            <h2 id="verify-the-model-with-a-database">Verify the model with a database</h2>
+            <h3 id="runnable-exercise">Runnable exercise</h3>
             <p>This chapter adds:</p>
             <p>~~~text
                 scripts/indexing/sqlite_btree_growth_demo.py

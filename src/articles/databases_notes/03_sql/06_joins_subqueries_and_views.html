@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Joins, Subqueries, and Views | Adam Djellouli</title>
-    <meta content="The bookstore's tables separate customers, orders, products, and order lines. A query puts the relevant facts together without permanently copying them." name="description" />
+    <meta content="The bookstore keeps customers, orders, products, and lines as separate facts." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views",
-            "description": "The bookstore's tables separate customers, orders, products, and order lines. A query puts the relevant facts together without permanently copying them.",
-            "dateModified": "2026-10-04",
+            "description": "The bookstore keeps customers, orders, products, and lines as separate facts.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="The bookstore's tables separate customers, orders, products, and order lines. A query puts the relevant facts together without permanently copying them." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="The bookstore keeps customers, orders, products, and lines as separate facts." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,8 +116,8 @@
                 <ol>
                     <li><a href="#an-inner-join-returns-matching-pairs">An inner join returns matching pairs</a></li>
                     <li><a href="#a-left-join-keeps-the-unmatched-left-rows">A left join keeps the unmatched left rows</a></li>
-                    <li><a href="#put-a-filter-where-its-meaning-belongs">Put a filter where its meaning belongs</a></li>
-                    <li><a href="#a-join-can-multiply-rows">A join can multiply rows</a></li>
+                    <li><a href="#place-outer-join-filters-according-to-their-meaning">Place outer-join filters according to their meaning</a></li>
+                    <li><a href="#decide-the-result-grain-before-joining">Decide the result grain before joining</a></li>
                     <li><a href="#aggregate-a-left-join-carefully">Aggregate a left join carefully</a></li>
                     <li><a href="#use-a-scalar-subquery-for-one-calculated-value">Use a scalar subquery for one calculated value</a></li>
                     <li><a href="#use-exists-when-you-need-to-know-whether-a-match-exists">Use EXISTS when you need to know whether a match exists</a></li>
@@ -128,7 +128,7 @@
                     <li><a href="#a-correlated-subquery-refers-to-the-current-outer-row">A correlated subquery refers to the current outer row</a></li>
                     <li><a href="#avoid-null-surprises-in-an-anti-match">Avoid null surprises in an anti-match</a></li>
                     <li><a href="#group-before-joining-another-one-to-many-relationship">Group before joining another one-to-many relationship</a></li>
-                    <li><a href="#a-view-has-a-definition-dependencies-and-a-write-policy">A view has a definition, dependencies, and a write policy</a></li>
+                    <li><a href="#treat-a-view-as-a-contract-with-dependencies">Treat a view as a contract with dependencies</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -352,7 +352,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -372,7 +372,7 @@
                     </button></div>
             </div>
             <h1>Joins, Subqueries, and Views</h1>
-            <p>The bookstore's tables separate customers, orders, products, and order lines. A query puts the relevant facts together without permanently copying them. This note explains three tools: a <strong>join</strong> combines matching rows, a <strong>subquery</strong> uses another query inside a statement, and a <strong>view</strong> names a reusable query.</p>
+            <p>The bookstore keeps customers, orders, products, and lines as separate facts. This chapter shows how to <strong>combine without copying</strong> them: joins pair related rows, subqueries express dependent tests and calculations, and views name reusable queries. The central skill is keeping track of <strong>result grain</strong>—whether one output row represents a customer, order, or order line.</p>
             <p>Use a fresh copy of the SQLite <a href="01_intro_to_sql.html">introductory setup</a>. In particular, Alice has two orders, Bob has one, and Carol has none. If you committed extra orders during the transaction exercises, reset the sample before comparing these results.</p>
             <p>These are the input rows used by the bookstore queries in this note:</p>
             <p><strong><code>customers</code></strong></p>
@@ -561,7 +561,7 @@ ORDER BY c.customer_id, o.order_id;</code></pre>
             </table>
             <p>Carol's row is retained. Since there is no order to supply right-side values, those values are <code>NULL</code> in the query result. The join did not create an empty order in the database.</p>
             <p>“Left” refers to the table written before the join. Reversing the table positions changes which unmatched rows are preserved.</p>
-            <h2 id="put-a-filter-where-its-meaning-belongs">Put a filter where its meaning belongs</h2>
+            <h2 id="place-outer-join-filters-according-to-their-meaning">Place outer-join filters according to their meaning</h2>
             <p>To keep every customer but attach only open orders, include that condition in the matching rule:</p>
             <div>
                 <pre><code class="language-sql">SELECT c.name, o.order_id
@@ -593,8 +593,30 @@ ORDER BY c.customer_id;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <p>If instead you write <code>WHERE o.status = 'open'</code>, the filter applies to the joined result. Bob and Carol have null on the order side, so they do not pass that condition and disappear. This is a frequent cause of a left join behaving like an inner join.</p>
-            <h2 id="a-join-can-multiply-rows">A join can multiply rows</h2>
+            <p><strong>Incorrect for this requirement — move the right-side filter to <code>WHERE</code>:</strong></p>
+            <div>
+                <pre><code class="language-sql">SELECT c.name, o.order_id
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.status = 'open'
+ORDER BY c.customer_id;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>name</th>
+                        <th>order_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Alice</td>
+                        <td>102</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The <code>WHERE</code> predicate removes Bob and Carol because their nonmatching order rows contain <code>NULL</code>. The earlier <strong>correct</strong> <code>ON</code> predicate retains both customers with null order IDs. A filter in <code>WHERE</code> is appropriate when the goal really is “only customers with open orders”; it is incorrect when the goal is “every customer, optionally showing open orders.”</p>
+            <h2 id="decide-the-result-grain-before-joining">Decide the result grain before joining</h2>
             <p>Joining order 101 to its items returns two rows because the order has two lines. Joining each line to its product supplies the title:</p>
             <div>
                 <pre><code class="language-sql">SELECT i.line_number, p.title, i.quantity, i.unit_price_cents
@@ -1127,7 +1149,7 @@ ORDER BY c.customer_id;</code></pre>
                 </tbody>
             </table>
             <p>Each CTE has at most one row per customer, so the final joins preserve that report's grain. Adding <code>DISTINCT</code> to a multiplied result is not a general repair: it can discard genuinely separate rows or leave a duplicated monetary sum.</p>
-            <h2 id="a-view-has-a-definition-dependencies-and-a-write-policy">A view has a definition, dependencies, and a write policy</h2>
+            <h2 id="treat-a-view-as-a-contract-with-dependencies">Treat a view as a contract with dependencies</h2>
             <p>The existing order-total view is a saved calculation, not stored totals. When order lines change, a later query through the view reflects the underlying rows visible to that query. A materialized view is different: its stored results need the engine's refresh or maintenance mechanism.</p>
             <p>SQLite views are read-only unless <code>INSTEAD OF</code> triggers supply write behavior. PostgreSQL can automatically update certain simple views. An independent PostgreSQL example illustrates keeping changes inside the view's condition:</p>
             <div>

@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages",
             "description": "SQL presents a table as rows and columns. Storage works with chunks of bytes.",
-            "dateModified": "2026-10-02",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="SQL presents a table as rows and columns. Storage works with chunks of bytes." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
                 <ol>
                     <li><a href="#follow-a-read-from-query-to-storage">Follow a read from query to storage</a></li>
                     <li><a href="#what-fits-inside-a-page">What fits inside a page?</a></li>
-                    <li><a href="#why-an-index-can-save-page-reads">Why an index can save page reads</a></li>
+                    <li><a href="#why-fewer-matching-rows-do-not-automatically-mean-fewer-page-reads">Why fewer matching rows do not automatically mean fewer page reads</a></li>
                     <li><a href="#writes-logs-and-checkpoints">Writes, logs, and checkpoints</a></li>
                     <li><a href="#page-size-is-a-tradeoff-not-a-speed-setting">Page size is a tradeoff, not a speed setting</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
@@ -342,7 +342,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -363,7 +363,7 @@
             </div>
             <h1>Database Pages: The Chunks Behind a Table</h1>
             <p>SQL presents a table as rows and columns. Storage works with chunks of bytes. In many database engines, a <strong>page</strong> is a fixed-size unit used to organize data and transfer it between storage and memory. A table or index usually spans many pages.</p>
-            <p>This distinction helps explain query performance: finding one row may require reading a page containing several rows. The cost depends partly on which pages the engine must visit, not only on how many rows it returns.</p>
+            <p>This distinction helps explain query performance: finding one row may require reading a page containing several rows. Cost depends on the pages the plan touches, how many of those pages are cached, and whether the query must fetch separate table pages after using an index. Counting returned rows alone cannot predict I/O.</p>
             <h2 id="follow-a-read-from-query-to-storage">Follow a read from query to storage</h2>
             <p>Suppose the bookstore looks up product 10 by its primary key.</p>
             <ol>
@@ -385,7 +385,7 @@
             </div>
             <p>The <strong>header</strong> stores bookkeeping information. A <strong>slot</strong> can identify a row's location within the page. The row data contains encoded values rather than the formatted text shown by a SQL client. Actual layouts vary: SQLite B-tree pages, PostgreSQL heap pages, and InnoDB pages do not share one universal layout.</p>
             <p>Rows have different lengths, and one large value need not fit on one page. Engines may use overflow pages or separate storage for large values. Updates can create new row versions or change space requirements, so free space and cleanup matter as well.</p>
-            <h2 id="why-an-index-can-save-page-reads">Why an index can save page reads</h2>
+            <h2 id="why-fewer-matching-rows-do-not-automatically-mean-fewer-page-reads">Why fewer matching rows do not automatically mean fewer page reads</h2>
             <p>Imagine a table spread across 1,000 data pages. A query for one customer's orders can follow either of two broad paths:</p>
             <table>
                 <thead>
@@ -406,7 +406,7 @@
                 </tbody>
             </table>
             <p>An index is useful when its route visits substantially fewer pages. It is not free: the index occupies pages, and inserts or updates may need to modify them. A query matching most of the table can make a scan cheaper than many separate row lookups.</p>
-            <p>A <strong>covering index</strong> includes everything needed by a query, which can reduce table-page visits. Whether an engine actually avoids those visits also depends on its visibility rules and implementation. See <a href="05_indexing.html">Indexing</a> for B-tree search and query-plan examples.</p>
+            <p>A <strong>covering index</strong> contains the values needed by a particular query and can avoid extra row fetches. In PostgreSQL, visibility checks can still trigger heap access even if the index covers all selected columns; in SQLite, a covering plan can often read directly from index entries. Coverage is query- and engine-specific. See <a href="05_indexing.html">Indexing</a> for B-tree search and query-plan examples.</p>
             <h2 id="writes-logs-and-checkpoints">Writes, logs, and checkpoints</h2>
             <p>Changing a row generally changes a page in memory. A changed page is often called <strong>dirty</strong> until its current contents are written to persistent storage. A database may flush pages later rather than writing every data page immediately at commit.</p>
             <p>With <strong>write-ahead logging</strong>, recovery information reaches durable storage before the corresponding data-page changes do. This can let the engine acknowledge a durable commit using the log and recover the data pages after a crash. A <strong>checkpoint</strong> advances the recovery process by recording a recovery boundary and, depending on the engine, flushing or coordinating relevant data.</p>

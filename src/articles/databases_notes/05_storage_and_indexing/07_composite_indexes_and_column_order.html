@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Composite Indexes and Column Order | Adam Djellouli</title>
-    <meta content="A composite index contains more than one key column. Example." name="description" />
+    <meta content="A composite index orders entries by a tuple of key columns." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order",
-            "description": "A composite index contains more than one key column. Example.",
-            "dateModified": "2026-10-02",
+            "description": "A composite index orders entries by a tuple of key columns.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/07_composite_indexes_and_column_order" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A composite index contains more than one key column. Example." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="A composite index orders entries by a tuple of key columns." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -112,27 +112,43 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#lexicographic-ordering">Lexicographic ordering</a></li>
-                    <li><a href="#leading-prefix">Leading prefix</a></li>
-                    <li><a href="#missing-the-leading-column">Missing the leading column</a></li>
-                    <li><a href="#equality-then-range">Equality then range</a></li>
-                    <li><a href="#equality-equality-range">Equality, equality, range</a></li>
-                    <li><a href="#most-selective-first-is-incomplete">"Most selective first" is incomplete</a></li>
-                    <li><a href="#order-by-after-equality">ORDER BY after equality</a></li>
-                    <li><a href="#mixed-sort-directions">Mixed sort directions</a></li>
-                    <li><a href="#range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</a></li>
-                    <li><a href="#one-index-cannot-optimize-every-query">One index cannot optimize every query</a></li>
-                    <li><a href="#composite-versus-separate-indexes">Composite versus separate indexes</a></li>
-                    <li><a href="#bitmap-combination">Bitmap combination</a></li>
-                    <li><a href="#key-columns-versus-payload-columns">Key columns versus payload columns</a></li>
-                    <li><a href="#unique-composite-index">Unique composite index</a></li>
-                    <li><a href="#tenant-first-indexes">Tenant-first indexes</a></li>
-                    <li><a href="#search-plus-sort">Search plus sort</a></li>
-                    <li><a href="#join-keys">Join keys</a></li>
-                    <li><a href="#low-cardinality-leading-column">Low-cardinality leading column</a></li>
-                    <li><a href="#parameter-skew">Parameter skew</a></li>
-                    <li><a href="#runnable-demonstration">Runnable demonstration</a></li>
-                    <li><a href="#design-workflow">Design workflow</a></li>
+                    <li><a href="#how-compound-keys-are-ordered">How compound keys are ordered</a>
+                        <ol>
+                            <li><a href="#lexicographic-ordering">Lexicographic ordering</a></li>
+                            <li><a href="#leading-prefix">Leading prefix</a></li>
+                            <li><a href="#missing-the-leading-column">Missing the leading column</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#turn-predicates-and-sorting-into-a-key-order">Turn predicates and sorting into a key order</a>
+                        <ol>
+                            <li><a href="#equality-then-range">Equality then range</a></li>
+                            <li><a href="#equality-equality-range">Equality, equality, range</a></li>
+                            <li><a href="#most-selective-first-is-incomplete">"Most selective first" is incomplete</a></li>
+                            <li><a href="#order-by-after-equality">ORDER BY after equality</a></li>
+                            <li><a href="#mixed-sort-directions">Mixed sort directions</a></li>
+                            <li><a href="#range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#compare-alternatives-and-workload-trade-offs">Compare alternatives and workload trade-offs</a>
+                        <ol>
+                            <li><a href="#one-index-cannot-optimize-every-query">One index cannot optimize every query</a></li>
+                            <li><a href="#composite-versus-separate-indexes">Composite versus separate indexes</a></li>
+                            <li><a href="#bitmap-combination">Bitmap combination</a></li>
+                            <li><a href="#key-columns-versus-payload-columns">Key columns versus payload columns</a></li>
+                            <li><a href="#unique-composite-index">Unique composite index</a></li>
+                            <li><a href="#tenant-first-indexes">Tenant-first indexes</a></li>
+                            <li><a href="#search-plus-sort">Search plus sort</a></li>
+                            <li><a href="#join-keys">Join keys</a></li>
+                            <li><a href="#low-cardinality-leading-column">Low-cardinality leading column</a></li>
+                            <li><a href="#parameter-skew">Parameter skew</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#inspect-a-real-plan">Inspect a real plan</a>
+                        <ol>
+                            <li><a href="#runnable-demonstration">Runnable demonstration</a></li>
+                            <li><a href="#design-workflow">Design workflow</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#common-mistakes">Common mistakes</a></li>
                     <li><a href="#related-notes">Related notes</a></li>
                 </ol>
@@ -357,7 +373,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -377,14 +393,15 @@
                     </button></div>
             </div>
             <h1>Composite Indexes and Column Order</h1>
-            <p>A composite index contains more than one key column.</p>
+            <p>A <strong>composite index</strong> orders entries by a tuple of key columns. The leading equalities, range predicates, and requested sort determine which part of that ordering the engine can exploit. The purpose is not to index every filtered column, but to build a useful access path for a specific workload.</p>
             <p>Example:</p>
             <p>~~~sql
                 CREATE INDEX idx_orders_customer_status_date
                 ON orders(customer_id, status, order_date DESC);
                 ~~~</p>
             <p>Column order is part of the data structure. The useful question is not merely which columns appear in WHERE, but which ordered access path the query needs.</p>
-            <h2 id="lexicographic-ordering">Lexicographic ordering</h2>
+            <h2 id="how-compound-keys-are-ordered">How compound keys are ordered</h2>
+            <h3 id="lexicographic-ordering">Lexicographic ordering</h3>
             <p>A B-tree on:</p>
             <p>~~~text
                 (customer_id, status, order_date)
@@ -405,7 +422,7 @@
                 (42, open, 2026-10-01)
                 ~~~</p>
             <p>That ordering determines which predicates can narrow the scan efficiently.</p>
-            <h2 id="leading-prefix">Leading prefix</h2>
+            <h3 id="leading-prefix">Leading prefix</h3>
             <p>Query:</p>
             <p>~~~sql
                 WHERE customer_id = 42
@@ -417,7 +434,7 @@
                 AND status = 'open'
                 ~~~</p>
             <p>uses a longer leading prefix.</p>
-            <h2 id="missing-the-leading-column">Missing the leading column</h2>
+            <h3 id="missing-the-leading-column">Missing the leading column</h3>
             <p>Query:</p>
             <p>~~~sql
                 WHERE status = 'open'
@@ -426,7 +443,8 @@
             <p>Open rows are spread across every customer group.</p>
             <p>Modern engines can sometimes use skip-scan, bitmap combinations, or the index for special reasons, but a conventional composite B-tree is not primarily ordered by status.</p>
             <p>Do not assume every suffix predicate receives a direct seek.</p>
-            <h2 id="equality-then-range">Equality then range</h2>
+            <h2 id="turn-predicates-and-sorting-into-a-key-order">Turn predicates and sorting into a key order</h2>
+            <h3 id="equality-then-range">Equality then range</h3>
             <p>Query:</p>
             <p>~~~sql
                 WHERE customer_id = 42
@@ -439,7 +457,7 @@
                 ON orders(customer_id, order_date);
                 ~~~</p>
             <p>The engine can seek to customer 42 and then walk that customer's date range.</p>
-            <h2 id="equality-equality-range">Equality, equality, range</h2>
+            <h3 id="equality-equality-range">Equality, equality, range</h3>
             <p>Query:</p>
             <p>~~~sql
                 WHERE tenant_id = ?
@@ -453,7 +471,7 @@
                 ~~~</p>
             <p>The equality columns establish a prefix; created_at defines the range.</p>
             <p>This is a useful heuristic, not a universal formula.</p>
-            <h2 id="most-selective-first-is-incomplete">"Most selective first" is incomplete</h2>
+            <h3 id="most-selective-first-is-incomplete">"Most selective first" is incomplete</h3>
             <p>A common rule says to put the most selective column first.</p>
             <p>That ignores:</p>
             <ul>
@@ -464,7 +482,7 @@
                 <li>other important queries.</li>
             </ul>
             <p>A tenant_id column can correctly lead an index even if it is less selective than another predicate because every query must remain inside one tenant.</p>
-            <h2 id="order-by-after-equality">ORDER BY after equality</h2>
+            <h3 id="order-by-after-equality">ORDER BY after equality</h3>
             <p>Index:</p>
             <p>~~~sql
                 CREATE INDEX idx_orders_customer_date
@@ -478,7 +496,7 @@
                 ~~~</p>
             <p>Since customer_id is fixed, the remaining order already matches order_date DESC.</p>
             <p>This can eliminate a large sort.</p>
-            <h2 id="mixed-sort-directions">Mixed sort directions</h2>
+            <h3 id="mixed-sort-directions">Mixed sort directions</h3>
             <p>Some engines support mixed index ordering.</p>
             <p>PostgreSQL example:</p>
             <p>~~~sql
@@ -491,7 +509,7 @@
                 ORDER BY score DESC;
                 ~~~</p>
             <p>Check engine-specific capabilities and the actual plan.</p>
-            <h2 id="range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</h2>
+            <h3 id="range-can-end-efficient-prefix-narrowing">Range can end efficient prefix narrowing</h3>
             <p>Index:</p>
             <p>~~~text
                 (customer_id, order_date, status)
@@ -509,7 +527,8 @@
                 (customer_id, status, order_date)
                 ~~~</p>
             <p>may fit the workload better.</p>
-            <h2 id="one-index-cannot-optimize-every-query">One index cannot optimize every query</h2>
+            <h2 id="compare-alternatives-and-workload-trade-offs">Compare alternatives and workload trade-offs</h2>
+            <h3 id="one-index-cannot-optimize-every-query">One index cannot optimize every query</h3>
             <p>Suppose two important queries are:</p>
             <p>~~~sql
                 WHERE customer_id = ?
@@ -527,7 +546,7 @@
                 ~~~</p>
             <p>Every additional index costs write/storage work.</p>
             <p>Prioritize the important workload.</p>
-            <h2 id="composite-versus-separate-indexes">Composite versus separate indexes</h2>
+            <h3 id="composite-versus-separate-indexes">Composite versus separate indexes</h3>
             <p>Compare:</p>
             <p>~~~text
                 index A: customer_id
@@ -541,7 +560,7 @@
             <p>A composite index often gives a more direct ordered path and can support ORDER BY.</p>
             <p>Separate indexes can better support independent queries.</p>
             <p>Use the actual query mix and execution plans.</p>
-            <h2 id="bitmap-combination">Bitmap combination</h2>
+            <h3 id="bitmap-combination">Bitmap combination</h3>
             <p>PostgreSQL can combine multiple indexes through bitmap operations for some queries.</p>
             <p>That can help a predicate such as:</p>
             <p>~~~sql
@@ -555,7 +574,7 @@
                 <li>a sort can still be needed,</li>
                 <li>a dedicated composite index may be cheaper for a hot query.</li>
             </ul>
-            <h2 id="key-columns-versus-payload-columns">Key columns versus payload columns</h2>
+            <h3 id="key-columns-versus-payload-columns">Key columns versus payload columns</h3>
             <p>Suppose the query filters/orders by:</p>
             <p>~~~text
                 customer_id
@@ -569,7 +588,7 @@
             <p>Do not automatically add every returned field as a search key.</p>
             <p>In PostgreSQL, INCLUDE can store payload columns without making them part of the navigation key.</p>
             <p>See the next note.</p>
-            <h2 id="unique-composite-index">Unique composite index</h2>
+            <h3 id="unique-composite-index">Unique composite index</h3>
             <p>~~~sql
                 CREATE UNIQUE INDEX ux_tenant_email
                 ON users(tenant_id, email);
@@ -580,7 +599,7 @@
                 ~~~</p>
             <p>not globally.</p>
             <p>The whole tuple defines uniqueness, while column order still affects access patterns.</p>
-            <h2 id="tenant-first-indexes">Tenant-first indexes</h2>
+            <h3 id="tenant-first-indexes">Tenant-first indexes</h3>
             <p>For multi-tenant schemas:</p>
             <p>~~~text
                 tenant_id
@@ -595,7 +614,7 @@
                 <li>safer query patterns.</li>
             </ul>
             <p>This can matter more than global selectivity.</p>
-            <h2 id="search-plus-sort">Search plus sort</h2>
+            <h3 id="search-plus-sort">Search plus sort</h3>
             <p>Query:</p>
             <p>~~~sql
                 SELECT id, title
@@ -621,14 +640,14 @@
                 ON posts(author_id, published_at DESC)
                 WHERE published = true;
                 ~~~</p>
-            <h2 id="join-keys">Join keys</h2>
+            <h3 id="join-keys">Join keys</h3>
             <p>Join:</p>
             <p>~~~sql
                 ON order_items.order_id = orders.order_id
                 ~~~</p>
             <p>An index beginning with order_items.order_id can make repeated join lookups cheaper.</p>
             <p>Trailing columns can support additional filter/order requirements.</p>
-            <h2 id="low-cardinality-leading-column">Low-cardinality leading column</h2>
+            <h3 id="low-cardinality-leading-column">Low-cardinality leading column</h3>
             <p>Index:</p>
             <p>~~~text
                 (is_deleted, customer_id)
@@ -640,7 +659,7 @@
                 ON customers(customer_id)
                 WHERE deleted_at IS NULL;
                 ~~~</p>
-            <h2 id="parameter-skew">Parameter skew</h2>
+            <h3 id="parameter-skew">Parameter skew</h3>
             <p>One composite index can work very differently for:</p>
             <ul>
                 <li>a tiny tenant,</li>
@@ -649,7 +668,8 @@
                 <li>a rare status.</li>
             </ul>
             <p>Test representative and worst-case parameters.</p>
-            <h2 id="runnable-demonstration">Runnable demonstration</h2>
+            <h2 id="inspect-a-real-plan">Inspect a real plan</h2>
+            <h3 id="runnable-demonstration">Runnable demonstration</h3>
             <p>This chapter adds:</p>
             <p>~~~text
                 scripts/indexing/sqlite_composite_index_demo.py
@@ -666,7 +686,7 @@
             </ul>
             <p>against one composite index.</p>
             <p>The purpose is to make stored column order visible in the query plans.</p>
-            <h2 id="design-workflow">Design workflow</h2>
+            <h3 id="design-workflow">Design workflow</h3>
             <ol>
                 <li>Write the exact WHERE predicates.</li>
                 <li>Mark equality predicates.</li>

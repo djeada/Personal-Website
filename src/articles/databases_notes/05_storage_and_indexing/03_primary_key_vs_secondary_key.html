@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Primary Keys, Alternate Keys, and Secondary Indexes</title>
-    <meta content="A key expresses an identification rule. An index is a physical access structure." name="description" />
+    <meta content="A key is a logical uniqueness/identity rule; an index is a physical route to rows." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key",
-            "description": "A key expresses an identification rule. An index is a physical access structure.",
-            "dateModified": "2026-10-04",
+            "description": "A key is a logical uniqueness/identity rule; an index is a physical route to rows.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A key expresses an identification rule. An index is a physical access structure." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A key is a logical uniqueness/identity rule; an index is a physical route to rows." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -115,7 +115,7 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#terminology">Terminology</a></li>
-                    <li><a href="#example-schema">Example schema</a></li>
+                    <li><a href="#one-schema-with-two-identifiers-and-a-search-index">One schema with two identifiers and a search index</a></li>
                     <li><a href="#nullability-and-composite-keys">Nullability and composite keys</a></li>
                     <li><a href="#keys-do-not-determine-one-universal-storage-layout">Keys do not determine one universal storage layout</a></li>
                     <li><a href="#related-notes">Related notes</a></li>
@@ -341,7 +341,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -361,7 +361,7 @@
                     </button></div>
             </div>
             <h1>Primary Keys, Alternate Keys, and Secondary Indexes</h1>
-            <p>A <strong>key</strong> expresses an identification rule. An <strong>index</strong> is a physical access structure. The two are related because engines often use indexes to enforce keys, but they are not interchangeable.</p>
+            <p>A <strong>key</strong> is a logical uniqueness/identity rule; an <strong>index</strong> is a physical route to rows. Engines often create indexes to enforce keys, but an additional index does not create a new business identifier. This note separates primary and alternate candidate keys from non-unique lookup indexes.</p>
             <h2 id="terminology">Terminology</h2>
             <table>
                 <thead>
@@ -405,7 +405,7 @@
                 </tbody>
             </table>
             <p>“Secondary key” is used inconsistently: some texts mean an alternate identifier, others mean a search attribute. Prefer the precise terms above.</p>
-            <h2 id="example-schema">Example schema</h2>
+            <h2 id="one-schema-with-two-identifiers-and-a-search-index">One schema with two identifiers and a search index</h2>
             <p>The following runs in PostgreSQL and SQLite. Enable <code>PRAGMA foreign_keys = ON</code> on each SQLite connection when using foreign keys.</p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE users (
@@ -465,7 +465,7 @@ VALUES (1, 'alice@example.com', 'Smith'),
                     </tr>
                 </tbody>
             </table>
-            <p>The optimizer can use the secondary index but may prefer a scan for a small table or a predicate matching many rows. An index does not guarantee a particular query plan or output order; add <code>ORDER BY</code> when order matters.</p>
+            <p>The optimizer may use <code>idx_users_last_name</code> or scan the two-row table. The index is intentionally <strong>non-unique</strong>: two Smiths are valid. The <code>UNIQUE</code> rule on <code>email</code> is a separate integrity requirement; an index alone on <code>last_name</code> never makes the names unique. <code>ORDER BY</code> (not an index's internal order) defines the query result order.</p>
             <h2 id="nullability-and-composite-keys">Nullability and composite keys</h2>
             <p>A primary key is unique and non-null in the relational model. Some legacy SQLite rowid-table declarations permit nulls in primary-key columns; use explicit <code>NOT NULL</code>, <code>INTEGER PRIMARY KEY</code>, or an appropriate strict/without-rowid table to avoid that exception.</p>
             <p>A composite key identifies a row by the whole tuple:</p>

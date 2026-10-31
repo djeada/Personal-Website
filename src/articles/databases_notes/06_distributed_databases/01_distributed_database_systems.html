@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Distributed Database Systems | Adam Djellouli</title>
-    <meta content="A distributed database system stores and processes logically related data across multiple machines, processes, availability zones, or geographic…" name="description" />
+    <meta content="A distributed database places related data and computation across independently failing nodes while exposing a usable database interface." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems",
-            "description": "A distributed database system stores and processes logically related data across multiple machines, processes, availability zones, or geographic\u2026",
-            "dateModified": "2026-10-04",
+            "description": "A distributed database places related data and computation across independently failing nodes while exposing a usable database interface.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A distributed database system stores and processes logically related data across multiple machines, processes, availability zones, or geographic…" property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A distributed database places related data and computation across independently failing nodes while exposing a usable database interface." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,100 +114,155 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#why-distribute-a-database">Why distribute a database?</a></li>
-                    <li><a href="#the-central-distinction-partitioning-replication-and-coordination">The central distinction: partitioning, replication, and coordination</a>
+                    <li><a href="#motivation-and-the-scope-of-distribution">Motivation and the scope of distribution</a>
                         <ol>
-                            <li><a href="#partitioning">Partitioning</a></li>
-                            <li><a href="#replication">Replication</a></li>
-                            <li><a href="#coordination">Coordination</a></li>
+                            <li><a href="#why-distribute-a-database">Why distribute a database?</a></li>
                         </ol>
                     </li>
-                    <li><a href="#sharding-and-replication-are-orthogonal">Sharding and replication are orthogonal</a></li>
-                    <li><a href="#a-more-realistic-distributed-database-picture">A more realistic distributed-database picture</a></li>
-                    <li><a href="#shared-nothing-architecture">Shared-nothing architecture</a></li>
-                    <li><a href="#shared-disk-architecture">Shared-disk architecture</a></li>
-                    <li><a href="#shared-memory-architecture">Shared-memory architecture</a></li>
-                    <li><a href="#architecture-summary">Architecture summary</a></li>
-                    <li><a href="#centralized-versus-decentralized-coordination">Centralized versus decentralized coordination</a>
+                    <li><a href="#the-three-independent-concerns">The three independent concerns</a>
                         <ol>
-                            <li><a href="#centralized-coordinator">Centralized coordinator</a></li>
-                            <li><a href="#distributed-coordination">Distributed coordination</a></li>
+                            <li><a href="#the-central-distinction-partitioning-replication-and-coordination">The central distinction: partitioning, replication, and coordination</a>
+                                <ol>
+                                    <li><a href="#partitioning">Partitioning</a></li>
+                                    <li><a href="#replication">Replication</a></li>
+                                    <li><a href="#coordination">Coordination</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#sharding-and-replication-are-orthogonal">Sharding and replication are orthogonal</a></li>
+                            <li><a href="#a-more-realistic-distributed-database-picture">A more realistic distributed-database picture</a></li>
                         </ol>
                     </li>
-                    <li><a href="#client-routing-is-not-always-a-load-balancer">Client routing is not always a load balancer</a></li>
-                    <li><a href="#horizontal-partitioning">Horizontal partitioning</a></li>
-                    <li><a href="#hash-partitioning">Hash partitioning</a></li>
-                    <li><a href="#range-partitioning">Range partitioning</a></li>
-                    <li><a href="#the-hotspot-problem">The hotspot problem</a></li>
-                    <li><a href="#spanner-automatic-range-splitting">Spanner: automatic range splitting</a></li>
-                    <li><a href="#cockroachdb-ranges">CockroachDB: ranges</a></li>
-                    <li><a href="#vertical-partitioning">Vertical partitioning</a></li>
-                    <li><a href="#functional-partitioning">Functional partitioning</a></li>
-                    <li><a href="#partitioning-summary">Partitioning summary</a></li>
-                    <li><a href="#data-locality-matters-because-networks-are-expensive">Data locality matters because networks are expensive</a></li>
-                    <li><a href="#replication-2">Replication</a></li>
-                    <li><a href="#asynchronous-replication">Asynchronous replication</a></li>
-                    <li><a href="#synchronous-replication">Synchronous replication</a></li>
-                    <li><a href="#quorum-replication">Quorum replication</a></li>
-                    <li><a href="#mongodb-concrete-example">MongoDB concrete example</a></li>
-                    <li><a href="#spanner-replication">Spanner replication</a></li>
-                    <li><a href="#replication-and-consensus-are-not-the-same-thing">Replication and consensus are not the same thing</a></li>
-                    <li><a href="#distributed-concurrency-control">Distributed concurrency control</a></li>
-                    <li><a href="#distributed-two-phase-locking">Distributed Two-Phase Locking</a></li>
-                    <li><a href="#timestamp-ordering">Timestamp ordering</a></li>
-                    <li><a href="#optimistic-concurrency-control">Optimistic Concurrency Control</a></li>
-                    <li><a href="#spanner-provides-a-concrete-modern-example">Spanner provides a concrete modern example</a></li>
-                    <li><a href="#what-is-a-distributed-transaction">What is a distributed transaction?</a></li>
-                    <li><a href="#why-cross-shard-transactions-cost-more">Why cross-shard transactions cost more</a></li>
-                    <li><a href="#two-phase-commit-2pc">Two-Phase Commit (2PC)</a></li>
-                    <li><a href="#phase-1-prepare">Phase 1: prepare</a></li>
-                    <li><a href="#phase-2-decision">Phase 2: decision</a></li>
-                    <li><a href="#what-happens-if-the-coordinator-disappears">What happens if the coordinator disappears?</a></li>
-                    <li><a href="#postgresql-exposes-prepared-transactions-directly">PostgreSQL exposes prepared transactions directly</a></li>
-                    <li><a href="#spanner-2pc-plus-consensus">Spanner: 2PC plus consensus</a></li>
-                    <li><a href="#2pc-is-not-consensus">2PC is not consensus</a></li>
-                    <li><a href="#three-phase-commit">Three-Phase Commit</a></li>
-                    <li><a href="#consensus-the-problem-it-solves">Consensus: the problem it solves</a></li>
-                    <li><a href="#raft-mental-model">Raft mental model</a></li>
-                    <li><a href="#etcd-a-concrete-raft-system">etcd: a concrete Raft system</a></li>
-                    <li><a href="#replica-learners">Replica learners</a></li>
-                    <li><a href="#consensus-does-not-make-networks-free">Consensus does not make networks free</a></li>
-                    <li><a href="#failure-types">Failure types</a></li>
-                    <li><a href="#failure-detection-uses-suspicion-not-omniscience">Failure detection uses suspicion, not omniscience</a></li>
-                    <li><a href="#logging-and-checkpointing">Logging and checkpointing</a></li>
-                    <li><a href="#replication-is-not-backup">Replication is not backup</a></li>
-                    <li><a href="#cap-enters-because-communication-can-fail">CAP enters because communication can fail</a></li>
-                    <li><a href="#quorum-and-cap">Quorum and CAP</a></li>
-                    <li><a href="#pacelc-adds-the-healthy-network-question">PACELC adds the healthy-network question</a></li>
-                    <li><a href="#distributed-query-processing">Distributed query processing</a></li>
-                    <li><a href="#scatter-gather">Scatter/gather</a></li>
-                    <li><a href="#distributed-joins">Distributed joins</a></li>
-                    <li><a href="#broadcast-join">Broadcast join</a></li>
-                    <li><a href="#shuffle-join">Shuffle join</a></li>
-                    <li><a href="#push-computation-to-the-data">Push computation to the data</a></li>
-                    <li><a href="#mongodb-sharding-makes-targeted-queries-important">MongoDB sharding makes targeted queries important</a></li>
-                    <li><a href="#homogeneous-distributed-databases">Homogeneous distributed databases</a></li>
-                    <li><a href="#heterogeneous-distributed-data-systems">Heterogeneous distributed data systems</a></li>
-                    <li><a href="#relational-nosql-and-distributed-sql">Relational, NoSQL, and distributed SQL</a></li>
-                    <li><a href="#spanner-as-distributed-sql">Spanner as distributed SQL</a></li>
-                    <li><a href="#cockroachdb-as-distributed-sql">CockroachDB as distributed SQL</a></li>
-                    <li><a href="#cassandra-as-a-different-design-point">Cassandra as a different design point</a></li>
-                    <li><a href="#mongodb-combines-replica-sets-and-sharding">MongoDB combines replica sets and sharding</a></li>
-                    <li><a href="#technology-summary">Technology summary</a></li>
-                    <li><a href="#a-complete-example-placing-an-order">A complete example: placing an order</a></li>
-                    <li><a href="#why-distribution-is-not-automatically-faster">Why distribution is not automatically faster</a></li>
-                    <li><a href="#the-single-node-fast-path">The "single-node fast path"</a></li>
-                    <li><a href="#secondary-indexes-can-unexpectedly-make-transactions-distributed">Secondary indexes can unexpectedly make transactions distributed</a></li>
-                    <li><a href="#security-gets-harder-too">Security gets harder too</a></li>
-                    <li><a href="#observability-must-follow-one-request-across-nodes">Observability must follow one request across nodes</a></li>
-                    <li><a href="#common-design-mistakes">Common design mistakes</a></li>
-                    <li><a href="#the-unknown-outcome-problem">The unknown-outcome problem</a></li>
-                    <li><a href="#idempotency">Idempotency</a></li>
-                    <li><a href="#choosing-architecture-from-requirements">Choosing architecture from requirements</a></li>
-                    <li><a href="#decision-table">Decision table</a></li>
-                    <li><a href="#the-full-mental-model">The full mental model</a></li>
-                    <li><a href="#final-technology-oriented-mental-model">Final technology-oriented mental model</a></li>
-                    <li><a href="#final-summary">Final summary</a></li>
+                    <li><a href="#topologies-coordination-and-routing">Topologies, coordination, and routing</a>
+                        <ol>
+                            <li><a href="#shared-nothing-architecture">Shared-nothing architecture</a></li>
+                            <li><a href="#shared-disk-architecture">Shared-disk architecture</a></li>
+                            <li><a href="#shared-memory-architecture">Shared-memory architecture</a></li>
+                            <li><a href="#architecture-summary">Architecture summary</a></li>
+                            <li><a href="#centralized-versus-decentralized-coordination">Centralized versus decentralized coordination</a>
+                                <ol>
+                                    <li><a href="#centralized-coordinator">Centralized coordinator</a></li>
+                                    <li><a href="#distributed-coordination">Distributed coordination</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#client-routing-is-not-always-a-load-balancer">Client routing is not always a load balancer</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#partitioning-and-data-locality">Partitioning and data locality</a>
+                        <ol>
+                            <li><a href="#horizontal-partitioning">Horizontal partitioning</a></li>
+                            <li><a href="#hash-partitioning">Hash partitioning</a></li>
+                            <li><a href="#range-partitioning">Range partitioning</a></li>
+                            <li><a href="#the-hotspot-problem">The hotspot problem</a></li>
+                            <li><a href="#spanner-automatic-range-splitting">Spanner: automatic range splitting</a></li>
+                            <li><a href="#cockroachdb-ranges">CockroachDB: ranges</a></li>
+                            <li><a href="#vertical-partitioning">Vertical partitioning</a></li>
+                            <li><a href="#functional-partitioning">Functional partitioning</a></li>
+                            <li><a href="#partitioning-summary">Partitioning summary</a></li>
+                            <li><a href="#data-locality-matters-because-networks-are-expensive">Data locality matters because networks are expensive</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#replica-consistency-and-quorum">Replica consistency and quorum</a>
+                        <ol>
+                            <li><a href="#replication-2">Replication</a></li>
+                            <li><a href="#asynchronous-replication">Asynchronous replication</a></li>
+                            <li><a href="#synchronous-replication">Synchronous replication</a></li>
+                            <li><a href="#quorum-replication">Quorum replication</a></li>
+                            <li><a href="#mongodb-concrete-example">MongoDB concrete example</a></li>
+                            <li><a href="#spanner-replication">Spanner replication</a></li>
+                            <li><a href="#replication-and-consensus-are-not-the-same-thing">Replication and consensus are not the same thing</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#concurrency-and-cross-partition-transactions">Concurrency and cross-partition transactions</a>
+                        <ol>
+                            <li><a href="#distributed-concurrency-control">Distributed concurrency control</a></li>
+                            <li><a href="#distributed-two-phase-locking">Distributed Two-Phase Locking</a></li>
+                            <li><a href="#timestamp-ordering">Timestamp ordering</a></li>
+                            <li><a href="#optimistic-concurrency-control">Optimistic Concurrency Control</a></li>
+                            <li><a href="#spanner-provides-a-concrete-modern-example">Spanner provides a concrete modern example</a></li>
+                            <li><a href="#what-is-a-distributed-transaction">What is a distributed transaction?</a></li>
+                            <li><a href="#why-cross-shard-transactions-cost-more">Why cross-shard transactions cost more</a></li>
+                            <li><a href="#two-phase-commit-2pc">Two-Phase Commit (2PC)</a></li>
+                            <li><a href="#phase-1-prepare">Phase 1: prepare</a></li>
+                            <li><a href="#phase-2-decision">Phase 2: decision</a></li>
+                            <li><a href="#what-happens-if-the-coordinator-disappears">What happens if the coordinator disappears?</a></li>
+                            <li><a href="#postgresql-exposes-prepared-transactions-directly">PostgreSQL exposes prepared transactions directly</a></li>
+                            <li><a href="#spanner-2pc-plus-consensus">Spanner: 2PC plus consensus</a></li>
+                            <li><a href="#2pc-is-not-consensus">2PC is not consensus</a></li>
+                            <li><a href="#three-phase-commit">Three-Phase Commit</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#consensus-and-membership">Consensus and membership</a>
+                        <ol>
+                            <li><a href="#consensus-the-problem-it-solves">Consensus: the problem it solves</a></li>
+                            <li><a href="#raft-mental-model">Raft mental model</a></li>
+                            <li><a href="#etcd-a-concrete-raft-system">etcd: a concrete Raft system</a></li>
+                            <li><a href="#replica-learners">Replica learners</a></li>
+                            <li><a href="#consensus-does-not-make-networks-free">Consensus does not make networks free</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#failure-detection-recovery-and-backups">Failure detection, recovery, and backups</a>
+                        <ol>
+                            <li><a href="#failure-types">Failure types</a></li>
+                            <li><a href="#failure-detection-uses-suspicion-not-omniscience">Failure detection uses suspicion, not omniscience</a></li>
+                            <li><a href="#logging-and-checkpointing">Logging and checkpointing</a></li>
+                            <li><a href="#replication-is-not-backup">Replication is not backup</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#consistency-trade-offs-during-network-failures">Consistency trade-offs during network failures</a>
+                        <ol>
+                            <li><a href="#cap-enters-because-communication-can-fail">CAP enters because communication can fail</a></li>
+                            <li><a href="#quorum-and-cap">Quorum and CAP</a></li>
+                            <li><a href="#pacelc-adds-the-healthy-network-question">PACELC adds the healthy-network question</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#query-execution-across-nodes">Query execution across nodes</a>
+                        <ol>
+                            <li><a href="#distributed-query-processing">Distributed query processing</a></li>
+                            <li><a href="#scatter-gather">Scatter/gather</a></li>
+                            <li><a href="#distributed-joins">Distributed joins</a></li>
+                            <li><a href="#broadcast-join">Broadcast join</a></li>
+                            <li><a href="#shuffle-join">Shuffle join</a></li>
+                            <li><a href="#push-computation-to-the-data">Push computation to the data</a></li>
+                            <li><a href="#mongodb-sharding-makes-targeted-queries-important">MongoDB sharding makes targeted queries important</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#how-real-engines-differ">How real engines differ</a>
+                        <ol>
+                            <li><a href="#homogeneous-distributed-databases">Homogeneous distributed databases</a></li>
+                            <li><a href="#heterogeneous-distributed-data-systems">Heterogeneous distributed data systems</a></li>
+                            <li><a href="#relational-nosql-and-distributed-sql">Relational, NoSQL, and distributed SQL</a></li>
+                            <li><a href="#spanner-as-distributed-sql">Spanner as distributed SQL</a></li>
+                            <li><a href="#cockroachdb-as-distributed-sql">CockroachDB as distributed SQL</a></li>
+                            <li><a href="#cassandra-as-a-different-design-point">Cassandra as a different design point</a></li>
+                            <li><a href="#mongodb-combines-replica-sets-and-sharding">MongoDB combines replica sets and sharding</a></li>
+                            <li><a href="#technology-summary">Technology summary</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#trace-a-complete-distributed-operation">Trace a complete distributed operation</a>
+                        <ol>
+                            <li><a href="#a-complete-example-placing-an-order">A complete example: placing an order</a></li>
+                            <li><a href="#why-distribution-is-not-automatically-faster">Why distribution is not automatically faster</a></li>
+                            <li><a href="#the-single-node-fast-path">The "single-node fast path"</a></li>
+                            <li><a href="#secondary-indexes-can-unexpectedly-make-transactions-distributed">Secondary indexes can unexpectedly make transactions distributed</a></li>
+                            <li><a href="#security-gets-harder-too">Security gets harder too</a></li>
+                            <li><a href="#observability-must-follow-one-request-across-nodes">Observability must follow one request across nodes</a></li>
+                            <li><a href="#common-design-mistakes">Common design mistakes</a></li>
+                            <li><a href="#the-unknown-outcome-problem">The unknown-outcome problem</a></li>
+                            <li><a href="#idempotency">Idempotency</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#choose-an-architecture-from-requirements">Choose an architecture from requirements</a>
+                        <ol>
+                            <li><a href="#choosing-architecture-from-requirements">Choosing architecture from requirements</a></li>
+                            <li><a href="#decision-table">Decision table</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#putting-the-layers-together">Putting the layers together</a>
+                        <ol>
+                            <li><a href="#the-full-mental-model">The full mental model</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#summary-the-questions-to-carry-forward">Summary: the questions to carry forward</a></li>
                     <li><a href="#references">References</a></li>
                 </ol>
             </div>
@@ -431,7 +486,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -451,7 +506,8 @@
                     </button></div>
             </div>
             <h1>Distributed Database Systems</h1>
-            <p>A distributed database system stores and processes logically related data across multiple machines, processes, availability zones, or geographic locations while trying to present an application with a coherent database abstraction.</p>
+            <p>A <strong>distributed database</strong> places related data and computation across independently failing nodes while exposing a usable database interface. Distribution is not a single feature: placement, replication, transaction coordination, and failure handling make different promises.</p>
+            <p><strong>Reading path:</strong> first distinguish partitioning from replication; then follow data placement, quorum and transaction protocols, network failures, and distributed queries. Later sections compare product mechanisms and trace an end-to-end order. This is an architectural survey, not a command tutorial. For deeper follow-up, use <a href="02_partitioning.html">partitioning</a>, <a href="03_sharding.html">sharding</a>, <a href="06_cap_theorem.html">CAP</a>, and <a href="07_eventual_consistency.html">eventual consistency</a>.</p>
             <p>A simple picture might be:</p>
             <div>
                 <pre><code class="language-text">                         Clients
@@ -487,7 +543,8 @@
    touches data owned by several nodes?</code></pre>
             </div>
             <p>Almost every major topic in distributed databases follows from those questions.</p>
-            <h2 id="why-distribute-a-database">Why distribute a database?</h2>
+            <h2 id="motivation-and-the-scope-of-distribution">Motivation and the scope of distribution</h2>
+            <h3 id="why-distribute-a-database">Why distribute a database?</h3>
             <p>A single database server has finite:</p>
             <div>
                 <pre><code class="language-text">CPU
@@ -559,9 +616,10 @@ geographic proximity</code></pre>
             <blockquote>
                 <p>Communication that used to happen inside one process or one machine becomes a distributed protocol.</p>
             </blockquote>
-            <h2 id="the-central-distinction-partitioning-replication-and-coordination">The central distinction: partitioning, replication, and coordination</h2>
+            <h2 id="the-three-independent-concerns">The three independent concerns</h2>
+            <h3 id="the-central-distinction-partitioning-replication-and-coordination">The central distinction: partitioning, replication, and coordination</h3>
             <p>Three ideas are often mixed together.</p>
-            <h3 id="partitioning">Partitioning</h3>
+            <h4 id="partitioning">Partitioning</h4>
             <p>Different nodes contain different pieces of the data.</p>
             <div>
                 <pre><code class="language-text">Node A:
@@ -576,7 +634,7 @@ customers 1,000,001–2,000,000</code></pre>
 write scalability
 parallelism</code></pre>
             </div>
-            <h3 id="replication">Replication</h3>
+            <h4 id="replication">Replication</h4>
             <p>Different nodes contain copies of the same data.</p>
             <div>
                 <pre><code class="language-text">Node A:
@@ -591,7 +649,7 @@ customers 1–1,000,000</code></pre>
 durability
 read scaling</code></pre>
             </div>
-            <h3 id="coordination">Coordination</h3>
+            <h4 id="coordination">Coordination</h4>
             <p>Nodes run protocols to decide:</p>
             <div>
                 <pre><code class="language-text">which copy is authoritative?
@@ -609,7 +667,7 @@ consistency
 failover safety</code></pre>
             </div>
             <p>A serious distributed database normally uses all three ideas together.</p>
-            <h2 id="sharding-and-replication-are-orthogonal">Sharding and replication are orthogonal</h2>
+            <h3 id="sharding-and-replication-are-orthogonal">Sharding and replication are orthogonal</h3>
             <p>Suppose the database is split into three shards:</p>
             <div>
                 <pre><code class="language-text">Shard A:
@@ -655,7 +713,7 @@ Shard C:
                 <pre><code class="language-text">"How many copies of that shard exist?"</code></pre>
             </div>
             <p>MongoDB is a concrete example: a sharded cluster distributes collection data across shards, and each shard is normally implemented as a replica set. <code>mongos</code> provides query routing while config servers maintain cluster metadata.</p>
-            <h2 id="a-more-realistic-distributed-database-picture">A more realistic distributed-database picture</h2>
+            <h3 id="a-more-realistic-distributed-database-picture">A more realistic distributed-database picture</h3>
             <p>A modern distributed database often looks conceptually like:</p>
             <div>
                 <pre><code class="language-text">                     Application
@@ -685,7 +743,8 @@ Shard C:
                 <pre><code class="language-text">one shard</code></pre>
             </div>
             <p>A physical server may contain replicas of many different shards.</p>
-            <h2 id="shared-nothing-architecture">Shared-nothing architecture</h2>
+            <h2 id="topologies-coordination-and-routing">Topologies, coordination, and routing</h2>
+            <h3 id="shared-nothing-architecture">Shared-nothing architecture</h3>
             <p>In a shared-nothing system, each node has its own:</p>
             <div>
                 <pre><code class="language-text">CPU
@@ -711,7 +770,7 @@ disk capacity
 network capacity</code></pre>
             </div>
             <p>Apache Cassandra is a classic example of a distributed architecture where partition-key hashing assigns portions of the token space across cluster nodes. Its default <code>Murmur3Partitioner</code> determines how partition keys map into the distributed token space.</p>
-            <h2 id="shared-disk-architecture">Shared-disk architecture</h2>
+            <h3 id="shared-disk-architecture">Shared-disk architecture</h3>
             <p>A shared-disk architecture gives nodes their own compute and memory but lets several nodes access a common storage subsystem.</p>
             <div>
                 <pre><code class="language-text">     Node A        Node B        Node C
@@ -733,7 +792,7 @@ recovery</code></pre>
             </div>
             <p>Two nodes modifying the same storage page without coordination would corrupt the database.</p>
             <p>Shared-disk therefore removes some data-placement problems but introduces strong coordination requirements around shared storage.</p>
-            <h2 id="shared-memory-architecture">Shared-memory architecture</h2>
+            <h3 id="shared-memory-architecture">Shared-memory architecture</h3>
             <p>A shared-memory or tightly coupled multiprocessor design gives multiple CPUs access to the same physical memory.</p>
             <p>Conceptually:</p>
             <div>
@@ -751,7 +810,7 @@ regions
 continents</code></pre>
             </div>
             <p>where failures, message delay, and partitions become important.</p>
-            <h2 id="architecture-summary">Architecture summary</h2>
+            <h3 id="architecture-summary">Architecture summary</h3>
             <table>
                 <thead>
                     <tr>
@@ -788,9 +847,9 @@ continents</code></pre>
             </table>
             <p>Modern cloud databases can also use disaggregated compute and storage, so production architectures do not always fit perfectly into these textbook categories.</p>
             <p>The categories are mental models, not universal product labels.</p>
-            <h2 id="centralized-versus-decentralized-coordination">Centralized versus decentralized coordination</h2>
+            <h3 id="centralized-versus-decentralized-coordination">Centralized versus decentralized coordination</h3>
             <p>Another independent architecture choice concerns metadata and coordination.</p>
-            <h3 id="centralized-coordinator">Centralized coordinator</h3>
+            <h4 id="centralized-coordinator">Centralized coordinator</h4>
             <p>One service may know:</p>
             <div>
                 <pre><code class="language-text">Shard 1 → Nodes A/B/C
@@ -799,7 +858,7 @@ Shard 3 → Nodes G/H/I</code></pre>
             </div>
             <p>Clients or routers consult that service to locate data.</p>
             <p>This simplifies reasoning but creates a component whose availability and scalability must itself be protected.</p>
-            <h3 id="distributed-coordination">Distributed coordination</h3>
+            <h4 id="distributed-coordination">Distributed coordination</h4>
             <p>Metadata or decisions can instead be maintained through:</p>
             <div>
                 <pre><code class="language-text">consensus
@@ -809,7 +868,7 @@ peer-to-peer membership</code></pre>
             </div>
             <p>The advantage is eliminating one simple central authority.</p>
             <p>The cost is considerably more protocol complexity.</p>
-            <h2 id="client-routing-is-not-always-a-load-balancer">Client routing is not always a load balancer</h2>
+            <h3 id="client-routing-is-not-always-a-load-balancer">Client routing is not always a load balancer</h3>
             <p>A normal stateless web service often uses:</p>
             <div>
                 <pre><code class="language-text">client
@@ -827,7 +886,8 @@ any application server</code></pre>
             <p>Sending the request to a random shard would be useless.</p>
             <p>The system needs data-aware routing.</p>
             <p>MongoDB uses <code>mongos</code> as a query router. A query containing the shard key can often be routed to the relevant shard, while a query that cannot be targeted may require broader scatter/gather work across shards.</p>
-            <h2 id="horizontal-partitioning">Horizontal partitioning</h2>
+            <h2 id="partitioning-and-data-locality">Partitioning and data locality</h2>
+            <h3 id="horizontal-partitioning">Horizontal partitioning</h3>
             <p>Horizontal partitioning divides rows.</p>
             <p>Suppose:</p>
             <div>
@@ -857,7 +917,7 @@ Bob    → B
 Carlos → C</code></pre>
             </div>
             <p>Each shard stores the same table structure but only some rows.</p>
-            <h2 id="hash-partitioning">Hash partitioning</h2>
+            <h3 id="hash-partitioning">Hash partitioning</h3>
             <p>Instead of ranges:</p>
             <div>
                 <pre><code class="language-text">1–999
@@ -878,7 +938,7 @@ hash(user 103) → shard B</code></pre>
             <p>Hashing tends to distribute randomly distributed keys more evenly.</p>
             <p>The downside is that naturally adjacent keys may no longer be stored together.</p>
             <p>This can make range scans more expensive.</p>
-            <h2 id="range-partitioning">Range partitioning</h2>
+            <h3 id="range-partitioning">Range partitioning</h3>
             <p>Range partitioning keeps nearby key values together.</p>
             <p>For example:</p>
             <div>
@@ -948,7 +1008,7 @@ WHERE customer_id BETWEEN 11000 AND 11500;</code></pre>
             </table>
             <p>because one shard may contain the entire range.</p>
             <p>But a poor range key can create hotspots.</p>
-            <h2 id="the-hotspot-problem">The hotspot problem</h2>
+            <h3 id="the-hotspot-problem">The hotspot problem</h3>
             <p>Suppose an orders table uses:</p>
             <div>
                 <pre><code class="language-text">order_timestamp</code></pre>
@@ -976,7 +1036,7 @@ WHERE customer_id BETWEEN 11000 AND 11500;</code></pre>
                 <pre><code class="language-text">data distribution</code></pre>
             </div>
             <p>as well as logical relationships.</p>
-            <h2 id="spanner-automatic-range-splitting">Spanner: automatic range splitting</h2>
+            <h3 id="spanner-automatic-range-splitting">Spanner: automatic range splitting</h3>
             <p>Spanner stores rows ordered by primary key and automatically divides growing data into splits.</p>
             <p>A split contains a contiguous range of rows and can move independently between servers.</p>
             <p>Conceptually:</p>
@@ -993,7 +1053,7 @@ A--------G
             </div>
             <p>As data grows, those splits can be distributed across different servers.</p>
             <p>This is horizontal range partitioning managed automatically by the database.</p>
-            <h2 id="cockroachdb-ranges">CockroachDB: ranges</h2>
+            <h3 id="cockroachdb-ranges">CockroachDB: ranges</h3>
             <p>CockroachDB follows a similar broad idea.</p>
             <p>Its SQL data is encoded into a distributed ordered key space, which is divided into chunks called ranges.</p>
             <p>Ranges are independently replicated and distributed across nodes; each range runs a Raft consensus group.</p>
@@ -1006,7 +1066,7 @@ A--------G
                 <pre><code class="language-text">hundreds or thousands of ranges</code></pre>
             </div>
             <p>spread across many machines.</p>
-            <h2 id="vertical-partitioning">Vertical partitioning</h2>
+            <h3 id="vertical-partitioning">Vertical partitioning</h3>
             <p>Vertical partitioning divides columns or related data.</p>
             <p>Suppose:</p>
             <div>
@@ -1038,7 +1098,7 @@ profile_photo, biography</code></pre>
             <div>
                 <pre><code class="language-text">cross-partition reads for another.</code></pre>
             </div>
-            <h2 id="functional-partitioning">Functional partitioning</h2>
+            <h3 id="functional-partitioning">Functional partitioning</h3>
             <p>A system can also divide data by business domain:</p>
             <div>
                 <pre><code class="language-text">Customer service:
@@ -1063,7 +1123,7 @@ decrement inventory</code></pre>
             </div>
             <p>may cross several independently owned databases.</p>
             <p>That turns a previously local transaction into a distributed workflow.</p>
-            <h2 id="partitioning-summary">Partitioning summary</h2>
+            <h3 id="partitioning-summary">Partitioning summary</h3>
             <table>
                 <thead>
                     <tr>
@@ -1111,7 +1171,7 @@ decrement inventory</code></pre>
             <blockquote>
                 <p>Which data is read and written together?</p>
             </blockquote>
-            <h2 id="data-locality-matters-because-networks-are-expensive">Data locality matters because networks are expensive</h2>
+            <h3 id="data-locality-matters-because-networks-are-expensive">Data locality matters because networks are expensive</h3>
             <p>Suppose one transaction modifies:</p>
             <div>
                 <pre><code class="language-text">customer
@@ -1141,7 +1201,8 @@ transaction coordination
 latency</code></pre>
             </div>
             <p>Spanner's documentation explicitly notes that transactions involving data in one area of the key space are generally cheaper than transactions spread across many servers.</p>
-            <h2 id="replication-2">Replication</h2>
+            <h2 id="replica-consistency-and-quorum">Replica consistency and quorum</h2>
+            <h3 id="replication-2">Replication</h3>
             <p>Partitioning answers:</p>
             <div>
                 <pre><code class="language-text">where is this data?</code></pre>
@@ -1166,7 +1227,7 @@ Node 2: A2
 Node 3: A3</code></pre>
             </div>
             <p>Now a single machine failure does not necessarily destroy the shard.</p>
-            <h2 id="asynchronous-replication">Asynchronous replication</h2>
+            <h3 id="asynchronous-replication">Asynchronous replication</h3>
             <p>With asynchronous replication:</p>
             <div>
                 <pre><code class="language-text">Primary
@@ -1190,7 +1251,7 @@ stale replica reads
 acknowledged writes may be missing after certain failovers</code></pre>
             </div>
             <p>This is a good choice when some delay is acceptable.</p>
-            <h2 id="synchronous-replication">Synchronous replication</h2>
+            <h3 id="synchronous-replication">Synchronous replication</h3>
             <p>A synchronous write may require:</p>
             <div>
                 <pre><code class="language-text">write primary
@@ -1213,7 +1274,7 @@ persisted?
 applied?
 visible to queries?</code></pre>
             </div>
-            <h2 id="quorum-replication">Quorum replication</h2>
+            <h3 id="quorum-replication">Quorum replication</h3>
             <p>Suppose a shard has:</p>
             <div>
                 <pre><code class="language-text">N = 3 replicas</code></pre>
@@ -1244,7 +1305,7 @@ Quorum 2 = {B, C}
 intersection = B</code></pre>
             </div>
             <p>That overlap is useful for consensus and strongly coordinated replicated state.</p>
-            <h2 id="mongodb-concrete-example">MongoDB concrete example</h2>
+            <h3 id="mongodb-concrete-example">MongoDB concrete example</h3>
             <p>A MongoDB replica set has:</p>
             <div>
                 <pre><code class="language-text">one primary
@@ -1268,7 +1329,7 @@ Secondary</code></pre>
             <blockquote>
                 <p>The durability/availability semantics depend not only on the product, but on the requested acknowledgement policy.</p>
             </blockquote>
-            <h2 id="spanner-replication">Spanner replication</h2>
+            <h3 id="spanner-replication">Spanner replication</h3>
             <p>Spanner synchronously replicates database splits using Paxos-based replica groups.</p>
             <p>A split has several replicas, and voting replicas participate in the decision for writes.</p>
             <p>Conceptually:</p>
@@ -1294,7 +1355,7 @@ consensus:
 replicas agree on updates</code></pre>
             </div>
             <p>Those three concepts should be kept separate even though Spanner uses them together.</p>
-            <h2 id="replication-and-consensus-are-not-the-same-thing">Replication and consensus are not the same thing</h2>
+            <h3 id="replication-and-consensus-are-not-the-same-thing">Replication and consensus are not the same thing</h3>
             <p>Replication means:</p>
             <div>
                 <pre><code class="language-text">make copies</code></pre>
@@ -1314,7 +1375,8 @@ configuration</code></pre>
             </div>
             <p>The distinction matters.</p>
             <p>Copying bytes is easier than deciding which conflicting state is authoritative.</p>
-            <h2 id="distributed-concurrency-control">Distributed concurrency control</h2>
+            <h2 id="concurrency-and-cross-partition-transactions">Concurrency and cross-partition transactions</h2>
+            <h3 id="distributed-concurrency-control">Distributed concurrency control</h3>
             <p>Now suppose transactions execute concurrently on several nodes.</p>
             <p>Example:</p>
             <div>
@@ -1343,7 +1405,7 @@ optimistic concurrency control
 MVCC
 serializable validation</code></pre>
             </div>
-            <h2 id="distributed-two-phase-locking">Distributed Two-Phase Locking</h2>
+            <h3 id="distributed-two-phase-locking">Distributed Two-Phase Locking</h3>
             <p>With distributed locking, a transaction may acquire locks from several nodes.</p>
             <p>Example:</p>
             <div>
@@ -1374,7 +1436,7 @@ release both</code></pre>
 T2 on Node B waits for T1 on Node A</code></pre>
             </div>
             <p>No individual local lock manager necessarily sees the whole cycle unless deadlock information is coordinated.</p>
-            <h2 id="timestamp-ordering">Timestamp ordering</h2>
+            <h3 id="timestamp-ordering">Timestamp ordering</h3>
             <p>Another family of algorithms assigns transactions ordering metadata such as timestamps.</p>
             <p>Conceptually:</p>
             <div>
@@ -1394,7 +1456,7 @@ locking
 consensus</code></pre>
             </div>
             <p>rather than using a pure textbook timestamp-ordering algorithm.</p>
-            <h2 id="optimistic-concurrency-control">Optimistic Concurrency Control</h2>
+            <h3 id="optimistic-concurrency-control">Optimistic Concurrency Control</h3>
             <p>Optimistic concurrency control (OCC) assumes conflicts are relatively uncommon.</p>
             <p>Conceptually:</p>
             <div>
@@ -1421,7 +1483,7 @@ retry</code></pre>
 → repeated retries</code></pre>
             </div>
             <p>can become expensive.</p>
-            <h2 id="spanner-provides-a-concrete-modern-example">Spanner provides a concrete modern example</h2>
+            <h3 id="spanner-provides-a-concrete-modern-example">Spanner provides a concrete modern example</h3>
             <p>Current Spanner supports both pessimistic and optimistic concurrency modes.</p>
             <p>For its default serializable isolation, pessimistic concurrency is the default: transactions acquire relevant locks and Spanner uses wound-wait logic to resolve conflicting transactions.</p>
             <p>For repeatable-read isolation, optimistic concurrency is the default: reads use a snapshot and conflicts are validated later.</p>
@@ -1434,7 +1496,7 @@ retry</code></pre>
                 <pre><code class="language-text">one concurrency-control algorithm.</code></pre>
             </div>
             <p>The isolation level and transaction mode can change the mechanism.</p>
-            <h2 id="what-is-a-distributed-transaction">What is a distributed transaction?</h2>
+            <h3 id="what-is-a-distributed-transaction">What is a distributed transaction?</h3>
             <p>Suppose a transfer moves:</p>
             <div>
                 <pre><code class="language-text">€100</code></pre>
@@ -1474,7 +1536,7 @@ B not credited</code></pre>
 A not debited</code></pre>
             </div>
             <p>Several nodes must therefore agree on one transaction outcome.</p>
-            <h2 id="why-cross-shard-transactions-cost-more">Why cross-shard transactions cost more</h2>
+            <h3 id="why-cross-shard-transactions-cost-more">Why cross-shard transactions cost more</h3>
             <p>A single-shard transaction can often be decided by one replica group.</p>
             <p>A cross-shard transaction may require:</p>
             <div>
@@ -1488,7 +1550,7 @@ publish commit/abort</code></pre>
             <p>That adds both latency and failure cases.</p>
             <p>MongoDB explicitly notes that transactions touching multiple shards have greater performance cost than single-shard transactions.</p>
             <p>Spanner likewise documents additional coordination for transactions spanning multiple splits.</p>
-            <h2 id="two-phase-commit-2pc">Two-Phase Commit (2PC)</h2>
+            <h3 id="two-phase-commit-2pc">Two-Phase Commit (2PC)</h3>
             <p>Two-Phase Commit solves atomic commitment across participants.</p>
             <p>It is unrelated to Two-Phase Locking.</p>
             <p>Assume:</p>
@@ -1511,7 +1573,7 @@ Participant B</code></pre>
                 <pre><code class="language-text">A commits
 B aborts</code></pre>
             </div>
-            <h2 id="phase-1-prepare">Phase 1: prepare</h2>
+            <h3 id="phase-1-prepare">Phase 1: prepare</h3>
             <p>Coordinator asks:</p>
             <div>
                 <pre><code class="language-text">Can you commit transaction T?</code></pre>
@@ -1534,7 +1596,7 @@ changes durable enough to survive?</code></pre>
             <blockquote>
                 <p>If the coordinator later says COMMIT, I am capable of committing.</p>
             </blockquote>
-            <h2 id="phase-2-decision">Phase 2: decision</h2>
+            <h3 id="phase-2-decision">Phase 2: decision</h3>
             <p>If every required participant prepared:</p>
             <div>
                 <pre><code class="language-text">Coordinator → COMMIT</code></pre>
@@ -1561,7 +1623,7 @@ changes durable enough to survive?</code></pre>
                  COMMIT</code></pre>
             </div>
             <p>The protocol ensures one global atomic outcome.</p>
-            <h2 id="what-happens-if-the-coordinator-disappears">What happens if the coordinator disappears?</h2>
+            <h3 id="what-happens-if-the-coordinator-disappears">What happens if the coordinator disappears?</h3>
             <p>Suppose both participants have replied:</p>
             <div>
                 <pre><code class="language-text">PREPARED</code></pre>
@@ -1586,7 +1648,7 @@ changes durable enough to survive?</code></pre>
             <p>The classical 2PC problem is therefore that a prepared participant may have to retain transaction state/resources while the global decision is recovered.</p>
             <p>Modern systems mitigate this with durable logs, replicated coordinators, recovery mechanisms, consensus groups, and implementation-specific optimizations.</p>
             <p>But the basic uncertainty is the reason classical 2PC is described as a blocking commit protocol.</p>
-            <h2 id="postgresql-exposes-prepared-transactions-directly">PostgreSQL exposes prepared transactions directly</h2>
+            <h3 id="postgresql-exposes-prepared-transactions-directly">PostgreSQL exposes prepared transactions directly</h3>
             <p>PostgreSQL supports:</p>
             <div>
                 <pre><code class="language-sql">PREPARE TRANSACTION 'transfer-123';</code></pre>
@@ -1601,7 +1663,7 @@ changes durable enough to survive?</code></pre>
             </div>
             <p>Once prepared, the transaction state is durably retained so an external transaction manager can later finish the distributed decision. PostgreSQL explicitly documents this interface for external two-phase transaction managers.</p>
             <p>This makes textbook 2PC unusually visible.</p>
-            <h2 id="spanner-2pc-plus-consensus">Spanner: 2PC plus consensus</h2>
+            <h3 id="spanner-2pc-plus-consensus">Spanner: 2PC plus consensus</h3>
             <p>Spanner provides an excellent example of why 2PC and consensus solve different problems.</p>
             <p>Within each split:</p>
             <div>
@@ -1631,7 +1693,7 @@ replicate/agree inside a shard
 commit atomically across shards</code></pre>
             </div>
             <p>They are complementary.</p>
-            <h2 id="2pc-is-not-consensus">2PC is not consensus</h2>
+            <h3 id="2pc-is-not-consensus">2PC is not consensus</h3>
             <p>This distinction is fundamental.</p>
             <p>Consensus answers something like:</p>
             <blockquote>
@@ -1653,7 +1715,7 @@ commit atomically across shards</code></pre>
                 <pre><code class="language-text">"2PC is a consensus protocol"</code></pre>
             </div>
             <p>without much more qualification.</p>
-            <h2 id="three-phase-commit">Three-Phase Commit</h2>
+            <h3 id="three-phase-commit">Three-Phase Commit</h3>
             <p>Three-Phase Commit adds another protocol stage to reduce the blocking conditions of basic 2PC under stronger timing/failure assumptions.</p>
             <p>Textbooks typically present:</p>
             <div>
@@ -1672,7 +1734,8 @@ transaction recovery</code></pre>
             </div>
             <p>than deploy classic textbook 3PC.</p>
             <p>So 3PC is important academically, but it should not be presented as the standard modern replacement for 2PC.</p>
-            <h2 id="consensus-the-problem-it-solves">Consensus: the problem it solves</h2>
+            <h2 id="consensus-and-membership">Consensus and membership</h2>
+            <h3 id="consensus-the-problem-it-solves">Consensus: the problem it solves</h3>
             <p>Suppose three replicas contain the same shard:</p>
             <div>
                 <pre><code class="language-text">A
@@ -1698,7 +1761,7 @@ leadership changes</code></pre>
 Raft</code></pre>
             </div>
             <p>solve this class of agreement problem.</p>
-            <h2 id="raft-mental-model">Raft mental model</h2>
+            <h3 id="raft-mental-model">Raft mental model</h3>
             <p>Raft typically organizes nodes into:</p>
             <div>
                 <pre><code class="language-text">leader
@@ -1723,7 +1786,7 @@ Follower B   Follower C</code></pre>
             </div>
             <p>B and C can potentially elect a new leader because together they form a majority.</p>
             <p>A alone cannot safely create an independent committed log.</p>
-            <h2 id="etcd-a-concrete-raft-system">etcd: a concrete Raft system</h2>
+            <h3 id="etcd-a-concrete-raft-system">etcd: a concrete Raft system</h3>
             <p>etcd is a distributed key-value store built around Raft.</p>
             <p>Its API responses expose both:</p>
             <div>
@@ -1733,7 +1796,7 @@ raft_term</code></pre>
             <p>which let clients identify the logical store revision and the Raft election term associated with a response.</p>
             <p>Loss of quorum prevents the cluster from making ordinary new consensus progress; etcd's operational metrics explicitly identify loss of quorum as one cause of prolonged proposal failures.</p>
             <p>This is a concrete example of consensus affecting availability.</p>
-            <h2 id="replica-learners">Replica learners</h2>
+            <h3 id="replica-learners">Replica learners</h3>
             <p>Adding a new voting replica immediately can be dangerous if the new node is far behind.</p>
             <p>etcd therefore supports a learner state.</p>
             <p>A learner:</p>
@@ -1747,7 +1810,7 @@ does not count toward quorum</code></pre>
             <blockquote>
                 <p>Membership changes themselves can reduce fault tolerance if performed carelessly.</p>
             </blockquote>
-            <h2 id="consensus-does-not-make-networks-free">Consensus does not make networks free</h2>
+            <h3 id="consensus-does-not-make-networks-free">Consensus does not make networks free</h3>
             <p>Suppose a three-region consensus group is:</p>
             <div>
                 <pre><code class="language-text">Frankfurt
@@ -1764,7 +1827,8 @@ Singapore</code></pre>
 network congestion
 disk latency</code></pre>
             </div>
-            <h2 id="failure-types">Failure types</h2>
+            <h2 id="failure-detection-recovery-and-backups">Failure detection, recovery, and backups</h2>
+            <h3 id="failure-types">Failure types</h3>
             <p>Distributed systems face more failure modes than a local database.</p>
             <table>
                 <thead>
@@ -1824,7 +1888,7 @@ disk latency</code></pre>
             <div>
                 <pre><code class="language-text">network partitioned.</code></pre>
             </div>
-            <h2 id="failure-detection-uses-suspicion-not-omniscience">Failure detection uses suspicion, not omniscience</h2>
+            <h3 id="failure-detection-uses-suspicion-not-omniscience">Failure detection uses suspicion, not omniscience</h3>
             <p>Distributed systems often use:</p>
             <div>
                 <pre><code class="language-text">heartbeats
@@ -1847,7 +1911,7 @@ failure detectors</code></pre>
             </div>
             <p>and both begin accepting conflicting writes, the system can produce split brain.</p>
             <p>Consensus/quorum mechanisms are designed in part to prevent isolated minorities from making authoritative decisions.</p>
-            <h2 id="logging-and-checkpointing">Logging and checkpointing</h2>
+            <h3 id="logging-and-checkpointing">Logging and checkpointing</h3>
             <p>Durable distributed systems still rely on familiar local recovery techniques.</p>
             <p>A write-ahead log records changes before the corresponding data pages need to be fully written.</p>
             <p>Conceptually:</p>
@@ -1863,7 +1927,7 @@ data pages later</code></pre>
             <p>After a crash, the database can use the log to reconstruct committed state.</p>
             <p>A checkpoint records that earlier portions of the log have already been reflected sufficiently in database state, reducing how much recovery work must be replayed.</p>
             <p>In distributed databases, these local recovery mechanisms are combined with replication and consensus.</p>
-            <h2 id="replication-is-not-backup">Replication is not backup</h2>
+            <h3 id="replication-is-not-backup">Replication is not backup</h3>
             <p>Suppose a user executes:</p>
             <div>
                 <pre><code class="language-sql">DELETE FROM customers;</code></pre>
@@ -1883,7 +1947,8 @@ deleted</code></pre>
             <p>Replication protects against some infrastructure failures.</p>
             <p>It does not preserve historical states automatically.</p>
             <p>Backups, snapshots, retained logs, and point-in-time recovery solve different problems.</p>
-            <h2 id="cap-enters-because-communication-can-fail">CAP enters because communication can fail</h2>
+            <h2 id="consistency-trade-offs-during-network-failures">Consistency trade-offs during network failures</h2>
+            <h3 id="cap-enters-because-communication-can-fail">CAP enters because communication can fail</h3>
             <p>Suppose two replicas lose connectivity:</p>
             <div>
                 <pre><code class="language-text">Node A       X       Node B</code></pre>
@@ -1910,7 +1975,7 @@ continue serving both sides
   linearizable global history</code></pre>
             </div>
             <p>CAP is therefore about behavior during network partitions, not a permanent "pick two" product taxonomy.</p>
-            <h2 id="quorum-and-cap">Quorum and CAP</h2>
+            <h3 id="quorum-and-cap">Quorum and CAP</h3>
             <p>Return to three replicas:</p>
             <div>
                 <pre><code class="language-text">A
@@ -1935,7 +2000,7 @@ C</code></pre>
             <p>This preserves the quorum protocol by sacrificing availability on the minority side.</p>
             <p>Quorum does not defeat CAP.</p>
             <p>It implements a particular response to the partition.</p>
-            <h2 id="pacelc-adds-the-healthy-network-question">PACELC adds the healthy-network question</h2>
+            <h3 id="pacelc-adds-the-healthy-network-question">PACELC adds the healthy-network question</h3>
             <p>CAP asks what happens:</p>
             <div>
                 <pre><code class="language-text">if the network partitions.</code></pre>
@@ -1959,7 +2024,8 @@ Else:
             <p>before completing.</p>
             <p>Even with no failure, that remote coordination increases latency.</p>
             <p>Distributed-database design therefore involves trade-offs even during normal operation.</p>
-            <h2 id="distributed-query-processing">Distributed query processing</h2>
+            <h2 id="query-execution-across-nodes">Query execution across nodes</h2>
+            <h3 id="distributed-query-processing">Distributed query processing</h3>
             <p>Distribution affects reads too.</p>
             <p>Suppose:</p>
             <div>
@@ -2062,7 +2128,7 @@ FROM users;</code></pre>
 combine results</code></pre>
             </div>
             <p>This is a distributed query plan.</p>
-            <h2 id="scatter-gather">Scatter/gather</h2>
+            <h3 id="scatter-gather">Scatter/gather</h3>
             <p>A scatter/gather query sends work to many partitions and collects the answers.</p>
             <p>Example:</p>
             <div>
@@ -2116,7 +2182,7 @@ Shard C →   500,000</code></pre>
             </table>
             <p>This parallelism can be powerful.</p>
             <p>But total query latency often depends heavily on the slowest participating shard.</p>
-            <h2 id="distributed-joins">Distributed joins</h2>
+            <h3 id="distributed-joins">Distributed joins</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">CUSTOMERS</code></pre>
@@ -2200,7 +2266,7 @@ JOIN orders o
 shuffle/repartition join
 co-located join</code></pre>
             </div>
-            <h2 id="broadcast-join">Broadcast join</h2>
+            <h3 id="broadcast-join">Broadcast join</h3>
             <p>Suppose:</p>
             <div>
                 <pre><code class="language-text">countries table = 200 rows
@@ -2216,7 +2282,7 @@ orders table = 10 billion rows</code></pre>
             </div>
             <p>Each node joins locally.</p>
             <p>This is a broadcast join.</p>
-            <h2 id="shuffle-join">Shuffle join</h2>
+            <h3 id="shuffle-join">Shuffle join</h3>
             <p>If both join inputs are large, rows may need to be redistributed by the join key.</p>
             <div>
                 <pre><code class="language-text">Customers partitioned by region
@@ -2232,7 +2298,7 @@ Orders partitioned by order_id</code></pre>
                 <pre><code class="language-text">shuffle</code></pre>
             </div>
             <p>Large distributed joins can therefore be network-intensive.</p>
-            <h2 id="push-computation-to-the-data">Push computation to the data</h2>
+            <h3 id="push-computation-to-the-data">Push computation to the data</h3>
             <p>A central principle in distributed query processing is:</p>
             <blockquote>
                 <p>Move as little data as possible.</p>
@@ -2250,7 +2316,7 @@ projections</code></pre>
             </div>
             <p>near where the data resides.</p>
             <p>Google Spanner's query engine, for example, can send subplans to remote servers and combine their results at a root server; it includes distributed union/apply and broadcast-hash-join operators.</p>
-            <h2 id="mongodb-sharding-makes-targeted-queries-important">MongoDB sharding makes targeted queries important</h2>
+            <h3 id="mongodb-sharding-makes-targeted-queries-important">MongoDB sharding makes targeted queries important</h3>
             <p>MongoDB's <code>mongos</code> router can target a subset of shards when the query contains sufficient shard-key information.</p>
             <p>Without suitable shard-key information, the query may need to be sent more broadly across the cluster.</p>
             <p>This demonstrates why choosing the shard key affects not only:</p>
@@ -2263,7 +2329,8 @@ projections</code></pre>
 network traffic
 latency.</code></pre>
             </div>
-            <h2 id="homogeneous-distributed-databases">Homogeneous distributed databases</h2>
+            <h2 id="how-real-engines-differ">How real engines differ</h2>
+            <h3 id="homogeneous-distributed-databases">Homogeneous distributed databases</h3>
             <p>A homogeneous distributed database generally uses the same DBMS technology and compatible internal data model across the participating cluster.</p>
             <p>Examples include a normal cluster of:</p>
             <div>
@@ -2275,7 +2342,7 @@ CockroachDB nodes</code></pre>
             </div>
             <p>This makes internal protocols and schemas easier to coordinate.</p>
             <p>Homogeneity does not mean every machine must have identical hardware or workload.</p>
-            <h2 id="heterogeneous-distributed-data-systems">Heterogeneous distributed data systems</h2>
+            <h3 id="heterogeneous-distributed-data-systems">Heterogeneous distributed data systems</h3>
             <p>A heterogeneous architecture may combine:</p>
             <div>
                 <pre><code class="language-text">PostgreSQL
@@ -2295,7 +2362,7 @@ different query languages</code></pre>
             </div>
             <p>This is often better described as data integration/federation than as one tightly integrated distributed DBMS.</p>
             <p>The distinction matters because one ACID transaction may not span those systems automatically.</p>
-            <h2 id="relational-nosql-and-distributed-sql">Relational, NoSQL, and distributed SQL</h2>
+            <h3 id="relational-nosql-and-distributed-sql">Relational, NoSQL, and distributed SQL</h3>
             <p>The source divides systems into:</p>
             <div>
                 <pre><code class="language-text">relational
@@ -2335,7 +2402,7 @@ NewSQL</code></pre>
                 </tbody>
             </table>
             <p>"NewSQL" is still encountered, but distributed SQL is often the clearer modern term.</p>
-            <h2 id="spanner-as-distributed-sql">Spanner as distributed SQL</h2>
+            <h3 id="spanner-as-distributed-sql">Spanner as distributed SQL</h3>
             <p>Google describes Spanner as a distributed database providing transactional consistency, synchronous replication, relational schema, SQL, and ACID transactions.</p>
             <p>Its design combines:</p>
             <div>
@@ -2346,7 +2413,7 @@ SQL query processing
 strong transactional guarantees</code></pre>
             </div>
             <p>It is a useful example because many theoretical topics appear in one production system.</p>
-            <h2 id="cockroachdb-as-distributed-sql">CockroachDB as distributed SQL</h2>
+            <h3 id="cockroachdb-as-distributed-sql">CockroachDB as distributed SQL</h3>
             <p>CockroachDB similarly exposes a SQL layer over a distributed transactional key-value layer.</p>
             <p>Its data is divided into ranges, ranges are replicated across nodes, and each range uses Raft coordination.</p>
             <p>Its SQL transaction layer then coordinates operations that can span multiple ranges.</p>
@@ -2360,7 +2427,7 @@ partitioned key-value ranges
   |
 Raft-replicated copies</code></pre>
             </div>
-            <h2 id="cassandra-as-a-different-design-point">Cassandra as a different design point</h2>
+            <h3 id="cassandra-as-a-different-design-point">Cassandra as a different design point</h3>
             <p>Cassandra is much more partition-key oriented.</p>
             <p>A partitioner maps partition keys into the cluster token space. Replication determines which nodes store copies, and clients can select consistency levels appropriate to operations.</p>
             <p>For specialized compare-and-set-style operations, Cassandra also implements Lightweight Transactions using Paxos variants. Current Cassandra configuration even exposes different Paxos implementations for LWT behavior.</p>
@@ -2369,7 +2436,7 @@ Raft-replicated copies</code></pre>
                 <pre><code class="language-text">"Cassandra is eventually consistent"</code></pre>
             </div>
             <p>is far too vague to describe every operation it supports.</p>
-            <h2 id="mongodb-combines-replica-sets-and-sharding">MongoDB combines replica sets and sharding</h2>
+            <h3 id="mongodb-combines-replica-sets-and-sharding">MongoDB combines replica sets and sharding</h3>
             <p>A MongoDB distributed deployment may combine:</p>
             <div>
                 <pre><code class="language-text">mongos routers
@@ -2389,7 +2456,7 @@ add/adjust replicas
 → redundancy/read options</code></pre>
             </div>
             <p>MongoDB also supports multi-document transactions that span sharded clusters, though cross-shard transactions have additional performance cost.</p>
-            <h2 id="technology-summary">Technology summary</h2>
+            <h3 id="technology-summary">Technology summary</h3>
             <table>
                 <thead>
                     <tr>
@@ -2439,7 +2506,8 @@ add/adjust replicas
                 </tbody>
             </table>
             <p>Spanner's current documentation describes splits, Paxos-based synchronous replication, and multi-split 2PC. MongoDB documents replica-set-backed shards and <code>mongos</code> routing. CockroachDB documents replicated ranges coordinated through Raft.</p>
-            <h2 id="a-complete-example-placing-an-order">A complete example: placing an order</h2>
+            <h2 id="trace-a-complete-distributed-operation">Trace a complete distributed operation</h2>
+            <h3 id="a-complete-example-placing-an-order">A complete example: placing an order</h3>
             <p>Consider an online shop with:</p>
             <div>
                 <pre><code class="language-text">Customer
@@ -2455,7 +2523,7 @@ Payment</code></pre>
 check inventory
 decrement stock
 insert order
-record payment
+record locally accepted payment state (not a remote charge)
 
 COMMIT</code></pre>
             </div>
@@ -2482,7 +2550,7 @@ failure recovery</code></pre>
             </div>
             <p>The business operation did not become logically more complicated.</p>
             <p>The architecture made its implementation more complicated.</p>
-            <h2 id="why-distribution-is-not-automatically-faster">Why distribution is not automatically faster</h2>
+            <h3 id="why-distribution-is-not-automatically-faster">Why distribution is not automatically faster</h3>
             <p>Suppose a query previously took:</p>
             <div>
                 <pre><code class="language-text">10 ms</code></pre>
@@ -2505,7 +2573,7 @@ locality
 independent scaling</code></pre>
             </div>
             <p>It can degrade performance when every operation becomes a cross-node coordination problem.</p>
-            <h2 id="the-single-node-fast-path">The "single-node fast path"</h2>
+            <h3 id="the-single-node-fast-path">The "single-node fast path"</h3>
             <p>Many distributed databases therefore optimize for operations contained within one partition/range.</p>
             <p>Spanner explicitly avoids distributed 2PC when a transaction is contained in one split; multi-split transactions pay extra coordination cost.</p>
             <p>This illustrates an important architecture rule:</p>
@@ -2513,7 +2581,7 @@ independent scaling</code></pre>
                 <p>Distributed capability does not mean every transaction should be distributed.</p>
             </blockquote>
             <p>Data modeling should try to keep frequent transactional work local when practical.</p>
-            <h2 id="secondary-indexes-can-unexpectedly-make-transactions-distributed">Secondary indexes can unexpectedly make transactions distributed</h2>
+            <h3 id="secondary-indexes-can-unexpectedly-make-transactions-distributed">Secondary indexes can unexpectedly make transactions distributed</h3>
             <p>Suppose one row lives in:</p>
             <div>
                 <pre><code class="language-text">Range A</code></pre>
@@ -2534,7 +2602,7 @@ index row</code></pre>
             <blockquote>
                 <p>Distribution can be hidden beneath ordinary SQL.</p>
             </blockquote>
-            <h2 id="security-gets-harder-too">Security gets harder too</h2>
+            <h3 id="security-gets-harder-too">Security gets harder too</h3>
             <p>A distributed database may communicate across:</p>
             <div>
                 <pre><code class="language-text">hosts
@@ -2555,7 +2623,7 @@ audit logs</code></pre>
             </div>
             <p>It may also require controlling where particular data is legally allowed to reside.</p>
             <p>Data placement can therefore become a compliance property, not only a performance decision.</p>
-            <h2 id="observability-must-follow-one-request-across-nodes">Observability must follow one request across nodes</h2>
+            <h3 id="observability-must-follow-one-request-across-nodes">Observability must follow one request across nodes</h3>
             <p>Suppose one SQL query involves:</p>
             <div>
                 <pre><code class="language-text">router
@@ -2592,7 +2660,7 @@ leader elections
 query fan-out</code></pre>
             </div>
             <p>Observability becomes part of database correctness engineering because partial failures can otherwise be extremely difficult to reconstruct.</p>
-            <h2 id="common-design-mistakes">Common design mistakes</h2>
+            <h3 id="common-design-mistakes">Common design mistakes</h3>
             <table>
                 <thead>
                     <tr>
@@ -2643,7 +2711,7 @@ query fan-out</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h2 id="the-unknown-outcome-problem">The unknown-outcome problem</h2>
+            <h3 id="the-unknown-outcome-problem">The unknown-outcome problem</h3>
             <p>Suppose the client sends:</p>
             <div>
                 <pre><code class="language-text">INSERT order 104</code></pre>
@@ -2675,7 +2743,7 @@ status queries
 safe retries</code></pre>
             </div>
             <p>A timeout is not equivalent to rollback.</p>
-            <h2 id="idempotency">Idempotency</h2>
+            <h3 id="idempotency">Idempotency</h3>
             <p>Suppose a payment request contains:</p>
             <div>
                 <pre><code class="language-text">idempotency_key = order-104-payment</code></pre>
@@ -2687,7 +2755,8 @@ safe retries</code></pre>
             <p>instead of charging twice.</p>
             <p>Idempotency is not a database consensus algorithm.</p>
             <p>It is an application technique for making retries safer in systems where responses can disappear after work has completed.</p>
-            <h2 id="choosing-architecture-from-requirements">Choosing architecture from requirements</h2>
+            <h2 id="choose-an-architecture-from-requirements">Choose an architecture from requirements</h2>
+            <h3 id="choosing-architecture-from-requirements">Choosing architecture from requirements</h3>
             <p>Start with requirements rather than technologies.</p>
             <p>Ask:</p>
             <div>
@@ -2724,7 +2793,7 @@ isolation
 transaction model
 database product</code></pre>
             </div>
-            <h2 id="decision-table">Decision table</h2>
+            <h3 id="decision-table">Decision table</h3>
             <table>
                 <thead>
                     <tr>
@@ -2783,7 +2852,8 @@ database product</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h2 id="the-full-mental-model">The full mental model</h2>
+            <h2 id="putting-the-layers-together">Putting the layers together</h2>
+            <h3 id="the-full-mental-model">The full mental model</h3>
             <p>The easiest way to understand a distributed database is as several layers.</p>
             <div>
                 <pre><code class="language-text">APPLICATION
@@ -2812,91 +2882,7 @@ STORAGE + WAL
 "how is committed state persisted?"</code></pre>
             </div>
             <p>A single request may pass through all of these.</p>
-            <h2 id="final-technology-oriented-mental-model">Final technology-oriented mental model</h2>
-            <p>Think of several real systems:</p>
-            <div>
-                <pre><code class="language-text">MongoDB
-
-mongos
-   ↓
-shard selection
-   ↓
-replica set
-   ↓
-primary + secondaries</code></pre>
-            </div>
-            <div>
-                <pre><code class="language-text">Cassandra
-
-partition key
-   ↓
-token range
-   ↓
-replicas
-   ↓
-chosen consistency level</code></pre>
-            </div>
-            <div>
-                <pre><code class="language-text">Spanner
-
-SQL
-   ↓
-key range / split
-   ↓
-split leader
-   ↓
-Paxos replicas
-   ↓
-2PC if several splits participate</code></pre>
-            </div>
-            <div>
-                <pre><code class="language-text">CockroachDB
-
-SQL
-   ↓
-distributed KV keys
-   ↓
-ranges
-   ↓
-Raft replicas
-   ↓
-distributed transaction layer</code></pre>
-            </div>
-            <div>
-                <pre><code class="language-text">etcd
-
-KV request
-   ↓
-Raft leader
-   ↓
-replicated log quorum</code></pre>
-            </div>
-            <p>These systems differ substantially, but the same questions keep appearing:</p>
-            <div>
-                <pre><code class="language-text">Where is the data?
-
-How is it replicated?
-
-How does a request reach it?
-
-How is one update ordered?
-
-How are concurrent updates controlled?
-
-How does a cross-partition transaction commit?
-
-What happens when communication fails?</code></pre>
-            </div>
-            <p>If you can answer those questions for a product, you understand much more than simply knowing whether it is called:</p>
-            <div>
-                <pre><code class="language-text">SQL
-NoSQL
-NewSQL
-CP
-AP
-shared-nothing</code></pre>
-            </div>
-            <h2 id="final-summary">Final summary</h2>
+            <h2 id="summary-the-questions-to-carry-forward">Summary: the questions to carry forward</h2>
             <p>A distributed database is not one algorithm.</p>
             <p>It combines several independent mechanisms:</p>
             <table>
