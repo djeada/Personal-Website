@@ -223,7 +223,7 @@ async function answerSentence(page, { right = true } = {}) {
 
 test("sentence mode switches settings and accepts typed articles with readable feedback", async ({ page }) => {
   await open(page, {});
-  await page.locator('input[name="mode"][value="sentences"]').check();
+  await page.locator("#modeControl .ddd-mode-name").filter({ hasText: /^Sentences$/ }).click();
   await expect(page.locator("#nounSettings")).toBeHidden();
   await expect(page.locator("#sentenceSettings")).toBeVisible();
   await expect(page.locator("#startSummary")).toContainText("48 sentences available");
@@ -296,10 +296,10 @@ test("case and article filters persist, a round completes and noun progress stay
   await expect(page.locator("#caseControl")).toHaveValue("genitive");
   await expect(page.locator('[data-best="sentences"]')).toHaveText(`Best ${score}`);
   await expect(page.locator("#sentenceProgressSummary")).toContainText("9 answers");
-  await page.locator('input[name="articleType"][value="definite"]').check();
+  await page.locator("#articleControl").getByText("Definite", { exact: true }).click();
   await expect(page.locator('[data-best="sentences"]')).toHaveText("No score yet");
   await expect(page.locator("#startSummary")).toContainText("12 sentences available");
-  await page.locator('input[name="mode"][value="classic"]').check();
+  await page.locator("#modeControl .ddd-mode-name").filter({ hasText: /^Classic$/ }).click();
   await expect(page.locator("#nounSettings")).toBeVisible();
   await expect(page.locator("#sentenceSettings")).toBeHidden();
 });
