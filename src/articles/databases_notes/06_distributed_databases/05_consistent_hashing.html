@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing",
             "description": "Imagine you're organizing books in a vast library with shelves arranged in a circle.",
-            "dateModified": "2026-10-03",
+            "dateModified": "2026-10-30",
             "image": "https://adamdjellouli.com/resources/article-images/41d53327-71e1-4014-9a5c-531ee7a5548a-c31faf8dfa.webp",
             "inLanguage": "en"
         }
@@ -60,7 +60,7 @@
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Imagine you're organizing books in a vast library with shelves arranged in a circle." property="og:description" />
     <meta content="https://adamdjellouli.com/resources/article-images/41d53327-71e1-4014-9a5c-531ee7a5548a-c31faf8dfa.webp" property="og:image" />
-    <meta content="2026-10-03" property="article:modified_time" />
+    <meta content="2026-10-30" property="article:modified_time" />
     <meta content="summary_large_image" name="twitter:card" />
 </head>
 
@@ -156,18 +156,9 @@ messageStyle: "none"
                             <li><a href="#benefits-of-virtual-nodes">Benefits of Virtual Nodes</a></li>
                         </ol>
                     </li>
-                    <li><a href="#implementing-consistent-hashing">Implementing Consistent Hashing</a>
-                        <ol>
-                            <li><a href="#step-1-hash-function-selection">Step 1: Hash Function Selection</a></li>
-                            <li><a href="#step-2-mapping-nodes-to-the-ring">Step 2: Mapping Nodes to the Ring</a></li>
-                            <li><a href="#step-3-mapping-keys-to-nodes">Step 3: Mapping Keys to Nodes</a></li>
-                            <li><a href="#sample-code-snippet-pseudocode">Sample Code Snippet (Pseudocode)</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#implement-a-deterministic-lookup">Implement a deterministic lookup</a></li>
                     <li><a href="#real-world-uses-challenges">Real‑World Uses &amp; Challenges</a></li>
-                    <li><a href="#advantages-of-consistent-hashing">Advantages of Consistent Hashing</a></li>
-                    <li><a href="#challenges-and-considerations">Challenges and Considerations</a></li>
-                    <li><a href="#best-practices">Best Practices</a></li>
+                    <li><a href="#what-consistent-hashing-solves-and-what-it-does-not">What consistent hashing solves—and what it does not</a></li>
                     <li><a href="#review-questions">Review questions</a></li>
                 </ol>
             </div>
@@ -391,7 +382,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 03, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 30, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -542,61 +533,33 @@ messageStyle: "none"
                 <li><strong>Easier scaling</strong> is possible because adding or removing a physical node only requires redistributing its associated virtual nodes, minimizing disruption.</li>
                 <li>Supporting heterogeneous nodes allows nodes with greater capacity to have more virtual nodes, enabling them to handle a proportionally larger share of data and requests.</li>
             </ul>
-            <h2 id="implementing-consistent-hashing">Implementing Consistent Hashing</h2>
-            <p>Let's walk through how you might implement consistent hashing in practice.</p>
-            <h3 id="step-1-hash-function-selection">Step 1: Hash Function Selection</h3>
-            <p>Choose a stable hash with good distribution. The SHA-1 example below is for placement, not cryptographic security. All participants must agree on the hash, key encoding, and ring membership.</p>
-            <h3 id="step-2-mapping-nodes-to-the-ring">Step 2: Mapping Nodes to the Ring</h3>
-            <p>Assign each node (or virtual node) a hash value to determine its position on the ring.</p>
-            <h3 id="step-3-mapping-keys-to-nodes">Step 3: Mapping Keys to Nodes</h3>
-            <p>For each data key:</p>
-            <ol>
-                <li>Compute its hash value.</li>
-                <li>Locate the first node on the ring whose hash value is greater than or equal to the key's hash.</li>
-                <li>If no such node exists (the key's hash is higher than any node's hash), wrap around to the first node on the ring.</li>
-            </ol>
-            <h3 id="sample-code-snippet-pseudocode">Sample Code Snippet (Pseudocode)</h3>
+            <h2 id="implement-a-deterministic-lookup">Implement a deterministic lookup</h2>
+            <p>A practical ring needs a stable hash function, a stable key encoding, virtual-node membership, and an efficient successor lookup. This runnable Python example uses SHA-1 <strong>only for placement</strong>, not to authenticate data, and binary search to avoid walking all 300 virtual nodes for every key.</p>
             <div>
-                <pre><code class="language-python"># Import a reliable hash function
-import hashlib
+                <pre><code class="language-python">from bisect import bisect_left
+from hashlib import sha1
 
-# Function to compute hash value
-def compute_hash(key):
-    return int(hashlib.sha1(key.encode()).hexdigest(), 16)
+def position(value: str) -&gt; int:
+    return int.from_bytes(sha1(value.encode("utf-8")).digest(), "big")
 
-# Nodes in the system
-nodes = ['NodeA', 'NodeB', 'NodeC']
+def build_ring(nodes: list[str], replicas: int = 100):
+    if not nodes or replicas &lt; 1 or len(nodes) != len(set(nodes)):
+        raise ValueError("provide distinct nodes and at least one virtual node")
+    entries = sorted(
+        (position(f"{node}:{i}"), node)
+        for node in nodes for i in range(replicas)
+    )
+    positions = [hash_value for hash_value, _ in entries]
+    return entries, positions
 
-# Create the ring with virtual nodes
-ring = {}
-virtual_nodes = 100  # Number of virtual nodes per physical node
+def owner(key: str, entries, positions) -&gt; str:
+    index = bisect_left(positions, position(key)) % len(entries)
+    return entries[index][1]
 
-for node in nodes:
-    for i in range(virtual_nodes):
-        vnode_key = f"{node}:{i}"
-        hash_val = compute_hash(vnode_key)
-        ring[hash_val] = node
-
-# Sort the hash ring
-sorted_hashes = sorted(ring.keys())
-
-# Function to find the node for a given key
-def get_node(key):
-    hash_val = compute_hash(key)
-    for node_hash in sorted_hashes:
-        if hash_val &lt;= node_hash:
-            return ring[node_hash]
-    return ring[sorted_hashes[0]]  # Wrap around
-
-# Example usage
-key = 'my_data_key'
-assigned_node = get_node(key)
-print(f"Key '{key}' is assigned to {assigned_node}")</code></pre>
+ring, positions = build_ring(["NodeA", "NodeB", "NodeC"])
+print(owner("my_data_key", ring, positions))</code></pre>
             </div>
-            <ul>
-                <li>The key <code>'my_data_key'</code> is assigned to a node based on its hash value.</li>
-                <li>If you add or remove nodes, only the keys that map to the affected virtual nodes need to change assignments.</li>
-            </ul>
+            <p>Building the ring sorts <code>N × replicas</code> virtual nodes; lookup uses binary search over the sorted positions. The output is deterministic for a given membership list, hash, and encoding, but the assigned node is not important to memorize. Real implementations must also resolve the astronomically unlikely hash collision and coordinate <strong>membership changes</strong>: different clients using different ring versions can disagree about ownership. The ring does not provide replication or durable rebalancing by itself.</p>
             <h2 id="real-world-uses-challenges">Real‑World Uses &amp; Challenges</h2>
             <table>
                 <thead>
@@ -630,26 +593,39 @@ print(f"Key '{key}' is assigned to {assigned_node}")</code></pre>
                 </tbody>
             </table>
             <p>Implementation challenges include choosing a non‑biased hash function, deciding how many VNodes per server, and coordinating ring state changes across clients.</p>
-            <h2 id="advantages-of-consistent-hashing">Advantages of Consistent Hashing</h2>
-            <ul>
-                <li>The scalability of consistent hashing allows nodes to be added or removed with minimal impact on existing data placement.</li>
-                <li><strong>Efficiency</strong> is enhanced by reducing cache misses and lowering database load in distributed caching systems.</li>
-                <li>Hashing defines ownership; replication, failure detection, and routing are needed to preserve data and service after a node failure.</li>
-                <li>Virtual nodes improve expected key distribution, but a single hot key can still overload its owner.</li>
-            </ul>
-            <h2 id="challenges-and-considerations">Challenges and Considerations</h2>
-            <ul>
-                <li><strong>Hotspots</strong> can arise if the hash function or data keys do not distribute data uniformly, leading to overloaded nodes.</li>
-                <li>Choosing the right hash function is critical to ensure a good spread of hash values across nodes.</li>
-                <li>The complexity of implementing virtual nodes and managing the hash ring can increase system overhead.</li>
-            </ul>
-            <h2 id="best-practices">Best Practices</h2>
-            <ul>
-                <li>Incorporating virtual nodes improves load distribution and minimizes hotspots.</li>
-                <li>Regularly monitor system performance to identify and address uneven load or emerging bottlenecks.</li>
-                <li>Selecting a consistent hash function that avoids clustering of values ensures better distribution of data.</li>
-                <li>Designing for scaling from the outset helps the system accommodate growth and handle additional nodes smoothly.</li>
-            </ul>
+            <h2 id="what-consistent-hashing-solves-and-what-it-does-not">What consistent hashing solves—and what it does not</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mechanism</th>
+                        <th>Benefit</th>
+                        <th>Remaining responsibility</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ring lookup</td>
+                        <td>Deterministic mapping from key to a current owner</td>
+                        <td>Agree on hash encoding and membership version</td>
+                    </tr>
+                    <tr>
+                        <td>Virtual nodes</td>
+                        <td>Better expected balance and smoother movement when capacity changes</td>
+                        <td>One exceptionally hot key can still dominate its owner</td>
+                    </tr>
+                    <tr>
+                        <td>Adding or removing nodes</td>
+                        <td>Only a fraction of keys normally change primary ownership</td>
+                        <td>Move or re-fetch data without losing writes during transition</td>
+                    </tr>
+                    <tr>
+                        <td>Replication around the ring</td>
+                        <td>Can place copies on distinct owners when deliberately implemented</td>
+                        <td>Failure domains, quorum rules, repair, and anti-entropy are separate designs</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Monitor actual key skew, traffic, and migration progress; the number of virtual nodes is a capacity/metadata trade-off, not a universal constant. Unlike consistent hashing, naïve modulo hashing such as <code>hash(key) % number_of_nodes</code> commonly remaps most keys when the modulus changes.</p>
             <h2 id="review-questions">Review questions</h2>
             <ol>
                 <li>What is consistent hashing, and how does it differ from traditional hashing?</li>

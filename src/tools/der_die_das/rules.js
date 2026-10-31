@@ -69,7 +69,7 @@
     ];
 
     const FIRST_PARTS = /^(?:ein|aus|vor|nach|unter|über|mit|auf|ab|bei|durch|gegen|hinter|neben|zwischen|haupt|groß|klein|ober|hoch|tief|lang|kurz|alt|neu|frei|selbst|fern|voll|halb|rück|wieder|miss|lieblings|schlaf|wohn|bade|spiel|fahr|wasch|kühl|schreib|lese|koch|ess|trink|sing|lauf|warte|park|sprech|lehr|hör|denk|merk|kauf|bau|leb|arbeits|staats|welt|stadt|land|haus|zimmer)$/i;
-    
+
     const NOT_COMPOUNDS = new Set(["Kontrolle", "Katastrophe", "Programm", "Fotograf", "Kontakt", "Uniform",
         "Terrasse", "Strecke", "Protest", "Klamotte", "Schriftsteller", "Fernseher", "Diplomat", "Kandidat",
         "Telegramm", "Paragraf", "Biograf", "Kilogramm", "Melodie", "Komödie", "Tragödie"

@@ -5,7 +5,7 @@
 })(typeof self !== "undefined" ? self : this, function() {
     "use strict";
 
-    
+
     const INTERVALS = [0, 1, 3, 7, 14, 30, 60, 120];
     const KNOWN_STEP = 4;
     const RETRY_GAP = 3;
@@ -157,7 +157,7 @@
         return Boolean(item && this.answered.has(item.id));
     };
 
-    
+
     Session.prototype.answer = function(correct) {
         const item = this.queue.shift();
         const first = !this.answered.has(item.id);

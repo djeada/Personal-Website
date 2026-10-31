@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization",
             "description": "Normalization separates facts so each has a clear home.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Normalization separates facts so each has a clear home." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -119,6 +119,7 @@
                     <li><a href="#implement-a-stored-total-and-its-maintenance-path">Implement a stored total and its maintenance path</a>
                         <ol>
                             <li><a href="#follow-a-complete-write-rather-than-updating-only-the-display-field">Follow a complete write rather than updating only the display field</a></li>
+                            <li><a href="#contrast-an-incorrect-write-that-leaves-a-stale-total">Contrast an incorrect write that leaves a stale total</a></li>
                             <li><a href="#detect-drift-and-rebuild">Detect drift and rebuild</a></li>
                         </ol>
                     </li>
@@ -352,7 +353,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -527,6 +528,70 @@ ROLLBACK;</code></pre>
                 </tbody>
             </table>
             <p>For a server database, concurrent edits can require locking the owning order, applying safe deltas, or serializable transactions with retries. A trigger can centralize maintenance but must handle inserts, updates, deletes, moves between orders, and multi-row operations. A trigger that updates only for inserts would leave deletions wrong.</p>
+            <p>A maintenance review should explicitly cover all of these changes:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Source change</th>
+                        <th>Required cache behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Insert an item</td>
+                        <td>Include its quantity × charged price</td>
+                    </tr>
+                    <tr>
+                        <td>Increase, decrease, or correct quantity/price</td>
+                        <td>Replace the old contribution with the new one</td>
+                    </tr>
+                    <tr>
+                        <td>Delete an item</td>
+                        <td>Remove its contribution</td>
+                    </tr>
+                    <tr>
+                        <td>Move an item to another order</td>
+                        <td>Reconcile <strong>both</strong> the old and new order</td>
+                    </tr>
+                    <tr>
+                        <td>Retry an event or import</td>
+                        <td>Avoid applying the same change twice</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>No single example transaction proves the system is correct unless <em>every</em> allowed write path follows the same rule.</p>
+            <h3 id="contrast-an-incorrect-write-that-leaves-a-stale-total">Contrast an incorrect write that leaves a stale total</h3>
+            <p>The <em>correct</em> transaction above changes the line and recomputes its cache together. This independent experiment intentionally performs <strong>only the line update</strong>. Run it after the backfill, and use the rollback so the starting data stays unchanged:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+-- Incorrect if committed: the source line changes, but the cache does not.
+UPDATE order_items
+SET quantity = 3
+WHERE order_id = 101 AND line_number = 1;
+
+SELECT o.cached_total_cents,
+       COALESCE(SUM(i.quantity * i.unit_price_cents), 0) AS actual_total_cents
+FROM orders AS o
+LEFT JOIN order_items AS i ON i.order_id = o.order_id
+WHERE o.order_id = 101
+GROUP BY o.order_id, o.cached_total_cents;
+ROLLBACK;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>cached_total_cents</th>
+                        <th>actual_total_cents</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>5500</td>
+                        <td>7000</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>If committed without repairing the total, this would create <strong>1500 cents of drift</strong>. Rolling back keeps the demonstration safe. Compare the two values to prove the inconsistency instead of trusting the cached column merely because it is quick to read.</p>
             <h3 id="detect-drift-and-rebuild">Detect drift and rebuild</h3>
             <div>
                 <pre><code class="language-sql">SELECT o.order_id, o.cached_total_cents,

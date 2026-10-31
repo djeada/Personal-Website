@@ -145,6 +145,42 @@ test("tools catalogue lists every optics tool", async ({ page }) => {
   }
 });
 
+test('polarization presets show the values their notes promise and URL values snap to the sliders', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'polarization', VIEWPORTS[2]);
+  const preset = async (name) => { await page.click(`[data-preset="${name}"]`); await expect(page.locator(`[data-preset="${name}"]`)).toHaveAttribute('aria-pressed', 'true'); };
+  await preset('elliptical');
+  await expect(page.locator('#stat-orient')).toHaveText('20.4°');
+  await expect(page.locator('#stat-chi')).toHaveText('24.3°');
+  await expect(page.locator('#rType')).toHaveText('Elliptical, right (CCW)');
+  await preset('malus');
+  await expect(page.locator('#rI')).toHaveText('0.7500');
+  await preset('three');
+  await expect(page.locator('#rI')).toHaveText('0.1250');
+  await expect(page.locator('#rTheta')).toHaveText('90.0°');
+  await preset('qwp');
+  await expect(page.locator('#stat-hand')).toHaveText('Left (CW)');
+  await preset('quartz');
+  await expect(page.locator('#stat-hand')).toHaveText('Right (CCW)');
+  await expect(page.locator('#rSel')).toHaveText('1: Quartz c=45° d=17.39 µm');
+  await preset('depol');
+  await expect(page.locator('#rDop')).toHaveText('0.4000');
+  // vertical light reads +90°, whichever sign round-off gives S₂
+  await page.goto('/tools/polarization/?psi=0&dl=0&b=H~-45&s=0', { waitUntil: 'load' });
+  await expect(page.locator('#rTheta')).toHaveText('90.0°');
+  await expect(page.locator('#rSel')).toHaveText('1: HWP −45°');
+  // off-grid URL values snap to the sliders, so the readouts describe what the sliders show (ψ = 31°, not 30.5°)
+  await page.goto('/tools/polarization/?psi=30.5&dl=60&b=P~30.3&s=-1', { waitUntil: 'load' });
+  await expect(page.locator('#psiSlider')).toHaveValue('31');
+  await expect(page.locator('#stepBody tr').first()).toContainText('21.6°');
+  await expect(page.locator('#rSel')).toHaveText('none');
+  await expect(page.locator('#stepBody tr').nth(1)).toContainText('Pol 30.5°');
+  // a 360° retarder is drawn as a full-wave quartz plate, not a zero-thickness one
+  await page.goto('/tools/polarization/?b=R~10~360&s=0', { waitUntil: 'load' });
+  await expect(page.locator('#crystalCanvas-summary')).toContainText('thickness 69.56 µm');
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
 test('geometric optics keeps readouts and matrix correct when the focus goes through infinity', async ({ browser }) => {
   const { context, page, errors } = await openTool(browser, 'geometric_optics', VIEWPORTS[0]);
   await expect(page.locator('#rImage')).toContainText('150 mm');
@@ -250,6 +286,92 @@ test('fresnel presets show the values their notes promise, the plot drag sets θ
   await page.click('#resetBtn');
   await expect(page.locator('#thetaSlider')).toHaveValue('45');
   await expect(page.locator('#stat-R')).toHaveText('0.050');
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test('standing waves presets show the values their notes promise and unknown URL selects fall back to defaults', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'standing_waves', VIEWPORTS[2]);
+  const preset = async (name) => { await page.click(`[data-preset="${name}"]`); await expect(page.locator(`[data-preset="${name}"]`)).toHaveAttribute('aria-pressed', 'true'); };
+  const readout = (label) => page.locator('#modelReadout > div', { hasText: label }).locator('dd');
+  await preset('pec');
+  await expect(page.locator('#stat-swr')).toHaveText('∞');
+  await expect(page.locator('#stat-nodes')).toHaveText('6');
+  await expect(readout('Minimum spacing')).toHaveText('299.8 nm');
+  await expect(readout('First minimum')).toHaveText('0 (at surface)');
+  await preset('glass');
+  await expect(page.locator('#stat-boundary')).toHaveText('0.20 ∠180°');
+  await expect(page.locator('#stat-swr')).toHaveText('1.50');
+  await expect(readout('Net power')).toHaveText('0.960');
+  await preset('glassOut');
+  await expect(page.locator('#stat-boundary')).toHaveText('0.20 ∠0°');
+  await expect(page.locator('#stat-lambda')).toHaveText('399.7 nm');
+  await expect(readout('First minimum')).toHaveText('99.93 nm');
+  await preset('cavity4');
+  await expect(page.locator('#stat-freq')).toHaveText('399.7 THz');
+  await expect(readout('Antinodes / E nodes')).toHaveText('4 / 5');
+  await expect(readout('Finesse')).toHaveText('29.8');
+  await preset('quarter');
+  await expect(page.locator('#stat-freq')).toHaveText('249.8 THz');
+  await expect(readout('Antinodes / E nodes')).toHaveText('3 / 3');
+  await preset('micro');
+  await expect(readout('Exact Airy FWHM')).toHaveText('91.34 GHz');
+  await expect(readout('Photon lifetime')).toHaveText('1.74 ps');
+  // readout labels carry symbols (η, ν, τ, and r versus R), so they keep their case
+  await expect(page.locator('#modelReadout dt').first()).toHaveCSS('text-transform', 'none');
+  // an unknown select value from the URL falls back to the default instead of breaking the plot
+  await page.goto('/tools/standing_waves/?mode=bogus&bnd=x&mir=y&L=2', { waitUntil: 'load' });
+  await expect(page.locator('#modeSelect')).toHaveValue('single');
+  await expect(page.locator('#boundaryType')).toHaveValue('pec');
+  await expect(page.locator('#mirrorConfig')).toHaveValue('pec-pec');
+  await expect(page.locator('#lengthSlider')).toHaveValue('2');
+  await expect(page.locator('#stat-nodes')).toHaveText('7');
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test('interference presets show the values their notes promise and labels keep their symbols', async ({ browser }) => {
+  const { context, page, errors } = await openTool(browser, 'interference', VIEWPORTS[2]);
+  const preset = async (name) => { await page.click(`[data-preset="${name}"]`); await expect(page.locator(`[data-preset="${name}"]`)).toHaveAttribute('aria-pressed', 'true'); };
+  const readout = (label) => page.locator('#readout > div', { hasText: label }).locator('dd');
+  await preset('constructive');
+  await expect(page.locator('#stat-intensity')).toHaveText('4.000 I₁');
+  await expect(page.locator('#stat-visibility')).toHaveText('1.000');
+  await preset('destructive');
+  await expect(page.locator('#stat-intensity')).toHaveText('0.000 I₁');
+  await preset('quadrature');
+  await expect(page.locator('#stat-intensity')).toHaveText('2.000 I₁');
+  await preset('unequal');
+  await expect(page.locator('#stat-intensity')).toHaveText('0.250 I₁');
+  await expect(page.locator('#stat-visibility')).toHaveText('0.800');
+  await preset('partial');
+  await expect(readout('I_max')).toHaveText('3.000 / 1.000 I₁');
+  await expect(page.locator('#stat-visibility')).toHaveText('0.500');
+  await preset('gammaPhase');
+  await expect(page.locator('#stat-intensity')).toHaveText('2.000 I₁');
+  await preset('orthogonal');
+  await expect(page.locator('#stat-visibility')).toHaveText('0.000');
+  await expect(page.locator('#regimeWarn')).toContainText('Orthogonal polarizations');
+  await preset('analyser');
+  await expect(readout('I_max')).toHaveText('2.000 / 0.000 I₁');
+  await expect(page.locator('#stat-visibility')).toHaveText('1.000');
+  await preset('beating');
+  await expect(readout('period')).toHaveText('0.0909 f₁, 11.00 T₁');
+  await preset('slowDetector');
+  await expect(page.locator('#stat-intensity')).toHaveText('2.000 I₁');
+  // one beat period: the sinc zero reads 0.000, not -0.000
+  await page.locator('#idint').evaluate((el) => { el.value = 11; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await expect(readout('Averaging factor')).toHaveText('0.000');
+  // uppercase labels must not turn γ into Γ or μ into M
+  await expect(page.locator('#readout dt .sym').first()).toHaveCSS('text-transform', 'none');
+  await expect(page.locator('.stat-label .sym').first()).toHaveCSS('text-transform', 'none');
+  // an analyser crossed with both beams passes nothing: no fringes, not V = 1
+  await page.goto('/tools/interference/?th=0&an=1&al=90', { waitUntil: 'load' });
+  await expect(page.locator('#regimeWarn')).toContainText('blocks both beams');
+  await expect(page.locator('#stat-visibility')).toHaveText('0.000');
+  // a restored URL highlights the preset it matches
+  await page.goto('/tools/interference/?ph=180', { waitUntil: 'load' });
+  await expect(page.locator('[data-preset="destructive"]')).toHaveAttribute('aria-pressed', 'true');
   expect(errors).toEqual([]);
   await context.close();
 });

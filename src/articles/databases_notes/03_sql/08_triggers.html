@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Triggers: Run Database Logic When Data Changes | Adam Djellouli</title>
-    <meta content="A trigger is database logic invoked automatically by a specified event." name="description" />
+    <meta content="A trigger runs automatically in response to specified writes; its effects are part of the database write, not a separate background job." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers",
-            "description": "A trigger is database logic invoked automatically by a specified event.",
-            "dateModified": "2026-10-04",
+            "description": "A trigger runs automatically in response to specified writes; its effects are part of the database write, not a separate background job.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A trigger is database logic invoked automatically by a specified event." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A trigger runs automatically in response to specified writes; its effects are part of the database write, not a separate background job." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -130,12 +130,12 @@ messageStyle: "none"
                     <li><a href="#observe-the-extra-write">Observe the extra write</a></li>
                     <li><a href="#trigger-changes-participate-in-rollback">Trigger changes participate in rollback</a></li>
                     <li><a href="#timing-and-scope-vary-by-engine">Timing and scope vary by engine</a></li>
-                    <li><a href="#prefer-the-simplest-rule-mechanism">Prefer the simplest rule mechanism</a></li>
+                    <li><a href="#use-a-constraint-before-writing-a-trigger">Use a constraint before writing a trigger</a></li>
                     <li><a href="#validate-a-transition-when-the-old-row-matters">Validate a transition when the old row matters</a></li>
                     <li><a href="#supply-writes-through-a-sqlite-view-explicitly">Supply writes through a SQLite view explicitly</a></li>
                     <li><a href="#modify-a-new-row-using-postgresql-s-trigger-function">Modify a new row using PostgreSQL's trigger function</a></li>
                     <li><a href="#handle-all-affected-rows-in-sql-server">Handle all affected rows in SQL Server</a></li>
-                    <li><a href="#manage-trigger-lifecycle-and-cost">Manage trigger lifecycle and cost</a></li>
+                    <li><a href="#audit-all-write-paths-and-side-effects">Audit all write paths and side effects</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -359,7 +359,7 @@ messageStyle: "none"
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -379,7 +379,7 @@ messageStyle: "none"
                     </button></div>
             </div>
             <h1>Triggers: Run Database Logic When Data Changes</h1>
-            <p>A <strong>trigger</strong> is database logic invoked automatically by a specified event. Unlike a procedure, which a caller explicitly invokes, a trigger can run because an application inserts, updates, or deletes rows.</p>
+            <p>A <strong>trigger</strong> runs automatically in response to specified writes; its effects are part of the database write, not a separate background job. This chapter makes the hidden work visible: first log a real price change, then test an unchanged value, rollback, and a rejected state transition. Prefer an ordinary constraint when the rule needs no trigger.</p>
             <p>This note uses <strong>SQLite</strong> and the fresh <a href="01_intro_to_sql.html">bookstore setup</a>. We will record changes to product prices, then see what happens when the surrounding transaction rolls back.</p>
             <p>The product rows used by these examples are:</p>
             <table>
@@ -490,6 +490,27 @@ SELECT COUNT(*) AS change_count FROM product_price_changes;</code></pre>
                 </tbody>
             </table>
             <p>It stays 1 because the <code>WHEN</code> condition is false.</p>
+            <p><strong>Incorrect expectation:</strong> because the trigger exists on <code>products</code>, every product update writes a price-history row.</p>
+            <p><strong>Correct behavior:</strong> the trigger watches updates <strong>of <code>price_cents</code></strong> and records a row only when the old and new prices differ. This separate stock-only experiment does not add any price-history row:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+UPDATE products SET stock = stock + 1 WHERE product_id = 10;
+SELECT COUNT(*) AS price_change_count FROM product_price_changes;
+ROLLBACK;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>price_change_count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The rollback preserves the initial stock; the history count remains one because the stock update did not target the watched price column.</p>
             <h2 id="trigger-changes-participate-in-rollback">Trigger changes participate in rollback</h2>
             <p>Continue from the previous exercise, where the current price is 1600:</p>
             <div>
@@ -572,7 +593,7 @@ SELECT price_cents FROM products WHERE product_id = 10;</code></pre>
                 </tbody>
             </table>
             <p>SQLite provides row triggers; other engines have different combinations and syntax. Do not paste a MySQL <code>SET NEW.column = ...</code> body into SQLite, or assume PostgreSQL trigger-function syntax works in every engine.</p>
-            <h2 id="prefer-the-simplest-rule-mechanism">Prefer the simplest rule mechanism</h2>
+            <h2 id="use-a-constraint-before-writing-a-trigger">Use a constraint before writing a trigger</h2>
             <p>Use <code>NOT NULL</code>, <code>UNIQUE</code>, <code>CHECK</code>, or a foreign key when they express the rule directly. Use a column default for a straightforward initial timestamp. A trigger is useful when a data change genuinely requires additional database work.</p>
             <p>The tradeoff is less visible behavior. An update may write several tables, acquire additional locks, or activate further triggers. Review multi-row updates, rollback behavior, and interactions with other triggers. Keep trigger code short and document the behavior beside the schema.</p>
             <h2 id="validate-a-transition-when-the-old-row-matters">Validate a transition when the old row matters</h2>
@@ -811,7 +832,7 @@ GO</code></pre>
                 </tbody>
             </table>
             <p>The join assumes product IDs are stable during the update. A mutable primary key requires a different matching policy. The trigger handles the statement's full set without a cursor.</p>
-            <h2 id="manage-trigger-lifecycle-and-cost">Manage trigger lifecycle and cost</h2>
+            <h2 id="audit-all-write-paths-and-side-effects">Audit all write paths and side effects</h2>
             <p>SQLite changes an existing trigger by dropping and recreating it. PostgreSQL and SQL Server provide different replace or alter mechanisms. For the SQLite practice rule, cleanup is:</p>
             <div>
                 <pre><code class="language-sql">-- SQLite

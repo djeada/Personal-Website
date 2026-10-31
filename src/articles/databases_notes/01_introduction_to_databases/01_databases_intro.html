@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro",
             "description": "A bookstore needs to remember its customers, books, orders, and remaining stock. At first, a spreadsheet or a CSV file might be enough.",
-            "dateModified": "2026-10-04",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A bookstore needs to remember its customers, books, orders, and remaining stock. At first, a spreadsheet or a CSV file might be enough." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -119,7 +119,7 @@
                             <li><a href="#a-technology-that-uses-this-approach">A technology that uses this approach</a></li>
                         </ol>
                     </li>
-                    <li><a href="#read-the-structure-before-writing-commands">Read the structure before writing commands</a></li>
+                    <li><a href="#separate-identities-from-repeated-order-facts">Separate identities from repeated order facts</a></li>
                     <li><a href="#create-the-database-and-its-first-tables">Create the database and its first tables</a></li>
                     <li><a href="#insert-records-create-the-data">Insert records: create the data</a></li>
                     <li><a href="#select-records-ask-a-precise-question">Select records: ask a precise question</a></li>
@@ -133,7 +133,7 @@
                     <li><a href="#let-the-database-reject-broken-rules">Let the database reject broken rules</a></li>
                     <li><a href="#try-a-transaction-without-keeping-its-changes">Try a transaction without keeping its changes</a></li>
                     <li><a href="#add-an-access-structure-for-a-recurring-query">Add an access structure for a recurring query</a></li>
-                    <li><a href="#put-the-database-behind-an-application">Put the database behind an application</a></li>
+                    <li><a href="#keep-database-rules-behind-the-application-boundary">Keep database rules behind the application boundary</a></li>
                     <li><a href="#where-other-technologies-fit">Where other technologies fit</a></li>
                     <li><a href="#practice-and-check-your-understanding">Practice and check your understanding</a></li>
                 </ol>
@@ -358,7 +358,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -380,7 +380,7 @@
             <h1>Introduction to Databases</h1>
             <p>A bookstore needs to remember its customers, books, orders, and remaining stock. At first, a spreadsheet or a CSV file might be enough. Once a website, a checkout desk, and an import job all change the same information, storing it becomes only part of the problem. The system also needs to answer questions, reject invalid changes, coordinate simultaneous work, and recover after failure.</p>
             <p>A <strong>database</strong> is an organized collection of data. A <strong>database management system (DBMS)</strong> is the software that stores and manages that collection. SQLite, PostgreSQL, MySQL, and MongoDB are DBMSs. When someone says “we use PostgreSQL as our database,” they are naming the software as well as implying the data it manages.</p>
-            <p>This note starts with a small relational database: one that represents facts in tables and connects them through keys. You will create it, insert records, query related tables, update and delete data, and try a rollback. Later notes compare other database models and explain the machinery behind these operations.</p>
+            <p>This note follows one small <strong>SQLite</strong> bookstore from requirements to tables, a join, a constraint violation, and rollback. Work through the SQL in order on a fresh database, skipping statements explicitly marked as expected failures. The next chapters explain other models and what the DBMS does underneath SQL.</p>
             <h2 id="why-a-file-is-not-always-enough">Why a file is not always enough</h2>
             <p>Suppose the bookstore keeps this CSV:</p>
             <div>
@@ -390,6 +390,8 @@
 103,Bob,bob@example.com,2025-01-12</code></pre>
             </div>
             <p>It is readable and easy to export. It is also repeating Alice's email. Correcting that address means finding every relevant row. If one row is missed, the file contains conflicting answers to “what is Alice's email?”</p>
+            <p><strong>Incorrect outcome:</strong> order 101 still says <code>alice@example.com</code> while order 102 says <code>alice.smith@example.com</code>. Both rows refer to the same customer, but a reader cannot know which address is authoritative.</p>
+            <p><strong>Correct direction:</strong> represent Alice once in <code>customers(customer_id, name, email)</code>, and refer to her from <code>orders(order_id, customer_id, order_date)</code>. The next section builds exactly this separation. The improvement comes from the <em>data model</em>, not merely converting CSV rows into an SQL table.</p>
             <p>Now imagine two programs each load the entire file. One adds an order while the other corrects an email. If both save their own complete version, the later save can overwrite the other's work. A file format does not provide a transaction or a concurrency protocol by itself.</p>
             <p>A DBMS supplies mechanisms for these problems:</p>
             <table>
@@ -443,11 +445,11 @@
                     </tr>
                 </tbody>
             </table>
-            <p>These capabilities have boundaries. A database cannot decide that a supplied postal address is true, and a backup must still be taken and tested. A spreadsheet or append-only file remains useful for small manual tasks, exports, or simple logs. The reason to use a DBMS is the set of operations and guarantees the application needs.</p>
+            <p>These guarantees have boundaries: a database cannot verify that a supplied postal address is true or restore data from a backup that was never tested. A unique email constraint enforces uniqueness, not proof that the customer controls the email address. A spreadsheet or append-only file remains useful for small manual tasks, exports, or simple logs. The reason to use a DBMS is the set of operations and guarantees the application needs.</p>
             <h3 id="a-technology-that-uses-this-approach">A technology that uses this approach</h3>
             <p>SQLite runs as a library inside an application and manages a local database, rather than requiring a separate database server. That makes it useful for a desktop catalog or offline application. Its main database can live in a file, with additional journal files used according to the configuration. <a href="https://www.sqlite.org/whentouse.html">SQLite's usage guide</a> explains the intended workloads.</p>
             <p>Android's Room library builds on SQLite for local structured storage. An app can keep records locally and show them while offline; Room supplies an application-facing layer for entities and queries. This is a concrete example of database storage being useful even without a remote service. See <a href="https://developer.android.com/training/data-storage/room">Android's Room overview</a>.</p>
-            <h2 id="read-the-structure-before-writing-commands">Read the structure before writing commands</h2>
+            <h2 id="separate-identities-from-repeated-order-facts">Separate identities from repeated order facts</h2>
             <p>Separate customer details from order details:</p>
             <table>
                 <thead>
@@ -508,6 +510,34 @@ customer_id = 1  &lt;----------------  order_id = 101, customer_id = 1
 customer_id = 2  &lt;----------------  order_id = 103, customer_id = 2</code></pre>
             </div>
             <p>A <strong>foreign key</strong> declares that the reference must match an existing eligible key. It can reject an order for a nonexistent customer. It does not automatically retrieve the customer's name; that is the query's job.</p>
+            <p><strong>Do not confuse three different operations:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Correct mechanism</th>
+                        <th>Incorrect assumption</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Does customer 1 exist when an order is inserted?</td>
+                        <td>Foreign-key constraint (when enforced)</td>
+                        <td>A join automatically validates future writes</td>
+                    </tr>
+                    <tr>
+                        <td>Which name belongs beside order 101?</td>
+                        <td>Join <code>orders.customer_id</code> to <code>customers.customer_id</code></td>
+                        <td>Store a duplicate name on every order</td>
+                    </tr>
+                    <tr>
+                        <td>How can the engine find one customer's orders efficiently?</td>
+                        <td>Consider an index on <code>orders.customer_id</code></td>
+                        <td>A foreign key automatically provides the best index on every engine</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A constraint defines an allowed state, a join produces an answer, and an index provides an access path.</p>
             <h2 id="create-the-database-and-its-first-tables">Create the database and its first tables</h2>
             <p>The following SQL uses <strong>SQLite</strong>. Use a fresh database for this note, separate from the fuller bookstore setup in the later SQL chapter. Run the blocks in reading order, except the explicitly marked invalid-write examples.</p>
             <p>If you have the SQLite command-line program, open a database with:</p>
@@ -808,7 +838,7 @@ WHERE customer_id = 1;</code></pre>
             </table>
             <p>The exact IDs and detail text depend on the SQLite version and planner.</p>
             <p>SQLite uses B-tree structures for its indexes: ordered keys guide lookup toward matching entries. Maintaining those entries costs space and additional work when relevant rows change. That tradeoff is why an index should answer a real access pattern instead of being added to every column. The <a href="03_database_management_systems_dbms_.html">DBMS note</a> follows planning and execution in more detail.</p>
-            <h2 id="put-the-database-behind-an-application">Put the database behind an application</h2>
+            <h2 id="keep-database-rules-behind-the-application-boundary">Keep database rules behind the application boundary</h2>
             <p>A website usually has this request path:</p>
             <div>
                 <pre><code class="language-text">Browser -&gt; Web application -&gt; Database query -&gt; DBMS

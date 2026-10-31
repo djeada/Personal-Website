@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Data Models: From Business Rules to Structures You Can Query</title>
-    <meta content="A data model describes which facts exist, how they relate, and which rules apply. Choosing a DBMS does not automatically create that model." name="description" />
+    <meta content="A data model specifies facts, identity, relationships, and invariants before those decisions become SQL tables, documents, or graph edges." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models",
-            "description": "A data model describes which facts exist, how they relate, and which rules apply. Choosing a DBMS does not automatically create that model.",
-            "dateModified": "2026-10-04",
+            "description": "A data model specifies facts, identity, relationships, and invariants before those decisions become SQL tables, documents, or graph edges.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A data model describes which facts exist, how they relate, and which rules apply. Choosing a DBMS does not automatically create that model." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A data model specifies facts, identity, relationships, and invariants before those decisions become SQL tables, documents, or graph edges." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -150,7 +150,7 @@
                         </ol>
                     </li>
                     <li><a href="#graph-models-describe-paths-and-relationship-facts">Graph models: describe paths and relationship facts</a></li>
-                    <li><a href="#decide-which-rules-each-representation-preserves">Decide which rules each representation preserves</a></li>
+                    <li><a href="#compare-representations-by-the-rules-they-preserve">Compare representations by the rules they preserve</a></li>
                     <li><a href="#practice-and-check-your-understanding">Practice and check your understanding</a></li>
                 </ol>
             </div>
@@ -374,7 +374,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -394,7 +394,7 @@
                     </button></div>
             </div>
             <h1>Data Models: From Business Rules to Structures You Can Query</h1>
-            <p>A <strong>data model</strong> describes which facts exist, how they relate, and which rules apply. Choosing a DBMS does not automatically create that model. PostgreSQL can store an excellent design or a confused one; a MongoDB document can group a useful record or duplicate facts that are difficult to maintain.</p>
+            <p>A <strong>data model</strong> specifies facts, identity, relationships, and invariants before those decisions become SQL tables, documents, or graph edges. A DBMS cannot infer a good model from product choice alone: the same bookstore can be modeled well or poorly in PostgreSQL, MongoDB, or another engine. Start with business rules, then examine the representation and its access patterns.</p>
             <p>This note develops the bookstore into a complete relational example, then compares the hierarchical, network, entity-relationship, object-oriented, document, column-family, and graph models. The goal is to see how each represents the same kinds of questions, not to memorize a product taxonomy.</p>
             <h2 id="separate-three-levels-of-decision">Separate three levels of decision</h2>
             <table>
@@ -568,6 +568,34 @@ INSERT INTO order_items VALUES
             <p>The orders table's foreign key is not unique: several orders can contain the same customer identifier. That implements one-to-many.</p>
             <p>Orders and products are many-to-many through <code>order_items</code>. One order can refer to several products, and a product can be referenced from several orders. <code>(order_id, line_number)</code> is a <strong>composite primary key</strong>. Both <code>(101, 1)</code> and <code>(102, 1)</code> are valid because line numbers are local to an order.</p>
             <p>This key deliberately permits the same product on separate lines of one order. If the business requires one line per product, that is another uniqueness rule, not a consequence of the current key.</p>
+            <p><strong>Compare the rules before adding a constraint:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Insert</th>
+                        <th>With only <code>PRIMARY KEY (order_id, line_number)</code></th>
+                        <th>If the business also requires <code>UNIQUE (order_id, product_id)</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Order 101, line 3, product 10</td>
+                        <td>Valid: a different line number</td>
+                        <td>Rejected: product 10 already appears on order 101</td>
+                    </tr>
+                    <tr>
+                        <td>Order 102, line 2, product 20</td>
+                        <td>Valid</td>
+                        <td>Valid: this product has not appeared on order 102</td>
+                    </tr>
+                    <tr>
+                        <td>Order 101, line 1, product 20</td>
+                        <td>Rejected: line 1 already exists</td>
+                        <td>Rejected: line 1 already exists</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A uniqueness rule should reflect the business contract, not be guessed from a sample where no products repeat. To test the alternative constraint, use a <strong>fresh</strong> schema with the rule; do not add it blindly to production.</p>
             <h3 id="query-the-model-not-a-hand-built-display">Query the model, not a hand-built display</h3>
             <div>
                 <pre><code class="language-sql">SELECT c.name, o.order_id, p.title,
@@ -666,7 +694,17 @@ WHERE i.order_id = 101 AND i.line_number = 1;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <p>The old order still charged 1500 per unit. This is intentional historical recording, not an accidental copy of the current price. If an invoice also needs the title as it appeared at purchase time, that may require a separate historical title. The correct ownership follows the business meaning of each fact.</p>
+            <p>The old order still charged 1500 per unit. This is intentional historical recording, not an accidental copy of the current price.</p>
+            <p><strong>Incorrect:</strong> calculate a past receipt by joining each item to the <em>current</em> <code>products.price_cents</code>; the receipt would change when catalog prices change.</p>
+            <p><strong>Correct:</strong> calculate the receipt from <code>order_items.unit_price_cents</code> and <code>quantity</code>, which record what the customer actually bought and paid:</p>
+            <div>
+                <pre><code class="language-sql">SELECT order_id,
+       SUM(quantity * unit_price_cents) AS charged_total_cents
+FROM order_items
+WHERE order_id = 101
+GROUP BY order_id;</code></pre>
+            </div>
+            <p>This returns <code>5500</code> even after changing product 10's catalog price to <code>1700</code>. If an invoice also needs the title as it appeared at purchase time, that may require a separate historical title. The correct ownership follows the business meaning of each fact.</p>
             <h2 id="hierarchical-models-navigate-parent-child-structure">Hierarchical models: navigate parent–child structure</h2>
             <p>A hierarchical model organizes records under parents. A basic tree has a root and one parent for each non-root node:</p>
             <div>
@@ -873,7 +911,7 @@ public class ObjectModelDemo {
     }
 }</code></pre>
             </div>
-            <p>After <code>persist</code>, the example's <code>Book</code> table contains:</p>
+            <p>After <code>persist</code>, the database contains one stored <code>Book</code> object, whose attributes can be summarized as:</p>
             <table>
                 <thead>
                     <tr>
@@ -904,7 +942,7 @@ public class ObjectModelDemo {
                 </tbody>
             </table>
             <p><code>@Entity</code> marks persistable state, <code>@Id</code> declares identity, and <code>persist</code> schedules storage within the transaction. The query uses <strong>JPQL</strong>, referring to the entity and its Java fields rather than a SQL table declaration.</p>
-            <p>Objects are not stored together with executable method code. Their persistent state is stored, and the application supplies behavior through its classes. This approach can fit an object-centered workload but still needs transaction, schema-evolution, query, and integration decisions. See ObjectDB's <a href="https://www.objectdb.com/java/jpa/start/entity">entity</a>, <a href="https://www.objectdb.com/java/jpa/start/connection">connection</a>, and <a href="https://www.objectdb.com/java/jpa/start/crud">CRUD</a> tutorials for the provider-specific setup and APIs.</p>
+            <p>Persistent object state is stored; the Java method code remains in the application. The table-shaped display above is <strong>only a readable summary</strong> of stored attributes, not evidence that ObjectDB created an SQL table. This approach can fit an object-centered workload but still needs transaction, schema-evolution, query, and integration decisions. See ObjectDB's <a href="https://www.objectdb.com/java/jpa/start/entity">entity</a>, <a href="https://www.objectdb.com/java/jpa/start/connection">connection</a>, and <a href="https://www.objectdb.com/java/jpa/start/crud">CRUD</a> tutorials for the provider-specific setup and APIs.</p>
             <h2 id="document-models-choose-a-useful-record-boundary">Document models: choose a useful record boundary</h2>
             <p>A document can put an order and its bounded set of lines together:</p>
             <div>
@@ -948,7 +986,7 @@ get 'chapter1_customer_events', 'customer:1'</code></pre>
             </div>
             <p>A purchase relationship may have a quantity and a timestamp, but an order often still deserves its own node because it groups several lines and has its own lifecycle. Choosing a graph does not imply every business event should be squeezed into one generic edge.</p>
             <p>The <a href="02_types_of_databases.html#graph-databases-make-traversal-a-first-class-operation">Neo4j example</a> creates this graph and runs a Cypher pattern query. Multi-hop traversal is the motivating operation; identity, uniqueness, indexes, and path-expansion limits still require a design.</p>
-            <h2 id="decide-which-rules-each-representation-preserves">Decide which rules each representation preserves</h2>
+            <h2 id="compare-representations-by-the-rules-they-preserve">Compare representations by the rules they preserve</h2>
             <table>
                 <thead>
                     <tr>

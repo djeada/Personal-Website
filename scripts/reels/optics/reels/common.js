@@ -39,6 +39,36 @@ const TOOLS = {
             url: "adamdjellouli.com/tools/fresnel"
         },
         key: -3
+    },
+    polarization: {
+        mark: "POLARIZATION · ADAMDJELLOULI.COM",
+        end: {
+            title: "Polarization",
+            formula: "I = I<sub>0</sub> cos²θ",
+            list: "Polarizers, wave plates, rotators<br>Jones · Stokes · Poincaré sphere",
+            url: "adamdjellouli.com/tools/polarization"
+        },
+        key: 5
+    },
+    interference: {
+        mark: "INTERFERENCE OF LIGHT · ADAMDJELLOULI.COM",
+        end: {
+            title: "Interference<br>of Light",
+            formula: "I = I<sub>1</sub> + I<sub>2</sub> + 2√(I<sub>1</sub>I<sub>2</sub>) |γ| cos Δφ",
+            list: "Add two waves, watch them build or cancel<br>coherence · polarization · beats",
+            url: "adamdjellouli.com/tools/interference"
+        },
+        key: -2
+    },
+    standing_waves: {
+        mark: "STANDING WAVES · ADAMDJELLOULI.COM",
+        end: {
+            title: "Standing<br>Waves",
+            formula: "L = m λ/2",
+            list: "Mirrors, partial reflection, cavities<br>nodes · SWR · resonant modes",
+            url: "adamdjellouli.com/tools/standing_waves"
+        },
+        key: 4
     }
 };
 

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Introduction to SQL | Adam Djellouli</title>
-    <meta content="SQL, or Structured Query Language, lets you describe the data you want or the change you want to make." name="description" />
+    <meta content="SQL (Structured Query Language) expresses database requests and changes declaratively." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql",
-            "description": "SQL, or Structured Query Language, lets you describe the data you want or the change you want to make.",
-            "dateModified": "2026-10-04",
+            "description": "SQL (Structured Query Language) expresses database requests and changes declaratively.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="SQL, or Structured Query Language, lets you describe the data you want or the change you want to make." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="SQL (Structured Query Language) expresses database requests and changes declaratively." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -122,12 +122,12 @@
                     <li><a href="#join-related-rows">Join related rows</a></li>
                     <li><a href="#calculate-one-result-per-group">Calculate one result per group</a></li>
                     <li><a href="#understand-missing-values">Understand missing values</a></li>
-                    <li><a href="#understand-the-command-families">Understand the command families</a></li>
-                    <li><a href="#read-conditions-as-questions-about-each-row">Read conditions as questions about each row</a></li>
+                    <li><a href="#distinguish-queries-schema-changes-writes-and-transactions">Distinguish queries, schema changes, writes, and transactions</a></li>
+                    <li><a href="#combine-predicates-without-changing-the-requested-question">Combine predicates without changing the requested question</a></li>
                     <li><a href="#order-before-choosing-the-first-few-rows">Order before choosing the first few rows</a></li>
                     <li><a href="#distinguish-filtering-rows-from-filtering-groups">Distinguish filtering rows from filtering groups</a></li>
                     <li><a href="#build-a-report-in-two-understandable-steps">Build a report in two understandable steps</a></li>
-                    <li><a href="#make-changes-without-losing-the-practice-data">Make changes without losing the practice data</a></li>
+                    <li><a href="#use-a-rollback-to-keep-later-examples-reproducible">Use a rollback to keep later examples reproducible</a></li>
                     <li><a href="#practice-structure-changes-on-a-separate-object">Practice structure changes on a separate object</a></li>
                     <li><a href="#preview-a-window-without-replacing-the-detailed-lesson">Preview a window without replacing the detailed lesson</a></li>
                     <li><a href="#what-changes-when-you-move-to-another-sql-engine">What changes when you move to another SQL engine?</a></li>
@@ -354,7 +354,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -374,7 +374,7 @@
                     </button></div>
             </div>
             <h1>Introduction to SQL</h1>
-            <p>SQL, or <strong>Structured Query Language</strong>, lets you describe the data you want or the change you want to make. For example, “show Alice's orders” becomes a <code>SELECT</code> query; “record a new customer” becomes an <code>INSERT</code> statement.</p>
+            <p><strong>SQL (Structured Query Language)</strong> expresses database requests and changes declaratively. Start by reading a result set, then work through filters, joins, groups, missing values, and controlled writes. This chapter uses <strong>SQLite</strong> so the examples can be run locally; it does not claim every syntax choice works in PostgreSQL or MySQL.</p>
             <p>The DBMS chooses how to carry out the request. You specify the result, not a loop that reads each disk location yourself. This is why SQL is called a <strong>declarative language</strong>.</p>
             <h2 id="set-up-one-database-for-the-examples">Set up one database for the examples</h2>
             <p>This note and the next SQL notes use a bookstore. Run the following setup in a <strong>fresh SQLite database</strong>. For each note, start from this setup unless the note explicitly continues an earlier exercise. Use a SQLite shell, a playground configured for SQLite, or Python's <code>sqlite3</code> module. Keep the same database connection when working through a transaction example.</p>
@@ -751,7 +751,23 @@ ORDER BY order_id;</code></pre>
             <h2 id="understand-missing-values">Understand missing values</h2>
             <p><code>NULL</code> represents a missing or unknown value. It is not zero or an empty string. Use <code>IS NULL</code> and <code>IS NOT NULL</code> to test it; <code>value = NULL</code> does not behave like an ordinary equality check.</p>
             <p>The required columns in this setup reject nulls. Later, a left join can still produce nulls in its result when one side has no matching row. That does not insert nulls into the base table.</p>
-            <h2 id="understand-the-command-families">Understand the command families</h2>
+            <p><strong>Incorrect vs correct: finding customers with no orders</strong></p>
+            <div>
+                <pre><code class="language-sql">-- Incorrect: = NULL never evaluates to true.
+SELECT c.name
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.order_id = NULL;
+
+-- Correct: test the unmatched join side with IS NULL.
+SELECT c.name
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.order_id IS NULL
+ORDER BY c.customer_id;</code></pre>
+            </div>
+            <p>The incorrect query returns no rows. The corrected query returns <strong>Carol</strong>, who has no order in the sample data. <code>NULL</code> is not a special value to compare using <code>=</code>; <code>IS NULL</code> is the intended predicate.</p>
+            <h2 id="distinguish-queries-schema-changes-writes-and-transactions">Distinguish queries, schema changes, writes, and transactions</h2>
             <table>
                 <thead>
                     <tr>
@@ -784,7 +800,7 @@ ORDER BY order_id;</code></pre>
                 </tbody>
             </table>
             <p>Some classifications place <code>SELECT</code> in a separate query-language group. Understanding what a statement does matters more than remembering one taxonomy.</p>
-            <h2 id="read-conditions-as-questions-about-each-row">Read conditions as questions about each row</h2>
+            <h2 id="combine-predicates-without-changing-the-requested-question">Combine predicates without changing the requested question</h2>
             <p>The bookstore asks three different questions: which books fall in a price band, which selected books are available, and which titles contain a word. Each has a direct SQL expression:</p>
             <p>Input (<code>products</code>):</p>
             <table>
@@ -1253,7 +1269,7 @@ ORDER BY product_id;</code></pre>
                 </tbody>
             </table>
             <p>Later notes explain subqueries that refer to the current outer row and queries that test whether any matching row exists.</p>
-            <h2 id="make-changes-without-losing-the-practice-data">Make changes without losing the practice data</h2>
+            <h2 id="use-a-rollback-to-keep-later-examples-reproducible">Use a rollback to keep later examples reproducible</h2>
             <p>Reading with <code>SELECT</code> does not reserve a book. A change must use a writing statement. This exercise inserts a customer, updates their name, and removes the row inside one transaction:</p>
             <p>Initial input (<code>customers</code>):</p>
             <table>

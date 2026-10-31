@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Hierarchical Data: Represent and Query a Tree | Adam Djellouli</title>
-    <meta content="A bookstore's categories form a hierarchy: Books contains Computing, and Computing contains Databases and Programming." name="description" />
+    <meta content="A category hierarchy is a set of parent–child relationships." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data",
-            "description": "A bookstore's categories form a hierarchy: Books contains Computing, and Computing contains Databases and Programming.",
-            "dateModified": "2026-10-04",
+            "description": "A category hierarchy is a set of parent\u2013child relationships.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A bookstore's categories form a hierarchy: Books contains Computing, and Computing contains Databases and Programming." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="A category hierarchy is a set of parent–child relationships." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -120,16 +120,16 @@
                     <li><a href="#extend-the-result-one-level-at-a-time">Extend the result one level at a time</a></li>
                     <li><a href="#walk-upward-for-a-breadcrumb">Walk upward for a breadcrumb</a></li>
                     <li><a href="#find-leaves-and-carry-a-readable-path">Find leaves and carry a readable path</a></li>
-                    <li><a href="#a-parent-reference-does-not-guarantee-a-tree">A parent reference does not guarantee a tree</a></li>
+                    <li><a href="#enforce-acyclicity-not-just-a-valid-parent-identifier">Enforce acyclicity, not just a valid parent identifier</a></li>
                     <li><a href="#detect-cycles-instead-of-trusting-a-depth-counter">Detect cycles instead of trusting a depth counter</a></li>
-                    <li><a href="#compare-other-representations-after-understanding-adjacency">Compare other representations after understanding adjacency</a></li>
+                    <li><a href="#compare-traversal-work-with-maintenance-cost">Compare traversal work with maintenance cost</a></li>
                     <li><a href="#materialized-paths-store-the-traversal-result">Materialized paths store the traversal result</a></li>
                     <li><a href="#nested-sets-replace-traversal-with-an-interval">Nested sets replace traversal with an interval</a></li>
                     <li><a href="#make-room-before-inserting-into-a-nested-set">Make room before inserting into a nested set</a></li>
                     <li><a href="#closure-tables-store-each-reachable-pair">Closure tables store each reachable pair</a></li>
                     <li><a href="#insert-and-move-a-leaf-in-the-closure-model">Insert and move a leaf in the closure model</a></li>
                     <li><a href="#delete-a-subtree-according-to-the-representation">Delete a subtree according to the representation</a></li>
-                    <li><a href="#choose-from-the-workload-then-validate-maintenance">Choose from the workload, then validate maintenance</a></li>
+                    <li><a href="#choose-representation-and-verify-subtree-updates">Choose representation and verify subtree updates</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -353,7 +353,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -373,7 +373,7 @@
                     </button></div>
             </div>
             <h1>Hierarchical Data: Represent and Query a Tree</h1>
-            <p>A bookstore's categories form a hierarchy: Books contains Computing, and Computing contains Databases and Programming. A <strong>tree</strong> represents that structure using nodes and parent–child relationships. A <strong>root</strong> has no parent. A <strong>leaf</strong> has no children. A node's <strong>descendants</strong> are its children, their children, and so on; its <strong>ancestors</strong> lie on the path toward the root.</p>
+            <p>A category hierarchy is a set of parent–child relationships. <strong>Adjacency lists</strong> store only the immediate parent, while recursive queries reconstruct ancestors or descendants. Later representations cache more traversal information in return for harder updates. The critical invariant is not just a valid parent reference: a tree must also have <strong>no cycles</strong>, and any single-root requirement must be explicit. The <strong>root</strong> has no parent, <strong>leaves</strong> have no children, <strong>ancestors</strong> lead toward the root, and <strong>descendants</strong> lie beneath a node.</p>
             <p>Relational tables can represent trees. The main question is which relationships to store directly and which to calculate when querying. Start with <a href="06_joins_subqueries_and_views.html">joins</a>; this note introduces recursion through a complete SQLite example.</p>
             <h2 id="store-each-node-s-immediate-parent">Store each node's immediate parent</h2>
             <p>An <strong>adjacency list</strong> gives each row a reference to its parent in the same table. Run this standalone setup in a fresh SQLite database:</p>
@@ -678,9 +678,36 @@ SELECT category_id, path FROM category_paths ORDER BY category_id;</code></pre>
                 </tbody>
             </table>
             <p>This calculates a display path; it does not store another copy of every ancestor's name. A rename is reflected on the next query. If names contain the chosen separator, a UI should format a structured list of nodes rather than treat this string as an unambiguous identifier encoding.</p>
-            <h2 id="a-parent-reference-does-not-guarantee-a-tree">A parent reference does not guarantee a tree</h2>
+            <h2 id="enforce-acyclicity-not-just-a-valid-parent-identifier">Enforce acyclicity, not just a valid parent identifier</h2>
             <p>To move a branch, an adjacency list often changes only the moved node's parent. But the new parent must not be that node or one of its descendants. Otherwise the move creates a cycle.</p>
             <p>For example, setting Computing's parent to SQL would create <code>Computing → Databases → SQL → Computing</code>. The foreign key still points to existing rows, and the immediate-self-parent check still passes. A recursive query using <code>UNION ALL</code> can then keep expanding instead of terminating normally.</p>
+            <p><strong>Incorrect tree move (do not execute against the teaching data):</strong></p>
+            <div>
+                <pre><code class="language-sql">-- Would introduce a cycle: 2 -&gt; 4 -&gt; 6 -&gt; 2.
+UPDATE categories SET parent_id = 6 WHERE category_id = 2;</code></pre>
+            </div>
+            <p><strong>Valid move for this sample:</strong> SQL (node 6) can instead move from Databases to Programming (node 5). Demonstrate it inside a rollback so later examples still use the original tree:</p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+UPDATE categories SET parent_id = 5 WHERE category_id = 6;
+SELECT category_id, parent_id FROM categories WHERE category_id = 6;
+ROLLBACK;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>category_id</th>
+                        <th>parent_id</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>6</td>
+                        <td>5</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The example is valid because Programming is not a descendant of SQL. <strong>A successful SQL update alone is not proof</strong> that an arbitrary move is safe: actual applications must prevent cycles under concurrent moves too.</p>
             <p>A production design needs cycle prevention or detection, an appropriate traversal bound, and transaction logic that handles concurrent moves. A “check, then update” sequence can race with another move. Do not assume replacing <code>UNION ALL</code> with <code>UNION</code> always solves cycles: if a changing depth or path is included, repeated visits can still produce distinct rows.</p>
             <p>This schema also allows more than one root, which represents a <strong>forest</strong>. If the business requires exactly one root, that is an additional rule.</p>
             <h2 id="detect-cycles-instead-of-trusting-a-depth-counter">Detect cycles instead of trusting a depth counter</h2>
@@ -726,7 +753,7 @@ SELECT category_id, name FROM safe_walk ORDER BY category_id;</code></pre>
             </table>
             <p>This avoids revisiting a node along a path; it does not repair invalid parent relationships or make a cycle-producing update acceptable. A production traversal should also consider the size of the reachable set and whether the structure is actually a tree or a graph with multiple paths to a node.</p>
             <p>References: <a href="https://www.sqlite.org/lang_with.html">SQLite recursive CTEs</a> and <a href="https://www.postgresql.org/docs/current/ltree.html">PostgreSQL ltree</a>.</p>
-            <h2 id="compare-other-representations-after-understanding-adjacency">Compare other representations after understanding adjacency</h2>
+            <h2 id="compare-traversal-work-with-maintenance-cost">Compare traversal work with maintenance cost</h2>
             <table>
                 <thead>
                     <tr>
@@ -1389,7 +1416,7 @@ ROLLBACK;</code></pre>
                 </tbody>
             </table>
             <p>This algorithm uses the example's unconstrained boundary columns and one coordinated writer. A production implementation must handle concurrent structural writes and any additional uniqueness rules.</p>
-            <h2 id="choose-from-the-workload-then-validate-maintenance">Choose from the workload, then validate maintenance</h2>
+            <h2 id="choose-representation-and-verify-subtree-updates">Choose representation and verify subtree updates</h2>
             <p>For an organizational chart with frequent reporting-line changes, adjacency keeps a move small, and recursive queries can calculate reporting chains. For a largely static category taxonomy with frequent subtree reports, nested sets can make reads simple. For breadcrumb and ancestor checks that dominate traffic, closure tables precompute exactly those relationships. Materialized paths fit prefix-based navigation, especially when paths are supported by a dedicated type such as PostgreSQL <code>ltree</code>.</p>
             <p>These are workload choices, not a ranking from primitive to advanced. A chain of N nodes needs N(N+1)/2 closure pairs when self-pairs are included. A wide shallow tree can need far fewer. Materialized paths can grow with depth, and nested-set edits can affect unrelated nodes whose traversal positions follow the edited branch.</p>
             <p>Useful validation includes detecting cycles, checking parent existence, checking path prefixes against actual ancestors, checking that nested intervals are nested or disjoint rather than crossing, and comparing closure depths with an adjacency traversal. Preserve a rebuild path when extra structures are derived. A graph allowing several parents needs different maintenance rules from this tree: deleting one edge may leave a node reachable through another path, and one closure pair cannot necessarily represent every path's distinct length.</p>

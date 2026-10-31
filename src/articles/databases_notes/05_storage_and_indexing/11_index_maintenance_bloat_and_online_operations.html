@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Index Maintenance, Bloat, Redundancy, and Online Operations</title>
-    <meta content="Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~ The difficult part is not creating an index." name="description" />
+    <meta content="Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations",
-            "description": "Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~ The difficult part is not creating an index.",
-            "dateModified": "2026-10-02",
+            "description": "Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/11_index_maintenance_bloat_and_online_operations" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~ The difficult part is not creating an index." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="Indexes have a lifecycle: ~~~text design | build | observe | maintain | replace or drop ~~~" property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -112,35 +112,47 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#index-maintenance-is-workload-specific">Index maintenance is workload-specific</a></li>
-                    <li><a href="#index-bloat">Index bloat</a></li>
-                    <li><a href="#why-files-do-not-shrink-immediately">Why files do not shrink immediately</a></li>
-                    <li><a href="#postgresql-and-mvcc">PostgreSQL and MVCC</a></li>
-                    <li><a href="#monitor-object-size">Monitor object size</a></li>
-                    <li><a href="#zero-scans-does-not-automatically-mean-unused">Zero scans does not automatically mean unused</a></li>
-                    <li><a href="#constraint-backed-indexes">Constraint-backed indexes</a></li>
-                    <li><a href="#redundant-indexes">Redundant indexes</a></li>
-                    <li><a href="#duplicate-indexes">Duplicate indexes</a></li>
-                    <li><a href="#write-amplification">Write amplification</a></li>
-                    <li><a href="#building-an-index-on-a-live-table">Building an index on a live table</a></li>
-                    <li><a href="#postgresql-create-index-concurrently">PostgreSQL CREATE INDEX CONCURRENTLY</a></li>
-                    <li><a href="#failed-concurrent-build">Failed concurrent build</a></li>
-                    <li><a href="#progress-monitoring">Progress monitoring</a></li>
-                    <li><a href="#reindex">REINDEX</a></li>
-                    <li><a href="#reindex-concurrently">REINDEX CONCURRENTLY</a></li>
-                    <li><a href="#rebuild-versus-drop-create">Rebuild versus drop/create</a></li>
-                    <li><a href="#replace-index-migration-pattern">Replace-index migration pattern</a></li>
-                    <li><a href="#fillfactor-changes">Fillfactor changes</a></li>
-                    <li><a href="#online-operations-are-not-free">Online operations are not free</a></li>
-                    <li><a href="#replica-impact">Replica impact</a></li>
-                    <li><a href="#indexes-and-backups">Indexes and backups</a></li>
-                    <li><a href="#statistics-after-index-creation">Statistics after index creation</a></li>
-                    <li><a href="#validate-with-plans">Validate with plans</a></li>
-                    <li><a href="#dropping-an-index">Dropping an index</a></li>
-                    <li><a href="#postgresql-drop-index-concurrently">PostgreSQL DROP INDEX CONCURRENTLY</a></li>
-                    <li><a href="#index-inventory">Index inventory</a></li>
-                    <li><a href="#migration-review-checklist">Migration review checklist</a></li>
-                    <li><a href="#runnable-postgresql-inventory-exercise">Runnable PostgreSQL inventory exercise</a></li>
+                    <li><a href="#observe-before-maintaining">Observe before maintaining</a>
+                        <ol>
+                            <li><a href="#index-maintenance-is-workload-specific">Index maintenance is workload-specific</a></li>
+                            <li><a href="#index-bloat">Index bloat</a></li>
+                            <li><a href="#why-files-do-not-shrink-immediately">Why files do not shrink immediately</a></li>
+                            <li><a href="#postgresql-and-mvcc">PostgreSQL and MVCC</a></li>
+                            <li><a href="#monitor-object-size">Monitor object size</a></li>
+                            <li><a href="#zero-scans-does-not-automatically-mean-unused">Zero scans does not automatically mean unused</a></li>
+                            <li><a href="#constraint-backed-indexes">Constraint-backed indexes</a></li>
+                            <li><a href="#redundant-indexes">Redundant indexes</a></li>
+                            <li><a href="#duplicate-indexes">Duplicate indexes</a></li>
+                            <li><a href="#write-amplification">Write amplification</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#building-and-replacing-indexes-under-traffic">Building and replacing indexes under traffic</a>
+                        <ol>
+                            <li><a href="#building-an-index-on-a-live-table">Building an index on a live table</a></li>
+                            <li><a href="#postgresql-create-index-concurrently">PostgreSQL CREATE INDEX CONCURRENTLY</a></li>
+                            <li><a href="#failed-concurrent-build">Failed concurrent build</a></li>
+                            <li><a href="#progress-monitoring">Progress monitoring</a></li>
+                            <li><a href="#reindex">REINDEX</a></li>
+                            <li><a href="#reindex-concurrently">REINDEX CONCURRENTLY</a></li>
+                            <li><a href="#rebuild-versus-drop-create">Rebuild versus drop/create</a></li>
+                            <li><a href="#replace-index-migration-pattern">Replace-index migration pattern</a></li>
+                            <li><a href="#fillfactor-changes">Fillfactor changes</a></li>
+                            <li><a href="#online-operations-are-not-free">Online operations are not free</a></li>
+                            <li><a href="#replica-impact">Replica impact</a></li>
+                            <li><a href="#indexes-and-backups">Indexes and backups</a></li>
+                            <li><a href="#statistics-after-index-creation">Statistics after index creation</a></li>
+                            <li><a href="#validate-with-plans">Validate with plans</a></li>
+                            <li><a href="#dropping-an-index">Dropping an index</a></li>
+                            <li><a href="#postgresql-drop-index-concurrently">PostgreSQL DROP INDEX CONCURRENTLY</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#audit-before-removing-or-rebuilding">Audit before removing or rebuilding</a>
+                        <ol>
+                            <li><a href="#index-inventory">Index inventory</a></li>
+                            <li><a href="#migration-review-checklist">Migration review checklist</a></li>
+                            <li><a href="#runnable-postgresql-inventory-exercise">Runnable PostgreSQL inventory exercise</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#common-mistakes">Common mistakes</a></li>
                     <li><a href="#related-notes">Related notes</a></li>
                 </ol>
@@ -365,7 +377,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -397,8 +409,9 @@
                 |
                 replace or drop
                 ~~~</p>
-            <p>The difficult part is not creating an index. It is knowing whether the index still earns its write, storage, and operational cost.</p>
-            <h2 id="index-maintenance-is-workload-specific">Index maintenance is workload-specific</h2>
+            <p>The difficult decision is whether an index still justifies its write, storage, and operational cost. Measure use and growth, verify why a redundant-looking index exists, and rehearse changes under realistic traffic. A rebuild is not routine housekeeping unless the engine and workload support that conclusion.</p>
+            <h2 id="observe-before-maintaining">Observe before maintaining</h2>
+            <h3 id="index-maintenance-is-workload-specific">Index maintenance is workload-specific</h3>
             <p>Avoid rules such as:</p>
             <p>~~~text
                 rebuild every index every Sunday
@@ -416,7 +429,7 @@
                 <li>SQLite file/page behavior.</li>
             </ul>
             <p>The same percentage does not mean the same thing everywhere.</p>
-            <h2 id="index-bloat">Index bloat</h2>
+            <h3 id="index-bloat">Index bloat</h3>
             <p>Bloat broadly means an index occupies substantially more space than its useful entries require.</p>
             <p>Causes can include:</p>
             <ul>
@@ -431,7 +444,7 @@
                 large index != bloated index
                 ~~~</p>
             <p>A large healthy index can be completely justified.</p>
-            <h2 id="why-files-do-not-shrink-immediately">Why files do not shrink immediately</h2>
+            <h3 id="why-files-do-not-shrink-immediately">Why files do not shrink immediately</h3>
             <p>Deletes can make space reusable inside an index without returning the underlying file space to the operating system.</p>
             <p>Reusing free pages is often cheaper than shrinking and regrowing the index.</p>
             <p>Therefore:</p>
@@ -442,10 +455,10 @@
             <p>~~~text
                 index file becomes small immediately
                 ~~~</p>
-            <h2 id="postgresql-and-mvcc">PostgreSQL and MVCC</h2>
+            <h3 id="postgresql-and-mvcc">PostgreSQL and MVCC</h3>
             <p>PostgreSQL indexes can contain entries pointing to row versions that are no longer visible to normal queries until cleanup can remove or recycle them.</p>
             <p>Long transactions can delay cleanup because old snapshots may still need row versions.</p>
-            <h2 id="monitor-object-size">Monitor object size</h2>
+            <h3 id="monitor-object-size">Monitor object size</h3>
             <p>PostgreSQL example:</p>
             <p>~~~sql
                 SELECT
@@ -458,7 +471,7 @@
                 ORDER BY pg_relation_size(indexrelid) DESC;
                 ~~~</p>
             <p>Size and scan count are clues, not verdicts.</p>
-            <h2 id="zero-scans-does-not-automatically-mean-unused">Zero scans does not automatically mean unused</h2>
+            <h3 id="zero-scans-does-not-automatically-mean-unused">Zero scans does not automatically mean unused</h3>
             <p>Index statistics can reset.</p>
             <p>An index may still be needed for:</p>
             <ul>
@@ -469,7 +482,7 @@
                 <li>incident workflow.</li>
             </ul>
             <p>Understand the observation period and purpose before dropping it.</p>
-            <h2 id="constraint-backed-indexes">Constraint-backed indexes</h2>
+            <h3 id="constraint-backed-indexes">Constraint-backed indexes</h3>
             <p>Primary keys and unique constraints are often enforced by indexes.</p>
             <p>Do not drop an index simply because application SELECT queries do not use it.</p>
             <p>Ask:</p>
@@ -477,7 +490,7 @@
                 does this index enforce correctness?
                 ~~~</p>
             <p>before treating it as optional.</p>
-            <h2 id="redundant-indexes">Redundant indexes</h2>
+            <h3 id="redundant-indexes">Redundant indexes</h3>
             <p>Examples:</p>
             <p>~~~text
                 index A: (customer_id)
@@ -495,11 +508,11 @@
                 <li>operator class.</li>
             </ul>
             <p>Use plans and workload evidence.</p>
-            <h2 id="duplicate-indexes">Duplicate indexes</h2>
+            <h3 id="duplicate-indexes">Duplicate indexes</h3>
             <p>Two indexes with identical key, predicate, and operator behavior can appear after migrations or tooling mistakes.</p>
             <p>They create duplicate write and storage cost.</p>
             <p>Inventory schema definitions periodically.</p>
-            <h2 id="write-amplification">Write amplification</h2>
+            <h3 id="write-amplification">Write amplification</h3>
             <p>Every index can add work to:</p>
             <ul>
                 <li>INSERT,</li>
@@ -510,7 +523,8 @@
                 <li>replication/WAL.</li>
             </ul>
             <p>This is why "just add another index" is not free.</p>
-            <h2 id="building-an-index-on-a-live-table">Building an index on a live table</h2>
+            <h2 id="building-and-replacing-indexes-under-traffic">Building and replacing indexes under traffic</h2>
+            <h3 id="building-an-index-on-a-live-table">Building an index on a live table</h3>
             <p>A normal index build may block writes depending on engine.</p>
             <p>On a large table, the build can also consume:</p>
             <ul>
@@ -521,7 +535,7 @@
                 <li>cache capacity.</li>
             </ul>
             <p>Plan index deployment as an operational change.</p>
-            <h2 id="postgresql-create-index-concurrently">PostgreSQL CREATE INDEX CONCURRENTLY</h2>
+            <h3 id="postgresql-create-index-concurrently">PostgreSQL CREATE INDEX CONCURRENTLY</h3>
             <p>PostgreSQL supports:</p>
             <p>~~~sql
                 CREATE INDEX CONCURRENTLY idx_orders_customer_date
@@ -536,7 +550,7 @@
                 <li>additional caveats on failure.</li>
             </ul>
             <p>It cannot run inside a transaction block.</p>
-            <h2 id="failed-concurrent-build">Failed concurrent build</h2>
+            <h3 id="failed-concurrent-build">Failed concurrent build</h3>
             <p>A failed concurrent PostgreSQL build can leave an invalid index object.</p>
             <p>Invalid indexes are not used for normal queries but can still need cleanup.</p>
             <p>After failure:</p>
@@ -546,14 +560,14 @@
                 <li>drop or rebuild the invalid object as appropriate.</li>
             </ol>
             <p>Do not assume failure cleaned up everything.</p>
-            <h2 id="progress-monitoring">Progress monitoring</h2>
+            <h3 id="progress-monitoring">Progress monitoring</h3>
             <p>PostgreSQL exposes:</p>
             <p>~~~text
                 pg_stat_progress_create_index
                 ~~~</p>
             <p>for index-build progress.</p>
             <p>Production migrations should monitor long-running builds instead of treating them as a black box.</p>
-            <h2 id="reindex">REINDEX</h2>
+            <h3 id="reindex">REINDEX</h3>
             <p>PostgreSQL can rebuild an index:</p>
             <p>~~~sql
                 REINDEX INDEX idx_orders_customer_date;
@@ -565,18 +579,18 @@
                 <li>applying some storage-parameter changes.</li>
             </ul>
             <p>REINDEX is not a routine cure for every slow query.</p>
-            <h2 id="reindex-concurrently">REINDEX CONCURRENTLY</h2>
+            <h3 id="reindex-concurrently">REINDEX CONCURRENTLY</h3>
             <p>For production systems where blocking writes is unacceptable:</p>
             <p>~~~sql
                 REINDEX INDEX CONCURRENTLY idx_orders_customer_date;
                 ~~~</p>
             <p>This performs more work and has additional restrictions, but reduces write blocking.</p>
             <p>It cannot run inside a transaction block.</p>
-            <h2 id="rebuild-versus-drop-create">Rebuild versus drop/create</h2>
+            <h3 id="rebuild-versus-drop-create">Rebuild versus drop/create</h3>
             <p>A rebuild can preserve the logical definition while writing a fresh physical structure.</p>
             <p>Drop/create can introduce an interval where the access path or constraint is absent unless carefully staged.</p>
             <p>For unique or constraint-backed indexes, correctness implications matter.</p>
-            <h2 id="replace-index-migration-pattern">Replace-index migration pattern</h2>
+            <h3 id="replace-index-migration-pattern">Replace-index migration pattern</h3>
             <p>A safe production pattern can be:</p>
             <p>~~~text
                 create new index concurrently
@@ -588,11 +602,11 @@
                 drop old index safely
                 ~~~</p>
             <p>This avoids an all-at-once replacement.</p>
-            <h2 id="fillfactor-changes">Fillfactor changes</h2>
+            <h3 id="fillfactor-changes">Fillfactor changes</h3>
             <p>Changing an index storage parameter does not necessarily rewrite existing pages immediately.</p>
             <p>A rebuild may be required for the new layout to apply fully.</p>
             <p>Do not change fillfactor without a measured write or page-density problem.</p>
-            <h2 id="online-operations-are-not-free">Online operations are not free</h2>
+            <h3 id="online-operations-are-not-free">Online operations are not free</h3>
             <p>Online or concurrent usually means foreground reads and writes can continue, not that the operation has zero impact.</p>
             <p>It can still increase:</p>
             <ul>
@@ -603,19 +617,19 @@
                 <li>query latency.</li>
             </ul>
             <p>Run large builds during controlled periods and monitor them.</p>
-            <h2 id="replica-impact">Replica impact</h2>
+            <h3 id="replica-impact">Replica impact</h3>
             <p>Index creation or rebuild can generate changes that replicas must receive or replay depending on engine.</p>
             <p>Large maintenance can increase replication lag.</p>
             <p>Check failover and read-replica health during the operation.</p>
-            <h2 id="indexes-and-backups">Indexes and backups</h2>
+            <h3 id="indexes-and-backups">Indexes and backups</h3>
             <p>More indexes increase backup size or restore/rebuild time depending on backup method.</p>
             <p>For logical backups, indexes may be rebuilt during restore.</p>
             <p>For physical backups, index files are often included.</p>
             <p>Storage cost extends beyond the primary server.</p>
-            <h2 id="statistics-after-index-creation">Statistics after index creation</h2>
+            <h3 id="statistics-after-index-creation">Statistics after index creation</h3>
             <p>A new ordinary index can be considered immediately, but table and expression statistics still influence plan choice.</p>
             <p>After major data/index changes, ensure statistics describe the current workload.</p>
-            <h2 id="validate-with-plans">Validate with plans</h2>
+            <h3 id="validate-with-plans">Validate with plans</h3>
             <p>After creating an index:</p>
             <p>~~~text
                 index exists
@@ -635,7 +649,7 @@
                 <li>cost model.</li>
             </ul>
             <p>Do not force the index automatically.</p>
-            <h2 id="dropping-an-index">Dropping an index</h2>
+            <h3 id="dropping-an-index">Dropping an index</h3>
             <p>Before dropping:</p>
             <ol>
                 <li>identify constraint ownership,</li>
@@ -645,14 +659,15 @@
                 <li>estimate rollback/recreate time.</li>
             </ol>
             <p>On large tables, recreating a dropped index can be expensive.</p>
-            <h2 id="postgresql-drop-index-concurrently">PostgreSQL DROP INDEX CONCURRENTLY</h2>
+            <h3 id="postgresql-drop-index-concurrently">PostgreSQL DROP INDEX CONCURRENTLY</h3>
             <p>PostgreSQL supports concurrent index drop for eligible cases:</p>
             <p>~~~sql
                 DROP INDEX CONCURRENTLY idx_old;
                 ~~~</p>
             <p>This can reduce blocking on a live system.</p>
             <p>Restrictions apply, so use current engine documentation for production migrations.</p>
-            <h2 id="index-inventory">Index inventory</h2>
+            <h2 id="audit-before-removing-or-rebuilding">Audit before removing or rebuilding</h2>
+            <h3 id="index-inventory">Index inventory</h3>
             <p>A useful inventory records:</p>
             <ul>
                 <li>index name,</li>
@@ -666,7 +681,7 @@
                 <li>last review/change.</li>
             </ul>
             <p>This helps prevent years of accidental index accumulation.</p>
-            <h2 id="migration-review-checklist">Migration review checklist</h2>
+            <h3 id="migration-review-checklist">Migration review checklist</h3>
             <p>When a pull request adds an index, ask:</p>
             <ol>
                 <li>Which query requires it?</li>
@@ -680,7 +695,7 @@
                 <li>How is rollback handled?</li>
                 <li>How will usefulness be measured after deployment?</li>
             </ol>
-            <h2 id="runnable-postgresql-inventory-exercise">Runnable PostgreSQL inventory exercise</h2>
+            <h3 id="runnable-postgresql-inventory-exercise">Runnable PostgreSQL inventory exercise</h3>
             <p>This chapter adds:</p>
             <p>~~~text
                 scripts/indexing/postgres_index_inventory.sql

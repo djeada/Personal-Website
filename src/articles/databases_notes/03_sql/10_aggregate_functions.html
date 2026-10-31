@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Aggregate Functions in SQL | Adam Djellouli</title>
-    <meta content="An aggregate calculates one result from several rows. SUM adds values, COUNT counts them, and AVG calculates their average." name="description" />
+    <meta content="An aggregate reduces qualifying rows to a summary, either once for the whole input or once per GROUP BY key." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions",
-            "description": "An aggregate calculates one result from several rows. SUM adds values, COUNT counts them, and AVG calculates their average.",
-            "dateModified": "2026-10-04",
+            "description": "An aggregate reduces qualifying rows to a summary, either once for the whole input or once per GROUP BY key.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="An aggregate calculates one result from several rows. SUM adds values, COUNT counts them, and AVG calculates their average." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="An aggregate reduces qualifying rows to a summary, either once for the whole input or once per GROUP BY key." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -114,73 +114,101 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#common-aggregate-functions">Common Aggregate Functions</a></li>
-                    <li><a href="#setting-up-example-tables">Setting Up Example Tables</a></li>
-                    <li><a href="#count-function">COUNT Function</a>
+                    <li><a href="#what-aggregates-return">What aggregates return</a>
                         <ol>
-                            <li><a href="#example-counting-total-employees">Example: Counting Total Employees</a></li>
-                            <li><a href="#example-counting-employees-per-department">Example: Counting Employees per Department</a></li>
+                            <li><a href="#common-aggregate-functions">Common Aggregate Functions</a></li>
                         </ol>
                     </li>
-                    <li><a href="#sum-function">SUM Function</a>
+                    <li><a href="#use-one-reproducible-employee-dataset">Use one reproducible employee dataset</a>
                         <ol>
-                            <li><a href="#example-calculating-total-salary-expenditure">Example: Calculating Total Salary Expenditure</a></li>
-                            <li><a href="#example-calculating-total-salary-per-department">Example: Calculating Total Salary per Department</a></li>
+                            <li><a href="#setting-up-example-tables">Setting Up Example Tables</a></li>
                         </ol>
                     </li>
-                    <li><a href="#avg-function">AVG Function</a>
+                    <li><a href="#count-sum-average-and-extrema">Count, sum, average, and extrema</a>
                         <ol>
-                            <li><a href="#example-calculating-average-salary">Example: Calculating Average Salary</a></li>
-                            <li><a href="#example-calculating-average-salary-per-department">Example: Calculating Average Salary per Department</a></li>
+                            <li><a href="#count-function">COUNT Function</a>
+                                <ol>
+                                    <li><a href="#example-counting-total-employees">Example: Counting Total Employees</a></li>
+                                    <li><a href="#example-counting-employees-per-department">Example: Counting Employees per Department</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#sum-function">SUM Function</a>
+                                <ol>
+                                    <li><a href="#example-calculating-total-salary-expenditure">Example: Calculating Total Salary Expenditure</a></li>
+                                    <li><a href="#example-calculating-total-salary-per-department">Example: Calculating Total Salary per Department</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#avg-function">AVG Function</a>
+                                <ol>
+                                    <li><a href="#example-calculating-average-salary">Example: Calculating Average Salary</a></li>
+                                    <li><a href="#example-calculating-average-salary-per-department">Example: Calculating Average Salary per Department</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#min-and-max-functions">MIN and MAX Functions</a>
+                                <ol>
+                                    <li><a href="#example-finding-minimum-and-maximum-salaries">Example: Finding Minimum and Maximum Salaries</a></li>
+                                    <li><a href="#example-finding-minimum-and-maximum-salaries-per-department">Example: Finding Minimum and Maximum Salaries per Department</a></li>
+                                </ol>
+                            </li>
                         </ol>
                     </li>
-                    <li><a href="#min-and-max-functions">MIN and MAX Functions</a>
+                    <li><a href="#group-and-filter-the-right-rows">Group and filter the right rows</a>
                         <ol>
-                            <li><a href="#example-finding-minimum-and-maximum-salaries">Example: Finding Minimum and Maximum Salaries</a></li>
-                            <li><a href="#example-finding-minimum-and-maximum-salaries-per-department">Example: Finding Minimum and Maximum Salaries per Department</a></li>
+                            <li><a href="#group-by-clause">GROUP BY Clause</a>
+                                <ol>
+                                    <li><a href="#example-counting-employees-by-department-name">Example: Counting Employees by Department Name</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#having-clause">HAVING Clause</a>
+                                <ol>
+                                    <li><a href="#example-departments-with-more-than-one-employee">Example: Departments with More Than One Employee</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#combining-aggregate-functions">Combining Aggregate Functions</a>
+                                <ol>
+                                    <li><a href="#example-employee-statistics-per-department">Example: Employee Statistics per Department</a></li>
+                                </ol>
+                            </li>
                         </ol>
                     </li>
-                    <li><a href="#group-by-clause">GROUP BY Clause</a>
+                    <li><a href="#handle-unknown-and-empty-inputs">Handle unknown and empty inputs</a>
                         <ol>
-                            <li><a href="#example-counting-employees-by-department-name">Example: Counting Employees by Department Name</a></li>
+                            <li><a href="#dealing-with-null-values">Dealing with NULL Values</a>
+                                <ol>
+                                    <li><a href="#example-impact-of-null-on-aggregate-functions">Example: Impact of NULL on Aggregate Functions</a></li>
+                                    <li><a href="#query-calculating-average-salary-with-null-values">Query: Calculating Average Salary with NULL Values</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#using-distinct-with-aggregate-functions">Using DISTINCT with Aggregate Functions</a>
+                                <ol>
+                                    <li><a href="#example-counting-unique-salaries">Example: Counting Unique Salaries</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#aggregate-functions-with-subqueries">Aggregate Functions with Subqueries</a>
+                                <ol>
+                                    <li><a href="#example-employees-earning-above-average-salary">Example: Employees Earning Above Average Salary</a></li>
+                                </ol>
+                            </li>
                         </ol>
                     </li>
-                    <li><a href="#having-clause">HAVING Clause</a>
+                    <li><a href="#keep-detailed-rows-with-windows">Keep detailed rows with windows</a>
                         <ol>
-                            <li><a href="#example-departments-with-more-than-one-employee">Example: Departments with More Than One Employee</a></li>
+                            <li><a href="#window-functions-analytic-functions">Window Functions (Analytic Functions)</a>
+                                <ol>
+                                    <li><a href="#example-calculating-running-total-of-salaries">Example: Calculating Running Total of Salaries</a></li>
+                                </ol>
+                            </li>
                         </ol>
                     </li>
-                    <li><a href="#combining-aggregate-functions">Combining Aggregate Functions</a>
+                    <li><a href="#validate-report-meaning-and-grain">Validate report meaning and grain</a>
                         <ol>
-                            <li><a href="#example-employee-statistics-per-department">Example: Employee Statistics per Department</a></li>
+                            <li><a href="#practical-tips-for-using-aggregate-functions">Practical Tips for Using Aggregate Functions</a></li>
+                            <li><a href="#distinguish-no-rows-unknown-values-and-a-known-zero">Distinguish no rows, unknown values, and a known zero</a></li>
+                            <li><a href="#count-known-and-missing-values-together">Count known and missing values together</a></li>
+                            <li><a href="#define-the-report-s-grain-and-unit-before-summing">Define the report's grain and unit before summing</a></li>
+                            <li><a href="#filter-groups-after-deciding-which-employees-belong">Filter groups after deciding which employees belong</a></li>
                         </ol>
                     </li>
-                    <li><a href="#dealing-with-null-values">Dealing with NULL Values</a>
-                        <ol>
-                            <li><a href="#example-impact-of-null-on-aggregate-functions">Example: Impact of NULL on Aggregate Functions</a></li>
-                            <li><a href="#query-calculating-average-salary-with-null-values">Query: Calculating Average Salary with NULL Values</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#using-distinct-with-aggregate-functions">Using DISTINCT with Aggregate Functions</a>
-                        <ol>
-                            <li><a href="#example-counting-unique-salaries">Example: Counting Unique Salaries</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#aggregate-functions-with-subqueries">Aggregate Functions with Subqueries</a>
-                        <ol>
-                            <li><a href="#example-employees-earning-above-average-salary">Example: Employees Earning Above Average Salary</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#window-functions-analytic-functions">Window Functions (Analytic Functions)</a>
-                        <ol>
-                            <li><a href="#example-calculating-running-total-of-salaries">Example: Calculating Running Total of Salaries</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#practical-tips-for-using-aggregate-functions">Practical Tips for Using Aggregate Functions</a></li>
-                    <li><a href="#distinguish-no-rows-unknown-values-and-a-known-zero">Distinguish no rows, unknown values, and a known zero</a></li>
-                    <li><a href="#count-known-and-missing-values-together">Count known and missing values together</a></li>
-                    <li><a href="#define-the-report-s-grain-and-unit-before-summing">Define the report's grain and unit before summing</a></li>
-                    <li><a href="#filter-groups-after-deciding-which-employees-belong">Filter groups after deciding which employees belong</a></li>
                     <li><a href="#review-questions">Review questions</a></li>
                 </ol>
             </div>
@@ -404,7 +432,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -424,10 +452,11 @@
                     </button></div>
             </div>
             <h1>Aggregate Functions in SQL</h1>
-            <p>An <strong>aggregate</strong> calculates one result from several rows. <code>SUM</code> adds values, <code>COUNT</code> counts them, and <code>AVG</code> calculates their average. Without grouping, one aggregate can summarize the whole input. With <code>GROUP BY</code>, it summarizes each group separately.</p>
+            <p>An <strong>aggregate</strong> reduces qualifying rows to a summary, either once for the whole input or once per <code>GROUP BY</code> key. <code>COUNT(*)</code> counts rows, while aggregates such as <code>AVG(column)</code> generally skip <code>NULL</code> inputs. Before writing a report, identify its <strong>grain</strong> (one result per what?), which rows qualify, and whether missing values mean unknown or zero.</p>
             <p>For example, the bookstore's order items become one total per order when grouped by <code>order_id</code>. In this chapter, a separate employee dataset makes grouped salary calculations and missing values easy to inspect. Read <a href="06_joins_subqueries_and_views.html">joins and subqueries</a> first.</p>
             <p>Work through <code>COUNT</code>, <code>SUM</code>, and <code>AVG</code> before combining them with joins and <code>HAVING</code>. <code>WHERE</code> filters input rows; <code>HAVING</code> filters the resulting groups. The final window-function example prepares for the next chapter.</p>
-            <h2 id="common-aggregate-functions">Common Aggregate Functions</h2>
+            <h2 id="what-aggregates-return">What aggregates return</h2>
+            <h3 id="common-aggregate-functions">Common Aggregate Functions</h3>
             <p>Here are the most commonly used aggregate functions in SQL:</p>
             <ul>
                 <li>The <code>COUNT</code> function calculates the number of rows in a dataset that meet a specified condition or the total number of rows when no condition is provided.</li>
@@ -436,7 +465,8 @@
                 <li>The <code>MIN</code> function identifies the smallest value in a dataset, including numeric, string, and date types.</li>
                 <li>The <code>MAX</code> function returns the largest value in a dataset, similar to <code>MIN</code>, and supports numeric, string, and date types.</li>
             </ul>
-            <h2 id="setting-up-example-tables">Setting Up Example Tables</h2>
+            <h2 id="use-one-reproducible-employee-dataset">Use one reproducible employee dataset</h2>
+            <h3 id="setting-up-example-tables">Setting Up Example Tables</h3>
             <p>Run this setup once in a <strong>fresh SQLite database</strong>. It is separate from the bookstore database. Continue using this same database through the chapter; the null-value section explicitly adds one more employee.</p>
             <div>
                 <pre><code class="language-sql">PRAGMA foreign_keys = ON;
@@ -534,9 +564,10 @@ INSERT INTO Employees VALUES
                     </tr>
                 </tbody>
             </table>
-            <h2 id="count-function">COUNT Function</h2>
+            <h2 id="count-sum-average-and-extrema">Count, sum, average, and extrema</h2>
+            <h3 id="count-function">COUNT Function</h3>
             <p>The <code>COUNT</code> function returns the number of rows that match a specified condition.</p>
-            <h3 id="example-counting-total-employees">Example: Counting Total Employees</h3>
+            <h4 id="example-counting-total-employees">Example: Counting Total Employees</h4>
             <div>
                 <pre><code class="language-sql">SELECT COUNT(*) AS TotalEmployees
 FROM Employees;</code></pre>
@@ -554,7 +585,7 @@ FROM Employees;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="example-counting-employees-per-department">Example: Counting Employees per Department</h3>
+            <h4 id="example-counting-employees-per-department">Example: Counting Employees per Department</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, COUNT(*) AS NumberOfEmployees
 FROM Employees
@@ -587,9 +618,9 @@ GROUP BY DepartmentID;</code></pre>
                 <li>The <code>GROUP BY</code> clause groups the rows by <code>DepartmentID</code>.</li>
                 <li>The <code>COUNT(*)</code> function counts the number of employees in each department.</li>
             </ul>
-            <h2 id="sum-function">SUM Function</h2>
+            <h3 id="sum-function">SUM Function</h3>
             <p>The <code>SUM</code> function adds up all the values in a numeric column.</p>
-            <h3 id="example-calculating-total-salary-expenditure">Example: Calculating Total Salary Expenditure</h3>
+            <h4 id="example-calculating-total-salary-expenditure">Example: Calculating Total Salary Expenditure</h4>
             <div>
                 <pre><code class="language-sql">SELECT SUM(Salary) AS TotalSalary
 FROM Employees;</code></pre>
@@ -607,7 +638,7 @@ FROM Employees;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="example-calculating-total-salary-per-department">Example: Calculating Total Salary per Department</h3>
+            <h4 id="example-calculating-total-salary-per-department">Example: Calculating Total Salary per Department</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, SUM(Salary) AS TotalSalary
 FROM Employees
@@ -637,9 +668,9 @@ GROUP BY DepartmentID;</code></pre>
                 </tbody>
             </table>
             <p>The <code>SUM(Salary)</code> function calculates the total salary for each department.</p>
-            <h2 id="avg-function">AVG Function</h2>
+            <h3 id="avg-function">AVG Function</h3>
             <p>The <code>AVG</code> function calculates the average value of a numeric column.</p>
-            <h3 id="example-calculating-average-salary">Example: Calculating Average Salary</h3>
+            <h4 id="example-calculating-average-salary">Example: Calculating Average Salary</h4>
             <div>
                 <pre><code class="language-sql">SELECT AVG(Salary) AS AverageSalary
 FROM Employees;</code></pre>
@@ -657,7 +688,7 @@ FROM Employees;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="example-calculating-average-salary-per-department">Example: Calculating Average Salary per Department</h3>
+            <h4 id="example-calculating-average-salary-per-department">Example: Calculating Average Salary per Department</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, AVG(Salary) AS AverageSalary
 FROM Employees
@@ -687,9 +718,9 @@ GROUP BY DepartmentID;</code></pre>
                 </tbody>
             </table>
             <p>The <code>AVG(Salary)</code> function computes the average salary for each department.</p>
-            <h2 id="min-and-max-functions">MIN and MAX Functions</h2>
+            <h3 id="min-and-max-functions">MIN and MAX Functions</h3>
             <p>The <code>MIN</code> and <code>MAX</code> functions return the smallest and largest values in a set, respectively.</p>
-            <h3 id="example-finding-minimum-and-maximum-salaries">Example: Finding Minimum and Maximum Salaries</h3>
+            <h4 id="example-finding-minimum-and-maximum-salaries">Example: Finding Minimum and Maximum Salaries</h4>
             <div>
                 <pre><code class="language-sql">SELECT MIN(Salary) AS MinimumSalary, MAX(Salary) AS MaximumSalary
 FROM Employees;</code></pre>
@@ -709,7 +740,7 @@ FROM Employees;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="example-finding-minimum-and-maximum-salaries-per-department">Example: Finding Minimum and Maximum Salaries per Department</h3>
+            <h4 id="example-finding-minimum-and-maximum-salaries-per-department">Example: Finding Minimum and Maximum Salaries per Department</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, MIN(Salary) AS MinimumSalary, MAX(Salary) AS MaximumSalary
 FROM Employees
@@ -743,9 +774,10 @@ GROUP BY DepartmentID;</code></pre>
                 </tbody>
             </table>
             <p>The <code>MIN(Salary)</code> and <code>MAX(Salary)</code> functions find the lowest and highest salaries in each department.</p>
-            <h2 id="group-by-clause">GROUP BY Clause</h2>
+            <h2 id="group-and-filter-the-right-rows">Group and filter the right rows</h2>
+            <h3 id="group-by-clause">GROUP BY Clause</h3>
             <p>The <code>GROUP BY</code> clause is used with aggregate functions to group the result set by one or more columns.</p>
-            <h3 id="example-counting-employees-by-department-name">Example: Counting Employees by Department Name</h3>
+            <h4 id="example-counting-employees-by-department-name">Example: Counting Employees by Department Name</h4>
             <p>To make the results more readable, let's join the <code>Employees</code> and <code>Departments</code> tables.</p>
             <div>
                 <pre><code class="language-sql">SELECT d.DepartmentName, COUNT(*) AS NumberOfEmployees
@@ -780,9 +812,9 @@ GROUP BY d.DepartmentName;</code></pre>
                 <li>The <code>JOIN</code> clause combines the <code>Employees</code> and <code>Departments</code> tables.</li>
                 <li>The <code>GROUP BY</code> clause groups the results by <code>DepartmentName</code>.</li>
             </ul>
-            <h2 id="having-clause">HAVING Clause</h2>
+            <h3 id="having-clause">HAVING Clause</h3>
             <p>The <code>HAVING</code> clause is used to filter groups based on a condition, similar to how the <code>WHERE</code> clause filters rows.</p>
-            <h3 id="example-departments-with-more-than-one-employee">Example: Departments with More Than One Employee</h3>
+            <h4 id="example-departments-with-more-than-one-employee">Example: Departments with More Than One Employee</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, COUNT(*) AS NumberOfEmployees
 FROM Employees
@@ -809,9 +841,9 @@ HAVING COUNT(*) &gt; 1;</code></pre>
                 </tbody>
             </table>
             <p>The <code>HAVING</code> clause filters groups where the count of employees is greater than one.</p>
-            <h2 id="combining-aggregate-functions">Combining Aggregate Functions</h2>
+            <h3 id="combining-aggregate-functions">Combining Aggregate Functions</h3>
             <p>You can use multiple aggregate functions in a single query to get comprehensive insights.</p>
-            <h3 id="example-employee-statistics-per-department">Example: Employee Statistics per Department</h3>
+            <h4 id="example-employee-statistics-per-department">Example: Employee Statistics per Department</h4>
             <div>
                 <pre><code class="language-sql">SELECT
     d.DepartmentName,
@@ -864,9 +896,10 @@ GROUP BY d.DepartmentName;</code></pre>
                 </tbody>
             </table>
             <p>The query provides a comprehensive overview of salary statistics for each department.</p>
-            <h2 id="dealing-with-null-values">Dealing with NULL Values</h2>
+            <h2 id="handle-unknown-and-empty-inputs">Handle unknown and empty inputs</h2>
+            <h3 id="dealing-with-null-values">Dealing with NULL Values</h3>
             <p>Aggregate functions generally ignore <code>NULL</code> values except for the <code>COUNT(*)</code> function.</p>
-            <h3 id="example-impact-of-null-on-aggregate-functions">Example: Impact of NULL on Aggregate Functions</h3>
+            <h4 id="example-impact-of-null-on-aggregate-functions">Example: Impact of NULL on Aggregate Functions</h4>
             <p>Now add an employee whose salary is unknown. Run this insert once before the remaining examples:</p>
             <div>
                 <pre><code class="language-sql">INSERT INTO Employees VALUES (6, 'Susan', 'Miller', 1, NULL);</code></pre>
@@ -892,7 +925,7 @@ GROUP BY d.DepartmentName;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <h3 id="query-calculating-average-salary-with-null-values">Query: Calculating Average Salary with NULL Values</h3>
+            <h4 id="query-calculating-average-salary-with-null-values">Query: Calculating Average Salary with NULL Values</h4>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, AVG(Salary) AS AverageSalary
 FROM Employees
@@ -925,9 +958,9 @@ GROUP BY DepartmentID;</code></pre>
                 <li>The <code>AVG</code> function ignores the <code>NULL</code> salary for Susan Miller.</li>
                 <li>The average salary for department 1 remains the same.</li>
             </ul>
-            <h2 id="using-distinct-with-aggregate-functions">Using DISTINCT with Aggregate Functions</h2>
+            <h3 id="using-distinct-with-aggregate-functions">Using DISTINCT with Aggregate Functions</h3>
             <p>The <code>DISTINCT</code> keyword can be used inside aggregate functions to consider only unique values.</p>
-            <h3 id="example-counting-unique-salaries">Example: Counting Unique Salaries</h3>
+            <h4 id="example-counting-unique-salaries">Example: Counting Unique Salaries</h4>
             <div>
                 <pre><code class="language-sql">SELECT COUNT(DISTINCT Salary) AS UniqueSalaries
 FROM Employees;</code></pre>
@@ -946,9 +979,9 @@ FROM Employees;</code></pre>
                 </tbody>
             </table>
             <p>The <code>COUNT(DISTINCT Salary)</code> function counts the number of unique salary values, excluding <code>NULL</code>.</p>
-            <h2 id="aggregate-functions-with-subqueries">Aggregate Functions with Subqueries</h2>
+            <h3 id="aggregate-functions-with-subqueries">Aggregate Functions with Subqueries</h3>
             <p>Aggregate functions can be used in subqueries to compare individual rows to aggregate values.</p>
-            <h3 id="example-employees-earning-above-average-salary">Example: Employees Earning Above Average Salary</h3>
+            <h4 id="example-employees-earning-above-average-salary">Example: Employees Earning Above Average Salary</h4>
             <div>
                 <pre><code class="language-sql">SELECT FirstName, LastName, Salary
 FROM Employees
@@ -988,9 +1021,10 @@ WHERE Salary &gt; (
                 <li>The subquery calculates the average salary.</li>
                 <li>The outer query selects employees whose salary is greater than this average.</li>
             </ul>
-            <h2 id="window-functions-analytic-functions">Window Functions (Analytic Functions)</h2>
+            <h2 id="keep-detailed-rows-with-windows">Keep detailed rows with windows</h2>
+            <h3 id="window-functions-analytic-functions">Window Functions (Analytic Functions)</h3>
             <p>In addition to aggregate functions, SQL supports window functions that perform calculations across a set of rows related to the current row.</p>
-            <h3 id="example-calculating-running-total-of-salaries">Example: Calculating Running Total of Salaries</h3>
+            <h4 id="example-calculating-running-total-of-salaries">Example: Calculating Running Total of Salaries</h4>
             <div>
                 <pre><code class="language-sql">SELECT
     EmployeeID,
@@ -1060,7 +1094,8 @@ FROM Employees;</code></pre>
                 <li>The <code>SUM(Salary) OVER (ORDER BY EmployeeID)</code> calculates a running total of salaries.</li>
                 <li><code>SUM</code> ignores Susan’s null salary, so the running total remains 322000.</li>
             </ul>
-            <h2 id="practical-tips-for-using-aggregate-functions">Practical Tips for Using Aggregate Functions</h2>
+            <h2 id="validate-report-meaning-and-grain">Validate report meaning and grain</h2>
+            <h3 id="practical-tips-for-using-aggregate-functions">Practical Tips for Using Aggregate Functions</h3>
             <ul>
                 <li>Assign meaningful aliases to aggregate results to improve the readability of the output.</li>
                 <li>Apply the <code>WHERE</code> clause to filter rows before performing aggregation, ensuring only relevant data is included in calculations.</li>
@@ -1068,7 +1103,7 @@ FROM Employees;</code></pre>
                 <li>Limit the number of columns in the <code>GROUP BY</code> clause to only those essential for your analysis, as excessive grouping can increase query complexity and runtime.</li>
                 <li>Use the <code>HAVING</code> clause to filter groups after aggregation, allowing conditions based on aggregated results.</li>
             </ul>
-            <h2 id="distinguish-no-rows-unknown-values-and-a-known-zero">Distinguish no rows, unknown values, and a known zero</h2>
+            <h3 id="distinguish-no-rows-unknown-values-and-a-known-zero">Distinguish no rows, unknown values, and a known zero</h3>
             <p>A report with no qualifying salaries has a different input from a report containing employees whose salaries are unknown:</p>
             <div>
                 <pre><code class="language-sql">SELECT COUNT(*) AS row_count,
@@ -1102,7 +1137,29 @@ WHERE EmployeeID &lt; 0;</code></pre>
             </table>
             <p>An aggregate without <code>GROUP BY</code> still returns a result row on empty input: counts are zero, while <code>SUM</code> and <code>AVG</code> are null. With a grouping key, empty input has no groups and therefore produces no result rows.</p>
             <p>Displaying zero may be appropriate for “no payroll entries this period.” It can be misleading for “payroll total unavailable,” so choose the fallback from the report's meaning. <code>AVG(COALESCE(Salary, 0))</code> treats unknown salaries as actual zero salaries and changes the denominator. <code>COALESCE(AVG(Salary), 0)</code> leaves unknown salaries out of the calculation and only replaces an absent final average. These expressions answer different questions.</p>
-            <h2 id="count-known-and-missing-values-together">Count known and missing values together</h2>
+            <p><strong>See the incorrect assumption numerically.</strong> After inserting Susan with a null salary, department 1 has two known salaries (60000 and 65000) and one unknown salary:</p>
+            <div>
+                <pre><code class="language-sql">SELECT ROUND(AVG(Salary), 2) AS average_known,
+       ROUND(AVG(COALESCE(Salary, 0)), 2) AS average_if_missing_means_zero
+FROM Employees
+WHERE DepartmentID = 1;</code></pre>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>average_known</th>
+                        <th>average_if_missing_means_zero</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>62500.0</td>
+                        <td>41666.67</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Correct</strong> for “average of known salaries” is <code>AVG(Salary)</code>. <strong>Incorrect</strong> for that question is <code>AVG(COALESCE(Salary, 0))</code>, which silently treats missing pay as zero. It is appropriate only if zero is genuinely the chosen meaning of missing in this report.</p>
+            <h3 id="count-known-and-missing-values-together">Count known and missing values together</h3>
             <p>Continue after the earlier null-value section has inserted Susan, whose salary is null. A conditional aggregate makes completeness visible beside the report:</p>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID,
@@ -1146,11 +1203,11 @@ ORDER BY DepartmentID;</code></pre>
             </table>
             <p><code>CASE</code> produces one or zero for every input row, then <code>SUM</code> counts the selected condition. This technique generalizes to approved orders, overdue invoices, or available stock while keeping one row per reporting group.</p>
             <p>PostgreSQL and SQLite also support aggregate <code>FILTER</code> clauses, but <code>CASE</code> is widely portable. If a left join is used to include empty departments, account for its null-extended row: <code>COUNT(*)</code> would count that preserved row, and a null-salary condition could confuse “no employee” with “employee with missing salary.” Test the employee ID's presence as well.</p>
-            <h2 id="define-the-report-s-grain-and-unit-before-summing">Define the report's grain and unit before summing</h2>
+            <h3 id="define-the-report-s-grain-and-unit-before-summing">Define the report's grain and unit before summing</h3>
             <p>A sum is meaningful only when each input row represents the intended fact once. Employee salary is annual pay in this example. Summing it does not calculate the cost of a particular month unless the report defines the conversion, employment dates, and other adjustments. Likewise, different currencies should not be added as if they shared one unit.</p>
             <p>Joining Employees to a table of projects can duplicate an employee who has several projects. Summing salary after that join then counts their salary several times. If the report needs payroll per department, aggregate the employees independently. If it needs allocated payroll per project, store and validate an allocation rule rather than deduplicating arbitrary result values.</p>
             <p><code>SUM(DISTINCT Salary)</code> does not repair this problem. John and another employee can legitimately earn the same amount; distinct salary values would count that shared amount only once. Deduplication must use the identity of the fact being counted, not merely its numeric value.</p>
-            <h2 id="filter-groups-after-deciding-which-employees-belong">Filter groups after deciding which employees belong</h2>
+            <h3 id="filter-groups-after-deciding-which-employees-belong">Filter groups after deciding which employees belong</h3>
             <p>For “departments with at least two known salaries above 60000,” apply the salary requirement to rows first:</p>
             <div>
                 <pre><code class="language-sql">SELECT DepartmentID, COUNT(*) AS qualifying_employees

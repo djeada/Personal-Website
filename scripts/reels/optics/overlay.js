@@ -20,6 +20,10 @@
 
     function init(data) {
         timeline = data;
+        // Tools move focus when they rebuild their controls; a focus that scrolls the
+        // page would knock the camera and spotlight off their targets.
+        const focus = HTMLElement.prototype.focus;
+        HTMLElement.prototype.focus = function (options) { focus.call(this, { ...options, preventScroll: true }); };
         main = document.querySelector("main.tool-main");
         root = document.createElement("div");
         root.id = "reel-root";
@@ -30,7 +34,7 @@
         mark = el("div", "reel-mark", timeline.mark);
         caption = el("div", "reel-caption");
         chips = el("div", "reel-chips");
-        hud = el("div", "reel-hud", `<div class="row"><span class="label"></span><span class="value"></span></div><div class="track"><div class="fill"></div><div class="knob"></div></div>`);
+        hud = el("div", "reel-hud", `<div class="hud-row"><span class="label"></span><span class="value"></span></div><div class="track"><div class="fill"></div><div class="knob"></div></div>`);
         hudLabel = hud.querySelector(".label");
         hudValue = hud.querySelector(".value");
         hudFill = hud.querySelector(".fill");
@@ -41,6 +45,7 @@
         end = el("div", "reel-end", `
             <div class="kicker">FREE INTERACTIVE OPTICS</div>
             <h1>${e.title}</h1>
+            <div class="rule"></div>
             <div class="formula">${e.formula}</div>
             <div class="list">${e.list}</div>
             <div class="url">${e.url}</div>
@@ -52,12 +57,13 @@
     }
 
     // Where a shot puts the page: scale s and translation so the target sits at height y.
+    // `fit` (a gutter in px) caps the zoom so the whole target width stays in frame.
     function placement(shot) {
         main.style.transform = "none";
         const target = document.querySelector(shot.target);
         const base = main.getBoundingClientRect();
         const rect = target ? target.getBoundingClientRect() : base;
-        const s = shot.zoom;
+        const s = shot.fit == null ? shot.zoom : Math.min(shot.zoom ?? Infinity, (W - 2 * shot.fit) / rect.width);
         const cx = rect.left - base.left + rect.width * (shot.ax ?? .5);
         const cy = rect.top - base.top + rect.height * (shot.anchor ?? .5);
         return { s, tx: W / 2 - s * cx, ty: H * shot.y - s * cy };
@@ -150,6 +156,11 @@
             const c = item.items[i];
             const source = document.querySelector(c.source);
             let text = source ? source.textContent.trim().replace(/\s+/g, " ") : "—";
+            // `row`: the value beside the readout label that starts with this text.
+            if (c.row && source) {
+                const dt = [...source.querySelectorAll("dt")].find(d => d.textContent.trim().startsWith(c.row));
+                text = dt && dt.nextElementSibling ? dt.nextElementSibling.textContent.trim() : "—";
+            }
             if (c.pick) text = (text.match(new RegExp(c.pick)) || [, text])[1];
             node.lastElementChild.textContent = text;
             if (c.labelFrom) node.firstElementChild.textContent = document.querySelector(c.labelFrom).textContent.trim();
@@ -199,6 +210,7 @@
     }
 
     function frame(t) {
+        if (scrollX || scrollY) scrollTo(0, 0);
         sweep(t);
         camera(t);
         renderCaption(t);

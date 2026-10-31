@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Database Indexing | Adam Djellouli</title>
-    <meta content="An index is an additional access path to data." name="description" />
+    <meta content="An index trades extra storage and write maintenance for a potentially cheaper read path." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing",
-            "description": "An index is an additional access path to data.",
-            "dateModified": "2026-10-04",
+            "description": "An index trades extra storage and write maintenance for a potentially cheaper read path.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="An index is an additional access path to data." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="An index trades extra storage and write maintenance for a potentially cheaper read path." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -117,7 +117,7 @@
                     <li><a href="#how-a-b-tree-lookup-works">How a B-tree lookup works</a></li>
                     <li><a href="#index-types-and-access-methods">Index types and access methods</a></li>
                     <li><a href="#clustered-storage-and-secondary-indexes">Clustered storage and secondary indexes</a></li>
-                    <li><a href="#designing-a-composite-index">Designing a composite index</a>
+                    <li><a href="#design-an-index-from-a-query-not-from-a-column-list">Design an index from a query, not from a column list</a>
                         <ol>
                             <li><a href="#covering-a-query">Covering a query</a></li>
                             <li><a href="#indexing-a-subset">Indexing a subset</a></li>
@@ -350,7 +350,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -370,7 +370,7 @@
                     </button></div>
             </div>
             <h1>Database Indexing</h1>
-            <p>An index is an additional access path to data. It can reduce the rows and pages examined by a query, but it also consumes storage and must be maintained when indexed data changes. Start with the queries you need to support, then verify the resulting plans.</p>
+            <p>An index trades extra storage and write maintenance for a potentially cheaper read path. Choose one only after identifying the query's filter, ordering, and columns to return; then compare its plan and measured cost with a scan. This chapter is an overview—the following notes cover individual structures and operational consequences.</p>
             <p>This page is the <strong>indexing overview</strong>. The focused notes that follow go deeper into:</p>
             <ul>
                 <li><a href="06_btree_internals_and_page_splits.html">B-tree internals and page splits</a>,</li>
@@ -444,8 +444,8 @@
                 <li><strong>PostgreSQL:</strong> ordinary tables are heaps with separate indexes. <code>CLUSTER</code> rewrites a table in an index's order once; later writes do not automatically preserve that order.</li>
             </ul>
             <p>Both clustered and secondary B-tree indexes can support range searches. A secondary lookup needs extra table access only when the query cannot be answered from the index and the engine's visibility rules require it.</p>
-            <h2 id="designing-a-composite-index">Designing a composite index</h2>
-            <p>Assume PostgreSQL and this access pattern:</p>
+            <h2 id="design-an-index-from-a-query-not-from-a-column-list">Design an index from a query, not from a column list</h2>
+            <p>Consider this <strong>illustrative PostgreSQL</strong> <code>orders</code> schema and access pattern; the rows show the logical input, but this section does not create the table or claim to be a standalone setup:</p>
             <p>Input (<code>orders</code>):</p>
             <table>
                 <thead>
@@ -518,7 +518,7 @@ ORDER BY order_date;</code></pre>
                 <pre><code class="language-sql">CREATE INDEX idx_orders_customer_date
 ON orders (customer_id, order_date);</code></pre>
             </div>
-            <p>The equality predicate selects one customer; within that customer, the date keys support a range and ordering. An index on <code>(order_date, customer_id)</code> is a different access path and may be less effective for this query. Leading-column rules are useful guidance, but engines can have skip-scan and other optimizations: inspect the actual plan.</p>
+            <p>The equality predicate selects one customer; within that customer, the date keys support a range and ordering. An index on <code>(order_date, customer_id)</code> is a different access path and may be less effective for this query. Leading-column rules are a starting point, not a universal ban on all other uses of the index. Query statistics, selective predicates, and engine-specific scans affect the chosen plan. Evaluate an index with the representative workload, not solely with the four illustrative rows.</p>
             <h3 id="covering-a-query">Covering a query</h3>
             <p>In PostgreSQL, payload columns can be included:</p>
             <div>

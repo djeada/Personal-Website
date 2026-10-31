@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes",
             "description": "A basic index answers: How can the engine locate matching rows? More specialized index designs answer.",
-            "dateModified": "2026-10-02",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/08_covering_partial_and_expression_indexes" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="A basic index answers: How can the engine locate matching rows? More specialized index designs answer." property="og:description" />
-    <meta content="2026-10-02" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -112,30 +112,50 @@
             <div class="collapsed" id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#covering-indexes">Covering indexes</a></li>
-                    <li><a href="#postgresql-include">PostgreSQL INCLUDE</a></li>
-                    <li><a href="#unique-index-with-include">Unique index with INCLUDE</a></li>
-                    <li><a href="#index-only-scans">Index-only scans</a></li>
-                    <li><a href="#postgresql-visibility-requirement">PostgreSQL visibility requirement</a></li>
-                    <li><a href="#covering-index-trade-off">Covering-index trade-off</a></li>
-                    <li><a href="#sqlite-covering-index">SQLite covering index</a></li>
-                    <li><a href="#partial-indexes">Partial indexes</a></li>
-                    <li><a href="#why-partial-indexes-help">Why partial indexes help</a></li>
-                    <li><a href="#query-must-match-the-predicate">Query must match the predicate</a></li>
-                    <li><a href="#parameterized-queries-and-partial-indexes">Parameterized queries and partial indexes</a></li>
-                    <li><a href="#soft-delete-pattern">Soft-delete pattern</a></li>
-                    <li><a href="#partial-unique-index">Partial unique index</a></li>
-                    <li><a href="#expression-indexes">Expression indexes</a></li>
-                    <li><a href="#good-expression-index-use-cases">Good expression-index use cases</a></li>
-                    <li><a href="#determinism-and-immutability">Determinism and immutability</a></li>
-                    <li><a href="#generated-column-alternative">Generated-column alternative</a></li>
-                    <li><a href="#json-indexing">JSON indexing</a></li>
-                    <li><a href="#combining-partial-and-covering">Combining partial and covering</a></li>
-                    <li><a href="#combining-expression-and-partial">Combining expression and partial</a></li>
-                    <li><a href="#too-specialized-indexes">Too-specialized indexes</a></li>
-                    <li><a href="#covering-index-versus-composite-key">Covering index versus composite key</a></li>
-                    <li><a href="#runnable-sqlite-demonstration">Runnable SQLite demonstration</a></li>
-                    <li><a href="#runnable-postgresql-demonstration">Runnable PostgreSQL demonstration</a></li>
+                    <li><a href="#covering-indexes-and-index-only-access">Covering indexes and index-only access</a>
+                        <ol>
+                            <li><a href="#covering-indexes">Covering indexes</a></li>
+                            <li><a href="#postgresql-include">PostgreSQL INCLUDE</a></li>
+                            <li><a href="#unique-index-with-include">Unique index with INCLUDE</a></li>
+                            <li><a href="#index-only-scans">Index-only scans</a></li>
+                            <li><a href="#postgresql-visibility-requirement">PostgreSQL visibility requirement</a></li>
+                            <li><a href="#covering-index-trade-off">Covering-index trade-off</a></li>
+                            <li><a href="#sqlite-covering-index">SQLite covering index</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#partial-indexes-for-selected-rows">Partial indexes for selected rows</a>
+                        <ol>
+                            <li><a href="#partial-indexes">Partial indexes</a></li>
+                            <li><a href="#why-partial-indexes-help">Why partial indexes help</a></li>
+                            <li><a href="#query-must-match-the-predicate">Query must match the predicate</a></li>
+                            <li><a href="#parameterized-queries-and-partial-indexes">Parameterized queries and partial indexes</a></li>
+                            <li><a href="#soft-delete-pattern">Soft-delete pattern</a></li>
+                            <li><a href="#partial-unique-index">Partial unique index</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#expression-indexes-for-transformed-predicates">Expression indexes for transformed predicates</a>
+                        <ol>
+                            <li><a href="#expression-indexes">Expression indexes</a></li>
+                            <li><a href="#good-expression-index-use-cases">Good expression-index use cases</a></li>
+                            <li><a href="#determinism-and-immutability">Determinism and immutability</a></li>
+                            <li><a href="#generated-column-alternative">Generated-column alternative</a></li>
+                            <li><a href="#json-indexing">JSON indexing</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#combining-techniques-without-over-indexing">Combining techniques without over-indexing</a>
+                        <ol>
+                            <li><a href="#combining-partial-and-covering">Combining partial and covering</a></li>
+                            <li><a href="#combining-expression-and-partial">Combining expression and partial</a></li>
+                            <li><a href="#too-specialized-indexes">Too-specialized indexes</a></li>
+                            <li><a href="#covering-index-versus-composite-key">Covering index versus composite key</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#check-the-implementation-on-sample-queries">Check the implementation on sample queries</a>
+                        <ol>
+                            <li><a href="#runnable-sqlite-demonstration">Runnable SQLite demonstration</a></li>
+                            <li><a href="#runnable-postgresql-demonstration">Runnable PostgreSQL demonstration</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#design-checklist">Design checklist</a>
                         <ol>
                             <li><a href="#covering">Covering</a></li>
@@ -367,7 +387,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 02, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -397,8 +417,9 @@
                 <li>Can the index omit rows that are rarely useful?</li>
                 <li>Can it index a function or derived value?</li>
             </ul>
-            <p>These patterns can make hot access paths much smaller or cheaper.</p>
-            <h2 id="covering-indexes">Covering indexes</h2>
+            <p>These options solve different problems: covering indexes avoid extra column fetches, partial indexes omit rows outside a predicate, and expression indexes make a transformed value searchable. None is universally faster; start from the query and engine's supported operators.</p>
+            <h2 id="covering-indexes-and-index-only-access">Covering indexes and index-only access</h2>
+            <h3 id="covering-indexes">Covering indexes</h3>
             <p>Suppose the query is:</p>
             <p>~~~sql
                 SELECT order_date, total_cents
@@ -416,7 +437,7 @@
                 total_cents
                 ~~~</p>
             <p>A covering index stores all values required by the query.</p>
-            <h2 id="postgresql-include">PostgreSQL INCLUDE</h2>
+            <h3 id="postgresql-include">PostgreSQL INCLUDE</h3>
             <p>~~~sql
                 CREATE INDEX idx_orders_customer_date
                 ON orders(customer_id, order_date DESC)
@@ -429,7 +450,7 @@
                 <li>search ordering,</li>
                 <li>uniqueness semantics.</li>
             </ul>
-            <h2 id="unique-index-with-include">Unique index with INCLUDE</h2>
+            <h3 id="unique-index-with-include">Unique index with INCLUDE</h3>
             <p>~~~sql
                 CREATE UNIQUE INDEX ux_users_email
                 ON users(email)
@@ -437,7 +458,7 @@
                 ~~~</p>
             <p>Uniqueness applies to email only.</p>
             <p>display_name is payload.</p>
-            <h2 id="index-only-scans">Index-only scans</h2>
+            <h3 id="index-only-scans">Index-only scans</h3>
             <p>Conceptually:</p>
             <p>~~~text
                 normal index scan:
@@ -447,7 +468,7 @@
                 ~~~</p>
             <p>A covering index can make an index-only scan possible.</p>
             <p>But all values being present in the index does not guarantee zero table visits in every engine.</p>
-            <h2 id="postgresql-visibility-requirement">PostgreSQL visibility requirement</h2>
+            <h3 id="postgresql-visibility-requirement">PostgreSQL visibility requirement</h3>
             <p>PostgreSQL indexes do not contain full tuple visibility state.</p>
             <p>The visibility map helps determine whether heap access can be skipped.</p>
             <p>Therefore:</p>
@@ -457,7 +478,7 @@
                 no heap visits
                 ~~~</p>
             <p>A frequently updated table may get less benefit than a mostly stable one.</p>
-            <h2 id="covering-index-trade-off">Covering-index trade-off</h2>
+            <h3 id="covering-index-trade-off">Covering-index trade-off</h3>
             <p>Payload columns make index leaves wider.</p>
             <p>Costs:</p>
             <ul>
@@ -468,7 +489,7 @@
                 <li>possible index tuple-size limits.</li>
             </ul>
             <p>Do not INCLUDE every SELECT column mechanically.</p>
-            <h2 id="sqlite-covering-index">SQLite covering index</h2>
+            <h3 id="sqlite-covering-index">SQLite covering index</h3>
             <p>SQLite can report a covering-index plan when every requested value is available in the index.</p>
             <p>Example:</p>
             <p>~~~sql
@@ -476,7 +497,8 @@
                 ON orders(customer_id, order_date DESC, total_cents);
                 ~~~</p>
             <p>SQLite does not use PostgreSQL's INCLUDE syntax here; total_cents is another index key column.</p>
-            <h2 id="partial-indexes">Partial indexes</h2>
+            <h2 id="partial-indexes-for-selected-rows">Partial indexes for selected rows</h2>
+            <h3 id="partial-indexes">Partial indexes</h3>
             <p>A partial index stores only rows satisfying a predicate.</p>
             <p>~~~sql
                 CREATE INDEX idx_open_orders_customer_date
@@ -484,7 +506,7 @@
                 WHERE status = 'open';
                 ~~~</p>
             <p>Only open orders occupy this index.</p>
-            <h2 id="why-partial-indexes-help">Why partial indexes help</h2>
+            <h3 id="why-partial-indexes-help">Why partial indexes help</h3>
             <p>Suppose:</p>
             <p>~~~text
                 95% closed historical orders
@@ -505,7 +527,7 @@
                 <li>less cache usage,</li>
                 <li>fewer index updates for unrelated rows.</li>
             </ul>
-            <h2 id="query-must-match-the-predicate">Query must match the predicate</h2>
+            <h3 id="query-must-match-the-predicate">Query must match the predicate</h3>
             <p>A partial index on:</p>
             <p>~~~sql
                 WHERE status = 'open'
@@ -517,7 +539,7 @@
                 ~~~</p>
             <p>It cannot safely answer a query for every status because closed rows are absent.</p>
             <p>The optimizer must prove the query condition implies the index predicate.</p>
-            <h2 id="parameterized-queries-and-partial-indexes">Parameterized queries and partial indexes</h2>
+            <h3 id="parameterized-queries-and-partial-indexes">Parameterized queries and partial indexes</h3>
             <p>Planner behavior can be subtle with parameterized predicates.</p>
             <p>A generic condition such as:</p>
             <p>~~~text
@@ -530,7 +552,7 @@
             <p>at plan time.</p>
             <p>Behavior depends on engine and planning mode.</p>
             <p>Inspect the real plan.</p>
-            <h2 id="soft-delete-pattern">Soft-delete pattern</h2>
+            <h3 id="soft-delete-pattern">Soft-delete pattern</h3>
             <p>Table:</p>
             <p>~~~text
                 users
@@ -546,7 +568,7 @@
                 WHERE deleted_at IS NULL;
                 ~~~</p>
             <p>Deleted rows are not carried in the active lookup index.</p>
-            <h2 id="partial-unique-index">Partial unique index</h2>
+            <h3 id="partial-unique-index">Partial unique index</h3>
             <p>A useful correctness pattern:</p>
             <p>~~~sql
                 CREATE UNIQUE INDEX ux_active_email
@@ -559,7 +581,8 @@
                 ~~~</p>
             <p>while keeping historical deleted rows.</p>
             <p>Use it only if that matches the business rule.</p>
-            <h2 id="expression-indexes">Expression indexes</h2>
+            <h2 id="expression-indexes-for-transformed-predicates">Expression indexes for transformed predicates</h2>
+            <h3 id="expression-indexes">Expression indexes</h3>
             <p>An expression index stores the result of a function/expression.</p>
             <p>~~~sql
                 CREATE INDEX idx_users_lower_email
@@ -572,7 +595,7 @@
                 WHERE lower(email) = lower($1);
                 ~~~</p>
             <p>The engine can search the indexed expression instead of evaluating lower(email) over every candidate row.</p>
-            <h2 id="good-expression-index-use-cases">Good expression-index use cases</h2>
+            <h3 id="good-expression-index-use-cases">Good expression-index use cases</h3>
             <p>Examples:</p>
             <ul>
                 <li>normalized text,</li>
@@ -582,7 +605,7 @@
                 <li>derived lookup key.</li>
             </ul>
             <p>The query expression still needs to align with what the optimizer can match to the index.</p>
-            <h2 id="determinism-and-immutability">Determinism and immutability</h2>
+            <h3 id="determinism-and-immutability">Determinism and immutability</h3>
             <p>Databases usually restrict indexed expressions to functions whose result is stable for the same stored row.</p>
             <p>PostgreSQL requires index expressions to use immutable functions.</p>
             <p>The index must be able to trust:</p>
@@ -590,7 +613,7 @@
                 same row values -&gt; same index key
                 ~~~</p>
             <p>until the row changes.</p>
-            <h2 id="generated-column-alternative">Generated-column alternative</h2>
+            <h3 id="generated-column-alternative">Generated-column alternative</h3>
             <p>Instead of indexing:</p>
             <p>~~~text
                 lower(email)
@@ -606,7 +629,7 @@
                 <li>reuse by queries and tools.</li>
             </ul>
             <p>Trade-offs depend on engine and storage behavior.</p>
-            <h2 id="json-indexing">JSON indexing</h2>
+            <h3 id="json-indexing">JSON indexing</h3>
             <p>Suppose a JSON document contains:</p>
             <p>~~~text
                 country
@@ -620,7 +643,8 @@
                 <li>GIN/inverted index for containment/membership.</li>
             </ul>
             <p>There is no single "JSON index" that optimizes every JSON query.</p>
-            <h2 id="combining-partial-and-covering">Combining partial and covering</h2>
+            <h2 id="combining-techniques-without-over-indexing">Combining techniques without over-indexing</h2>
+            <h3 id="combining-partial-and-covering">Combining partial and covering</h3>
             <p>PostgreSQL example:</p>
             <p>~~~sql
                 CREATE INDEX idx_open_orders
@@ -635,7 +659,7 @@
                 <li>payload for possible index-only access.</li>
             </ul>
             <p>Powerful, but specialized.</p>
-            <h2 id="combining-expression-and-partial">Combining expression and partial</h2>
+            <h3 id="combining-expression-and-partial">Combining expression and partial</h3>
             <p>~~~sql
                 CREATE INDEX idx_active_users_lower_email
                 ON users(lower(email))
@@ -646,7 +670,7 @@
                 normalized email of active users
                 ~~~</p>
             <p>It can also be UNIQUE if that is the desired constraint.</p>
-            <h2 id="too-specialized-indexes">Too-specialized indexes</h2>
+            <h3 id="too-specialized-indexes">Too-specialized indexes</h3>
             <p>A narrowly optimized index may be used by only one rare query.</p>
             <p>Costs remain:</p>
             <ul>
@@ -657,7 +681,7 @@
                 <li>backups.</li>
             </ul>
             <p>Track usage over a meaningful observation period.</p>
-            <h2 id="covering-index-versus-composite-key">Covering index versus composite key</h2>
+            <h3 id="covering-index-versus-composite-key">Covering index versus composite key</h3>
             <p>Suppose a query filters on x and returns y.</p>
             <p>Two PostgreSQL designs:</p>
             <p>~~~sql
@@ -677,7 +701,8 @@
                 <li>upper tree levels can stay smaller.</li>
             </ul>
             <p>Use INCLUDE when y is payload rather than a search key.</p>
-            <h2 id="runnable-sqlite-demonstration">Runnable SQLite demonstration</h2>
+            <h2 id="check-the-implementation-on-sample-queries">Check the implementation on sample queries</h2>
+            <h3 id="runnable-sqlite-demonstration">Runnable SQLite demonstration</h3>
             <p>This chapter adds:</p>
             <p>~~~text
                 scripts/indexing/sqlite_covering_index_demo.py
@@ -692,7 +717,7 @@
                 <li>a covering index that contains the selected payload.</li>
             </ul>
             <p>The script prints EXPLAIN QUERY PLAN output.</p>
-            <h2 id="runnable-postgresql-demonstration">Runnable PostgreSQL demonstration</h2>
+            <h3 id="runnable-postgresql-demonstration">Runnable PostgreSQL demonstration</h3>
             <p>This chapter also adds:</p>
             <p>~~~text
                 scripts/indexing/postgres_partial_expression_indexes.sql

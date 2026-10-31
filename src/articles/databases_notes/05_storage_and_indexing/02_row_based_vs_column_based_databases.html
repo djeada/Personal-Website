@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Row Storage and Column Storage | Adam Djellouli</title>
-    <meta content="A table's logical shape does not determine its physical layout. Both row-oriented and column-oriented systems can expose rows and columns to SQL." name="description" />
+    <meta content="A SQL table is a logical relation, not a promise about disk layout." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases",
-            "description": "A table's logical shape does not determine its physical layout. Both row-oriented and column-oriented systems can expose rows and columns to SQL.",
-            "dateModified": "2026-09-30",
+            "description": "A SQL table is a logical relation, not a promise about disk layout.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="A table's logical shape does not determine its physical layout. Both row-oriented and column-oriented systems can expose rows and columns to SQL." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="A SQL table is a logical relation, not a promise about disk layout." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,7 +116,7 @@
                 <ol>
                     <li><a href="#row-storage-keeps-one-record-together">Row storage keeps one record together</a></li>
                     <li><a href="#column-storage-keeps-one-field-s-values-together">Column storage keeps one field's values together</a></li>
-                    <li><a href="#compare-the-work-not-just-the-label">Compare the work, not just the label</a></li>
+                    <li><a href="#compare-access-patterns-rather-than-product-labels">Compare access patterns rather than product labels</a></li>
                     <li><a href="#do-not-confuse-column-storage-with-wide-column-databases">Do not confuse column storage with wide-column databases</a></li>
                     <li><a href="#choose-from-a-concrete-workload">Choose from a concrete workload</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
@@ -342,7 +342,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -362,7 +362,7 @@
                     </button></div>
             </div>
             <h1>Row Storage and Column Storage</h1>
-            <p>A table's logical shape does not determine its physical layout. Both row-oriented and column-oriented systems can expose rows and columns to SQL. The difference is which values they keep together in storage.</p>
+            <p>A SQL table is a logical relation, not a promise about disk layout. A row store groups many columns of a record together; a column store groups values from the same field across records. This changes the work of reconstructing one row versus scanning a few columns across many rows. Real engines also mix layouts, compression, indexes, and buffered writes.</p>
             <p>Consider a small sales table:</p>
             <table>
                 <thead>
@@ -416,10 +416,10 @@ product_id:    10,  20,  20
 quantity:      2,   1,   2
 amount_cents: 3000, 2500, 5000</code></pre>
             </div>
-            <p>A report asking for <code>SUM(amount_cents)</code> needs the amount column, not every customer's identifier or product field. For a much larger table, reading only the relevant columns can avoid substantial work.</p>
+            <p>A report asking for <code>SUM(amount_cents)</code> primarily needs the amount column. A columnar layout can avoid fetching unrelated fields across a large scan. Filtering or joining may still require additional columns, so “one aggregate” does not universally imply one-column I/O.</p>
             <p>Similar values stored together also often compress well. <strong>Compression</strong> represents data with fewer bytes; for example, repeated customer identifiers can be encoded compactly. Less data to read can improve throughput, though decoding has a cost too.</p>
             <p>This pattern is common in <strong>online analytical processing (OLAP)</strong>: reports and aggregations that examine many records. Engines may process groups of column values in batches, often called <strong>vectorized execution</strong>.</p>
-            <h2 id="compare-the-work-not-just-the-label">Compare the work, not just the label</h2>
+            <h2 id="compare-access-patterns-rather-than-product-labels">Compare access patterns rather than product labels</h2>
             <table>
                 <thead>
                     <tr>

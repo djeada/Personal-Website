@@ -61,7 +61,7 @@
         return {
             re: w.A * Math.cos(th),
             im: w.A * Math.sin(th),
-            angle: th,
+            angle: w.A < 0 ? th + Math.PI : th,
             magnitude: Math.abs(w.A)
         };
     }
@@ -126,8 +126,14 @@
     }
 
 
+
+    function signPhase(w1, w2) {
+        return w1.A * w2.A < 0 ? Math.PI : 0;
+    }
+
+
     function intensity(w1, w2, x, t, gamma) {
-        return twoBeamIntensity(singleIntensity(w1.A), singleIntensity(w2.A), phaseDifference(w1, w2, x, t), gamma);
+        return twoBeamIntensity(singleIntensity(w1.A), singleIntensity(w2.A), phaseDifference(w1, w2, x, t) + signPhase(w1, w2), gamma);
     }
 
 
@@ -226,8 +232,10 @@
                 overlap: polarizationOverlap(theta)
             };
         }
-        const c1 = Math.cos(analyser),
-            c2 = Math.cos(analyser - theta);
+
+        const snap = (c) => (Math.abs(c) < 1e-12 ? 0 : c);
+        const c1 = snap(Math.cos(analyser)),
+            c2 = snap(Math.cos(analyser - theta));
         return {
             A1: Math.abs(A1 * c1),
             A2: Math.abs(A2 * c2),
@@ -252,7 +260,7 @@
             I2 = singleIntensity(w2.A);
         const Tint = Math.max(0, T || 0);
         const dOmega = w2.omega - w1.omega;
-        const mid = phaseDifference(w1, w2, x, t - Tint / 2);
+        const mid = phaseDifference(w1, w2, x, t - Tint / 2) + signPhase(w1, w2);
         return I1 + I2 + 2 * Math.sqrt(I1 * I2) * g.mag * sinc(dOmega * Tint / 2) * Math.cos(mid + g.arg);
     }
 

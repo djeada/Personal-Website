@@ -23,7 +23,7 @@
         })();
     </script>
     <title>DCL: Decide Who May Access the Data | Adam Djellouli</title>
-    <meta content="Data Control Language (DCL) manages database privileges through statements such as GRANT and REVOKE." name="description" />
+    <meta content="DCL describes database privileges, such as GRANT and REVOKE." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl",
-            "description": "Data Control Language (DCL) manages database privileges through statements such as GRANT and REVOKE.",
-            "dateModified": "2026-10-04",
+            "description": "DCL describes database privileges, such as GRANT and REVOKE.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Data Control Language (DCL) manages database privileges through statements such as GRANT and REVOKE." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="DCL describes database privileges, such as GRANT and REVOKE." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -116,9 +116,9 @@
                 <ol>
                     <li><a href="#identity-is-different-from-permission">Identity is different from permission</a></li>
                     <li><a href="#grant-a-narrowly-defined-reading-role">Grant a narrowly defined reading role</a></li>
-                    <li><a href="#revoke-a-grant-and-understand-the-remaining-paths">Revoke a grant and understand the remaining paths</a></li>
+                    <li><a href="#trace-effective-access-before-calling-a-revoke-complete">Trace effective access before calling a revoke complete</a></li>
                     <li><a href="#database-privileges-are-not-the-whole-application-policy">Database privileges are not the whole application policy</a></li>
-                    <li><a href="#use-least-privilege">Use least privilege</a></li>
+                    <li><a href="#separate-runtime-reporting-and-migration-credentials">Separate runtime, reporting, and migration credentials</a></li>
                     <li><a href="#try-permissions-on-a-complete-postgresql-practice-object">Try permissions on a complete PostgreSQL practice object</a></li>
                     <li><a href="#separate-login-identity-from-a-job-s-privileges">Separate login identity from a job's privileges</a></li>
                     <li><a href="#existing-tables-and-future-tables-are-different-scopes">Existing tables and future tables are different scopes</a></li>
@@ -347,7 +347,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -367,7 +367,7 @@
                     </button></div>
             </div>
             <h1>DCL: Decide Who May Access the Data</h1>
-            <p><strong>Data Control Language (DCL)</strong> manages database privileges through statements such as <code>GRANT</code> and <code>REVOKE</code>. A <strong>privilege</strong> is permission to perform a particular operation on a particular resource.</p>
+            <p><strong>DCL</strong> describes database privileges, such as <code>GRANT</code> and <code>REVOKE</code>. This chapter uses <strong>PostgreSQL</strong>, not SQLite: table privileges, role membership, object ownership, and application-user authorization are distinct layers. The goal is to trace <em>effective access</em>, not to assume a single grant is the whole security policy.</p>
             <p>The bookstore might need an application that creates orders and a reporting job that only reads them. They should not necessarily have the same permissions.</p>
             <h2 id="identity-is-different-from-permission">Identity is different from permission</h2>
             <p><strong>Authentication</strong> answers “who is connecting?” <strong>Authorization</strong> answers “what may this identity do?” Successfully logging in does not mean that every table or operation should be available.</p>
@@ -387,7 +387,7 @@ GRANT SELECT ON TABLE public.orders TO report_reader;</code></pre>
 GRANT report_reader TO reporting_login;</code></pre>
             </div>
             <p>No insert, update, or delete privilege is granted by these statements. However, the login may obtain additional privileges through other roles, ownership, or privileges granted to <code>PUBLIC</code>. PostgreSQL <code>PUBLIC</code> means all roles; it is different from the <code>public</code> schema.</p>
-            <h2 id="revoke-a-grant-and-understand-the-remaining-paths">Revoke a grant and understand the remaining paths</h2>
+            <h2 id="trace-effective-access-before-calling-a-revoke-complete">Trace effective access before calling a revoke complete</h2>
             <div>
                 <pre><code class="language-sql">REVOKE SELECT ON TABLE public.orders FROM report_reader;</code></pre>
             </div>
@@ -396,7 +396,16 @@ GRANT report_reader TO reporting_login;</code></pre>
             <h2 id="database-privileges-are-not-the-whole-application-policy">Database privileges are not the whole application policy</h2>
             <p>The database connection may be shared by many bookstore customers through one application identity. Giving that identity access to orders does not mean every customer should see every order.</p>
             <p>The application must check whose order is being requested, or use a suitable database row-level policy. A <strong>row-level policy</strong> governs which rows may be accessed, rather than only whether the table as a whole can be queried. Its design must account for how authenticated customer identity reaches the database.</p>
-            <h2 id="use-least-privilege">Use least privilege</h2>
+            <p><strong>Incorrect:</strong> “The application role has <code>SELECT</code> on <code>orders</code>, therefore customer 1 can safely query any row through that role.”</p>
+            <p><strong>Correct:</strong> enforce the <em>requesting customer's</em> authorization in trusted application code or an appropriately configured row-level-security policy, independently of the table-level grant. For example, an order-history query can be scoped to a customer ID <strong>derived from the authenticated session</strong>, not an untrusted ID supplied by the requester:</p>
+            <div>
+                <pre><code class="language-sql">-- Shape of a parameterized, application-authorized query.
+SELECT order_id, customer_id, order_date
+FROM orders
+WHERE customer_id = ?;</code></pre>
+            </div>
+            <p>The <code>?</code> placeholder is SQLite/driver-style syntax shown for the concept; PostgreSQL client libraries often use a different parameter convention. A filter alone is not authorization if the caller can choose someone else's customer ID. Database row-level security can enforce this boundary closer to the data when its identity mapping is correctly designed.</p>
+            <h2 id="separate-runtime-reporting-and-migration-credentials">Separate runtime, reporting, and migration credentials</h2>
             <p><strong>Least privilege</strong> means granting only the access needed for a job. A reporting process usually does not need schema modification. A checkout application generally should not use the database administrator's identity.</p>
             <p>Separate migration credentials from routine application credentials. A migration changes tables; normal checkout uses the already defined tables. Keeping those jobs separate reduces the authority available to an unintended query or compromised application.</p>
             <h2 id="try-permissions-on-a-complete-postgresql-practice-object">Try permissions on a complete PostgreSQL practice object</h2>

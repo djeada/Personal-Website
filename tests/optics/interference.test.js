@@ -321,3 +321,41 @@ test("visibility factorises: V = V_amplitude * |gamma| * |cos theta| * |sinc(dw 
     const Vamp = (2 * 0.6) / (1 + 0.36);
     close(Vnum, Vamp * 0.7 * Math.abs(Math.cos(theta)) * Math.abs(m.sinc((dOmega * T) / 2)), 1e-5);
 });
+
+test("negative amplitude is a pi phase shift: intensity and detector reading match brute force", () => {
+    // The page builds the co-polarized part of beam 2 as A2 cos(theta), negative past 90 deg.
+    const w1 = m.makeWave(1, 1, 0, 1);
+    for (const [A2, phi] of [[-0.6, 0.4], [-1, 0], [-1.3, 2.1]]) {
+        const w2 = m.makeWave(A2, 1, phi, 1);
+        const brute = numericMeanSquare([w1, w2], 0.3, 0, 10, 4000);
+        close(m.intensity(w1, w2, 0.3, 0, 1), brute, 1e-9, `A2=${A2} phi=${phi}`);
+        close(m.detectedIntensity(w1, w2, 0.3, 10, 0, 1), brute, 1e-9, `detector A2=${A2}`);
+        // Same as flipping the sign of the amplitude into the phase
+        close(m.intensity(w1, w2, 0.3, 0, 1), m.intensity(w1, m.makeWave(-A2, 1, phi + Math.PI, 1), 0.3, 0, 1), 1e-12);
+        // Phasor angle points along (re, im)
+        const p = m.phasor(w2, 0.3, 0);
+        close(Math.cos(p.angle) * p.magnitude, p.re, 1e-12);
+        close(Math.sin(p.angle) * p.magnitude, p.im, 1e-12);
+    }
+    // Long detector window still averages to I1 + I2 with a negative amplitude
+    const w2 = m.makeWave(-1, 1.1, 0, 1);
+    close(m.detectedIntensity(w1, w2, 0.37, 50, 3 * m.beat(w1, w2).TBeat, 1), 1, 1e-9);
+});
+
+test("a crossed analyser blocks a beam exactly; with both blocked V is 0, not 1", () => {
+    // theta = 0, alpha = 90 deg: cos(pi/2) round-off used to leave 6e-17 amplitudes and V = 1
+    const b = m.detectorBeams(1, 1, 0, Math.PI / 2);
+    assert.equal(b.A1, 0);
+    assert.equal(b.A2, 0);
+    assert.equal(m.predictedVisibility(b.A1, b.A2, 1, 0, 0), 0);
+    const ext = m.intensityExtremes(b.A1, b.A2, 1, 0, 0);
+    assert.equal(ext.Imax, 0);
+    assert.equal(ext.Imin, 0);
+    // Analyser along beam 1, crossed with beam 2 (theta = 90 deg): only beam 1 passes
+    const b2 = m.detectorBeams(1, 1, Math.PI / 2, 0);
+    assert.equal(b2.A1, 1);
+    assert.equal(b2.A2, 0);
+    // Near (not at) crossing the contrast is still full: both beams scale together
+    const b3 = m.detectorBeams(1, 1, 0, Math.PI / 2 - 0.01);
+    close(m.predictedVisibility(b3.A1, b3.A2, 1, 0, 0), 1, 1e-12);
+});

@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Consistency: Preserve the Rules That Make Data Valid</title>
-    <meta content="In ACID, consistency means that correct transactions take the database from a valid state to another valid state." name="description" />
+    <meta content="In ACID, consistency means a transaction preserves the invariants that define valid states." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency",
-            "description": "In ACID, consistency means that correct transactions take the database from a valid state to another valid state.",
-            "dateModified": "2026-10-04",
+            "description": "In ACID, consistency means a transaction preserves the invariants that define valid states.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="In ACID, consistency means that correct transactions take the database from a valid state to another valid state." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="In ACID, consistency means a transaction preserves the invariants that define valid states." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -117,7 +117,7 @@
                     <li><a href="#name-the-rules-before-choosing-a-mechanism">Name the rules before choosing a mechanism</a></li>
                     <li><a href="#test-a-declared-rule">Test a declared rule</a></li>
                     <li><a href="#a-valid-row-can-still-belong-to-an-invalid-workflow">A valid row can still belong to an invalid workflow</a></li>
-                    <li><a href="#a-check-followed-by-a-write-can-race">A check followed by a write can race</a></li>
+                    <li><a href="#why-checking-before-writing-can-race">Why checking before writing can race</a></li>
                     <li><a href="#translate-a-seat-rule-into-a-unique-key">Translate a seat rule into a unique key</a></li>
                     <li><a href="#detect-a-stale-edit-with-a-version-column">Detect a stale edit with a version column</a></li>
                     <li><a href="#a-cross-row-invariant-needs-a-cross-row-design">A cross-row invariant needs a cross-row design</a></li>
@@ -346,7 +346,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -366,7 +366,7 @@
                     </button></div>
             </div>
             <h1>Consistency: Preserve the Rules That Make Data Valid</h1>
-            <p>In ACID, <strong>consistency</strong> means that correct transactions take the database from a valid state to another valid state. A valid state satisfies the system's required rules. The database enforces declared constraints; the application must correctly implement rules that are not fully expressed by those constraints.</p>
+            <p>In ACID, <strong>consistency</strong> means a transaction preserves the invariants that define valid states. The DBMS enforces invariants it knows, such as declared keys and checks; it cannot enforce an unexpressed business rule simply because a transaction commits. Correct application logic and suitable concurrency control are also needed for cross-row or cross-system invariants.</p>
             <p>This use of “consistency” concerns valid data. <a href="../06_distributed_databases/07_eventual_consistency.html">Eventual consistency</a> concerns when separate copies agree. The same word describes different questions.</p>
             <h2 id="name-the-rules-before-choosing-a-mechanism">Name the rules before choosing a mechanism</h2>
             <p>For the bookstore, “the data should be correct” is too vague. These rules are specific enough to test:</p>
@@ -430,7 +430,7 @@
             <p>Consider decreasing stock by one and committing without creating an order. Every remaining row may satisfy its keys and checks. Nevertheless, the checkout's business rule has been violated.</p>
             <p>The engine cannot infer that every stock reduction must correspond to a sale: stock might also decrease because a damaged book was removed. The application needs a clearly defined operation, the right transaction boundary, and suitable concurrency control.</p>
             <p><strong>Atomicity</strong> makes changes an all-or-nothing unit. <strong>Consistency</strong> asks whether that unit performs a valid change. A transaction can atomically deduct the wrong quantity.</p>
-            <h2 id="a-check-followed-by-a-write-can-race">A check followed by a write can race</h2>
+            <h2 id="why-checking-before-writing-can-race">Why checking before writing can race</h2>
             <p>Suppose one copy remains. Two transactions each read stock 1 and independently decide that a sale is allowed. Their decisions were based on data that can change before they write.</p>
             <p>For a simple stock reservation, combine the condition and modification:</p>
             <div>
@@ -625,7 +625,7 @@ ORDER BY product_id;</code></pre>
                     </tr>
                 </tbody>
             </table>
-            <p>This ledger preserves reasons and provides a way to reconstruct quantity. It does not yet prevent a dispatch that drives the total negative: an ordinary check on one movement cannot sum the other rows safely under concurrent writers.</p>
+            <p>This ledger records movements and can reconstruct a quantity, but it is <strong>not an inventory constraint</strong>: a negative movement can make the sum negative. A row-level <code>CHECK</code> on one movement cannot enforce a sum over other rows, especially under concurrent writers.</p>
             <p>One approach retains a current-stock row and conditionally decrements it in the same transaction that inserts a dispatch movement. Receipts increment the current-stock row and insert their movement together. A reconciliation query compares the cache with the ledger sum. This adds a redundancy invariant, so every writing path must maintain both representations. Another design derives stock entirely from movements but needs a concurrency strategy for admitting new dispatches.</p>
             <p>Do not assume a trigger that reads a sum is automatically safe against another simultaneous trigger. The locking or isolation strategy must protect the same logical product across competing dispatches.</p>
             <h2 id="distinguish-transaction-end-validity-from-intermediate-work">Distinguish transaction-end validity from intermediate work</h2>

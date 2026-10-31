@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis",
             "description": "Before choosing tables, find out what the application must do. A requirement is a statement about a needed behavior or rule.",
-            "dateModified": "2026-09-30",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Before choosing tables, find out what the application must do. A requirement is a statement about a needed behavior or rule." property="og:description" />
-    <meta content="2026-09-30" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -353,7 +353,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: September 30, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -438,6 +438,34 @@
                 <li>The cancellation time belongs to the order or canceled line, depending on the workflow.</li>
             </ul>
             <p>This prevents storing a fact in a convenient but misleading place. If an order has several products, a single <code>product_id</code> column on the order cannot represent the whole purchase.</p>
+            <p><strong>Incorrect → correct requirement translation:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vague or misleading assumption</th>
+                        <th>Clarified requirement</th>
+                        <th>Modeling consequence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>“Keep the price of every purchased book.”</td>
+                        <td>Preserve what was <strong>charged at checkout</strong>, even if the catalog price later changes.</td>
+                        <td>Store <code>unit_price_cents</code> on each order line, separate from <code>products.price_cents</code>.</td>
+                    </tr>
+                    <tr>
+                        <td>“One order has a product.”</td>
+                        <td>An order can have several lines, and the same product might appear on different lines.</td>
+                        <td>Give each line its own <code>(order_id, line_number)</code> identifier and product reference.</td>
+                    </tr>
+                    <tr>
+                        <td>“The customer can cancel.”</td>
+                        <td>Decide whether partial cancellation is allowed and what happens to stock and refunds.</td>
+                        <td>Specify order/line states and transition rules before choosing columns.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>A schema is not correct merely because its SQL executes. It is correct only relative to the agreed business rules.</p>
             <h2 id="state-the-relationships-and-optional-cases">State the relationships and optional cases</h2>
             <p>“One customer can place many orders” is incomplete until you ask whether a customer can have zero orders and whether an order can have no customer.</p>
             <p>For our initial model:</p>
@@ -531,7 +559,10 @@ CREATE TABLE uni_enrollments (
 );
 INSERT INTO uni_students VALUES (1, 'Alice'), (2, 'Bob'), (3, 'Carol');
 INSERT INTO uni_professors VALUES (10, 'Dr Lee'), (20, 'Dr Rao');
-INSERT INTO uni_courses VALUES (101, 'Databases', 10), (102, 'Networks', 20);
+INSERT INTO uni_courses VALUES
+    (101, 'Databases', 10),
+    (102, 'Networks', 20),
+    (103, 'Data Ethics', 10);
 INSERT INTO uni_enrollments VALUES (1, 101, 88), (2, 101, NULL), (1, 102, 91);
 
 SELECT s.name, e.grade
@@ -559,6 +590,16 @@ ORDER BY s.student_id;</code></pre>
                 </tbody>
             </table>
             <p>The roster returns Bob despite his missing grade. Interpreting null as zero would incorrectly turn “not graded yet” into a failing result. The pair key prevents duplicate enrollment under the stated rule, while foreign keys prevent missing students and courses.</p>
+            <p><strong>Negative acceptance cases</strong> are just as important as the successful roster. With foreign keys enabled, each of these statements should be tested <em>separately</em> and rejected:</p>
+            <div>
+                <pre><code class="language-sql">-- Incorrect: Alice is already enrolled in course 101.
+INSERT INTO uni_enrollments VALUES (1, 101, 95);
+-- Incorrect: student 99 does not exist.
+INSERT INTO uni_enrollments VALUES (99, 101, NULL);
+-- Incorrect: a supplied grade must stay in the allowed range.
+INSERT INTO uni_enrollments VALUES (3, 102, 105);</code></pre>
+            </div>
+            <p>The first fails the composite primary key, the second fails the foreign key, and the third fails the grade check. Use a fresh setup if you change the data while experimenting; these are examples of expected failures, not a single script that runs uninterrupted.</p>
             <p>Ask the professor how they would use this roster. Do they need withdrawn students, a preferred name, or a section number? Each answer can change the required schema or filter. A working query is a way to validate a requirement, not proof that the entire domain has been understood.</p>
             <h3 id="validate-a-report-that-keeps-courses-with-no-students">Validate a report that keeps courses with no students</h3>
             <div>
@@ -584,9 +625,15 @@ ORDER BY c.course_id;</code></pre>
                         <td>Networks</td>
                         <td>1</td>
                     </tr>
+                    <tr>
+                        <td>Data Ethics</td>
+                        <td>0</td>
+                    </tr>
                 </tbody>
             </table>
-            <p>A left join lets an empty course remain in the report. Counting the non-null enrollment identifier would give it zero; <code>COUNT(*)</code> would count its unmatched result row instead. That distinction should be established before a report is used for staffing or capacity decisions.</p>
+            <p><strong>Correct:</strong> <code>COUNT(e.student_id)</code> counts only real enrollment rows, so the empty Data Ethics course stays visible with zero students.</p>
+            <p><strong>Incorrect:</strong> replacing it with <code>COUNT(*)</code> counts the one null-extended row produced by the <code>LEFT JOIN</code>, falsely reporting <strong>1</strong> student for Data Ethics. Changing the join to an inner join would omit Data Ethics altogether.</p>
+            <p>This is why testing the empty case is more informative than running the same report only against courses that already have students.</p>
             <h2 id="resolve-priorities-and-disagreements-explicitly">Resolve priorities and disagreements explicitly</h2>
             <p>Separate required correctness from optional convenience. A useful initial scope might require a valid roster and duplicate-enrollment protection, while postponing automatic recommendations. Do not postpone a rule that prevents lost money or invalid records simply because it has no visible user-interface element.</p>
             <p>Keep a decision log: the rule, its owner, the selected interpretation, and an example that demonstrates it. Walk through rejected cases as well as successful ones. If one stakeholder wants permanent history and another wants to remove a record, determine what must be deleted, anonymized, archived, or retained under the organization's policy. Do not make that choice silently in <code>ON DELETE CASCADE</code>.</p>

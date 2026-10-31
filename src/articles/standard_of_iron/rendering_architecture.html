@@ -49,7 +49,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture",
             "description": "Standard of Iron renders from published simulation snapshots.",
-            "dateModified": "2026-10-24",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -58,7 +58,7 @@
     <meta content="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
     <meta content="Standard of Iron renders from published simulation snapshots." property="og:description" />
-    <meta content="2026-10-24" property="article:modified_time" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -181,7 +181,11 @@
                     <li><a href="#local-lights">Local lights</a></li>
                     <li><a href="#weather-and-precipitation">Weather and precipitation</a></li>
                     <li><a href="#grass-and-environmental-density">Grass and environmental density</a></li>
-                    <li><a href="#nation-and-equipment-appearance">Nation and equipment appearance</a></li>
+                    <li><a href="#nation-and-equipment-appearance">Nation and equipment appearance</a>
+                        <ol>
+                            <li><a href="#limb-geometry-and-skinning">Limb geometry and skinning</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#shader-system">Shader system</a></li>
                     <li><a href="#opengl-backend">OpenGL backend</a>
                         <ol>
@@ -268,7 +272,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 24, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -797,6 +801,31 @@ MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 \
                 <li>renderer-specific cached resources.</li>
             </ul>
             <p>The renderer does not become the gameplay registry for what equipment a unit owns. If a simulation rule needs equipment data, it must read simulation/content data rather than reverse-querying a render asset choice.</p>
+            <h3 id="limb-geometry-and-skinning">Limb geometry and skinning</h3>
+            <p>A span primitive's <code>anchor_bone</code> and <code>tail_bone</code> locate its endpoints. Its
+                <code>SpanSkinning</code> policy separately controls deformation during the rigged bake:
+                <code>LinearBlend</code> distributes influence along the span, while <code>AnchorRigid</code> attaches
+                the entire surface to the anchor's frame. Custom span geometry uses the same
+                policy; <code>MeshSkinning</code> continues to describe standalone mesh weights.
+            </p>
+            <p>Humanoid arm and leg segments use <code>AnchorRigid</code> at both detail levels, including
+                the skeleton body. Their anchor frame already aims along the segment: <code>Forearm</code>
+                runs from elbow to wrist and <code>Knee</code> from knee to ankle. The hand and foot frames
+                control the extremities and equipment sockets independently. Blending toward
+                those frames across the limb shaft makes a wrist turn bow or pinch the forearm
+                and an ankle rotation twist the calf. Joint spheres cover articulation while the
+                two smooth sections of each limb retain their shared surface and normal.</p>
+            <p>Pose solvers and the skeleton evaluator share <code>PosePrimitives::hip_position</code>.
+                Leg-length correction must use that actual pelvis-relative joint, not infer a
+                hip from the moving knee. The latter stretched the held pose's thigh by about
+                26% and left a gap once its mesh stopped deforming toward the knee. Baked held
+                poses are checked against the rig's hip, knee, and ankle origins on every frame.</p>
+            <p>The humanoid mesh regression bends and twists every downstream joint and checks
+                the skinned positions and normals on both sides and at both detail levels.
+                After changes, rebuild <code>bake_creature_assets</code> and inspect the Arena's
+                <code>humanoid_gait_review</code>, <code>humanoid_gait_review_carthage</code>, <code>sword_duel</code>, and
+                <code>promo_humanoid_showcase</code> scenarios; the bind pose alone cannot expose this fault.
+            </p>
             <h2 id="shader-system">Shader system</h2>
             <p>The OpenGL backend compiles shader programs from <code>assets/shaders/</code>.</p>
             <p>Shared shader includes centralize behavior such as:</p>

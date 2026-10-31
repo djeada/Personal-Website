@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0e1218";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>End-to-end VTK case study: build, export, and validate a mesh</title>
+    <meta content="This small project connects the main ideas from the notes: generate geometry, produce triangles, attach a named scalar array, export to VTP, read the…" name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/vtk_examples/10_end_to_end_case_study" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "End-to-end VTK case study: build, export, and validate a mesh",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/vtk_examples/10_end_to_end_case_study"
+            },
+            "url": "https://adamdjellouli.com/articles/vtk_examples/10_end_to_end_case_study",
+            "description": "This small project connects the main ideas from the notes: generate geometry, produce triangles, attach a named scalar array, export to VTP, read the\u2026",
+            "dateModified": "2026-10-31",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="End-to-end VTK case study: build, export, and validate a mesh" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/vtk_examples/10_end_to_end_case_study" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="This small project connects the main ideas from the notes: generate geometry, produce triangles, attach a named scalar array, export to VTP, read the…" property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a aria-label="Adam Djellouli, home" class="logo" href="../../index.html">
+            <span aria-hidden="true" class="logo-mark"></span>
+            <span class="logo-name">Adam Djellouli</span>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/vtk_examples.html">Vtk Examples</a></li><li><span aria-current="page">End-to-end VTK case study: build, export, and validate a mesh</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#problem-and-expected-output">Problem and expected output</a></li>
+                    <li><a href="#complete-runnable-script">Complete, runnable script</a></li>
+                    <li><a href="#understand-the-design-decisions">Understand the design decisions</a></li>
+                    <li><a href="#extend-the-case-study">Extend the case study</a></li>
+                    <li><a href="#troubleshooting-checklist">Troubleshooting checklist</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/vtk_examples/09_custom_filters_and_algorithms.html">Developing Custom Filters and Algorithms in VTK</a></li><li><a href="/articles/vtk_examples/08_integration_with_other_tools.html">Integration of VTK with Other Tools and Libraries</a></li><li><a href="/articles/vtk_examples/07_performance_optimization_and_parallelism.html">Performance Optimization and Parallelism</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/01_data_types_and_structures.html">Data Types and Structures</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/02_filters_and_algorithms.html">Filters and Algorithms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/03_input_and_output.html">Input and Output</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/04_visualization_techniques.html">Visualization Techniques</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/05_interactivity.html">Interactivity</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/06_animations.html">Animations</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/07_performance_optimization_and_parallelism.html">Performance Optimization and Parallelism</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/08_integration_with_other_tools.html">Integration with Other Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/vtk_examples/09_custom_filters_and_algorithms.html">Custom Filters and Algorithms</a></li>
+                    <li><a aria-current="page" href="https://adamdjellouli.com/articles/vtk_examples/10_end_to_end_case_study.html">End to End Case Study</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>End-to-end VTK case study: build, export, and validate a mesh</h1>
+            <p>This small project connects the main ideas from the notes: generate geometry, produce triangles, attach a named scalar array, export to VTP, read the result back, validate it, and configure color mapping. The workflow uses <strong>VTK and the Python standard library only</strong>. It runs without opening a rendering window, making it useful in CI or on a headless workstation.</p>
+            <h2 id="problem-and-expected-output">Problem and expected output</h2>
+            <p>Construct a sphere and use each point's Z coordinate as a scalar named <code>elevation</code>. The sphere source defaults to radius 0.5, so the scalar range should be approximately <code>[-0.5, 0.5]</code>. Save to <code>surface.vtp</code> and confirm that the file retains the same number of points, cells, and scalar tuples.</p>
+            <p><code>vtkSphereSource → vtkTriangleFilter → elevation point array → vtkXMLPolyDataWriter → vtkXMLPolyDataReader → vtkPolyDataMapper</code></p>
+            <h2 id="complete-runnable-script">Complete, runnable script</h2>
+            <p>Save this example as <code>case_study.py</code> and run <code>python case_study.py</code>. It writes into the current directory.</p>
+            <p>~~~python
+                from pathlib import Path
+                import vtk</p>
+            <p>def build_surface():
+                source = vtk.vtkSphereSource()
+                source.SetThetaResolution(48)
+                source.SetPhiResolution(24)</p>
+            <pre><code class="language-none">triangles = vtk.vtkTriangleFilter()
+triangles.SetInputConnection(source.GetOutputPort())
+triangles.Update()
+mesh = triangles.GetOutput()
+
+elevation = vtk.vtkFloatArray()
+elevation.SetName("elevation")
+elevation.SetNumberOfTuples(mesh.GetNumberOfPoints())
+for point_id in range(mesh.GetNumberOfPoints()):
+    _, _, z = mesh.GetPoint(point_id)
+    elevation.SetValue(point_id, z)
+mesh.GetPointData().SetScalars(elevation)
+return mesh
+</code></pre>
+            <p>def save_and_validate(mesh, filename):
+                writer = vtk.vtkXMLPolyDataWriter()
+                writer.SetFileName(str(filename))
+                writer.SetInputData(mesh)
+                if writer.Write() != 1:
+                raise RuntimeError("VTP export failed")</p>
+            <pre><code class="language-none">reader = vtk.vtkXMLPolyDataReader()
+reader.SetFileName(str(filename))
+reader.Update()
+loaded = reader.GetOutput()
+
+if loaded.GetNumberOfPoints() != mesh.GetNumberOfPoints():
+    raise RuntimeError("Point count changed during export")
+if loaded.GetNumberOfCells() != mesh.GetNumberOfCells():
+    raise RuntimeError("Cell count changed during export")
+values = loaded.GetPointData().GetArray("elevation")
+if values is None or values.GetNumberOfTuples() != loaded.GetNumberOfPoints():
+    raise RuntimeError("The elevation array was not preserved")
+return loaded
+</code></pre>
+            <p>def make_mapper(mesh):
+                mapper = vtk.vtkPolyDataMapper()
+                mapper.SetInputData(mesh)
+                mapper.SetScalarModeToUsePointData()
+                mapper.SelectColorArray("elevation")
+                mapper.SetScalarRange(-0.5, 0.5)
+                return mapper</p>
+            <p>if <strong>name</strong> == "<strong>main</strong>":
+                path = Path("surface.vtp")
+                original = build_surface()
+                restored = save_and_validate(original, path)
+                mapper = make_mapper(restored)
+                print("Saved:", path.resolve())
+                print("Points:", restored.GetNumberOfPoints())
+                print("Cells:", restored.GetNumberOfCells())
+                print(
+                "Elevation range:",
+                restored.GetPointData().GetArray("elevation").GetRange()
+                )
+                ~~~</p>
+            <p>The script should print a positive number of points and cells and an elevation range close to <code>(-0.5, 0.5)</code>. You can inspect the resulting file in ParaView, another VTK application, or a text editor if you explicitly choose ASCII XML output.</p>
+            <h2 id="understand-the-design-decisions">Understand the design decisions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Why it is necessary</th>
+                        <th>What would go wrong otherwise</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Triangle conversion</td>
+                        <td>Creates triangles understood by many mesh tools</td>
+                        <td>Later filters may require different cell types</td>
+                    </tr>
+                    <tr>
+                        <td>Point-data allocation</td>
+                        <td>Gives each point exactly one scalar</td>
+                        <td>Wrong tuple counts or associations can break coloring</td>
+                    </tr>
+                    <tr>
+                        <td>Explicit array name</td>
+                        <td>Allows filters/mappers to select the intended field</td>
+                        <td>A mapper may use an unintended active array</td>
+                    </tr>
+                    <tr>
+                        <td>VTP export</td>
+                        <td>Preserves polygonal geometry and arrays</td>
+                        <td>Surface-only formats like STL drop general attributes</td>
+                    </tr>
+                    <tr>
+                        <td>Read-back assertions</td>
+                        <td>Catch lost arrays and changed topology early</td>
+                        <td>A successful write alone can conceal data loss</td>
+                    </tr>
+                    <tr>
+                        <td>Fixed scalar range</td>
+                        <td>Colors carry stable numeric meaning</td>
+                        <td>Auto-ranging makes side-by-side comparison unreliable</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>In this script, the mesh is updated before directly attaching the elevation array. The writer uses <code>SetInputData()</code> on this resulting object. For a pipeline whose fields must be recomputed as source parameters change, implement the array computation as a filter and connect the writer to its output port instead.</p>
+            <h2 id="extend-the-case-study">Extend the case study</h2>
+            <ol>
+                <li>Replace elevation with the radial distance from the origin. Predict the scalar range <em>before</em> running the script.</li>
+                <li>Attach a value to every <strong>cell</strong> rather than every point. Change the mapper's scalar mode accordingly.</li>
+                <li>Increase sphere resolution. Compare triangle count, VTP file size, and export time; note what each metric measures.</li>
+                <li>Export STL instead of VTP. Reload it and check whether the elevation array survived.</li>
+                <li>Add a renderer and actor using the mapper, then give users a fixed camera and color legend; see <a href="05_interactivity.html">interactivity</a>.</li>
+            </ol>
+            <h2 id="troubleshooting-checklist">Troubleshooting checklist</h2>
+            <ul>
+                <li><strong>No file:</strong> inspect working directory and <code>writer.Write()</code> return value.</li>
+                <li><strong>Missing colors:</strong> check scalar name, point/cell association, mapper scalar selection, and scalar range.</li>
+                <li><strong>Unexpected geometry:</strong> print <code>GetBounds()</code> and ensure source units/coordinates are correct.</li>
+                <li><strong>Different data after reload:</strong> compare types, cells, points, and arrays—not just a screenshot.</li>
+                <li><strong>Slow processing:</strong> profile source, filter, write, and render stages separately as discussed in <a href="07_performance_optimization_and_parallelism.html">performance</a>.</li>
+            </ul>
+            <p>This is an intentionally small validation target: it exercises the complete data path without conflating file correctness with GUI setup.</p>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>

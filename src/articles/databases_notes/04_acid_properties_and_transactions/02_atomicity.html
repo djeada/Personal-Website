@@ -23,7 +23,7 @@
         })();
     </script>
     <title>Atomicity: Commit the Whole Operation or None of It</title>
-    <meta content="Atomicity means that a transaction's changes are committed as one unit. If the transaction is rolled back, none of those changes remain committed." name="description" />
+    <meta content="Atomicity means that the database makes a transaction's effects visible as a committed unit or leaves none of those effects committed." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -48,8 +48,8 @@
                 "@id": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity"
             },
             "url": "https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity",
-            "description": "Atomicity means that a transaction's changes are committed as one unit. If the transaction is rolled back, none of those changes remain committed.",
-            "dateModified": "2026-10-04",
+            "description": "Atomicity means that the database makes a transaction's effects visible as a committed unit or leaves none of those effects committed.",
+            "dateModified": "2026-10-31",
             "inLanguage": "en"
         }
     </script>
@@ -57,8 +57,8 @@
     <meta content="article" property="og:type" />
     <meta content="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity" property="og:url" />
     <meta content="Adam Djellouli" property="og:site_name" />
-    <meta content="Atomicity means that a transaction's changes are committed as one unit. If the transaction is rolled back, none of those changes remain committed." property="og:description" />
-    <meta content="2026-10-04" property="article:modified_time" />
+    <meta content="Atomicity means that the database makes a transaction's effects visible as a committed unit or leaves none of those effects committed." property="og:description" />
+    <meta content="2026-10-31" property="article:modified_time" />
     <meta content="summary" name="twitter:card" />
 </head>
 
@@ -118,10 +118,10 @@
                     <li><a href="#an-error-is-not-the-same-as-rollback">An error is not the same as rollback</a></li>
                     <li><a href="#how-recovery-supports-atomicity">How recovery supports atomicity</a></li>
                     <li><a href="#define-what-is-inside-the-transaction">Define what is inside the transaction</a></li>
-                    <li><a href="#make-a-later-constraint-failure-undo-an-earlier-successful-write">Make a later constraint failure undo an earlier successful write</a></li>
+                    <li><a href="#exercise-roll-back-a-successful-write-after-a-later-constraint-error">Exercise: roll back a successful write after a later constraint error</a></li>
                     <li><a href="#atomic-writes-can-still-need-explicit-business-validation">Atomic writes can still need explicit business validation</a></li>
                     <li><a href="#put-notification-intent-inside-an-outbox">Put notification intent inside an outbox</a></li>
-                    <li><a href="#two-phase-commit-coordinates-multiple-participants">Two-phase commit coordinates multiple participants</a></li>
+                    <li><a href="#when-one-transaction-spans-multiple-participants-two-phase-commit">When one transaction spans multiple participants: two-phase commit</a></li>
                     <li><a href="#check-your-understanding">Check your understanding</a></li>
                 </ol>
             </div>
@@ -345,7 +345,7 @@
         </aside><article-section id="article-body">
             <div class="article-header">
                 <div class="article-header-metadata">
-                    <p style="text-align: right;"><i>Last modified: October 04, 2026</i></p>
+                    <p style="text-align: right;"><i>Last modified: October 31, 2026</i></p>
                     <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
                 </div>
                 <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
@@ -365,7 +365,7 @@
                     </button></div>
             </div>
             <h1>Atomicity: Commit the Whole Operation or None of It</h1>
-            <p><strong>Atomicity</strong> means that a transaction's changes are committed as one unit. If the transaction is rolled back, none of those changes remain committed. The operations still execute one after another; atomicity does not mean they take place at the same instant.</p>
+            <p><strong>Atomicity</strong> means that the database makes a transaction's effects visible as a committed unit or leaves none of those effects committed. The statements still execute in sequence; atomicity does <strong>not</strong> mean simultaneous execution, nor does it guarantee that application logic is correct. A statement error is not necessarily an automatic rollback of the entire transaction.</p>
             <p>Read <a href="01_transactions_intro.html">Transactions</a> first. Its checkout groups a stock reduction, an order, and an order item.</p>
             <h2 id="see-rollback-undo-an-earlier-change">See rollback undo an earlier change</h2>
             <p>Use the fresh <a href="../03_sql/01_intro_to_sql.html">bookstore setup</a>. Product 10 begins with stock 5.</p>
@@ -444,7 +444,7 @@ on any failure:
             <p>A database transaction generally covers the transactional operations on its participating database connection. It does not automatically cover another service, a file write, or a message sent to a broker. Some database operations and storage engines also have different rollback behavior.</p>
             <p>For example, sending a confirmation email before commit risks announcing an order that later rolls back. Sending it after commit avoids that particular error, but a crash between commit and sending can leave the email unsent. A common design records a pending notification in the same transaction as the order, then lets a worker deliver it with retry and duplicate handling. This is often called a <strong>transactional outbox</strong>.</p>
             <p>A <strong>savepoint</strong> marks a place for partial rollback inside a transaction. It helps recover from an optional step, but releasing it does not commit the surrounding transaction. The <a href="../03_sql/05_transaction_control_language_tcl.html">SQL transaction control note</a> includes a runnable example.</p>
-            <h2 id="make-a-later-constraint-failure-undo-an-earlier-successful-write">Make a later constraint failure undo an earlier successful write</h2>
+            <h2 id="exercise-roll-back-a-successful-write-after-a-later-constraint-error">Exercise: roll back a successful write after a later constraint error</h2>
             <p>An invalid operation provides a stronger demonstration than rolling back a successful update by choice. This Python exercise creates its own in-memory database, so it does not depend on the bookstore:</p>
             <div>
                 <pre><code class="language-python">import sqlite3
@@ -630,13 +630,13 @@ ORDER BY o.message_id;</code></pre>
             <p>The pending message is <code>checkout-request-abc, order_confirmation</code>. A failure before commit must roll back both records. A worker sees the committed pending record later, sends the notification, and then marks progress. A crash after sending but before marking progress can cause another send, so delivery needs duplicate tolerance or a stable message ID accepted by the recipient.</p>
             <p>The unique request key helps recognize a retried checkout. It does not automatically return the first request's outcome: application code must look up the existing record and verify that a repeated key represents the same operation. The unique message pair prevents recording the same confirmation intent twice for one checkout.</p>
             <p>For multiple workers, use the engine's appropriate claim or locking mechanism so they do not all process the same pending row at once. This SQLite example shows transactional recording, not a complete concurrent delivery queue.</p>
-            <h2 id="two-phase-commit-coordinates-multiple-participants">Two-phase commit coordinates multiple participants</h2>
+            <h2 id="when-one-transaction-spans-multiple-participants-two-phase-commit">When one transaction spans multiple participants: two-phase commit</h2>
             <p>A local transaction cannot ordinarily make two unrelated databases commit together. <strong>Two-phase commit (2PC)</strong> adds a coordinator and a durable decision:</p>
             <ol>
                 <li>Ask each participant to prepare. It records enough state to commit later and retains the necessary resources.</li>
                 <li>If all participants prepare, record and distribute the commit decision. Otherwise resolve the participants with an abort decision.</li>
             </ol>
-            <p>A participant that has prepared cannot simply guess the decision when the coordinator disappears. In-doubt prepared transactions can hold locks until recovery resolves them. This is a major operational cost, not merely two extra SQL statements.</p>
+            <p>After preparing, a participant cannot safely guess the missing coordinator's decision. In-doubt transactions may hold locks or other resources until the decision is recovered. <strong>Two-phase commit provides atomic coordination, not nonblocking availability</strong>: the ability to finish still depends on coordinator recovery or an equivalent durable decision mechanism.</p>
             <p>PostgreSQL exposes a participant mechanism through prepared transactions. This optional example requires a disposable PostgreSQL instance configured with <code>max_prepared_transactions</code> greater than zero; it is commonly disabled by default. It demonstrates one participant, <strong>not a complete distributed coordinator</strong>:</p>
             <div>
                 <pre><code class="language-sql">-- PostgreSQL; prepared transactions must be enabled for this exercise
