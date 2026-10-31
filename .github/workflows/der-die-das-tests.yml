@@ -1,0 +1,43 @@
+name: Der Die Das regression tests
+
+on:
+  pull_request:
+    paths:
+      - 'src/tools/der_die_das/**'
+      - 'src/tools/shared/**'
+      - 'src/resources/**'
+      - 'tests/der-die-das.spec.js'
+      - 'tests/der_die_das/**'
+      - 'playwright.config.js'
+      - 'package*.json'
+      - '.github/workflows/der-die-das-tests.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'src/tools/der_die_das/**'
+      - 'tests/der-die-das.spec.js'
+      - 'tests/der_die_das/**'
+      - '.github/workflows/der-die-das-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  articles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:der-die-das
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: der-die-das-test-results
+          path: test-results/
+          retention-days: 7

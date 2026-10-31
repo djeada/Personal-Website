@@ -3,6 +3,7 @@
 
     const Rules = window.DDDRules;
     const Srs = window.DDDSrs;
+    const Sentences = window.DDDSentences;
     const $ = (id) => document.getElementById(id);
 
     const GENDERS = ["m", "f", "n"];
@@ -47,6 +48,12 @@
             name: "Practice",
             words: 20,
             wait: true
+        },
+        sentences: {
+            name: "Sentences",
+            words: 20,
+            wait: true,
+            sentences: true
         }
     };
     const PACES = {
@@ -112,9 +119,12 @@
             bonus: true,
             speak: false,
             patterns: false,
-            sound: true
+            sound: true,
+            articleType: "definite",
+            grammaticalCase: "all"
         }, saved.settings || {}),
         progress: Object.assign(Srs.blank(), saved.progress || {}),
+        sentenceProgress: Object.assign(Srs.blank(), saved.sentenceProgress || {}),
         best: saved.best || {},
         totals: Object.assign({
             games: 0,
@@ -130,6 +140,7 @@
                 v: 2,
                 settings: state.settings,
                 progress: state.progress,
+                sentenceProgress: state.sentenceProgress,
                 best: state.best,
                 totals: state.totals
             }));
@@ -670,6 +681,7 @@
     }
 
     function draw(now) {
+        if (game && game.mode.sentences) return;
         if (!W || !H || !colors.canvas) return;
         const L = layout();
         ctx.clearRect(0, 0, W, H);
@@ -723,15 +735,18 @@
     }
 
     function newGame(options = {}) {
-        const modeKey = options.mode || state.settings.mode;
+        const modeKey = MODES[options.mode || state.settings.mode] ? options.mode || state.settings.mode : "classic";
         const mode = MODES[modeKey];
-        const pools = buildPool(options);
+        const sentencePool = mode.sentences ? options.sentences || Sentences.pool(state.settings.articleType, state.settings.grammaticalCase) : [];
+        const pools = mode.sentences ? { pool: sentencePool, fixed: Sentences.deck(sentencePool) } : buildPool(options);
         if (!pools.pool.length) return null;
         return {
             key: modeKey,
             mode,
             label: options.label || mode.name,
             source: options.source || "",
+            bestKey: scoreKey(modeKey),
+            articleType: state.settings.articleType,
             pools,
             status: "playing",
             score: 0,
@@ -745,13 +760,14 @@
             right: 0,
             spawned: 0,
             unique: new Set(),
-            budget: options.words ? Math.min(options.words.length, 20) : mode.words || Infinity,
+            budget: mode.sentences ? Math.min(sentencePool.length, mode.words) : options.words ? Math.min(options.words.length, 20) : mode.words || Infinity,
             retry: [],
             recent: [],
             history: [],
             missed: new Map(),
             sinceBonus: 0,
             word: null,
+            sentence: null,
             correction: null,
             flash: null,
             reveal: null,
@@ -1165,6 +1181,143 @@
     }
 
 
+    function nextSentence() {
+        const g = game;
+        if (!g || !g.mode.sentences || !["playing", "frozen"].includes(g.status)) return;
+        const due = g.retry.findIndex((item) => item.at <= g.spawned);
+        let pick;
+        if (due >= 0) pick = { entry: g.retry.splice(due, 1)[0].entry, source: "retry" };
+        else if (g.unique.size < g.budget && g.pools.fixed.length) pick = { entry: g.pools.fixed.shift(), source: g.source || "new" };
+        else if (g.retry.length) pick = { entry: g.retry.shift().entry, source: "retry" };
+        else {
+            endGame("done");
+            return;
+        }
+
+        g.status = "playing";
+        g.sentence = pick;
+        g.spawned += 1;
+        g.unique.add(pick.entry.id);
+        const entry = pick.entry;
+        $("sentenceCount").textContent = `${pick.source === "retry" ? "Review · " : ""}${g.unique.size} / ${g.budget}`;
+        $("sentenceInstruction").textContent = `Complete the German sentence with ${entry.family === "definite" ? "a definite article (the)" : "an indefinite article (a / an)"}.`;
+        const blank = document.createElement("span");
+        blank.className = "ddd-sentence-blank";
+        blank.id = "sentenceBlank";
+        blank.setAttribute("aria-label", "missing article");
+        blank.textContent = "…";
+        $("sentencePrompt").replaceChildren(entry.before, blank, entry.after);
+        $("sentenceTranslation").textContent = entry.translation;
+        $("sentenceInput").value = "";
+        $("sentenceInput").disabled = false;
+        $("sentenceInput").removeAttribute("aria-invalid");
+        $("sentenceCheck").disabled = false;
+        $("sentenceValidation").textContent = "";
+        $("sentenceFeedback").hidden = true;
+        $("sentenceNext").hidden = true;
+        $("sentenceNext").textContent = "Next sentence";
+        const choices = $("sentenceChoices");
+        choices.replaceChildren();
+        Sentences.choices(g.articleType).forEach((article) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn ddd-sentence-choice";
+            button.lang = "de";
+            button.dataset.article = article;
+            button.textContent = article;
+            choices.appendChild(button);
+        });
+        updateHud();
+        $("sentenceInput").focus({ preventScroll: true });
+        announce(`${entry.before}blank${entry.after} ${entry.translation}`);
+    }
+
+    function submitSentence(event) {
+        if (event) event.preventDefault();
+        const g = game;
+        if (!g || !g.mode.sentences || g.status !== "playing" || !g.sentence) return;
+        const input = $("sentenceInput");
+        const chosen = input.value.trim().toLowerCase();
+        if (!Sentences.choices(g.articleType).includes(chosen)) {
+            $("sentenceValidation").textContent = "Type or choose one of the article forms below.";
+            input.setAttribute("aria-invalid", "true");
+            input.focus({ preventScroll: true });
+            return;
+        }
+        const { entry, source } = g.sentence;
+        const correct = chosen === entry.answer;
+        g.answers += 1;
+        state.totals.answers += 1;
+        g.history.push({ entry, chosen, correct, source });
+        Srs.record(state.sentenceProgress, entry.id, correct, Srs.today());
+        if (correct) {
+            g.right += 1;
+            state.totals.right += 1;
+            g.streak += 1;
+            g.bestStreak = Math.max(g.bestStreak, g.streak);
+            g.score += 10 * multiplier(g.streak);
+            Sound.right(g.streak);
+        } else {
+            g.streak = 0;
+            if (!g.missed.has(entry.id)) g.missed.set(entry.id, { entry, chosen });
+            g.retry.push({ entry, at: g.spawned + 3 });
+            Sound.wrong();
+        }
+        // Both outcomes wait for an explicit Next, so explanations stay readable.
+        g.status = "frozen";
+        $("sentenceBlank").textContent = Sentences.displayAnswer(entry);
+        $("sentenceBlank").removeAttribute("aria-label");
+        const verdict = $("sentenceVerdict");
+        verdict.className = `ddd-last-verdict ${correct ? "is-right" : "is-wrong"}`;
+        verdict.textContent = correct ? "Right" : `You chose ${chosen}. The answer is ${entry.answer}.`;
+        $("sentenceExplanation").textContent = Sentences.explain(entry);
+        $("sentenceFeedback").hidden = false;
+        input.removeAttribute("aria-invalid");
+        $("sentenceValidation").textContent = "";
+        input.disabled = true;
+        $("sentenceCheck").disabled = true;
+        $("sentenceChoices").querySelectorAll("button").forEach((button) => { button.disabled = true; });
+        $("sentenceNext").hidden = false;
+        if (g.unique.size >= g.budget && !g.retry.length) $("sentenceNext").textContent = "See results";
+        $("sentenceNext").focus({ preventScroll: true });
+        updateHud();
+        renderRecap();
+        persist();
+        announce(`${verdict.textContent} ${Sentences.sentence(entry)} ${Sentences.explain(entry)}`);
+    }
+
+    function renderArticleReference() {
+        const reference = $("articleReference");
+        reference.replaceChildren();
+        Object.entries(Sentences.FORMS).forEach(([family, cases]) => {
+            const table = document.createElement("table");
+            const caption = document.createElement("caption");
+            caption.textContent = family === "definite" ? "Definite articles · the" : "Indefinite articles · a / an";
+            table.appendChild(caption);
+            const head = table.createTHead().insertRow();
+            ["Case", "Masc.", "Fem.", "Neuter", "Plural"].forEach((name) => {
+                const cell = document.createElement("th");
+                cell.scope = "col";
+                cell.textContent = name;
+                head.appendChild(cell);
+            });
+            const body = table.createTBody();
+            Object.entries(cases).forEach(([grammaticalCase, genders]) => {
+                const row = body.insertRow();
+                const heading = document.createElement("th");
+                heading.scope = "row";
+                heading.textContent = Sentences.CASES[grammaticalCase];
+                row.appendChild(heading);
+                ["m", "f", "n", "p"].forEach((gender) => {
+                    const cell = row.insertCell();
+                    cell.lang = "de";
+                    cell.textContent = genders[gender] || "–";
+                });
+            });
+            reference.appendChild(table);
+        });
+    }
+
     function pauseGame(reason) {
         if (!game || (game.status !== "playing" && game.status !== "frozen")) return;
         game.pausedFrom = game.status;
@@ -1172,6 +1325,7 @@
         game.status = "paused";
         $("pauseText").textContent = reason || `${game.label} · score ${game.score}. Your game waits here.`;
         els.pause.hidden = false;
+        $("sentencePanel").inert = true;
         $("resumeButton").focus({
             preventScroll: true
         });
@@ -1187,7 +1341,9 @@
         if (game.flash) game.flash.until += away;
         if (game.reveal) game.reveal.until += away;
         els.pause.hidden = true;
-        els.stage.focus({
+        $("sentencePanel").inert = false;
+        const focus = game.mode.sentences ? $(game.status === "frozen" ? "sentenceNext" : "sentenceInput") : els.stage;
+        focus.focus({
             preventScroll: true
         });
         updateHud();
@@ -1208,13 +1364,28 @@
         els.bonus.hidden = true;
         els.stage.classList.remove("is-static");
         els.stage.classList.add("is-playing");
+        const sentences = Boolean(game.mode.sentences);
+        els.stage.classList.toggle("is-sentences", sentences);
+        $("sentencePanel").hidden = !sentences;
+        $("sentencePanel").inert = false;
+        $("lastWord").hidden = sentences;
+        $("keyHints").hidden = sentences;
+        $("sentenceKeyHints").hidden = !sentences;
+        $("hudLevelLabel").textContent = sentences ? "Sentence" : "Level";
+        $("hudLevelBar").parentElement.hidden = sentences;
         resize();
-        $("hudLivesBox").hidden = false;
+        $("hudLivesBox").hidden = sentences;
         $("hudTimeBox").hidden = !game.mode.clock;
         resetLast();
         renderRecap();
         updateHud();
         scrollToGame();
+        if (rafId) window.cancelAnimationFrame(rafId);
+        rafId = 0;
+        if (sentences) {
+            nextSentence();
+            return;
+        }
         els.stage.focus({
             preventScroll: true
         });
@@ -1231,9 +1402,12 @@
         els.stage.classList.remove("is-playing");
         els.bonus.hidden = true;
         els.pause.hidden = true;
+        $("sentencePanel").hidden = true;
+        $("sentencePanel").inert = false;
+        els.stage.classList.remove("is-sentences");
         state.totals.games += 1;
         state.totals.bestStreak = Math.max(state.totals.bestStreak, g.bestStreak);
-        const bestKey = g.options && g.options.words ? "" : `${g.key}:${state.settings.levels.join("")}:${state.settings.pace}`;
+        const bestKey = g.options && (g.options.words || g.options.sentences) ? "" : g.bestKey;
         const previous = bestKey ? state.best[bestKey] || 0 : 0;
         const isBest = bestKey && g.answers > 0 && g.score > previous;
         if (isBest) state.best[bestKey] = g.score;
@@ -1243,7 +1417,7 @@
         const reasons = {
             lives: "Out of lives",
             time: "Time's up",
-            done: g.mode.wait || g.options.words ? "Practice complete" : "Every word played",
+            done: g.mode.sentences ? "Round complete" : g.mode.wait || g.options.words ? "Practice complete" : "Every word played",
             quit: "Game ended"
         };
         $("overReason").textContent = `${g.label} · ${reasons[reason] || "Game over"}`;
@@ -1255,16 +1429,16 @@
         const newWords = g.history.filter((h) => h.source === "new" && h.correct).length;
         fillStats($("overStats"), [
             ["Accuracy", g.answers ? `${accuracy}%` : "–"],
-            ["Words", String(g.unique.size)],
+            [g.mode.sentences ? "Sentences" : "Words", String(g.unique.size)],
             ["Best streak", String(g.bestStreak)],
-            [g.mode.ramp ? "Level" : "New words", g.mode.ramp ? String(g.level) : String(newWords)]
+            [g.mode.sentences ? "Cases" : g.mode.ramp ? "Level" : "New words", g.mode.sentences ? String(new Set(g.history.map((row) => row.entry.case)).size) : g.mode.ramp ? String(g.level) : String(newWords)]
         ]);
         const missed = $("overMissed");
         missed.innerHTML = "";
         const list = Array.from(g.missed.values());
         if (list.length) {
             const heading = document.createElement("h3");
-            heading.textContent = list.length === 1 ? "One word to remember" : `${list.length} words to remember`;
+            heading.textContent = list.length === 1 ? `One ${g.mode.sentences ? "sentence" : "word"} to remember` : `${list.length} ${g.mode.sentences ? "sentences" : "words"} to remember`;
             const ul = document.createElement("ul");
             list.slice(0, 6).forEach(({
                 entry
@@ -1272,9 +1446,10 @@
                 const li = document.createElement("li");
                 const word = document.createElement("span");
                 word.lang = "de";
-                word.append(articleNode(entry.genders[0]), ` ${entry.word}`);
+                if (g.mode.sentences) word.textContent = Sentences.sentence(entry);
+                else word.append(articleNode(entry.genders[0]), ` ${entry.word}`);
                 const rule = document.createElement("span");
-                rule.textContent = `${entry.meaning}. ${rules.explain(entry).text}`;
+                rule.textContent = g.mode.sentences ? Sentences.explain(entry) : `${entry.meaning}. ${rules.explain(entry).text}`;
                 li.append(word, rule);
                 ul.appendChild(li);
             });
@@ -1295,6 +1470,7 @@
 
     function loop(now) {
         rafId = 0;
+        if (game && game.mode.sentences) return;
         const dt = Math.min(64, now - lastFrame || 16);
         lastFrame = now;
         if (game && game.status !== "over") update(dt, now);
@@ -1305,6 +1481,7 @@
     }
 
     function kick() {
+        if (game && game.mode.sentences) return;
         if (!rafId) {
             lastFrame = performance.now();
             rafId = window.requestAnimationFrame(loop);
@@ -1360,7 +1537,7 @@
         $("hudStreak").textContent = g ? String(g.streak) : "0";
         const mult = g ? multiplier(g.streak) : 1;
         $("hudMult").textContent = mult > 1 ? `x${mult}` : "";
-        $("hudLevel").textContent = g ? String(g.level) : "1";
+        $("hudLevel").textContent = g ? String(g.mode.sentences ? g.unique.size : g.level) : "1";
         $("hudLevelBar").style.width = g && g.mode.ramp ? `${(g.levelProgress / WORDS_PER_LEVEL) * 100}%` : "0";
         $("hudAccuracy").textContent = g && g.answers ? `${Math.round((g.right / g.answers) * 100)}%` : "–";
         updateClock();
@@ -1477,6 +1654,13 @@
             s.meaning = value;
             persist();
         });
+        segmented($("articleControl"), "articleType", [["definite", "Definite"], ["indefinite", "Indefinite"], ["mixed", "Mixed"]], s.articleType, (value) => {
+            s.articleType = value;
+            persist();
+            renderSummary();
+            renderModeBests();
+        });
+        $("caseControl").value = s.grammaticalCase;
         $("optBonus").checked = s.bonus;
         $("optSpeak").checked = s.speak;
         $("optPatterns").checked = s.patterns;
@@ -1504,6 +1688,16 @@
 
     function renderSummary() {
         if (!entries.length) return;
+        const sentences = state.settings.mode === "sentences";
+        $("nounSettings").hidden = sentences;
+        $("sentenceSettings").hidden = !sentences;
+        els.startButton.textContent = sentences ? "Start sentences" : "Start game";
+        if (sentences) {
+            const pool = Sentences.pool(state.settings.articleType, state.settings.grammaticalCase);
+            const scope = state.settings.grammaticalCase === "all" ? "all four cases" : Sentences.CASES[state.settings.grammaticalCase].toLowerCase();
+            $("startSummary").textContent = `${pool.length} sentences available · ${Math.min(20, pool.length)} per round · ${scope}. No timer. Each answer explains the case and article; missed sentences return until you get them right.`;
+            return;
+        }
         const levels = new Set(state.settings.levels);
         const pool = entries.filter((entry) => levels.has(entry.level));
         const day = Srs.today();
@@ -1526,8 +1720,12 @@
         summary.append(`${parts.join(", ")}. Missed words come back a few words later.`);
     }
 
+    function scoreKey(mode) {
+        return mode === "sentences" ? `sentences:${state.settings.articleType}:${state.settings.grammaticalCase}` : `${mode}:${state.settings.levels.join("")}:${state.settings.pace}`;
+    }
+
     function bestFor(mode) {
-        return state.best[`${mode}:${state.settings.levels.join("")}:${state.settings.pace}`] || 0;
+        return state.best[scoreKey(mode)] || 0;
     }
 
     function renderModeBests() {
@@ -1541,6 +1739,10 @@
     function renderRecap() {
         const recap = $("recap");
         recap.innerHTML = "";
+        if (game && game.mode.sentences) {
+            renderSentenceRecap(recap);
+            return;
+        }
         const history = game ? game.history : [];
         if (!history.length) {
             const empty = document.createElement("p");
@@ -1600,6 +1802,48 @@
             list.appendChild(li);
         });
         recap.append(tools, list);
+    }
+
+    function renderSentenceRecap(recap) {
+        const seen = new Map();
+        game.history.forEach((row) => {
+            const previous = seen.get(row.entry.id);
+            if (!previous || (!row.correct && previous.correct)) seen.set(row.entry.id, row);
+        });
+        if (!seen.size) {
+            const empty = document.createElement("p");
+            empty.className = "la-empty";
+            empty.textContent = "Your completed sentences and their case explanations will appear here.";
+            recap.appendChild(empty);
+            return;
+        }
+        const rows = Array.from(seen.values()).sort((a, b) => Number(a.correct) - Number(b.correct));
+        const count = document.createElement("p");
+        const missed = rows.filter((row) => !row.correct).length;
+        count.className = "ddd-recap-tools";
+        count.textContent = `${rows.length} sentences · ${rows.length - missed} right first time · ${missed} missed`;
+        const list = document.createElement("ol");
+        list.className = "ddd-recap-list";
+        rows.forEach((row) => {
+            const li = document.createElement("li");
+            const mark = document.createElement("span");
+            mark.className = `ddd-mark${row.correct ? "" : " is-wrong"}`;
+            mark.textContent = row.correct ? "RIGHT" : "MISSED";
+            const sentence = document.createElement("span");
+            sentence.className = "ddd-recap-word";
+            sentence.lang = "de";
+            sentence.textContent = Sentences.sentence(row.entry);
+            const translation = document.createElement("small");
+            translation.lang = "en";
+            translation.textContent = row.entry.translation;
+            sentence.appendChild(translation);
+            const explanation = document.createElement("span");
+            explanation.className = "ddd-recap-rule";
+            explanation.textContent = `${row.correct ? "" : `You chose ${row.chosen}. `}${Sentences.explain(row.entry)}`;
+            li.append(mark, sentence, explanation);
+            list.appendChild(li);
+        });
+        recap.append(count, list);
     }
 
     function renderProgress() {
@@ -1687,6 +1931,16 @@
             legend.appendChild(span);
         });
         view.appendChild(legend);
+        const sentenceCards = Object.keys(state.sentenceProgress.words).map((id) => Srs.card(state.sentenceProgress, id));
+        if (sentenceCards.length) {
+            const answers = sentenceCards.reduce((sum, card) => sum + card.right + card.wrong, 0);
+            const right = sentenceCards.reduce((sum, card) => sum + card.right, 0);
+            const summary = document.createElement("p");
+            summary.id = "sentenceProgressSummary";
+            summary.className = "ddd-section-lead";
+            summary.textContent = `Sentences: ${sentenceCards.length} practised · ${answers} answers · ${answers ? Math.round(right / answers * 100) : 0}% accuracy.`;
+            view.appendChild(summary);
+        }
         $("replayMistakes").disabled = !Srs.weakest(entries, state.progress, 1).length;
     }
 
@@ -1866,6 +2120,7 @@
             exported: new Date().toISOString(),
             settings: state.settings,
             progress: state.progress,
+            sentenceProgress: state.sentenceProgress,
             best: state.best,
             totals: state.totals
         })], {
@@ -1887,13 +2142,14 @@
                 const data = JSON.parse(String(reader.result));
                 if (!data || data.v !== 2 || !data.progress || typeof data.progress.words !== "object") throw new Error("format");
                 state.progress = Object.assign(Srs.blank(), data.progress);
+                state.sentenceProgress = Object.assign(Srs.blank(), data.sentenceProgress || {});
                 state.best = data.best || {};
                 state.totals = Object.assign(state.totals, data.totals || {});
                 persist();
                 renderProgress();
                 renderSummary();
                 renderModeBests();
-                ToolShared.showToast(`Imported progress for ${Object.keys(state.progress.words).length} words.`, "success");
+                ToolShared.showToast(`Imported progress for ${Object.keys(state.progress.words).length} words and ${Object.keys(state.sentenceProgress.words).length} sentences.`, "success");
             } catch (error) {
                 ToolShared.showToast("That file is not a Der Die Das progress export.", "error");
             }
@@ -1902,8 +2158,9 @@
     }
 
     function resetProgress() {
-        if (!window.confirm("Forget every word you have practised, your best scores and your streak? This cannot be undone.")) return;
+        if (!window.confirm("Forget your word and sentence progress, best scores and streak? This cannot be undone.")) return;
         state.progress = Srs.blank();
+        state.sentenceProgress = Srs.blank();
         state.best = {};
         state.totals = {
             games: 0,
@@ -1943,6 +2200,22 @@
                 closeBonus();
             }
             return;
+        }
+        if (game && game.mode.sentences && els.start.hidden && els.over.hidden) {
+            if (key === "Escape") {
+                event.preventDefault();
+                if (game.status === "paused") resumeGame();
+                else pauseGame();
+                return;
+            }
+            if (game.status !== "paused") {
+                const nativeControl = event.target && event.target.closest("button, a, summary");
+                if (key === "Enter" && !event.repeat && game.status === "frozen" && !nativeControl) {
+                    event.preventDefault();
+                    nextSentence();
+                }
+                return;
+            }
         }
         if (isTyping(event.target)) return;
         const onButton = event.target && event.target.closest && event.target.closest("button, a, label, summary");
@@ -2097,6 +2370,21 @@
             if (event.target.name !== "mode") return;
             state.settings.mode = event.target.value;
             persist();
+            renderSummary();
+        });
+        $("caseControl").addEventListener("change", (event) => {
+            state.settings.grammaticalCase = event.target.value;
+            persist();
+            renderSummary();
+            renderModeBests();
+        });
+        $("sentenceForm").addEventListener("submit", submitSentence);
+        $("sentenceNext").addEventListener("click", nextSentence);
+        $("sentenceChoices").addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-article]");
+            if (!button || button.disabled) return;
+            $("sentenceInput").value = button.dataset.article;
+            submitSentence();
         });
         $("optBonus").addEventListener("change", (event) => {
             state.settings.bonus = event.target.checked;
@@ -2127,6 +2415,15 @@
         $("againButton").addEventListener("click", () => startGame(game && game.options));
         $("mistakesButton").addEventListener("click", () => {
             if (!game) return;
+            if (game.mode.sentences) {
+                startGame({
+                    mode: "sentences",
+                    sentences: Array.from(game.missed.values()).map((item) => item.entry),
+                    source: "mistake",
+                    label: "Sentence mistakes"
+                });
+                return;
+            }
             const words = Array.from(game.missed.values()).map((item) => item.entry);
             startGame({
                 mode: "practice",
@@ -2215,6 +2512,7 @@
         $("loadState").hidden = true;
         els.startButton.disabled = false;
         renderSetup();
+        renderArticleReference();
         renderProgress();
         renderRules();
         draw(performance.now());
@@ -2224,10 +2522,20 @@
         snapshot() {
             if (!game) return null;
             return {
+                mode: game.key,
                 status: game.status,
                 word: game.word ? game.word.entry.word : null,
                 articles: game.word ? game.word.entry.articles : null,
-                source: game.word ? game.word.source : null,
+                source: game.word ? game.word.source : game.sentence ? game.sentence.source : null,
+                sentence: game.mode.sentences && game.sentence ? {
+                    id: game.sentence.entry.id,
+                    prompt: `${game.sentence.entry.before}___${game.sentence.entry.after}`,
+                    answer: game.sentence.entry.answer,
+                    case: game.sentence.entry.case,
+                    gender: game.sentence.entry.gender,
+                    family: game.sentence.entry.family
+                } : null,
+                budget: game.budget,
                 score: game.score,
                 lives: game.lives,
                 clock: game.clock,

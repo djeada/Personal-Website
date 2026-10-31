@@ -211,3 +211,140 @@ test("the page loads without errors in light and dark mode", async ({ page, cont
   await nextWord(page);
   expect(errors).toEqual([]);
 });
+
+async function answerSentence(page, { right = true } = {}) {
+  const s = await snapshot(page);
+  const chosen = right ? s.sentence.answer : (s.sentence.family === "definite" ? ["der", "die", "das", "den", "dem", "des"] : ["ein", "eine", "einen", "einem", "einer", "eines"]).find((article) => article !== s.sentence.answer);
+  await page.locator("#sentenceInput").fill(chosen);
+  await page.locator("#sentenceCheck").click();
+  await expect.poll(async () => (await snapshot(page)).answers).toBe(s.answers + 1);
+  return s;
+}
+
+test("sentence mode switches settings and accepts typed articles with readable feedback", async ({ page }) => {
+  await open(page, {});
+  await page.locator("#modeControl .ddd-mode-name").filter({ hasText: /^Sentences$/ }).click();
+  await expect(page.locator("#nounSettings")).toBeHidden();
+  await expect(page.locator("#sentenceSettings")).toBeVisible();
+  await expect(page.locator("#startSummary")).toContainText("48 sentences available");
+  await page.locator("#startButton").click();
+  await expect(page.locator("#gameCanvas")).toBeHidden();
+  await expect(page.locator("#sentenceChoices button")).toHaveCount(6);
+  const first = await snapshot(page);
+  await page.locator("#sentenceInput").fill("hello");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sentenceValidation")).toContainText("article forms");
+  expect((await snapshot(page)).answers).toBe(0);
+  await page.locator("#sentenceInput").fill(` ${first.sentence.answer.toUpperCase()} `);
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sentenceVerdict")).toHaveText("Right");
+  await expect(page.locator("#sentenceExplanation")).toContainText(first.sentence.case[0].toUpperCase() + first.sentence.case.slice(1));
+  await expect(page.locator("#sentenceCheck")).toBeDisabled();
+  await expect(page.locator("#bonusForm")).toBeHidden();
+  expect((await snapshot(page)).score).toBe(10);
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sentenceInput")).toBeFocused();
+  expect((await snapshot(page)).sentence.id).not.toBe(first.sentence.id);
+});
+
+test("sentence mistakes return after three intervening sentences and can be replayed", async ({ page }) => {
+  await open(page, { mode: "sentences" });
+  await page.locator("#startButton").click();
+  const missed = await answerSentence(page, { right: false });
+  await expect(page.locator("#sentenceVerdict")).toContainText(`The answer is ${missed.sentence.answer}`);
+  await page.locator("#sentenceNext").click();
+  for (let i = 0; i < 3; i++) {
+    expect((await snapshot(page)).sentence.id).not.toBe(missed.sentence.id);
+    await answerSentence(page);
+    await page.locator("#sentenceNext").click();
+  }
+  expect((await snapshot(page)).sentence.id).toBe(missed.sentence.id);
+  expect((await snapshot(page)).source).toBe("retry");
+  await answerSentence(page);
+  await page.keyboard.press("Escape");
+  await page.locator("#quitButton").click();
+  await expect(page.locator("#overMissed")).toContainText("One sentence to remember");
+  await page.locator("#mistakesButton").click();
+  expect((await snapshot(page)).mode).toBe("sentences");
+  expect((await snapshot(page)).sentence.id).toBe(missed.sentence.id);
+  expect((await snapshot(page)).budget).toBe(1);
+  await answerSentence(page);
+  await page.locator("#sentenceNext").click();
+  await expect(page.locator("#overReason")).toContainText("Round complete");
+});
+
+test("case and article filters persist, a round completes and noun progress stays separate", async ({ page }) => {
+  await open(page, { mode: "sentences", articleType: "indefinite", grammaticalCase: "genitive" });
+  await expect(page.locator("#startSummary")).toContainText("9 sentences available");
+  await page.locator("#startButton").click();
+  for (let i = 0; i < 9; i++) {
+    const s = await snapshot(page);
+    expect(s.sentence.case).toBe("genitive");
+    expect(s.sentence.family).toBe("indefinite");
+    expect(s.sentence.gender).not.toBe("p");
+    await page.locator(`#sentenceChoices button[data-article="${s.sentence.answer}"]`).click();
+    await page.locator("#sentenceNext").click();
+  }
+  await expect(page.locator("#overScreen")).toBeVisible();
+  await expect(page.locator("#overReason")).toContainText("Round complete");
+  await expect(page.locator("#recap .ddd-recap-list > li")).toHaveCount(9);
+  await expect(page.locator("#progressView .ddd-figures dd").first()).toHaveText("0");
+  await expect(page.locator("#sentenceProgressSummary")).toContainText("9 answers · 100% accuracy");
+  const score = (await snapshot(page)).score;
+  await page.reload();
+  await expect(page.locator('input[name="mode"][value="sentences"]')).toBeChecked();
+  await expect(page.locator("#caseControl")).toHaveValue("genitive");
+  await expect(page.locator('[data-best="sentences"]')).toHaveText(`Best ${score}`);
+  await expect(page.locator("#sentenceProgressSummary")).toContainText("9 answers");
+  await page.locator("#articleControl").getByText("Definite", { exact: true }).click();
+  await expect(page.locator('[data-best="sentences"]')).toHaveText("No score yet");
+  await expect(page.locator("#startSummary")).toContainText("12 sentences available");
+  await page.locator("#modeControl .ddd-mode-name").filter({ hasText: /^Classic$/ }).click();
+  await expect(page.locator("#nounSettings")).toBeVisible();
+  await expect(page.locator("#sentenceSettings")).toBeHidden();
+});
+
+test("a mixed sentence round covers every case and ends after twenty distinct sentences", async ({ page }) => {
+  await open(page, { mode: "sentences", articleType: "mixed" });
+  await page.locator("#startButton").click();
+  await expect(page.locator("#sentenceChoices button")).toHaveCount(12);
+  const cases = new Set();
+  const families = new Set();
+  const ids = new Set();
+  for (let i = 0; i < 20; i++) {
+    const s = await answerSentence(page);
+    cases.add(s.sentence.case);
+    families.add(s.sentence.family);
+    ids.add(s.sentence.id);
+    await page.locator("#sentenceNext").click();
+  }
+  expect(cases.size).toBe(4);
+  expect(families.size).toBe(2);
+  expect(ids.size).toBe(20);
+  await expect(page.locator("#overScreen")).toBeVisible();
+  await expect(page.locator("#recap .ddd-recap-list > li")).toHaveCount(20);
+  await expect(page.locator("#mistakesButton")).toBeHidden();
+});
+
+test("sentence input pauses with Escape, resumes intact, and fits a phone in both themes", async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, { mode: "sentences", articleType: "mixed" });
+  for (const dark of [false, true]) {
+    await context.addCookies([{ name: "darkMode", value: String(dark), url: "http://127.0.0.1:8000" }]);
+    await page.reload();
+    await page.locator("#startButton").click();
+    const s = await snapshot(page);
+    await page.locator("#sentenceInput").fill("dem");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#pauseScreen")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#sentenceInput")).toBeFocused();
+    await expect(page.locator("#sentenceInput")).toHaveValue("dem");
+    expect((await snapshot(page)).sentence.id).toBe(s.sentence.id);
+    await page.locator(".ddd-article-reference summary").click();
+    await expect(page.locator("#articleReference table")).toHaveCount(2);
+    const width = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    expect(width[0]).toBeLessThanOrEqual(width[1] + 1);
+  }
+});
+
