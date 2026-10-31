@@ -31,12 +31,12 @@ async function solve(page) {
   } else if (type === "hunt") {
     await expect(page.locator(".pa-hunt-cell")).toHaveCount(8);
     for (const cell of await page.locator(".pa-hunt-cell[data-answer='true']").all()) await cell.click();
+  } else if (type === "story") {
+    await page.locator("#story-next").click();
   } else {
-    if (type !== "story") {
-      await expect(page.locator("#stage [data-option]"), `${type} offers three choices`).toHaveCount(3);
-      const options = await page.locator("#stage [data-option]").evaluateAll((nodes) => nodes.map((node) => node.dataset.option));
-      expect(new Set(options).size, type).toBe(3);
-    }
+    await expect(page.locator("#stage [data-option]"), `${type} offers three choices`).toHaveCount(3);
+    const options = await page.locator("#stage [data-option]").evaluateAll((nodes) => nodes.map((node) => node.dataset.option));
+    expect(new Set(options).size, type).toBe(3);
     await page.locator("#stage [data-answer='true']").first().click();
   }
   await expect(page.locator("#play-progress")).not.toHaveAttribute("aria-valuenow", before, { timeout: 8000 });
@@ -195,16 +195,133 @@ test("in capitals, tiles that look the same are interchangeable (MAMA, THE ... T
   }
 });
 
+for (const language of ["en", "de", "ar"]) {
+  for (const type of ["build", "order"]) {
+    test(`${language} ${type} checks every full answer after repeated mistakes`, async ({ page }) => {
+      const errors = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await start(page);
+      await page.locator(`[data-language="${language}"]`).click();
+      await unlockAll(page);
+      await openLevel(page, type === "build" ? "words" : "stories", 4);
+      while ((await taskType(page)) !== type) await solve(page);
+      const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
+      const target = (await page.locator("#slots").getAttribute("data-target")).split("|");
+      const wrong = [...target];
+      const other = wrong.findIndex((piece) => piece !== wrong[0]);
+      expect(other).toBeGreaterThan(0);
+      [wrong[0], wrong[other]] = [wrong[other], wrong[0]];
+      const clear = async () => {
+        while (await page.locator(".pa-slot.is-filled").count()) await page.locator(".pa-slot.is-filled").first().click();
+      };
+      const fill = async (pieces) => {
+        for (const piece of pieces) await page.locator(".pa-tile:not(:disabled)").filter({ hasText: exact(piece) }).first().click();
+      };
+      // A correct answer after two misses used to crash in the hint lookup before being checked.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await clear();
+        await fill(wrong);
+        await expect(page.locator(".pa-slot.is-wrong").first()).toBeVisible();
+        await expect(page.locator(".pa-slot:not(.is-filled)")).toHaveCount(2);
+        await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", before);
+      }
+      await clear();
+      await fill(target);
+      await expect(page.locator(".pa-slot.is-right")).toHaveCount(target.length);
+      await expect(page.locator("#play-progress")).not.toHaveAttribute("aria-valuenow", before);
+      expect(errors).toEqual([]);
+    });
+  }
+}
+
+test("the last letter locks a correct answer before rapid taps or backspace can change it", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
+    HTMLMediaElement.prototype.play = function () {
+      setTimeout(() => this.onended && this.onended(), 5);
+      return Promise.resolve();
+    };
+  });
+  await start(page, { muted: false });
+  await unlockAll(page);
+  await openLevel(page, "words", 4);
+  while ((await taskType(page)) !== "build") await solve(page);
+  const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
+  const size = await page.evaluate(() => {
+    const target = document.querySelector("#slots").dataset.target.split("|");
+    for (const text of target) [...document.querySelectorAll(".pa-tile")].find((tile) => !tile.disabled && tile.textContent === text).click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true }));
+    document.querySelector(".pa-slot").click();
+    return target.length;
+  });
+  await expect(page.locator(".pa-slot.is-right.is-filled")).toHaveCount(size);
+  await expect(page.locator("[data-slot]:enabled, [data-tile]:enabled")).toHaveCount(0);
+  await expect(page.locator("#play-progress")).not.toHaveAttribute("aria-valuenow", before, { timeout: 8000 });
+});
+
 test("stories read along, ask questions about what happened and finish with stars", async ({ page }) => {
   await start(page);
   await unlockAll(page);
   await openLevel(page, "stories", 1);
   await expect(page.locator(".pa-sentence")).toHaveText("A DOG SAT.");
-  await page.locator(".pa-word[data-answer='false']").first().click();
-  await expect(page.locator(".pa-word[data-answer='true']")).toBeEnabled();
+  await expect(page.locator(".pa-word[data-answer]")).toHaveCount(0);
+  await page.locator(".pa-word").first().click();
+  await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", "0");
+  await expect(page.locator("#story-next")).toBeEnabled();
   const types = await playLevel(page);
   expect(types).toEqual(["story", "story", "story", "question", "question"]);
   await expect(page.locator(".pa-stars-big i.is-on")).toHaveCount(3);
+});
+
+for (const language of ["en", "de", "ar"]) {
+  test(`${language} stories separate reading from comprehension without revealing answers`, async ({ page }) => {
+    await start(page);
+    await page.locator(`[data-language="${language}"]`).click();
+    await unlockAll(page);
+    await openLevel(page, "stories", 1);
+    while ((await taskType(page)) === "story") {
+      await expect(page.locator(".pa-word[data-answer], #find-hint, .is-hint, .is-right")).toHaveCount(0);
+      const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
+      await page.locator(".pa-word").last().click();
+      await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", before);
+      await solve(page);
+    }
+    expect(await taskType(page)).toBe("question");
+    await expect(page.locator(".pa-question")).toBeVisible();
+    await expect(page.locator("[data-option]")).toHaveCount(3);
+    await expect(page.locator("[data-answer='true']")).not.toHaveClass(/is-hint|is-right/);
+    const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
+    await page.locator("[data-answer='false']").first().click();
+    await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", before);
+    await expect(page.locator("[data-answer='false']:disabled")).toHaveCount(1);
+    await page.locator("[data-answer='false']:enabled").click();
+    await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", before);
+    await playLevel(page);
+    await expect(page.locator(".pa-stars-big i.is-on")).toHaveCount(2);
+  });
+}
+
+test("story pages advance when narration stalls and closing a page cancels its continuation", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "AudioContext", { value: undefined });
+    Object.defineProperty(window, "webkitAudioContext", { value: undefined });
+    HTMLMediaElement.prototype.play = () => new Promise(() => {});
+  });
+  await start(page, { muted: false });
+  await page.locator('[data-language="ar"]').click();
+  await unlockAll(page);
+  await openLevel(page, "stories", 1);
+  await page.locator("#story-next").click();
+  await expect(page.locator("#play-progress")).toHaveAttribute("aria-valuenow", "1");
+  await page.locator("#close-play").click();
+  await openLevel(page, "words", 0);
+  const type = await taskType(page);
+  await page.waitForTimeout(1800);
+  expect(await taskType(page)).toBe(type);
+  expect(errors).toEqual([]);
 });
 
 test("sentence levels match pictures, fill gaps and put words in order", async ({ page }) => {

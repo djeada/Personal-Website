@@ -86,6 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
             close: "Back to the map",
             replay: "Hear it again",
             readToMe: "Read to me",
+            nextPage: "Next page",
+            storyQuestions: "Answer the questions",
             listen: "Listen",
             levelDone: "Level complete!",
             nextLevel: "Next level",
@@ -163,6 +165,8 @@ document.addEventListener("DOMContentLoaded", () => {
             close: "Zurück zur Karte",
             replay: "Noch einmal hören",
             readToMe: "Vorlesen",
+            nextPage: "Nächste Seite",
+            storyQuestions: "Fragen beantworten",
             listen: "Hören",
             levelDone: "Level geschafft!",
             nextLevel: "Nächstes Level",
@@ -240,6 +244,8 @@ document.addEventListener("DOMContentLoaded", () => {
             close: "العودة إلى الخريطة",
             replay: "استمع مرة أخرى",
             readToMe: "اقرأ لي",
+            nextPage: "الصفحة التالية",
+            storyQuestions: "أجب عن الأسئلة",
             listen: "استمع",
             levelDone: "أكملت المستوى!",
             nextLevel: "المستوى التالي",
@@ -1302,6 +1308,8 @@ document.addEventListener("DOMContentLoaded", () => {
         showTask();
     }
     async function mistake(task, button, clips = []) {
+        const activeRound = round;
+        const isCurrent = () => round === activeRound && round?.tasks[round.step] === task;
         round.taskMistakes += 1;
         if (task.type !== "story") round.mistakes += 1;
         record(task, false);
@@ -1314,9 +1322,10 @@ document.addEventListener("DOMContentLoaded", () => {
             button.classList.add("is-wrong");
         }
         if (state.sound) await sleep(300);
-        if (!round) return;
+        if (!isCurrent()) return;
         const finishedSaying = await say([...clips, `line:retry${1 + Math.floor(Math.random() * 4)}`]);
-        if (round?.taskMistakes >= 2) {
+        if (!isCurrent()) return;
+        if (round.taskMistakes >= 2) {
             stage.querySelectorAll("[data-answer='true']:not(:disabled)").forEach((node) => node.classList.add("is-hint"));
             if (finishedSaying) say("line:hereItIs");
         } else if (finishedSaying && round?.replay) round.replay();
@@ -1555,6 +1564,8 @@ document.addEventListener("DOMContentLoaded", () => {
         finish,
         typing = false
     }) {
+        const activeRound = round;
+        const isCurrent = () => round === activeRound && round?.tasks[round.step] === task;
         const slots = Array(target.length).fill(null);
         const textOf = (id) => pieces.find((piece) => piece.id === id).text;
         // Compare what the child sees: in capitals mode "M" and "m" are the same tile.
@@ -1565,7 +1576,7 @@ document.addEventListener("DOMContentLoaded", () => {
             $("slots").innerHTML = slots.map((id, i) => `<button type="button" class="pa-slot ${id === null ? "" : "is-filled"}" data-slot="${i}" ${id === null ? "disabled" : ""} aria-label="${escape(id === null ? t("emptySlot", { n: i + 1 }) : t("slot", { n: i + 1, letter: cased(textOf(id)) }))}">${id === null ? "" : escape(cased(textOf(id)))}</button>`).join("");
             $("slots").querySelectorAll("[data-slot]").forEach((button) => {
                 button.onclick = () => {
-                    if (round.busy) return;
+                    if (!isCurrent() || round.busy) return;
                     slots[Number(button.dataset.slot)] = null;
                     sync();
                 };
@@ -1577,23 +1588,27 @@ document.addEventListener("DOMContentLoaded", () => {
             // After two misses the next correct piece glows.
             if (round.taskMistakes >= 2) {
                 const gap = slots.findIndex((id, i) => id === null || !same(textOf(id), target[i]));
-                const wanted = pieces.find((piece) => same(piece.text, target[gap]) && !slots.includes(piece.id));
+                const wanted = gap < 0 ? null : pieces.find((piece) => same(piece.text, target[gap]) && !slots.includes(piece.id));
                 if (wanted) stage.querySelector(`[data-tile="${wanted.id}"]`).classList.add("is-hint");
             }
         };
         const check = async () => {
+            if (!isCurrent() || round.busy || slots.includes(null)) return;
+            // A completed answer is checked atomically, before another tap or key can change it.
+            round.busy = true;
+            stage.querySelectorAll("[data-slot], [data-tile]").forEach((button) => {
+                button.disabled = true;
+            });
             const built = slots.map(textOf);
             if (built.every((text, i) => same(text, target[i]))) {
                 $("slots").querySelectorAll(".pa-slot").forEach((slot) => slot.classList.add("is-right"));
                 // In a joined script the separate letters become one word once it is built.
                 if (typing && L().connected) $("slots").insertAdjacentHTML("afterend", `<p class="pa-joined-word">${escape(target.join(""))}</p>`);
-                await sleep(state.sound ? 350 : 0);
                 success(task, $("slots"), finish);
             } else {
-                round.busy = true;
                 $("slots").querySelectorAll(".pa-slot").forEach((slot, i) => slot.classList.toggle("is-wrong", !same(built[i], target[i])));
                 await sleep(800);
-                if (!round || round.tasks[round.step] !== task) return;
+                if (!isCurrent()) return;
                 built.forEach((text, i) => {
                     if (!same(text, target[i])) slots[i] = null;
                 });
@@ -1603,24 +1618,25 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         };
         const add = (id) => {
-            if (round.busy || slots.includes(id)) return;
+            if (!isCurrent() || round.busy || slots.includes(id)) return;
             const free = slots.indexOf(null);
             if (free < 0) return;
             slots[free] = id;
             sync();
-            say(sound(textOf(id)));
             if (!slots.includes(null)) check();
+            else say(sound(textOf(id)));
         };
         stage.querySelectorAll("[data-tile]").forEach((button) => {
             button.onclick = () => add(Number(button.dataset.tile));
         });
         if (typing) {
             round.keyboard = (key) => {
+                if (!isCurrent() || round.busy) return;
                 const free = pieces.filter((piece) => !slots.includes(piece.id));
                 const match = free.find((piece) => piece.text.toLocaleLowerCase() === key) || free.find((piece) => piece.text.toLocaleLowerCase().startsWith(key));
                 if (key === "backspace") {
                     const last = slots.findLastIndex((id) => id !== null);
-                    if (last >= 0 && !round.busy) {
+                    if (last >= 0) {
                         slots[last] = null;
                         sync();
                     }
@@ -1703,16 +1719,15 @@ document.addEventListener("DOMContentLoaded", () => {
     /* Stories path */
     // A sentence of tappable words; a gap keeps the punctuation that followed the missing word.
     function sentenceHtml(tokens, {
-        gapAt = -1,
-        answerKey = null
+        gapAt = -1
     } = {}) {
         return `<p class="pa-sentence" id="sentence">${tokens.map((token, i) => i === gapAt
             ? `<span class="pa-word pa-gap" id="gap" aria-label="${escape(t("gap"))}"></span>${escape(token.replace(/^[\p{L}']+/u, ""))}`
-            : `<button type="button" class="pa-word" data-word="${escape(wordKey(token))}" ${answerKey ? `data-answer="${wordKey(token) === answerKey}"` : ""}>${escape(cased(token))}</button>`).join(" ")}</p>`;
+            : `<button type="button" class="pa-word" data-word="${escape(wordKey(token))}">${escape(cased(token))}</button>`).join(" ")}</p>`;
     }
     // Tapping a word reads it; the returned function reads the whole sentence with each word lighting up.
     function wireWords(clipId) {
-        stage.querySelectorAll(".pa-word[data-word]:not([data-answer])").forEach((button) => {
+        stage.querySelectorAll(".pa-word[data-word]").forEach((button) => {
             button.onclick = () => {
                 pulse(button);
                 say(`w:${button.dataset.word}`);
@@ -1732,7 +1747,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return finishedReading;
         };
     }
-    const readButton = (extra = "") => `<div class="pa-story-tools"><button type="button" class="pa-read-aloud" id="read-aloud"><span aria-hidden="true"></span>${t("readToMe")}</button>${extra}</div>`;
+    const readButton = () => `<div class="pa-story-tools"><button type="button" class="pa-read-aloud" id="read-aloud"><span aria-hidden="true"></span>${t("readToMe")}</button></div>`;
     renderers.sentencePic = (task, lead) => {
         setGuide(L().lines.sentencePicQ);
         const options = choices(task, {
@@ -1792,44 +1807,31 @@ document.addEventListener("DOMContentLoaded", () => {
         say([lead, task.question === 0 ? "line:questions" : null, id]);
     };
     renderers.story = (task, lead) => {
+        const activeRound = round;
+        const isCurrent = () => round === activeRound && round?.tasks[round.step] === task;
         const story = L().stories[task.story];
         const page = story.pages[task.page];
         const id = `st:${task.story}:${task.page}`;
+        const lastPage = task.page === story.pages.length - 1;
         setGuide(`${story.title} · ${task.page + 1}/${story.pages.length}`);
         stage.innerHTML = `<div class="pa-story-pictures">${page.pics.map((pic) => `<span class="pa-card pa-card-static">${imageHtml(pic)}</span>`).join("")}</div>
-            ${sentenceHtml(page.text.split(/\s+/), { answerKey: wordKey(page.target) })}${readButton('<span class="pa-find" id="find-hint" hidden></span>')}`;
+            ${sentenceHtml(page.text.split(/\s+/))}${readButton()}
+            <div class="pa-actions"><button type="button" class="pa-next" id="story-next">${t(lastPage ? "storyQuestions" : "nextPage")}</button></div>`;
         const readAloud = wireWords(id);
-        const ask = () => say(["line:storyFind", `w:${wordKey(page.target)}`]);
-        const showHint = () => {
-            $("find-hint").hidden = false;
-            $("find-hint").textContent = cased(page.target);
-        };
-        round.replay = ask;
+        round.replay = readAloud;
         $("read-aloud").onclick = readAloud;
-        stage.querySelectorAll(".pa-word[data-answer]").forEach((button) => {
-            button.onclick = async () => {
-                if (round.busy) return;
-                if (button.dataset.answer === "true") {
-                    stage.querySelectorAll(".pa-word").forEach((item) => {
-                        item.disabled = true;
-                    });
-                    success(task, button, [`w:${button.dataset.word}`, ...(task.page === story.pages.length - 1 ? ["line:theEnd"] : [])]);
-                    return;
-                }
-                pulse(button);
-                round.taskMistakes += 1;
-                // Exploring words is welcome: it plays the word and only shows the target after two misses.
-                if (await say(`w:${button.dataset.word}`) && round?.tasks[round.step] === task) {
-                    if (round.taskMistakes >= 2) showHint();
-                    ask();
-                }
-            };
-        });
+        // Reading a page is practice; the following questions check what happened in the story.
+        $("story-next").onclick = () => {
+            if (!isCurrent() || round.busy) return;
+            round.busy = true;
+            stopAudio();
+            round.step += 1;
+            showTask(lastPage ? "line:theEnd" : null);
+        };
         (async () => {
             if (lead && !(await say(lead))) return;
-            if (await readAloud()) ask();
+            if (isCurrent()) readAloud();
         })();
-        if (!state.sound) showHint();
     };
 
     function finishRound() {
