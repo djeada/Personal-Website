@@ -551,7 +551,8 @@
             s2 = S.S2 / Sp,
             s3 = Math.max(-1, Math.min(1, S.S3 / Sp));
         const linearPart = Math.hypot(s1, s2);
-        const orientation = linearPart > exactTol ? 0.5 * Math.atan2(s2, s1) : NaN;
+        let orientation = linearPart > exactTol ? 0.5 * Math.atan2(s2, s1) : NaN;
+        if (orientation <= -Math.PI / 2 + exactTol) orientation += Math.PI;
         const ellipticity = 0.5 * Math.asin(s3);
         const chiDeg = Math.abs(ellipticity) * 180 / Math.PI;
 

@@ -40,17 +40,22 @@ async function record(timeline, frameDir, { only = null, log = () => {} } = {}) 
         const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2, colorScheme: "dark", reducedMotion: "no-preference" });
         await context.addCookies([{ name: "darkMode", value: "true", url: "http://127.0.0.1:8000" }]);
         const page = await context.newPage();
-        await page.route("**/*", route => (new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort()));
+        // Local pages plus the site's IBM Plex webfonts; ads and analytics stay out.
+        const allowed = new Set(["127.0.0.1", "fonts.googleapis.com", "fonts.gstatic.com"]);
+        await page.route("**/*", route => (allowed.has(new URL(route.request().url()).hostname) ? route.continue() : route.abort()));
         const errors = [];
         page.on("pageerror", error => { errors.push(error.message); log(`page error: ${error.message}`); });
         await page.clock.install({ time: EPOCH });
         await page.goto(`http://127.0.0.1:8000/tools/${timeline.tool}/`, { waitUntil: "load" });
-        await page.clock.pauseAt(EPOCH + 2000);
+        // A slow load (several reels rendering at once) can run past the planned pause point.
+        const now = await page.evaluate(() => Date.now());
+        await page.clock.pauseAt(Math.max(EPOCH + 2000, now + 50));
         await page.addStyleTag({ path: path.join(__dirname, "overlay.css") });
         if (timeline.css) await page.addStyleTag({ content: timeline.css });
         await page.addScriptTag({ path: path.join(__dirname, "overlay.js") });
         await page.evaluate(data => window.__reel.init(data), timeline);
-        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(() => Promise.all(["400 20px 'IBM Plex Sans'", "500 20px 'IBM Plex Sans'", "600 40px 'IBM Plex Sans'", "500 20px 'IBM Plex Mono'"]
+            .map(font => document.fonts.load(font, "Aθλ°·→"))).then(() => document.fonts.ready));
         // Off the record: load the starting state and let the layout settle.
         for (const action of timeline.setup) {
             await page.evaluate(a => window.__reel.act(a), action);

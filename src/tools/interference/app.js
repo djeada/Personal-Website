@@ -98,7 +98,7 @@
                 th: 90,
                 lr: 1.1
             },
-            note: "Press Start. Expected: the fields beat, but the detector reads a steady 2 I₁ and V = 0 (Fresnel–Arago).",
+            note: "Press Start. Expected: the relative phase drifts at |Δf| but no field component beats, so the detector reads a steady 2 I₁ and V = 0 (Fresnel–Arago).",
         },
         analyser: {
             v: {
@@ -721,9 +721,11 @@
             const tw = ctx.measureText(txt).width;
             const lab = P(Math.cos(alpha), Math.sin(alpha), R + 14);
             let lx = Math.cos(alpha) >= 0 ? lab.x : lab.x - tw;
+            if (Math.sin(alpha) > 0 && Math.cos(alpha) * (R + 14) < 22) lx = lab.x + 22;
             lx = Math.max(4, Math.min(w - 4 - tw, lx));
+            const ly = Math.abs(Math.sin(alpha)) * (R + 14) < 14 ? lab.y - 14 : lab.y;
             ctx.textAlign = "left";
-            ctx.fillText(txt, lx, Math.max(top + 4, Math.min(h - bottom - 4, lab.y)));
+            ctx.fillText(txt, lx, Math.max(top + 4, Math.min(h - bottom - 4, ly)));
         }
 
         ctx.strokeStyle = PAL.textMuted;
@@ -736,7 +738,13 @@
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
             const lp = P(Math.cos(theta / 2), Math.sin(theta / 2), R * 0.28 + 8);
-            ctx.fillText(`θ=${s.th.toFixed(0)}°`, lp.x, lp.y);
+            const txt = `θ=${s.th.toFixed(0)}°`;
+            if (s.an) {
+                ctx.fillStyle = PAL.panel;
+                ctx.fillRect(lp.x - 2, lp.y - 8, ctx.measureText(txt).width + 4, 16);
+                ctx.fillStyle = PAL.text;
+            }
+            ctx.fillText(txt, lp.x, lp.y);
         }
 
         const ct = Math.cos(theta);
@@ -766,8 +774,9 @@
         ctx.fillText("ê₁", P(1, 0).x - 14, cy + 6);
         ctx.fillStyle = COLORS.wave2;
         ctx.textBaseline = "bottom";
-        ctx.textAlign = Math.cos(theta) >= 0 ? "left" : "right";
-        ctx.fillText("ê₂", tip2.x + (Math.cos(theta) >= 0 ? 4 : -4), tip2.y - 2);
+        const onAxis = Math.cos(theta) >= 0 && R * Math.sin(theta) < 16;
+        ctx.textAlign = Math.cos(theta) >= 0 && !onAxis ? "left" : "right";
+        ctx.fillText("ê₂", tip2.x + (ctx.textAlign === "left" ? 4 : -4), tip2.y - (onAxis ? 6 : 2));
         ctx.font = `12px ${PAL.mono}`;
         ctx.fillStyle = PAL.text;
         ctx.textAlign = "left";
@@ -868,7 +877,11 @@
     });
 
 
-    const fmt = (v, d) => (Number.isFinite(v) ? v.toFixed(d === undefined ? 3 : d) : "∞");
+    const fmt = (v, d) => {
+        if (!Number.isFinite(v)) return "∞";
+        const str = v.toFixed(d === undefined ? 3 : d);
+        return /^-0(\.0*)?$/.test(str) ? str.slice(1) : str;
+    };
     const statPhase = $("stat-phase"),
         statIntensity = $("stat-intensity"),
         statVisibility = $("stat-visibility"),
@@ -905,7 +918,8 @@
         const beating = beat.fBeat > 1e-12;
         const sincF = model.sinc((dOmega * s.T) / 2);
 
-        statPhase.textContent = `${fmt(dPhi / DEG, 1)}°`;
+        const dDeg = dPhi / DEG;
+        statPhase.textContent = `${fmt(dDeg >= 359.95 ? dDeg - 360 : dDeg, 1)}°`;
         statIntensity.textContent = `${fmt(id, 3)} I₁`;
         statVisibility.textContent = fmt(V, 3);
         statMu.textContent = fmt(mu.mag, 3);
@@ -921,15 +935,15 @@
         const rows = [
             ["I₁, I₂ at detector", `${fmt(I1, 3)}, ${fmt(I2, 3)} I₁`],
             ["Polarization overlap", s.an ? `${beams.overlap > 0 ? "+1" : "−1"} (analyser)` : `cos θ = ${fmt(Math.cos(theta), 3)}`],
-            ["γ₁₂", `${fmt(s.g, 3)} ∠ ${fmt(s.ga, 0)}°`],
-            ["μ = γ₁₂ × overlap", `${fmt(mu.mag, 3)} ∠ ${fmt(mu.arg / DEG, 1)}°`],
-            ["Cycle-avg. I(xₚ, t)", `${fmt(ic, 3)} I₁`],
+            ['<span class="sym">γ₁₂</span>', `${fmt(s.g, 3)} ∠ ${fmt(s.ga, 0)}°`],
+            ['<span class="sym">μ = γ₁₂</span> × overlap', `${fmt(mu.mag, 3)} ∠ ${fmt(mu.arg / DEG, 1)}°`],
+            ['Cycle-avg. <span class="sym">I(xₚ, t)</span>', `${fmt(ic, 3)} I₁`],
             [`Detector I (T = ${fmt(s.T, 1)} T₁)`, `${fmt(id, 3)} I₁`],
-            ["Detected I_max / I_min", `${fmt(ext.Imax / I1_UNIT, 3)} / ${fmt(ext.Imin / I1_UNIT, 3)} I₁`],
+            ['Detected <span class="sym">I_max / I_min</span>', `${fmt(ext.Imax / I1_UNIT, 3)} / ${fmt(ext.Imin / I1_UNIT, 3)} I₁`],
             ["Visibility V", `${fmt(V, 3)} (T = 0: ${fmt(V0, 3)})`],
-            ["Beat |Δf|, period", beating ? `${fmt(beat.fBeat, 4)} f₁, ${fmt(beat.TBeat, 2)} T₁` : "none (f₁ = f₂)"],
+            ['Beat <span class="sym">|Δf|</span>, period', beating ? `${fmt(beat.fBeat, 4)} f₁, ${fmt(beat.TBeat, 2)} T₁` : "none (f₁ = f₂)"],
             ["Spatial beat Λ", beating ? `${fmt(beat.spatialPeriod, 2)} λ₁, v_g = ${fmt(beat.groupVelocity, 2)} c` : "none"],
-            ["Averaging factor sinc(ΔωT/2)", fmt(sincF, 3)],
+            ['Averaging factor <span class="sym">sinc(ΔωT/2)</span>', fmt(sincF, 3)],
         ];
         readout.innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
 

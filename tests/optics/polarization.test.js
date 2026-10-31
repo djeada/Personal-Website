@@ -18,6 +18,22 @@ test("single-component states are linear for every relative phase", () => {
     }
 });
 
+test("orientation is reported in (−90°, 90°]: vertical light reads +90° whatever the round-off sign of S₂", () => {
+    const vertical = [
+        m.propagate({ psi: 90 * deg, delta: 0 }, []),
+        m.propagate({ psi: 90 * deg, delta: 180 * deg }, []),
+        m.propagate({ psi: 90 * deg, delta: -180 * deg }, []),
+        m.propagate({ psi: 0, delta: 0 }, [{ type: "hwp", angle: -45 * deg }]),
+        m.propagate({ psi: 0, delta: 0 }, [{ type: "rotator", rotation: -90 * deg }]),
+        m.propagate({ psi: 45 * deg, delta: 0 }, [{ type: "polarizer", angle: -90 * deg }]),
+    ];
+    for (const r of vertical) close(r.output.desc.orientation, 90 * deg, 1e-9);
+    for (let a = -89.5; a <= 90; a += 0.5) {
+        const d = m.propagate({ psi: 0, delta: 0, dop: 0 }, [{ type: "polarizer", angle: a * deg }]).output.desc;
+        close(d.orientation, a * deg, 1e-9, `polarizer ${a}`);
+    }
+});
+
 test("δ = 0 or ±180° is linear for any amplitude ratio", () => {
     for (const psiDeg of [10, 30, 45, 70]) {
         for (const dDeg of [0, 180, -180]) {

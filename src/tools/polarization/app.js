@@ -136,19 +136,19 @@
             const parts = tok.split("~");
             const type = CODE_TO_TYPE[parts[0]];
             if (!type) continue;
-            const num = (i, lo, hi, def) => {
+            const num = (i, lo, hi, def, step) => {
                 const v = Number(parts[i]);
-                return Number.isFinite(v) ? clamp(v, lo, hi) : def;
+                return Number.isFinite(v) ? clamp(round(Math.round(v / step) * step, 2), lo, hi) : def;
             };
             const el = defaultElement(type);
-            if (TYPES[type].angleLabel) el.a = num(1, -90, 90, el.a);
-            if (type === "retarder") el.g = num(2, 0, 360, el.g);
+            if (TYPES[type].angleLabel) el.a = num(1, -90, 90, el.a, 0.5);
+            if (type === "retarder") el.g = num(2, 0, 360, el.g, 1);
             if (type === "plate") {
                 el.cr = CRYSTAL_KEYS.includes(parts[2]) ? parts[2] : "quartz";
-                el.d = num(3, 0.1, 300, el.d);
+                el.d = num(3, 0.1, 300, el.d, 0.01);
             }
-            if (type === "rotator") el.rho = num(1, -180, 180, el.rho);
-            if (type === "depolarizer") el.D = num(1, 0, 1, el.D);
+            if (type === "rotator") el.rho = num(1, -180, 180, el.rho, 1);
+            if (type === "depolarizer") el.D = num(1, 0, 1, el.D, 0.01);
             out.push(el);
         }
         return out;
@@ -519,7 +519,7 @@
                 cr: "quartz",
                 d: 17.39
             }],
-            note: "Quartz A-plate, c at 45°, d = 17.39 µm at 633 nm: Γ = 0.250 waves, fast axis (o) at 135°, right-handed circular. Move λ to 532 nm: Γ ≈ 0.297 waves, elliptical."
+            note: "Quartz A-plate, c at 45°, d = 17.39 µm at 633 nm: Γ = 0.250 waves, fast axis (o) at −45° (≡ 135°), right-handed circular. Move λ to 532 nm: Γ ≈ 0.297 waves, elliptical."
         },
         depol: {
             psi: 0,
@@ -637,19 +637,27 @@
     }
     const orientLabel = (d) => (d.type === "circular" && d.exact) || d.type === "unpolarized" || d.type === "none" ? "undefined" : fmtDeg(d.orientation);
 
+    const CRYSTAL_SHORT = {
+        quartz: "Quartz",
+        mgf2: "MgF₂",
+        sapphire: "Sapphire",
+        calcite: "Calcite"
+    };
+    const sgn = (v) => String(v).replace("-", "−");
+
     function elementSummary(el) {
         const T = TYPES[el.type];
         switch (el.type) {
             case "retarder":
-                return `${T.short} θ=${el.a}° Γ=${el.g}°`;
+                return `${T.short} θ=${sgn(el.a)}° Γ=${el.g}°`;
             case "plate":
-                return `${Pol.CRYSTALS[el.cr].name.split(" ").pop()} c=${el.a}° d=${el.d} µm`;
+                return `${CRYSTAL_SHORT[el.cr] || Pol.CRYSTALS[el.cr].name} c=${sgn(el.a)}° d=${el.d} µm`;
             case "rotator":
-                return `${T.short} ρ=${el.rho}°`;
+                return `${T.short} ρ=${sgn(el.rho)}°`;
             case "depolarizer":
                 return `${T.short} D=${el.D}`;
             default:
-                return `${T.short} ${el.a}°`;
+                return `${T.short} ${sgn(el.a)}°`;
         }
     }
 
@@ -692,7 +700,7 @@
         el$.count.textContent = `${state.bench.length} / ${MAX_ELEMENTS}`;
         el$.rI.textContent = fmtNum(out.S0, 4);
         el$.rDop.textContent = out.type === "none" ? "—" : fmtNum(out.dop, 4);
-        el$.rType.textContent = typeLabel(out) + (out.handedness !== "none" ? ", " + handLabel(out).toLowerCase() : "");
+        el$.rType.textContent = typeLabel(out) + (out.handedness !== "none" ? ", " + handLabel(out).replace(/^./, (ch) => ch.toLowerCase()) : "");
         el$.rTheta.textContent = orientLabel(out);
         el$.rChi.textContent = fmtDeg(out.ellipticity, 2);
 
@@ -1163,14 +1171,16 @@
 
         ctx.textAlign = "left";
         const tri = {
-            x: left - 4,
+            x: 14,
             y: 34
         };
         arrow(ctx, tri.x, tri.y, tri.x, tri.y - 22, PAL.textMuted, 1.2, 6);
         arrow(ctx, tri.x, tri.y, tri.x + 18 * Math.cos(35 * DEG), tri.y - 18 * Math.sin(35 * DEG), PAL.textMuted, 1.2, 6);
         ctx.fillStyle = PAL.textMuted;
         ctx.fillText("Ey", tri.x + 4, tri.y - 22);
-        ctx.fillText("Ex (into page)", tri.x + 20, tri.y - 8);
+        const exLabel = "Ex (into page)";
+        const firstLabelLeft = n ? left + segW - ctx.measureText(`1 ${TYPES[state.bench[0].type].short}`).width / 2 - 6 : Infinity;
+        ctx.fillText(tri.x + 20 + ctx.measureText(exLabel).width < firstLabelLeft ? exLabel : "Ex", tri.x + 20, tri.y - 8);
         const ph = phaseNow();
         for (let k = 0; k < segs; k++) {
             const st = result.stages[k];
@@ -1293,8 +1303,7 @@
             g: null
         };
 
-        const gam = ((par.retardance % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const d = gam / (2 * Math.PI) * lam / QUARTZ_DN;
+        const d = Math.abs(par.retardance) / (2 * Math.PI) * lam / QUARTZ_DN;
         return {
             el,
             g: Pol.plateGeometry("quartz", par.fast - Math.PI / 2, d, lam),
@@ -1307,11 +1316,11 @@
         const fs = w < 520 ? 11 : 12;
         const info = crystalInfo();
         crystalBadge.textContent = info && info.g ? (info.equivalent ? "equivalent quartz A-plate" : `${info.g.name} A-plate`) : "A-plate";
-        if (!info || !info.g) {
+        if (!info || !info.g || !(info.g.thickness > 0)) {
             ctx.fillStyle = PAL.textMuted;
             ctx.font = font(fs + 1);
             ctx.textAlign = "center";
-            const msg = state.bench.length ? "Inspect a wave plate, retarder or crystal plate to see its o/e decomposition." : "Add a crystal plate or wave plate to the bench.";
+            const msg = info && info.g ? "Γ = 0: the retarder delays neither component, so there is no o/e lag to show." : state.bench.length ? "Inspect a wave plate, retarder or crystal plate to see its o/e decomposition." : "Add a crystal plate or wave plate to the bench.";
             wrapText(ctx, msg, w / 2, h / 2, w - 40, fs + 5);
             return;
         }
@@ -1398,7 +1407,7 @@
         ctx.fillStyle = PAL.textMuted;
         ctx.font = font(fs);
         ctx.textAlign = "center";
-        ctx.fillText("front view (x right, y up)", fcx, stacked ? sq + 14 : Math.min(h - 6, fcy + R * 1.15 + fs + 6));
+        ctx.fillText("front view (x right, y up)", fcx, stacked ? sq + 14 : h - 6);
 
 
         const x0 = stacked ? 8 : sq + 26;
@@ -1447,6 +1456,7 @@
             legend: false,
             fontSize: fs,
         });
+        labelLevels(ctx, map, [0.25, 0.5, 1], fs, "left");
         const px0 = map.xToPx(0),
             px1 = map.xToPx(dUm);
         const laneTop = top + 2,
@@ -1458,6 +1468,7 @@
         ctx.lineWidth = 1;
         ctx.strokeRect(px0, laneTop, px1 - px0, laneH * 2);
         const M = 5;
+        const nLane = Math.min(4000, Math.max(300, Math.ceil(16 * (1.4 * M + g.waves))));
         const ph = phaseNow();
         const lane = (k, amp, color, lag, label) => {
             const mid = laneTop + laneH * (k + 0.5),
@@ -1468,10 +1479,10 @@
             ctx.lineTo(map.plot.x + map.plot.w, mid);
             ctx.stroke();
             ctx.beginPath();
-            for (let i = 0; i <= 300; i++) {
-                const z = zMin + (zMax - zMin) * i / 300;
+            for (let i = 0; i <= nLane; i++) {
+                const z = zMin + (zMax - zMin) * i / nLane;
                 const carrier = 2 * Math.PI * M * z / dUm;
-                const val = amp * Math.cos(carrier + ph - (lag ? 2 * Math.PI * clamp(z, 0, dUm) * 1e-6 * Math.abs(g.dn) / g.wavelength - phi0 : 0));
+                const val = amp * Math.cos(carrier + ph + (lag ? 2 * Math.PI * clamp(z, 0, dUm) * 1e-6 * Math.abs(g.dn) / g.wavelength + phi0 : 0));
                 const px = map.xToPx(z),
                     py = mid - A * val;
                 i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
@@ -1495,6 +1506,16 @@
         ctx.fillStyle = color;
         ctx.textAlign = align;
         ctx.fillText(text, x, y);
+    }
+
+    function labelLevels(ctx, map, levels, fs, align) {
+        let last = Infinity;
+        for (const v of levels) {
+            const py = map.yToPx(v);
+            if (v > map.y.max || py > map.plot.y + map.plot.h - fs - 2 || Math.abs(py - last) < fs + 3) continue;
+            labelBox(ctx, v === 0.25 ? "λ/4" : v === 0.5 ? "λ/2" : "λ", align === "right" ? map.plot.x + map.plot.w - 4 : map.plot.x + 4, py - 3, PAL.textMuted, fs, align);
+            last = py;
+        }
     }
 
     function wrapText(ctx, text, x, y, maxW, lh) {
@@ -1662,7 +1683,7 @@
             eff.push(wv - Math.floor(wv));
         }
         const yMax = Math.max(1.05, Math.min(Math.max(...tot) * 1.05, 40));
-        UI.plot(ctx, {
+        const map = UI.plot(ctx, {
             x: 0,
             y: 0,
             w,
@@ -1707,6 +1728,7 @@
             }],
             fontSize: fs,
         });
+        labelLevels(ctx, map, [0.25, 0.5], fs, "right");
     }
 
 
@@ -1806,7 +1828,7 @@
         descs.sphere.update("Poincaré sphere points. " + result.stages.map(stageTxt).join("; ") + ".");
         descs.bench.update(`${state.bench.length} elements: ${state.bench.map((e, i) => `${i + 1} ${elementSummary(e)}`).join(", ") || "none"}. Output intensity ${fmtNum(out.S0)}, DoP ${fmtNum(out.dop)}.`);
         const info = crystalInfo();
-        descs.crystal.update(info && info.g ? `${info.equivalent ? "Equivalent quartz" : info.g.name} A-plate, optic axis ${fmtAngle180(info.g.opticAxis)}, fast axis (${info.g.fastRay}-wave) ${fmtAngle180(info.g.fastAxis)}, thickness ${(info.g.thickness * 1e6).toFixed(2)} µm, Δn ${info.g.dn.toFixed(4)}, retardance ${info.g.waves.toFixed(3)} waves at ${state.lam} nm.` : "No retarder inspected.");
+        descs.crystal.update(info && info.g ? `${info.equivalent ? "Equivalent quartz" : info.g.name} A-plate, optic axis ${fmtAngle180(info.g.opticAxis)}, fast axis (${info.g.fastRay}-wave) ${fmtAngle180(info.g.fastAxis)}, thickness ${(info.g.thickness * 1e6).toFixed(2)} µm, Δn ${sgn(info.g.dn.toFixed(4))}, retardance ${info.g.waves.toFixed(3)} waves at ${state.lam} nm.` : "No retarder inspected.");
         const sd = scanSpec();
         descs.scan.update(sd ? `Output intensity as ${sd.label} of element ${sel + 1} sweeps ${sd.min} to ${sd.max}${sd.unit}; current value ${sd.cur}${sd.unit} gives ${fmtNum(out.S0)}.` : "No element inspected.");
         descs.disp.update(info && info.g && !info.equivalent ? `Retardance ${info.g.waves.toFixed(3)} waves at ${state.lam} nm; varies as 1/λ.` : "No crystal plate inspected.");
@@ -1938,6 +1960,7 @@
             if (o.b != null) state.bench = decodeBench(o.b);
             state.sel = o.s != null ? clamp(Math.round(o.s), -1, state.bench.length - 1) : state.bench.length - 1;
             writeInputs();
+            readInputs();
             buildBench();
             render();
         },

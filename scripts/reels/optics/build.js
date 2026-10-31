@@ -23,7 +23,8 @@ const { describe } = require("./reels/common");
 const REELS = path.resolve(__dirname, "..");
 const ROOT = path.resolve(REELS, "../..");
 const OUT = path.join(REELS, "out");
-const ORDER = ["go-image", "go-telescope", "go-aberrations", "em-light", "em-polarization", "em-mirror", "fresnel-angle", "fresnel-tir", "fresnel-metal"];
+const ORDER = ["go-image", "go-telescope", "go-aberrations", "em-light", "em-polarization", "em-mirror", "fresnel-angle", "fresnel-tir", "fresnel-metal",
+    "pol-three", "pol-waveplate", "pol-sphere", "int-cancel", "int-coherence", "int-beats", "sw-swr", "sw-cavity"];
 const load = id => require(`./reels/${id}`).build();
 
 function ffmpeg(args) {
@@ -78,9 +79,15 @@ async function main() {
         for (let i = 0; i < 50 && !(await serverUp()); i++) await new Promise(r => setTimeout(r, 100));
     }
     try {
-        const queue = [...timelines];
-        const worker = async () => { while (queue.length) await render(queue.shift(), options); };
+        const queue = [...timelines], failed = [];
+        const worker = async () => {
+            while (queue.length) {
+                const timeline = queue.shift();
+                try { await render(timeline, options); } catch (error) { failed.push(timeline.id); console.error(`[${timeline.id}] failed: ${error.message}`); }
+            }
+        };
         await Promise.all(Array.from({ length: Math.max(1, Number(value("--jobs")) || 1) }, worker));
+        if (failed.length) throw new Error(`${failed.length} reel(s) failed: ${failed.join(", ")}`);
     } finally {
         if (server) server.kill();
     }

@@ -247,7 +247,7 @@
 
 
     function getProfile(st) {
-        const key = JSON.stringify([st.mode, st.n, st.L, st.nu, st.r, st.r1, st.r2, st.n2]);
+        const key = JSON.stringify([st.mode, st.boundary, st.n, st.L, st.nu, st.r, st.r1, st.r2, st.n2]);
         if (key !== cacheKey) {
             const periods = st.L / SW.wavelengthInMedium(st.nu, st.n);
             const samples = Math.min(8000, Math.max(1200, Math.ceil(periods * 64)));
@@ -559,6 +559,8 @@
         const labelText = perfect ? "N" : "min";
         const labelW = ctx.measureText(labelText).width;
         const showLabels = spacingPx > labelW + 10;
+        const barGap = perfect ? 0 : Y(-pr.eMin) - Y(0);
+        const labelY = barGap >= 8 && barGap <= 24 ? Y(-pr.eMin) + 14 : Y(0) + 20;
         const walls = single ? [wallR] : [wallL, wallR];
         ctx.save();
         pr.minima.forEach((x) => {
@@ -589,7 +591,7 @@
                         if (spacingPx < 2 * labelW + 22) skip = true;
                     }
                 }
-                if (!skip) textStrip(ctx, labelText, lx, Y(0) + 20, align, COLORS.node, true);
+                if (!skip) textStrip(ctx, labelText, lx, labelY, align, COLORS.node, true);
             }
         });
         ctx.fillStyle = COLORS.antinode;
@@ -1081,7 +1083,23 @@
         $("stat-time").textContent = (opticalTime * 1e15).toFixed(2) + " fs";
     }
 
+    function repairSelects() {
+        let fixed = false;
+        [
+            [modeSelect, DEFAULTS.mode],
+            [boundarySelect, DEFAULTS.bnd],
+            [mirrorSelect, DEFAULTS.mir]
+        ].forEach(([el, v]) => {
+            if (el.selectedIndex < 0) {
+                el.value = v;
+                fixed = true;
+            }
+        });
+        if (fixed) url.update();
+    }
+
     function updateAll() {
+        repairSelects();
         state = readState();
         pr = getProfile(state);
         updateVisibility();
