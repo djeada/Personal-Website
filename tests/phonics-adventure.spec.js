@@ -761,3 +761,17 @@ for (const dark of [false, true]) {
     }
   });
 }
+
+test("a finished answer shows Next at once so spoken praise never leaves the child stuck", async ({ page }) => {
+  await start(page, { muted: false });
+  await unlockAll(page);
+  await openLevel(page, "words", 0);
+  while ((await taskType(page)) !== "build") await solve(page);
+  const before = await page.locator("#play-progress").getAttribute("aria-valuenow");
+  const target = (await page.locator("#slots").getAttribute("data-target")).split("|");
+  for (const piece of target) await page.locator(".pa-tile:not(:disabled)").filter({ hasText: exact(piece) }).first().click();
+  // The spoken celebration takes seconds; the child must not have to sit through it.
+  await expect(page.locator("#task-next")).toBeVisible({ timeout: 1000 });
+  await page.locator("#task-next").click();
+  await expect(page.locator("#play-progress")).not.toHaveAttribute("aria-valuenow", before, { timeout: 1000 });
+});

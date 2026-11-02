@@ -87,6 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
             replay: "Hear it again",
             readToMe: "Read to me",
             nextPage: "Next page",
+            continue: "Next",
             storyQuestions: "Answer the questions",
             listen: "Listen",
             levelDone: "Level complete!",
@@ -166,6 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
             replay: "Noch einmal hören",
             readToMe: "Vorlesen",
             nextPage: "Nächste Seite",
+            continue: "Weiter",
             storyQuestions: "Fragen beantworten",
             listen: "Hören",
             levelDone: "Level geschafft!",
@@ -245,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
             replay: "استمع مرة أخرى",
             readToMe: "اقرأ لي",
             nextPage: "الصفحة التالية",
+            continue: "التالي",
             storyQuestions: "أجب عن الأسئلة",
             listen: "استمع",
             levelDone: "أكملت المستوى!",
@@ -474,6 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const speechReady = Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
     const Context = window.AudioContext || window.webkitAudioContext;
     const READY_WAIT = 1500;
+    // The longest a finished answer may hold the child before the next task appears on its own.
+    const SUCCESS_CAP = 9000;
     let context = null;
     let audioToken = 0;
     let audioFailed = false;
@@ -1290,6 +1295,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!correct && round.taskMistakes === 1) stat.w += 1;
     }
     async function success(task, button, clips = []) {
+        const activeRound = round;
+        const isCurrent = () => round === activeRound && round?.tasks[round.step] === task;
         round.busy = true;
         record(task, true);
         button?.classList.add("is-right");
@@ -1297,15 +1304,30 @@ document.addEventListener("DOMContentLoaded", () => {
         tone("win");
         burst(button || stage);
         announce(t("correct"));
+        // A finished answer must never feel stuck: Next is there at once, and a hard cap moves on even if sound stalls.
+        let moved = false;
+        let cap = 0;
+        const advance = () => {
+            if (moved || !isCurrent()) return;
+            moved = true;
+            clearTimeout(cap);
+            stopAudio();
+            round.step += 1;
+            showTask();
+        };
+        stage.insertAdjacentHTML("beforeend", `<div class="pa-actions pa-task-done"><button type="button" class="pa-next" id="task-next">${t("continue")}</button></div>`);
+        $("task-next").onclick = advance;
+        $("task-next").focus({
+            preventScroll: true
+        });
+        cap = setTimeout(advance, SUCCESS_CAP);
         // The chime finishes before anyone speaks, so two sounds never overlap.
         if (state.sound) await sleep(420);
-        if (!round || round.tasks[round.step] !== task) return;
+        if (!isCurrent()) return;
         await say([...clips, `line:praise${1 + Math.floor(Math.random() * 8)}`]);
-        if (!round || round.tasks[round.step] !== task) return;
+        if (!isCurrent()) return;
         await sleep(state.sound ? 250 : 650);
-        if (!round || round.tasks[round.step] !== task) return;
-        round.step += 1;
-        showTask();
+        advance();
     }
     async function mistake(task, button, clips = []) {
         const activeRound = round;
