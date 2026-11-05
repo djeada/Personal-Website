@@ -239,3 +239,34 @@ test("filling the whole board is a win and does not hang", () => {
     assert.equal(g.state.over, true);
     assert.equal(path.length, 1);
 });
+
+test("peek predicts exactly what the next step will do, without changing anything", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+        const rnd = seeded(seed * 31);
+        const g = Snake.create({ rng: seeded(seed), size: 12 });
+        for (let n = 0; n < 300 && !g.state.over; n++) {
+            if (rnd() < 0.3) g.turn(["up", "down", "left", "right"][Math.floor(rnd() * 4)]);
+            const snapshot = JSON.stringify(g.state);
+            const p = g.peek();
+            assert.equal(JSON.stringify(g.state), snapshot, "peek must not mutate");
+            const e = g.step();
+            assert.equal(p.fatal, e.type === "crash", `seed ${seed} fatal mismatch`);
+            assert.equal(p.eat, e.type === "eat" || e.type === "win", `seed ${seed} eat mismatch`);
+            if (!p.fatal) assert.deepEqual(g.state.snake[0], p.next);
+        }
+    }
+    const done = Snake.create({ rng: seeded(1) });
+    done.state.over = true;
+    assert.equal(done.peek().fatal, true);
+});
+
+test("the move counter advances once per step and resets with the game", () => {
+    const g = Snake.create({ rng: seeded(2) });
+    g.state.obstacles = [];
+    g.state.food = { x: 0, y: 0 };
+    g.step();
+    g.step();
+    assert.equal(g.state.moves, 2);
+    g.reset();
+    assert.equal(g.state.moves, 0);
+});

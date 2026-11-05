@@ -46,7 +46,8 @@
             level: 1,
             over: false,
             won: false,
-            crash: null
+            crash: null,
+            moves: 0
         };
 
         const key = (x, y) => y * size + x;
@@ -166,6 +167,7 @@
             state.over = false;
             state.won = false;
             state.crash = null;
+            state.moves = 0;
             syncObstacles();
             placeFood();
         }
@@ -179,27 +181,39 @@
             return true;
         }
 
+        function lookAhead() {
+            const dir = state.queue.length ? state.queue[0] : state.dir;
+            const head = state.snake[0];
+            const next = { x: head.x + dir.x, y: head.y + dir.y };
+            const eat = state.food !== null && same(next, state.food);
+            const body = eat ? state.snake : state.snake.slice(0, -1);
+            const fatal = !inside(next.x, next.y) ||
+                body.some(s => same(s, next)) ||
+                state.obstacles.some(o => same(o, next));
+            return { dir, next, eat, fatal };
+        }
+
+        function peek() {
+            if (state.over) return { dir: state.dir, next: state.snake[0], eat: false, fatal: true };
+            return lookAhead();
+        }
+
         function step() {
             if (state.over) return { type: "none" };
-            if (state.queue.length) state.dir = state.queue.shift();
+            const ahead = lookAhead();
+            if (state.queue.length) state.queue.shift();
+            state.dir = ahead.dir;
+            const next = ahead.next;
 
-            const head = state.snake[0];
-            const next = { x: head.x + state.dir.x, y: head.y + state.dir.y };
-            const eating = state.food !== null && same(next, state.food);
-
-            const crash = () => {
+            if (ahead.fatal) {
                 state.over = true;
                 state.crash = next;
                 return { type: "crash", at: next };
-            };
-
-            if (!inside(next.x, next.y)) return crash();
-            const body = eating ? state.snake : state.snake.slice(0, -1);
-            if (body.some(s => same(s, next))) return crash();
-            if (state.obstacles.some(o => same(o, next))) return crash();
+            }
 
             state.snake.unshift(next);
-            if (!eating) {
+            state.moves++;
+            if (!ahead.eat) {
                 state.snake.pop();
                 return { type: "move" };
             }
@@ -220,7 +234,7 @@
 
         reset();
 
-        return { state, DIRS, reset, turn, step, speed, setPace, get pace() { return pace; } };
+        return { state, DIRS, reset, turn, step, peek, speed, setPace, get pace() { return pace; } };
     }
 
     return { create, DIRS, PACES, DEFAULT_PACE, APPLES_PER_LEVEL, MAX_OBSTACLES };
