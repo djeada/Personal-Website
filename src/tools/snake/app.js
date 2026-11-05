@@ -49,6 +49,7 @@
     let overAt = 0;
     let cell = 1;
     let bestAtStart = best;
+    let progress = 0;
 
     function bestKey() {
         return engine.pace === "classic" ? BEST_KEY : `${BEST_KEY}_${engine.pace}`;
@@ -172,39 +173,138 @@
         ctx.stroke();
     }
 
+    function mix(a, b, t) {
+        const parse = value => {
+            ctx.fillStyle = "#000";
+            ctx.fillStyle = value;
+            const hex = ctx.fillStyle;
+            return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+        };
+        const [r1, g1, b1] = parse(a);
+        const [r2, g2, b2] = parse(b);
+        const to = (x, y) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
+        return `#${to(r1, r2)}${to(g1, g2)}${to(b1, b2)}`;
+    }
+
     function drawSnake() {
         const snake = state.snake;
-        const m = Math.max(1, Math.round(cell * 0.1));
-        const body = state.over && !state.won ? pal.ink3 : pal.verdigris;
-        for (let i = snake.length - 1; i > 0; i--) {
-            const s = snake[i];
-            inset(s.x, s.y, m, body);
-            const prev = snake[i - 1];
-            const dx = prev.x - s.x;
-            const dy = prev.y - s.y;
-            if (Math.abs(dx) + Math.abs(dy) === 1) {
-                const x = Math.min(s.x, prev.x) * cell + (dx ? cell - m : m);
-                const y = Math.min(s.y, prev.y) * cell + (dy ? cell - m : m);
-                ctx.fillStyle = body;
-                ctx.fillRect(x, y, dx ? m * 2 : cell - m * 2, dy ? m * 2 : cell - m * 2);
+        const crashed = state.over && !state.won;
+        const look = (mode === "playing" || mode === "paused") && progress > 0 ? engine.peek() : null;
+        const adv = look && !look.fatal ? Math.min(1, progress) : 0;
+        const face = look ? look.dir : state.dir;
+
+        const pts = [];
+        if (adv > 0) pts.push({ x: snake[0].x + face.x * adv, y: snake[0].y + face.y * adv });
+        snake.forEach(s => pts.push({ x: s.x, y: s.y }));
+        const last = pts.length - 1;
+        if (adv > 0 && !look.eat && last >= 1) {
+            pts[last] = {
+                x: pts[last].x + (pts[last - 1].x - pts[last].x) * adv,
+                y: pts[last].y + (pts[last - 1].y - pts[last].y) * adv
+            };
+        }
+
+        const dist = [0];
+        for (let k = 1; k < pts.length; k++) {
+            dist[k] = dist[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+        }
+        const total = dist[last];
+        const TAPER = 2.4;
+        const width = d => 1 - 0.5 * Math.min(1, Math.max(0, (d - (total - TAPER)) / TAPER));
+        const base = cell * 0.72;
+        const at = p => [(p.x + 0.5) * cell, (p.y + 0.5) * cell];
+
+        const bodyColor = crashed ? pal.ink3 : pal.verdigris;
+        const spotColor = crashed ? mix(pal.ink3, "#000000", 0.25) : mix(pal.verdigris, "#000000", 0.3);
+        const headColor = crashed ? pal.rose : mix(pal.verdigris, "#ffffff", 0.12);
+
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = bodyColor;
+        const PIECES = 6;
+        for (let k = last; k >= 1; k--) {
+            for (let j = 0; j < PIECES; j++) {
+                const t0 = j / PIECES;
+                const t1 = (j + 1) / PIECES;
+                const lerp = (t) => ({
+                    x: pts[k].x + (pts[k - 1].x - pts[k].x) * t,
+                    y: pts[k].y + (pts[k - 1].y - pts[k].y) * t
+                });
+                const [x1, y1] = at(lerp(t0));
+                const [x2, y2] = at(lerp(t1));
+                ctx.lineWidth = base * width(dist[k] + (dist[k - 1] - dist[k]) * ((t0 + t1) / 2));
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
             }
         }
 
-        const head = snake[0];
-        const crashed = state.over && !state.won;
-        inset(head.x, head.y, Math.max(1, m - 1), crashed ? pal.rose : pal.gold);
-        const d = state.dir;
-        const px = -d.y;
-        const py = d.x;
-        const hx = (head.x + 0.5) * cell;
-        const hy = (head.y + 0.5) * cell;
-        const eye = Math.max(2, cell * 0.14);
-        ctx.fillStyle = pal.canvas;
+        const offset = adv > 0 ? 1 : 0;
+        ctx.fillStyle = spotColor;
+        for (let i = 1; i < snake.length - 1; i++) {
+            if ((state.moves + i) % 2 !== 0) continue;
+            const k = i + offset;
+            const [x, y] = at(pts[k]);
+            ctx.beginPath();
+            ctx.arc(x, y, base * 0.2 * width(dist[k]), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const [hx, hy] = at(pts[0]);
+        const px = -face.y;
+        const py = face.x;
+        ctx.fillStyle = headColor;
+        ctx.beginPath();
+        ctx.ellipse(hx + face.x * cell * 0.04, hy + face.y * cell * 0.04, cell * 0.52, cell * 0.46, Math.atan2(face.y, face.x), 0, Math.PI * 2);
+        ctx.fill();
+
+        const sclera = pal.isDark ? pal.ink : "#ffffff";
+        const pupil = pal.isDark ? pal.bg : pal.ink;
         [-1, 1].forEach(side => {
-            const ex = hx + d.x * cell * 0.17 + px * side * cell * 0.2;
-            const ey = hy + d.y * cell * 0.17 + py * side * cell * 0.2;
-            ctx.fillRect(ex - eye / 2, ey - eye / 2, eye, eye);
+            const ex = hx + face.x * cell * 0.12 + px * side * cell * 0.2;
+            const ey = hy + face.y * cell * 0.12 + py * side * cell * 0.2;
+            if (crashed) {
+                const r = cell * 0.09;
+                ctx.strokeStyle = pal.canvas;
+                ctx.lineWidth = Math.max(1.5, cell * 0.06);
+                ctx.lineCap = "butt";
+                ctx.beginPath();
+                ctx.moveTo(ex - r, ey - r);
+                ctx.lineTo(ex + r, ey + r);
+                ctx.moveTo(ex + r, ey - r);
+                ctx.lineTo(ex - r, ey + r);
+                ctx.stroke();
+                return;
+            }
+            ctx.fillStyle = sclera;
+            ctx.beginPath();
+            ctx.arc(ex, ey, cell * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = pupil;
+            ctx.beginPath();
+            ctx.arc(ex + face.x * cell * 0.04, ey + face.y * cell * 0.04, cell * 0.065, 0, Math.PI * 2);
+            ctx.fill();
         });
+
+        if (!crashed && state.moves % 2 === 0) {
+            const sx = hx + face.x * cell * 0.5;
+            const sy = hy + face.y * cell * 0.5;
+            const mx = sx + face.x * cell * 0.2;
+            const my = sy + face.y * cell * 0.2;
+            ctx.strokeStyle = pal.rose;
+            ctx.lineWidth = Math.max(1.5, cell * 0.06);
+            ctx.lineCap = "butt";
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(mx, my);
+            [-1, 1].forEach(side => {
+                ctx.moveTo(mx, my);
+                ctx.lineTo(mx + face.x * cell * 0.16 + px * side * cell * 0.1, my + face.y * cell * 0.16 + py * side * cell * 0.1);
+            });
+            ctx.stroke();
+        }
+        ctx.lineCap = "butt";
     }
 
     function frameLoop(now) {
@@ -213,22 +313,20 @@
         const dt = Math.min(MAX_FRAME_MS, now - lastFrame);
         lastFrame = now;
         carry += dt;
-        let redraw = false;
         const interval = engine.speed();
         while (carry >= interval && mode === "playing") {
             carry -= interval;
             const result = engine.step();
-            redraw = true;
             if (result.type === "eat") onEat(result);
             else if (result.type === "crash" || result.type === "win") onEnd(result.type === "win");
         }
-        if (redraw) draw();
+        progress = mode === "playing" ? Math.min(1, carry / interval) : 0;
+        draw();
         if (mode === "playing") rafId = requestAnimationFrame(frameLoop);
     }
 
     function startLoop() {
         lastFrame = performance.now();
-        carry = 0;
         if (!rafId) rafId = requestAnimationFrame(frameLoop);
     }
 
@@ -248,6 +346,7 @@
 
     function onEnd(won) {
         mode = "over";
+        progress = 0;
         overAt = performance.now();
         stopLoop();
         el.pause.disabled = true;
@@ -273,6 +372,8 @@
 
     function startGame(direction) {
         engine.reset(direction);
+        carry = 0;
+        progress = 0;
         bestAtStart = best;
         mode = "playing";
         hideOverlay();
