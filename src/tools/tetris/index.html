@@ -31,7 +31,7 @@
     <link href="/favicon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/base.css" rel="stylesheet" type="text/css" />
-    <link href="../shared/games.css" rel="stylesheet" type="text/css" />
+    <link href="../shared/arcade.css" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
     <link href="../shared/grimoire.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -109,28 +109,70 @@
             </ol>
         </div>
         <section>
-            <header class="game-intro">
-                <p class="game-eyebrow">Arcade</p>
+            <header class="arcade-intro">
+                <p class="arcade-eyebrow">Arcade</p>
                 <h1>Tetris</h1>
-                <p class="game-lead">
+                <p class="arcade-lead">
                     Rotate and arrange the falling pieces to complete horizontal
-                    lines without gaps. Every cleared line speeds the game up.
+                    lines without gaps. Every ten lines the game speeds up.
                 </p>
-                <ul class="game-keys">
-                    <li><span class="game-keys-label">Move</span><kbd>←</kbd><kbd>→</kbd></li>
-                    <li><span class="game-keys-label">Rotate</span><kbd>↑</kbd> or <kbd>Space</kbd></li>
-                    <li><span class="game-keys-label">Drop</span><kbd>↓</kbd></li>
-                    <li><span class="game-keys-label">Restart</span><kbd>Esc</kbd></li>
+                <ul class="arcade-keys">
+                    <li><span class="arcade-keys-label">Move</span><kbd>←</kbd><kbd>→</kbd></li>
+                    <li><span class="arcade-keys-label">Rotate</span><kbd>↑</kbd> or <kbd>X</kbd>, <kbd>Z</kbd> back</li>
+                    <li><span class="arcade-keys-label">Drop</span><kbd>↓</kbd> soft, <kbd>Space</kbd> hard</li>
+                    <li><span class="arcade-keys-label">Hold</span><kbd>C</kbd></li>
+                    <li><span class="arcade-keys-label">Pause</span><kbd>P</kbd> or <kbd>Esc</kbd></li>
+                    <li><span class="arcade-keys-label">Full screen</span><kbd>F</kbd></li>
                 </ul>
             </header>
-            <div class="outer game-frame">
-                <canvas aria-label="Tetris board" id="canvas"></canvas>
-                <div class="row">
-                    <button class="button" id="leftButton">Left</button>
-                    <button class="button" id="rightButton">Right</button>
-                    <button class="button" id="downButton">Down</button>
-                    <button class="button" id="rotateButton">Rotate</button>
+            <div class="arcade-frame tetris-frame" id="game-frame">
+                <div class="tetris-bar">
+                    <button class="arcade-btn" disabled="" id="pause-btn" type="button">Pause</button>
+                    <button aria-label="Full screen" aria-pressed="false" class="arcade-btn" id="fs-btn" type="button"><svg class="ico-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg><svg class="ico-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg><span class="arcade-btn-label">Full screen</span></button>
                 </div>
+                <div class="tetris-layout">
+                    <div class="tetris-panel tetris-hold">
+                        <span class="arcade-label">Hold</span>
+                        <canvas aria-label="Held piece" id="hold-canvas"></canvas>
+                    </div>
+                    <dl class="tetris-stats">
+                        <div class="arcade-stat"><dt>Score</dt><dd id="score">0</dd></div>
+                        <div class="arcade-stat"><dt>Lines</dt><dd id="lines">0</dd></div>
+                        <div class="arcade-stat"><dt>Level</dt><dd id="level">1</dd></div>
+                        <div class="arcade-stat"><dt>Best</dt><dd id="best">0</dd></div>
+                    </dl>
+                    <div class="arcade-board tetris-board" id="board">
+                        <canvas aria-label="Tetris board" id="canvas" tabindex="0"></canvas>
+                        <div class="arcade-overlay is-visible" id="overlay">
+                            <div class="arcade-card">
+                                <p class="arcade-kicker" id="overlay-kicker">Arcade</p>
+                                <h2 id="overlay-title">Tetris</h2>
+                                <p class="arcade-copy" id="overlay-copy">Fill whole rows to clear them. Ten lines is a new level.</p>
+                                <fieldset class="arcade-seg" id="pace">
+                                    <legend>Pace</legend>
+                                    <label><input checked="" name="pace" type="radio" value="relaxed" />Relaxed</label>
+                                    <label><input name="pace" type="radio" value="classic" />Classic</label>
+                                    <label><input name="pace" type="radio" value="fast" />Fast</label>
+                                </fieldset>
+                                <button class="arcade-btn primary" id="play-btn" type="button">Play</button>
+                                <p class="arcade-hint" id="overlay-hint">Keys, buttons or touch: drag to move, tap to rotate</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tetris-panel tetris-next">
+                        <span class="arcade-label">Next</span>
+                        <canvas aria-label="Next pieces" id="next-canvas"></canvas>
+                    </div>
+                </div>
+                <div aria-label="Touch controls" class="arcade-touch tetris-pad" role="group">
+                    <button aria-label="Move left" class="arcade-btn" data-act="left" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg></button>
+                    <button aria-label="Move right" class="arcade-btn" data-act="right" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></button>
+                    <button aria-label="Rotate" class="arcade-btn" data-act="rotate" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.2-5.1M19 4v4h-4" /></svg></button>
+                    <button aria-label="Soft drop (hold)" class="arcade-btn" data-act="down" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+                    <button aria-label="Hard drop" class="arcade-btn" data-act="drop" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l6 6 6-6M6 13l6 6 6-6" /></svg></button>
+                    <button aria-label="Hold piece" class="arcade-btn" data-act="hold" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM9 12h6" /></svg></button>
+                </div>
+                <p aria-live="polite" class="tetris-sr" id="status"></p>
             </div>
         </section>
     </main>
@@ -197,6 +239,8 @@
         <script src="/app.js"></script>
     </footer>
     <script src="../shared/base.js"></script>
+    <script src="../shared/arcade.js"></script>
+    <script src="engine.js"></script>
     <script src="app.js"></script>
 </body>
 
