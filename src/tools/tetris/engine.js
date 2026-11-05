@@ -15,18 +15,77 @@
     const TYPES = ["I", "J", "L", "O", "S", "T", "Z"];
 
     const SHAPES = {
-        I: { size: 4, cells: [[0, 1], [1, 1], [2, 1], [3, 1]] },
-        J: { size: 3, cells: [[0, 0], [0, 1], [1, 1], [2, 1]] },
-        L: { size: 3, cells: [[2, 0], [0, 1], [1, 1], [2, 1]] },
-        O: { size: 4, cells: [[1, 0], [2, 0], [1, 1], [2, 1]] },
-        S: { size: 3, cells: [[1, 0], [2, 0], [0, 1], [1, 1]] },
-        T: { size: 3, cells: [[1, 0], [0, 1], [1, 1], [2, 1]] },
-        Z: { size: 3, cells: [[0, 0], [1, 0], [1, 1], [2, 1]] }
+        I: {
+            size: 4,
+            cells: [
+                [0, 1],
+                [1, 1],
+                [2, 1],
+                [3, 1]
+            ]
+        },
+        J: {
+            size: 3,
+            cells: [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ]
+        },
+        L: {
+            size: 3,
+            cells: [
+                [2, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ]
+        },
+        O: {
+            size: 4,
+            cells: [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1]
+            ]
+        },
+        S: {
+            size: 3,
+            cells: [
+                [1, 0],
+                [2, 0],
+                [0, 1],
+                [1, 1]
+            ]
+        },
+        T: {
+            size: 3,
+            cells: [
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ]
+        },
+        Z: {
+            size: 3,
+            cells: [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [2, 1]
+            ]
+        }
     };
 
     const ROTATIONS = {};
     TYPES.forEach(type => {
-        const { size, cells } = SHAPES[type];
+        const {
+            size,
+            cells
+        } = SHAPES[type];
         const states = [cells.map(c => [c[0], c[1]])];
         for (let r = 1; r < 4; r++) {
             states.push(states[r - 1].map(([x, y]) => [size - 1 - y, x]));
@@ -35,29 +94,128 @@
     });
 
     const KICKS_JLSTZ = {
-        "0>1": [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
-        "1>0": [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
-        "1>2": [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
-        "2>1": [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
-        "2>3": [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]],
-        "3>2": [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
-        "3>0": [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
-        "0>3": [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]]
+        "0>1": [
+            [0, 0],
+            [-1, 0],
+            [-1, 1],
+            [0, -2],
+            [-1, -2]
+        ],
+        "1>0": [
+            [0, 0],
+            [1, 0],
+            [1, -1],
+            [0, 2],
+            [1, 2]
+        ],
+        "1>2": [
+            [0, 0],
+            [1, 0],
+            [1, -1],
+            [0, 2],
+            [1, 2]
+        ],
+        "2>1": [
+            [0, 0],
+            [-1, 0],
+            [-1, 1],
+            [0, -2],
+            [-1, -2]
+        ],
+        "2>3": [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, -2],
+            [1, -2]
+        ],
+        "3>2": [
+            [0, 0],
+            [-1, 0],
+            [-1, -1],
+            [0, 2],
+            [-1, 2]
+        ],
+        "3>0": [
+            [0, 0],
+            [-1, 0],
+            [-1, -1],
+            [0, 2],
+            [-1, 2]
+        ],
+        "0>3": [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, -2],
+            [1, -2]
+        ]
     };
     const KICKS_I = {
-        "0>1": [[0, 0], [-2, 0], [1, 0], [-2, -1], [1, 2]],
-        "1>0": [[0, 0], [2, 0], [-1, 0], [2, 1], [-1, -2]],
-        "1>2": [[0, 0], [-1, 0], [2, 0], [-1, 2], [2, -1]],
-        "2>1": [[0, 0], [1, 0], [-2, 0], [1, -2], [-2, 1]],
-        "2>3": [[0, 0], [2, 0], [-1, 0], [2, 1], [-1, -2]],
-        "3>2": [[0, 0], [-2, 0], [1, 0], [-2, -1], [1, 2]],
-        "3>0": [[0, 0], [1, 0], [-2, 0], [1, -2], [-2, 1]],
-        "0>3": [[0, 0], [-1, 0], [2, 0], [-1, 2], [2, -1]]
+        "0>1": [
+            [0, 0],
+            [-2, 0],
+            [1, 0],
+            [-2, -1],
+            [1, 2]
+        ],
+        "1>0": [
+            [0, 0],
+            [2, 0],
+            [-1, 0],
+            [2, 1],
+            [-1, -2]
+        ],
+        "1>2": [
+            [0, 0],
+            [-1, 0],
+            [2, 0],
+            [-1, 2],
+            [2, -1]
+        ],
+        "2>1": [
+            [0, 0],
+            [1, 0],
+            [-2, 0],
+            [1, -2],
+            [-2, 1]
+        ],
+        "2>3": [
+            [0, 0],
+            [2, 0],
+            [-1, 0],
+            [2, 1],
+            [-1, -2]
+        ],
+        "3>2": [
+            [0, 0],
+            [-2, 0],
+            [1, 0],
+            [-2, -1],
+            [1, 2]
+        ],
+        "3>0": [
+            [0, 0],
+            [1, 0],
+            [-2, 0],
+            [1, -2],
+            [-2, 1]
+        ],
+        "0>3": [
+            [0, 0],
+            [-1, 0],
+            [2, 0],
+            [-1, 2],
+            [2, -1]
+        ]
     };
 
     function cellsOf(piece) {
         const [ox, oy] = [piece.x, piece.y];
-        return ROTATIONS[piece.type][piece.rot].map(([x, y]) => ({ x: x + ox, y: y + oy }));
+        return ROTATIONS[piece.type][piece.rot].map(([x, y]) => ({
+            x: x + ox,
+            y: y + oy
+        }));
     }
 
     function gravityInterval(level) {
@@ -114,11 +272,16 @@
         }
 
         function emptyBoard() {
-            return Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(null));
+            return Array.from({
+                length: HEIGHT
+            }, () => Array(WIDTH).fill(null));
         }
 
         function fits(piece) {
-            return cellsOf(piece).every(({ x, y }) => {
+            return cellsOf(piece).every(({
+                x,
+                y
+            }) => {
                 if (x < 0 || x >= WIDTH || y >= HEIGHT) return false;
                 return y < 0 || state.board[y][x] === null;
             });
@@ -138,7 +301,9 @@
             lockResets = 0;
             if (!fits(piece)) {
                 state.over = true;
-                events.push({ type: "over" });
+                events.push({
+                    type: "over"
+                });
                 return false;
             }
             return true;
@@ -172,7 +337,10 @@
         }
 
         function grounded() {
-            return !fits({ ...state.piece, y: state.piece.y + 1 });
+            return !fits({
+                ...state.piece,
+                y: state.piece.y + 1
+            });
         }
 
         function touched(wasGrounded) {
@@ -184,7 +352,10 @@
 
         function shift(dx) {
             if (state.over || !state.piece) return false;
-            const moved = { ...state.piece, x: state.piece.x + dx };
+            const moved = {
+                ...state.piece,
+                x: state.piece.x + dx
+            };
             if (!fits(moved)) return false;
             const was = grounded();
             state.piece = moved;
@@ -201,7 +372,12 @@
             const kicks = table[`${p.rot}>${to}`];
             const was = grounded();
             for (const [kx, ky] of kicks) {
-                const candidate = { type: p.type, rot: to, x: p.x + kx, y: p.y - ky };
+                const candidate = {
+                    type: p.type,
+                    rot: to,
+                    x: p.x + kx,
+                    y: p.y - ky
+                };
                 if (fits(candidate)) {
                     state.piece = candidate;
                     touched(was);
@@ -213,7 +389,10 @@
 
         function step() {
             if (state.over) return false;
-            const moved = { ...state.piece, y: state.piece.y + 1 };
+            const moved = {
+                ...state.piece,
+                y: state.piece.y + 1
+            };
             if (!fits(moved)) return false;
             state.piece = moved;
             lockTimer = 0;
@@ -224,13 +403,19 @@
             const cells = cellsOf(state.piece);
             const type = state.piece.type;
             let abovePlayfield = true;
-            cells.forEach(({ x, y }) => {
+            cells.forEach(({
+                x,
+                y
+            }) => {
                 if (y >= 0) {
                     state.board[y][x] = type;
                     abovePlayfield = false;
                 }
             });
-            events.push({ type: "lock", cells });
+            events.push({
+                type: "lock",
+                cells
+            });
             const full = [];
             for (let y = 0; y < HEIGHT; y++) {
                 if (state.board[y].every(c => c !== null)) full.push(y);
@@ -243,13 +428,19 @@
                 const newLevel = 1 + Math.floor(state.lines / LINES_PER_LEVEL);
                 const leveled = newLevel > state.level;
                 state.level = newLevel;
-                events.push({ type: "clear", rows: full, leveled });
+                events.push({
+                    type: "clear",
+                    rows: full,
+                    leveled
+                });
             }
             state.canHold = true;
             if (abovePlayfield && !full.length) {
                 state.over = true;
                 state.piece = null;
-                events.push({ type: "over" });
+                events.push({
+                    type: "over"
+                });
                 return;
             }
             spawnNext();
@@ -289,7 +480,13 @@
         function ghost() {
             if (!state.piece) return null;
             let g = state.piece;
-            while (fits({ ...g, y: g.y + 1 })) g = { ...g, y: g.y + 1 };
+            while (fits({
+                    ...g,
+                    y: g.y + 1
+                })) g = {
+                ...g,
+                y: g.y + 1
+            };
             return g;
         }
 

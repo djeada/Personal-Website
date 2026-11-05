@@ -7,6 +7,8 @@
     const RESTART_GUARD_MS = 450;
     const MAX_FRAME_MS = 250;
     const SWIPE_PX = 22;
+    const TURN_BOOST = 2.5;
+    const SWING_MS = 70;
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -38,7 +40,10 @@
         return SnakeEngine.DEFAULT_PACE;
     }
 
-    const engine = SnakeEngine.create({ size: GRID, pace: readPace() });
+    const engine = SnakeEngine.create({
+        size: GRID,
+        pace: readPace()
+    });
     const state = engine.state;
     let pal = ToolShared.palette();
     let mode = "ready";
@@ -50,6 +55,16 @@
     let cell = 1;
     let bestAtStart = best;
     let progress = 0;
+    let swing = {
+        x: 0,
+        y: 0
+    };
+    let swingKey = "";
+    let lastDrawAt = 0;
+    let drawnHead = {
+        x: 0,
+        y: 0
+    };
 
     function bestKey() {
         return engine.pace === "classic" ? BEST_KEY : `${BEST_KEY}_${engine.pace}`;
@@ -189,13 +204,46 @@
     function drawSnake() {
         const snake = state.snake;
         const crashed = state.over && !state.won;
-        const look = (mode === "playing" || mode === "paused") && progress > 0 ? engine.peek() : null;
+        const now = performance.now();
+        const dt = Math.min(100, Math.max(0, now - lastDrawAt));
+        lastDrawAt = now;
+        const live = mode === "playing" || mode === "paused";
+        const look = live ? engine.peek() : null;
         const adv = look && !look.fatal ? Math.min(1, progress) : 0;
         const face = look ? look.dir : state.dir;
 
-        const pts = [];
-        if (adv > 0) pts.push({ x: snake[0].x + face.x * adv, y: snake[0].y + face.y * adv });
-        snake.forEach(s => pts.push({ x: s.x, y: s.y }));
+        const target = {
+            x: snake[0].x + face.x * adv,
+            y: snake[0].y + face.y * adv
+        };
+        if (live) {
+            const key = `${face.x},${face.y},${look.fatal ? "f" : "o"}`;
+            if (swingKey && key !== swingKey) {
+                swing.x = drawnHead.x - target.x;
+                swing.y = drawnHead.y - target.y;
+            }
+            swingKey = key;
+            const decay = Math.exp(-dt / SWING_MS);
+            swing.x *= decay;
+            swing.y *= decay;
+        } else {
+            swing = {
+                x: 0,
+                y: 0
+            };
+            swingKey = "";
+        }
+
+        const head = {
+            x: target.x + swing.x,
+            y: target.y + swing.y
+        };
+        drawnHead = head;
+        const pts = [head];
+        snake.forEach(s => pts.push({
+            x: s.x,
+            y: s.y
+        }));
         const last = pts.length - 1;
         if (adv > 0 && !look.eat && last >= 1) {
             pts[last] = {
@@ -240,7 +288,7 @@
             }
         }
 
-        const offset = adv > 0 ? 1 : 0;
+        const offset = 1;
         ctx.fillStyle = spotColor;
         for (let i = 1; i < snake.length - 1; i++) {
             if ((state.moves + i) % 2 !== 0) continue;
@@ -252,18 +300,29 @@
         }
 
         const [hx, hy] = at(pts[0]);
-        const px = -face.y;
-        const py = face.x;
+        let fx = face.x;
+        let fy = face.y;
+        if (pts.length > 1) {
+            const nx = pts[0].x - pts[1].x;
+            const ny = pts[0].y - pts[1].y;
+            const nl = Math.hypot(nx, ny);
+            if (nl > 0.03) {
+                fx = nx / nl;
+                fy = ny / nl;
+            }
+        }
+        const px = -fy;
+        const py = fx;
         ctx.fillStyle = headColor;
         ctx.beginPath();
-        ctx.ellipse(hx + face.x * cell * 0.04, hy + face.y * cell * 0.04, cell * 0.52, cell * 0.46, Math.atan2(face.y, face.x), 0, Math.PI * 2);
+        ctx.ellipse(hx + fx * cell * 0.04, hy + fy * cell * 0.04, cell * 0.52, cell * 0.46, Math.atan2(fy, fx), 0, Math.PI * 2);
         ctx.fill();
 
         const sclera = pal.isDark ? pal.ink : "#ffffff";
         const pupil = pal.isDark ? pal.bg : pal.ink;
         [-1, 1].forEach(side => {
-            const ex = hx + face.x * cell * 0.12 + px * side * cell * 0.2;
-            const ey = hy + face.y * cell * 0.12 + py * side * cell * 0.2;
+            const ex = hx + fx * cell * 0.12 + px * side * cell * 0.2;
+            const ey = hy + fy * cell * 0.12 + py * side * cell * 0.2;
             if (crashed) {
                 const r = cell * 0.09;
                 ctx.strokeStyle = pal.canvas;
@@ -283,15 +342,15 @@
             ctx.fill();
             ctx.fillStyle = pupil;
             ctx.beginPath();
-            ctx.arc(ex + face.x * cell * 0.04, ey + face.y * cell * 0.04, cell * 0.065, 0, Math.PI * 2);
+            ctx.arc(ex + fx * cell * 0.04, ey + fy * cell * 0.04, cell * 0.065, 0, Math.PI * 2);
             ctx.fill();
         });
 
         if (!crashed && state.moves % 2 === 0) {
-            const sx = hx + face.x * cell * 0.5;
-            const sy = hy + face.y * cell * 0.5;
-            const mx = sx + face.x * cell * 0.2;
-            const my = sy + face.y * cell * 0.2;
+            const sx = hx + fx * cell * 0.5;
+            const sy = hy + fy * cell * 0.5;
+            const mx = sx + fx * cell * 0.2;
+            const my = sy + fy * cell * 0.2;
             ctx.strokeStyle = pal.rose;
             ctx.lineWidth = Math.max(1.5, cell * 0.06);
             ctx.lineCap = "butt";
@@ -300,7 +359,7 @@
             ctx.lineTo(mx, my);
             [-1, 1].forEach(side => {
                 ctx.moveTo(mx, my);
-                ctx.lineTo(mx + face.x * cell * 0.16 + px * side * cell * 0.1, my + face.y * cell * 0.16 + py * side * cell * 0.1);
+                ctx.lineTo(mx + fx * cell * 0.16 + px * side * cell * 0.1, my + fy * cell * 0.16 + py * side * cell * 0.1);
             });
             ctx.stroke();
         }
@@ -312,7 +371,7 @@
         if (mode !== "playing") return;
         const dt = Math.min(MAX_FRAME_MS, now - lastFrame);
         lastFrame = now;
-        carry += dt;
+        carry += dt * (state.queue.length ? TURN_BOOST : 1);
         const interval = engine.speed();
         while (carry >= interval && mode === "playing") {
             carry -= interval;
@@ -367,13 +426,20 @@
             true
         );
         el.status.textContent = won ? "You win" : `Game over. Score ${state.score}`;
-        if (document.activeElement === document.body) el.play.focus({ preventScroll: true });
+        if (document.activeElement === document.body) el.play.focus({
+            preventScroll: true
+        });
     }
 
     function startGame(direction) {
         engine.reset(direction);
         carry = 0;
         progress = 0;
+        swing = {
+            x: 0,
+            y: 0
+        };
+        swingKey = "";
         bestAtStart = best;
         mode = "playing";
         hideOverlay();
@@ -386,7 +452,10 @@
         fullscreen.autoEnter();
         if (!fullscreen.active && window.matchMedia("(pointer: coarse)").matches) {
             const top = frame.getBoundingClientRect().top;
-            if (top < 0 || top > 80) frame.scrollIntoView({ block: "start", behavior: "smooth" });
+            if (top < 0 || top > 80) frame.scrollIntoView({
+                block: "start",
+                behavior: "smooth"
+            });
         }
     }
 
@@ -480,7 +549,9 @@
     el.play.addEventListener("click", () => {
         if (mode === "paused") resumeGame();
         else primaryAction();
-        if (mode === "playing") canvas.focus({ preventScroll: true });
+        if (mode === "playing") canvas.focus({
+            preventScroll: true
+        });
     });
     el.pause.addEventListener("click", () => {
         togglePause();
@@ -500,7 +571,11 @@
     let swipe = null;
     board.addEventListener("pointerdown", e => {
         if (e.pointerType === "mouse") return;
-        swipe = { id: e.pointerId, x: e.clientX, y: e.clientY };
+        swipe = {
+            id: e.pointerId,
+            x: e.clientX,
+            y: e.clientY
+        };
         if (mode === "playing") e.preventDefault();
     });
     board.addEventListener("pointermove", e => {
@@ -543,6 +618,9 @@
         engine,
         get mode() {
             return mode;
+        },
+        get head() {
+            return drawnHead;
         }
     };
 })();

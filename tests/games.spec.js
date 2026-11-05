@@ -119,6 +119,52 @@ test.describe("Snake on desktop", () => {
   });
 });
 
+test.describe("Snake turn feel", () => {
+  test.beforeEach(async ({ page }) => {
+    await offline(page);
+  });
+
+  for (const pressAt of [40, 160, 250, 300]) {
+    test(`a turn pressed ${pressAt} ms into a 320 ms tick lands quickly and never snaps the head`, async ({ page }) => {
+      await page.goto("/tools/snake/");
+      await page.locator("#play-btn").click();
+      const result = await page.evaluate((pressAt) => new Promise((resolve) => {
+        const s = SnakeGame.engine.state;
+        s.obstacles = [];
+        s.food = { x: 0, y: 0 };
+        const startY = s.snake[0].y;
+        let lastX = s.snake[0].x;
+        let t0 = performance.now();
+        let pressed = 0;
+        let turned = 0;
+        let prev = null;
+        let maxJump = 0;
+        const frame = () => {
+          const now = performance.now();
+          const h = SnakeGame.head;
+          if (prev && pressed) maxJump = Math.max(maxJump, Math.hypot(h.x - prev.x, h.y - prev.y));
+          prev = { x: h.x, y: h.y };
+          if (!pressed) {
+            if (s.snake[0].x !== lastX) {
+              lastX = s.snake[0].x;
+              t0 = now;
+            } else if (now - t0 >= pressAt) {
+              window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+              pressed = now;
+            }
+          } else if (!turned && s.snake[0].y !== startY) turned = now;
+          if (pressed && turned && now - pressed > 700) return resolve({ lag: turned - pressed, maxJump });
+          if (now - t0 > 8000) return resolve({ lag: Infinity, maxJump });
+          requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      }), pressAt);
+      expect(result.lag, "the old behaviour waited out the whole tick").toBeLessThan(200);
+      expect(result.maxJump, "head moved sideways in one frame").toBeLessThan(0.6);
+    });
+  }
+});
+
 test.describe("Snake on a phone", () => {
   test.use(iphone);
   test.beforeEach(async ({ page }) => {

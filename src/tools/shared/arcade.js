@@ -24,7 +24,9 @@
             const request = frame.requestFullscreen || frame.webkitRequestFullscreen;
             if (!request) return;
             try {
-                await request.call(frame, { navigationUI: "hide" });
+                await request.call(frame, {
+                    navigationUI: "hide"
+                });
             } catch (e) {}
         }
 
@@ -78,5 +80,7 @@
         };
     }
 
-    window.ArcadeFullscreen = { attach };
+    window.ArcadeFullscreen = {
+        attach
+    };
 })();

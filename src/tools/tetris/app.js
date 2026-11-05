@@ -44,7 +44,9 @@
         return TetrisEngine.DEFAULT_PACE;
     }
 
-    const engine = TetrisEngine.create({ pace: readPace() });
+    const engine = TetrisEngine.create({
+        pace: readPace()
+    });
     const state = engine.state;
     let pal = ToolShared.palette();
     let colors = {};
@@ -56,8 +58,16 @@
     let overAt = 0;
     let cell = 1;
     let flash = null;
-    const held = { left: false, right: false, down: false };
-    const repeat = { dir: null, t: 0, started: false };
+    const held = {
+        left: false,
+        right: false,
+        down: false
+    };
+    const repeat = {
+        dir: null,
+        t: 0,
+        started: false
+    };
 
     function bestKey() {
         return `${BEST_KEY}_${engine.pace}`;
@@ -205,7 +215,10 @@
             const ghost = engine.ghost();
             const color = colors[state.piece.type];
             if (ghost && ghost.y !== state.piece.y) {
-                TetrisEngine.cellsOf(ghost).forEach(({ x, y }) => {
+                TetrisEngine.cellsOf(ghost).forEach(({
+                    x,
+                    y
+                }) => {
                     if (y < 0) return;
                     ctx.strokeStyle = color;
                     ctx.globalAlpha = 0.55;
@@ -214,7 +227,10 @@
                     ctx.globalAlpha = 1;
                 });
             }
-            TetrisEngine.cellsOf(state.piece).forEach(({ x, y }) => {
+            TetrisEngine.cellsOf(state.piece).forEach(({
+                x,
+                y
+            }) => {
                 if (y >= 0) block(ctx, x * cell, y * cell, cell, color);
             });
         }
@@ -320,7 +336,10 @@
         let over = false;
         events.forEach(e => {
             if (e.type === "clear") {
-                flash = { rows: e.rows, until: performance.now() + FLASH_MS };
+                flash = {
+                    rows: e.rows,
+                    until: performance.now() + FLASH_MS
+                };
                 el.status.textContent = e.rows.length === 4 ? "Tetris" : `${e.rows.length} line${e.rows.length > 1 ? "s" : ""}`;
                 if (e.leveled) el.status.textContent += `. Level ${state.level}`;
             }
@@ -352,7 +371,9 @@
             true
         );
         el.status.textContent = `Game over. Score ${state.score}`;
-        if (document.activeElement === document.body) el.play.focus({ preventScroll: true });
+        if (document.activeElement === document.body) el.play.focus({
+            preventScroll: true
+        });
     }
 
     function clearHeld() {
@@ -378,7 +399,10 @@
         fullscreen.autoEnter();
         if (!fullscreen.active && window.matchMedia("(pointer: coarse), (max-width: 899px)").matches) {
             const top = frame.getBoundingClientRect().top;
-            if (top < 0 || top > 80) frame.scrollIntoView({ block: "start", behavior: "smooth" });
+            if (top < 0 || top > 80) frame.scrollIntoView({
+                block: "start",
+                behavior: "smooth"
+            });
         }
     }
 
@@ -503,7 +527,9 @@
 
     el.play.addEventListener("click", () => {
         primaryAction();
-        if (mode === "playing") canvas.focus({ preventScroll: true });
+        if (mode === "playing") canvas.focus({
+            preventScroll: true
+        });
     });
     el.pause.addEventListener("click", () => {
         togglePause();

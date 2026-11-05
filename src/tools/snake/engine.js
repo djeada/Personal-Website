@@ -6,10 +6,22 @@
     "use strict";
 
     const DIRS = Object.freeze({
-        up: Object.freeze({ x: 0, y: -1 }),
-        down: Object.freeze({ x: 0, y: 1 }),
-        left: Object.freeze({ x: -1, y: 0 }),
-        right: Object.freeze({ x: 1, y: 0 })
+        up: Object.freeze({
+            x: 0,
+            y: -1
+        }),
+        down: Object.freeze({
+            x: 0,
+            y: 1
+        }),
+        left: Object.freeze({
+            x: -1,
+            y: 0
+        }),
+        right: Object.freeze({
+            x: 1,
+            y: 0
+        })
     });
 
     const APPLES_PER_LEVEL = 5;
@@ -19,9 +31,21 @@
     const SAFE_LOOKAHEAD = 8;
 
     const PACES = Object.freeze({
-        relaxed: Object.freeze({ start: 320, step: 8, min: 190 }),
-        classic: Object.freeze({ start: 200, step: 12, min: 90 }),
-        fast: Object.freeze({ start: 140, step: 12, min: 60 })
+        relaxed: Object.freeze({
+            start: 320,
+            step: 8,
+            min: 190
+        }),
+        classic: Object.freeze({
+            start: 200,
+            step: 12,
+            min: 90
+        }),
+        fast: Object.freeze({
+            start: 140,
+            step: 12,
+            min: 60
+        })
     });
     const DEFAULT_PACE = "relaxed";
 
@@ -72,7 +96,10 @@
             const free = [];
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
-                    if (!taken.has(key(x, y))) free.push({ x, y });
+                    if (!taken.has(key(x, y))) free.push({
+                        x,
+                        y
+                    });
                 }
             }
             if (!free.length) {
@@ -108,7 +135,10 @@
                     const k = key(nx, ny);
                     if (blocked.has(k) || seen.has(k)) continue;
                     seen.add(k);
-                    stack.push({ x: nx, y: ny });
+                    stack.push({
+                        x: nx,
+                        y: ny
+                    });
                 }
             }
             return seen.size === size * size - blocked.size;
@@ -120,7 +150,10 @@
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
                     if (taken.has(key(x, y)) || inSafeZone(x, y)) continue;
-                    candidates.push({ x, y });
+                    candidates.push({
+                        x,
+                        y
+                    });
                 }
             }
             while (candidates.length) {
@@ -158,7 +191,10 @@
             state.queue = [];
             state.snake = [];
             for (let i = 0; i < startLength; i++) {
-                state.snake.push({ x: mid - dir.x * i, y: mid - dir.y * i });
+                state.snake.push({
+                    x: mid - dir.x * i,
+                    y: mid - dir.y * i
+                });
             }
             state.obstacles = [];
             state.food = null;
@@ -184,22 +220,37 @@
         function lookAhead() {
             const dir = state.queue.length ? state.queue[0] : state.dir;
             const head = state.snake[0];
-            const next = { x: head.x + dir.x, y: head.y + dir.y };
+            const next = {
+                x: head.x + dir.x,
+                y: head.y + dir.y
+            };
             const eat = state.food !== null && same(next, state.food);
             const body = eat ? state.snake : state.snake.slice(0, -1);
             const fatal = !inside(next.x, next.y) ||
                 body.some(s => same(s, next)) ||
                 state.obstacles.some(o => same(o, next));
-            return { dir, next, eat, fatal };
+            return {
+                dir,
+                next,
+                eat,
+                fatal
+            };
         }
 
         function peek() {
-            if (state.over) return { dir: state.dir, next: state.snake[0], eat: false, fatal: true };
+            if (state.over) return {
+                dir: state.dir,
+                next: state.snake[0],
+                eat: false,
+                fatal: true
+            };
             return lookAhead();
         }
 
         function step() {
-            if (state.over) return { type: "none" };
+            if (state.over) return {
+                type: "none"
+            };
             const ahead = lookAhead();
             if (state.queue.length) state.queue.shift();
             state.dir = ahead.dir;
@@ -208,14 +259,19 @@
             if (ahead.fatal) {
                 state.over = true;
                 state.crash = next;
-                return { type: "crash", at: next };
+                return {
+                    type: "crash",
+                    at: next
+                };
             }
 
             state.snake.unshift(next);
             state.moves++;
             if (!ahead.eat) {
                 state.snake.pop();
-                return { type: "move" };
+                return {
+                    type: "move"
+                };
             }
 
             state.score++;
@@ -227,15 +283,39 @@
             if (!placeFood()) {
                 state.over = true;
                 state.won = true;
-                return { type: "win" };
+                return {
+                    type: "win"
+                };
             }
-            return { type: "eat", leveled };
+            return {
+                type: "eat",
+                leveled
+            };
         }
 
         reset();
 
-        return { state, DIRS, reset, turn, step, peek, speed, setPace, get pace() { return pace; } };
+        return {
+            state,
+            DIRS,
+            reset,
+            turn,
+            step,
+            peek,
+            speed,
+            setPace,
+            get pace() {
+                return pace;
+            }
+        };
     }
 
-    return { create, DIRS, PACES, DEFAULT_PACE, APPLES_PER_LEVEL, MAX_OBSTACLES };
+    return {
+        create,
+        DIRS,
+        PACES,
+        DEFAULT_PACE,
+        APPLES_PER_LEVEL,
+        MAX_OBSTACLES
+    };
 });

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <script id="theme-init">
+        (function() {
+            if (!/(?:^|;\s*)darkMode=true/.test(document.cookie)) return;
+            var root = document.documentElement;
+            root.classList.add("dark-mode");
+            root.style.colorScheme = "dark";
+            root.style.backgroundColor = "#0e1218";
+            new MutationObserver(function(changes, observer) {
+                if (document.body) {
+                    document.body.classList.add("dark-mode");
+                    observer.disconnect();
+                }
+            }).observe(root, {
+                childList: true
+            });
+        })();
+    </script>
+    <title>Investigating Web APIs with Chrome DevTools: HackerTube Case Study</title>
+    <meta content="Chrome DevTools lets you study the client-visible behavior of a deployed website even when its backend source code is private." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="/favicon.ico" rel="icon" />
+    <link href="/resources/brand/apple-touch-icon.png" rel="apple-touch-icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/07_browser_devtools_api_investigation" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Investigating Web APIs with Chrome DevTools: HackerTube Case Study",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/07_browser_devtools_api_investigation"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/07_browser_devtools_api_investigation",
+            "description": "Chrome DevTools lets you study the client-visible behavior of a deployed website even when its backend source code is private.",
+            "dateModified": "2026-11-02",
+            "inLanguage": "en"
+        }
+    </script>
+    <meta content="Investigating Web APIs with Chrome DevTools: HackerTube Case Study" property="og:title" />
+    <meta content="article" property="og:type" />
+    <meta content="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/07_browser_devtools_api_investigation" property="og:url" />
+    <meta content="Adam Djellouli" property="og:site_name" />
+    <meta content="Chrome DevTools lets you study the client-visible behavior of a deployed website even when its backend source code is private." property="og:description" />
+    <meta content="2026-11-02" property="article:modified_time" />
+    <meta content="summary" name="twitter:card" />
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <script id="theme-init-body">
+        if (document.documentElement.classList.contains("dark-mode")) document.body.classList.add("dark-mode");
+    </script>
+    <nav aria-label="Main navigation">
+        <a aria-label="Adam Djellouli, home" class="logo" href="../../../index.html">
+            <span aria-hidden="true" class="logo-mark"></span>
+            <span class="logo-name">Adam Djellouli</span>
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li>
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li>
+                <a href="../../../articles/blog_1.html" title="Read Adam Djellouli Blog on Programming and Technology" aria-current="true"> Blog </a>
+            </li>
+            <li>
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li>
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li>
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li>
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <div class="gcse-search" id="site-search">
+                    <form action="https://cse.google.com/cse" class="site-search" method="get" role="search">
+                        <input name="cx" type="hidden" value="8160ef9bb935f4f68" />
+                        <input aria-label="Search this site" autocomplete="off" class="gsc-input" name="q" placeholder="Search" type="search" />
+                    </form>
+                </div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <main class="site-main" id="main-content" tabindex="-1">
+<div class="breadcrumbs" role="navigation" aria-label="Breadcrumb"><ol><li><a href="/index.html">Home</a></li><li><a href="/articles/blog_1.html">Writing</a></li><li><a href="/articles/backend_engineers_guide.html">Backend Engineers Guide</a></li><li>API Design</li><li><span aria-current="page">Investigating Web APIs with Chrome DevTools: HackerTube Case Study</span></li></ol></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div class="collapsed" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#prepare-a-clean-investigation">Prepare a clean investigation</a></li>
+                    <li><a href="#1-map-the-browser-visible-api">1. Map the browser-visible API</a></li>
+                    <li><a href="#2-find-documentation-or-swagger-openapi">2. Find documentation or Swagger/OpenAPI</a></li>
+                    <li><a href="#3-inventory-api-requests-from-the-console">3. Inventory API requests from the Console</a></li>
+                    <li><a href="#4-inspect-large-resources-and-caches">4. Inspect large resources and caches</a></li>
+                    <li><a href="#5-test-account-free-personalization">5. Test account-free personalization</a></li>
+                    <li><a href="#6-investigate-the-thumbnail-trick">6. Investigate the thumbnail trick</a></li>
+                    <li><a href="#7-examine-the-shipped-frontend-not-the-private-server">7. Examine the shipped frontend, not the private server</a></li>
+                    <li><a href="#8-measure-page-and-interaction-performance">8. Measure page and interaction performance</a></li>
+                    <li><a href="#9-privacy-and-security-checks-non-invasive">9. Privacy and security checks (non-invasive)</a></li>
+                    <li><a href="#10-reproduce-a-single-request-safely">10. Reproduce a single request safely</a></li>
+                    <li><a href="#demo-outline-for-a-technical-video">Demo outline for a technical video</a></li>
+                    <li><a href="#references">References</a></li>
+                </ol>
+            </div>
+            <div id="related-articles"><section class="read-next" aria-label="Read next"><h2>Read next</h2><ul><li><a href="/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li><li><a href="/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li><li><a href="/articles/backend_engineers_guide/01_api_design/04_grpc.html">gRPC: Protocol Buffers and RPC Communication</a></li></ul></section>
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>
+                        <details open="">
+                            <summary>Api Design</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                                <li><a aria-current="page" href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/07_browser_devtools_api_investigation.html">Browser Devtools Api Investigation</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Network Communications</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Server Technologies</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Databases</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Caching</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Data Processing</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Data Formats</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Security</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Deployment</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Distributed Systems</summary>
+                            <ol>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                            </ol>
+                        </details>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-header">
+                <div class="article-header-metadata">
+                    <p style="text-align: right;"><i>Last modified: November 02, 2026</i></p>
+                    <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+                </div>
+                <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button><button class="btn-create-issue" title="Create Issue">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                            <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                            <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                        </svg>
+                    </button><button class="btn-download" title="Download">
+                        <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                            <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </button></div>
+            </div>
+            <h1>Investigating Web APIs with Chrome DevTools: HackerTube Case Study</h1>
+            <p>Chrome DevTools lets you study <strong>the client-visible behavior</strong> of a deployed website even when its backend source code is private. This is useful for learning API design, HTTP, browser storage, rendering, caching, and performance. It does <strong>not</strong> expose private server code or prove how the backend is implemented.</p>
+            <p><strong>Case study:</strong> <a href="https://hackertube.org/">HackerTube</a>, a YouTube-style site built from videos recommended on Hacker News. Andrej Karpathy <a href="https://karpathy.bearblog.dev/hacker-tube/">describes</a> its account-free recommendations, browser-side state, representative video-frame thumbnails, and downloadable dataset.</p>
+            <blockquote>
+                <p><strong>Evidence and scope (2026-11-02):</strong> The endpoint names below are from <a href="https://trenchcoat.tools/b/Aq3O8h7v">a third-party inspection of the website</a>. The live site could not be fetched directly for independent verification while writing this note. Treat the table as a starting point for your own DevTools observations, not a complete or stable API contract. No Swagger/OpenAPI document has been confirmed.</p>
+            </blockquote>
+            <h3 id="prepare-a-clean-investigation">Prepare a clean investigation</h3>
+            <ol>
+                <li>Open <a href="https://hackertube.org/">hackertube.org</a> in Chrome and press <strong>F12</strong>, or <strong>Ctrl+Shift+I</strong> (<strong>Cmd+Option+I</strong> on macOS).</li>
+                <li>Select <strong>Network</strong>, enable <strong>Preserve log</strong>, and choose <strong>Fetch/XHR</strong>. Reload the page.</li>
+                <li>Perform one action at a time: search, choose a topic, open a video, like it, and refresh. Note which requests appear after each action.</li>
+                <li>Select a request and inspect <strong>Headers</strong> (method, URL, status, headers, query parameters), <strong>Payload</strong>, <strong>Preview/Response</strong>, <strong>Initiator</strong>, and <strong>Timing</strong>.</li>
+                <li>Save evidence such as request method, route, parameter <em>names</em>, status, response shape, and timing. Do not paste private cookies, tokens, or browsing-history identifiers into public notes or videos.</li>
+            </ol>
+            <h3 id="1-map-the-browser-visible-api">1. Map the browser-visible API</h3>
+            <p>A <a href="https://trenchcoat.tools/b/Aq3O8h7v">third-party browser capture</a> reported these <strong>GET requests observed on initial load</strong>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Reported role</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/api/browse</code></td>
+                        <td>Browse catalogue</td>
+                        <td>Observed request</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/config</code></td>
+                        <td>Page configuration</td>
+                        <td>Observed request</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/chips</code></td>
+                        <td>Topic/filter chips</td>
+                        <td>Observed request</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/feed</code></td>
+                        <td>Recommendation feed</td>
+                        <td>Observed request</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The same capture identified the following <strong>strings in page HTML/source</strong>. A reference is not evidence that the route currently works, what its HTTP method is, or which parameters it accepts:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Candidate route</th>
+                        <th>Feature to test</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/api/search</code></td>
+                        <td>Search</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/video</code></td>
+                        <td>Video details</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/related</code></td>
+                        <td>Related videos</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/list</code></td>
+                        <td>Lists</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/stats</code></td>
+                        <td>Statistics</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/export</code></td>
+                        <td>Data export</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/docs</code></td>
+                        <td>API documentation</td>
+                        <td>Referenced in frontend</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>An unofficial client has also been reported to use playlist-related routes (<code>/api/playlists</code> and <code>/api/playlist</code>); verify those yourself before treating them as part of the site API. Do not guess request bodies or attempt mutations on a third-party service.</p>
+            <p><strong>Experiment:</strong> Compare the Network log before and after selecting a category or searching. Is the relevant filter in the query string, the request body, or computed entirely in the browser? Use <strong>Initiator</strong> to connect the request to the frontend code that triggered it.</p>
+            <h3 id="2-find-documentation-or-swagger-openapi">2. Find documentation or Swagger/OpenAPI</h3>
+            <p>An API base path such as <code>/api/</code> is <strong>not</strong> necessarily an API index. Likewise, a link to <code>/api/docs</code> does <strong>not</strong> establish that Swagger UI or a machine-readable OpenAPI schema exists.</p>
+            <p>In <strong>Network</strong>, click any documentation link the website actually exposes, and inspect its response and content type. Optionally check a small set of familiar <strong>read-only</strong> locations from the same-origin Console:</p>
+            <div>
+                <pre><code class="language-javascript">const paths = [
+  "/api/docs",
+  "/openapi.json",
+  "/api/openapi.json",
+  "/swagger",
+  "/swagger-ui"
+];
+
+const results = await Promise.all(paths.map(async (path) =&gt; {
+  try {
+    const response = await fetch(path, { method: "GET" });
+    return {
+      path,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      finalPath: new URL(response.url).pathname
+    };
+  } catch (error) {
+    return { path, error: String(error) };
+  }
+}));
+console.table(results);</code></pre>
+            </div>
+            <p><strong>Interpretation:</strong> <code>200</code> alone proves nothing; some SPAs return the homepage for unknown paths. Look for an OpenAPI document with an <code>openapi</code> version and <code>paths</code> object, or a UI explicitly rendering an API specification. A <code>404</code> only shows that <em>that particular URL</em> was not found. Avoid repeated guessing or scanning.</p>
+            <h3 id="3-inventory-api-requests-from-the-console">3. Inventory API requests from the Console</h3>
+            <p>The Resource Timing API can quickly show same-origin resources with <code>/api/</code> in the path:</p>
+            <div>
+                <pre><code class="language-javascript">console.table(
+  performance.getEntriesByType("resource")
+    .filter((entry) =&gt; {
+      const url = new URL(entry.name);
+      return url.origin === location.origin &amp;&amp;
+             url.pathname.startsWith("/api/");
+    })
+    .map((entry) =&gt; {
+      const url = new URL(entry.name);
+      return {
+        path: url.pathname,
+        queryKeys: [...url.searchParams.keys()].join(", "),
+        durationMs: Math.round(entry.duration)
+      };
+    })
+);</code></pre>
+            </div>
+            <p>Only parameter <strong>names</strong> are displayed to avoid accidentally exposing identifier or token values. Resource Timing is not a complete HTTP log: entries may be missing because of navigation, buffer limits, or timing rules. For method, status, request/response bodies, and headers, use <strong>Network</strong>.</p>
+            <h3 id="4-inspect-large-resources-and-caches">4. Inspect large resources and caches</h3>
+            <p>Use <strong>Network → All</strong>, sort by <strong>Size</strong> or <strong>Time</strong>, and look at waterfall, <strong>Content-Encoding</strong>, <strong>Cache-Control</strong>, <code>ETag</code>, transfer size, and the <strong>Timing</strong> breakdown. Compare a first load to a reload, with and without <strong>Disable cache</strong> checked (while DevTools is open).</p>
+            <p>This Console snippet surfaces the largest browser-recorded transfers:</p>
+            <div>
+                <pre><code class="language-javascript">console.table(
+  performance.getEntriesByType("resource")
+    .map((entry) =&gt; ({
+      path: new URL(entry.name).pathname,
+      type: entry.initiatorType,
+      transferKB: Math.round(entry.transferSize / 1024),
+      durationMs: Math.round(entry.duration)
+    }))
+    .sort((a, b) =&gt; b.transferKB - a.transferKB)
+    .slice(0, 20)
+);</code></pre>
+            </div>
+            <p><strong>Caveat:</strong> <code>transferSize</code> may be zero for cached responses and for cross-origin resources without the appropriate timing-permission headers. Do not interpret zero as “no bandwidth was used.”</p>
+            <h3 id="5-test-account-free-personalization">5. Test account-free personalization</h3>
+            <p>Karpathy says HackerTube works without accounts and keeps user state locally. Use <strong>Application → Local Storage</strong>, <strong>Session Storage</strong>, <strong>IndexedDB</strong>, <strong>Cookies</strong>, and <strong>Service Workers</strong> to determine which mechanisms the current version actually uses.</p>
+            <ol>
+                <li>Inspect the keys before interacting, without sharing their raw values.</li>
+                <li>Like or save a video, change a preference, and inspect which entries changed.</li>
+                <li>Reload, close/reopen the tab, and test a fresh incognito profile.</li>
+                <li>Watch <strong>Network → Fetch/XHR</strong> during these actions, especially requests involving the feed.</li>
+                <li>Determine whether state stays exclusively local or whether some state is transmitted to the server to compute recommendations.</li>
+            </ol>
+            <p><strong>Important distinction:</strong> “No account” does not imply “no requests or tracking.” An API can use locally stored preferences supplied with a request without maintaining registered users. Observing requests is not enough to infer internal ranking algorithms or data retention.</p>
+            <h3 id="6-investigate-the-thumbnail-trick">6. Investigate the thumbnail trick</h3>
+            <p>HackerTube says it shows a <strong>representative frame from the middle of the video</strong> rather than the uploader's thumbnail.</p>
+            <ol>
+                <li>Use <strong>Network → Img</strong> and reload.</li>
+                <li>If the site offers a thumbnail/frame toggle, switch it and compare URLs and request origins.</li>
+                <li>Open image <strong>Preview</strong>, inspect response headers and <code>Initiator</code>, and look for lazy loading or caching.</li>
+                <li>Verify whether the frame is generated by the app, obtained from another service, or retrieved as a stored image. The image URL alone may not tell the complete story.</li>
+            </ol>
+            <h3 id="7-examine-the-shipped-frontend-not-the-private-server">7. Examine the shipped frontend, not the private server</h3>
+            <p>Use <strong>Sources</strong> and <strong>Network → JS</strong> to identify bundles, source maps (if published), framework signatures, fetch calls, route strings, and event handlers. The <strong>Pretty print</strong> button (<code>{}</code>) can improve minified code readability; global search (<strong>Ctrl+Shift+F</strong>) helps find <code>fetch(</code>, <code>/api/</code>, <code>localStorage</code>, and request constructors.</p>
+            <p>Source maps might reveal readable client source, but <strong>frontend JavaScript is not the server repository</strong>. Do not infer the backend language or architecture merely from a filename or a request URL.</p>
+            <h3 id="8-measure-page-and-interaction-performance">8. Measure page and interaction performance</h3>
+            <ul>
+                <li>In <strong>Performance</strong>, record a fresh navigation, a search, and a video-open interaction; inspect main-thread work, network delays, layout shifts, and long tasks.</li>
+                <li>In <strong>Lighthouse</strong>, run a reproducible mobile audit and record <strong>LCP</strong>, <strong>CLS</strong>, <strong>INP</strong> where available, accessibility, and performance findings. Lighthouse lab scores can vary between runs and don't by themselves measure real-user INP.</li>
+                <li>In <strong>Network</strong>, compare cold load with warm cache, note connection/protocol information when available, and look for thumbnail downloads or large JavaScript bundles.</li>
+                <li>In <strong>Application</strong>, check service worker and cache storage behavior before claiming assets are served offline.</li>
+            </ul>
+            <h3 id="9-privacy-and-security-checks-non-invasive">9. Privacy and security checks (non-invasive)</h3>
+            <p>In <strong>Network</strong>, inspect <em>which domains</em> receive requests and whether third-party video embeds are loaded before playback. In <strong>Application</strong>, view storage mechanisms; in <strong>Security</strong>, examine TLS details. For relevant responses, examine cookie attributes (<code>Secure</code>, <code>HttpOnly</code>, <code>SameSite</code>), CSP, CORS, and cache headers.</p>
+            <p>These observations reveal browser-facing behavior, <strong>not</strong> proof of full server security. Avoid attempting authentication bypasses, rate-limit testing, fuzzing, or submitting altered state to someone else's service.</p>
+            <h3 id="10-reproduce-a-single-request-safely">10. Reproduce a single request safely</h3>
+            <p>In <strong>Network</strong>, right-click a public <strong>GET</strong> request and choose <strong>Copy → Copy as fetch</strong> or <strong>Copy as cURL</strong>. Before using or publishing it, remove or redact <code>Cookie</code>, <code>Authorization</code>, tokens, personal IDs, sensitive query parameters, and unnecessary headers. Never distribute a live session's copied credentials. Don't automatically replay mutations or bulk-download data.</p>
+            <p>Record a small API inventory:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Method and route</th>
+                        <th>Params/body (redacted)</th>
+                        <th>Status</th>
+                        <th>Response shape</th>
+                        <th>Timing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Initial load</td>
+                        <td>Fill from Network</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>Search</td>
+                        <td>Fill from Network</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>Choose topic</td>
+                        <td>Fill from Network</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>Open video</td>
+                        <td>Fill from Network</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>Like/save video</td>
+                        <td>Fill from Network (if any)</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3 id="demo-outline-for-a-technical-video">Demo outline for a technical video</h3>
+            <ol>
+                <li><strong>Hook:</strong> Can we understand the client/backend boundary of a Claude-built site without the original source?</li>
+                <li><strong>Network:</strong> Reload and enumerate initial requests; search and filter to discover more.</li>
+                <li><strong>API docs:</strong> Test <code>/api/docs</code> and common OpenAPI locations, explaining the difference between a path reference and a real specification.</li>
+                <li><strong>Storage:</strong> Like a video, inspect Local Storage, then retry in a clean session.</li>
+                <li><strong>Images:</strong> Investigate the video-frame thumbnails.</li>
+                <li><strong>Sources:</strong> Pretty-print frontend assets and locate request initiators.</li>
+                <li><strong>Performance/privacy:</strong> Show a quick trace and third-party request inventory.</li>
+                <li><strong>Conclusion:</strong> Separate <strong>observed browser facts</strong>, <strong>plausible inferences</strong>, and <strong>unknown server behavior</strong>.</li>
+            </ol>
+            <h3 id="references">References</h3>
+            <ul>
+                <li><a href="https://karpathy.bearblog.dev/hacker-tube/">Andrej Karpathy — HackerTube (2026-10-31)</a></li>
+                <li><a href="https://hackertube.org/">HackerTube website</a></li>
+                <li><a href="https://trenchcoat.tools/b/Aq3O8h7v">Third-party HackerTube network/source inspection</a> — external observation; verify against current behavior</li>
+                <li><a href="https://developer.chrome.com/docs/devtools/network/">Chrome DevTools: Network</a></li>
+                <li><a href="https://developer.chrome.com/docs/devtools/storage/">Chrome DevTools: Storage</a></li>
+                <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/PerformanceResourceTiming">MDN: PerformanceResourceTiming</a></li>
+                <li><a href="https://spec.openapis.org/oas/latest.html">OpenAPI Specification</a></li>
+            </ul>
+        </article-section>
+    </div>
+    </main>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="social-icon" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.75 15.02V8.98L15.5 12z"></path>
+                            </svg></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="social-icon" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 24 24" width="16">
+                                <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"></path>
+                            </svg></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="social-icon" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"><svg aria-hidden="true" fill="none" focusable="false" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+                                <rect height="18" rx="5" width="18" x="3" y="3"></rect>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <circle cx="17.5" cy="6.5" fill="currentColor" r="1.2" stroke="none"></circle>
+                            </svg></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="social-icon" href="https://github.com/djeada" title="GitHub"><svg aria-hidden="true" fill="currentColor" focusable="false" height="16" viewbox="0 0 16 16" width="16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" decoding="async" height="180" loading="lazy" src="/resources/brand/symbol.webp" width="180"/>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+
+</html>
