@@ -125,7 +125,7 @@ test.describe("Snake turn feel", () => {
   });
 
   for (const pressAt of [40, 160, 250, 300]) {
-    test(`a turn pressed ${pressAt} ms into a 320 ms tick lands quickly and never snaps the head`, async ({ page }) => {
+    test(`a turn pressed ${pressAt} ms into a 320 ms tick follows the next grid corner`, async ({ page }) => {
       await page.goto("/tools/snake/");
       await page.locator("#play-btn").click();
       const result = await page.evaluate((pressAt) => new Promise((resolve) => {
@@ -137,32 +137,72 @@ test.describe("Snake turn feel", () => {
         let t0 = performance.now();
         let pressed = 0;
         let turned = 0;
+        let cornerX;
         let prev = null;
         let maxJump = 0;
+        let maxRewind = 0;
+        let cornerDrift = 0;
         const frame = () => {
           const now = performance.now();
           const h = SnakeGame.head;
-          if (prev && pressed) maxJump = Math.max(maxJump, Math.hypot(h.x - prev.x, h.y - prev.y));
+          if (pressed) {
+            maxJump = Math.max(maxJump, Math.hypot(h.x - prev.x, h.y - prev.y));
+            maxRewind = Math.max(maxRewind, prev.x - h.x);
+            if (h.y < startY) cornerDrift = Math.max(cornerDrift, Math.abs(h.x - cornerX));
+          }
           prev = { x: h.x, y: h.y };
           if (!pressed) {
             if (s.snake[0].x !== lastX) {
               lastX = s.snake[0].x;
               t0 = now;
             } else if (now - t0 >= pressAt) {
+              cornerX = s.snake[0].x + 1;
               window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
               pressed = now;
             }
           } else if (!turned && s.snake[0].y !== startY) turned = now;
-          if (pressed && turned && now - pressed > 700) return resolve({ lag: turned - pressed, maxJump });
+          if (pressed && turned && now - pressed > 700) {
+            return resolve({ lag: turned - pressed, maxJump, maxRewind, cornerDrift, modelX: s.snake[0].x, cornerX });
+          }
           if (now - t0 > 8000) return resolve({ lag: Infinity, maxJump });
           requestAnimationFrame(frame);
         };
         requestAnimationFrame(frame);
       }), pressAt);
-      expect(result.lag, "the old behaviour waited out the whole tick").toBeLessThan(200);
-      expect(result.maxJump, "head moved sideways in one frame").toBeLessThan(0.6);
+      expect(result.maxRewind, "the rendered head should keep moving forward").toBeLessThan(1e-6);
+      expect(result.cornerDrift, "the rendered head should turn on the grid corner").toBeLessThan(1e-6);
+      expect(result.modelX).toBe(result.cornerX);
+      expect(result.lag, "the model head should turn within 200 ms").toBeLessThan(200);
+      expect(result.maxJump, "the rendered head should move smoothly").toBeLessThan(0.6);
     });
   }
+
+  test("a late turn away from an obstacle starts at the current cell", async ({ page }) => {
+    await page.clock.install({ time: new Date(0) });
+    await page.clock.pauseAt(1000);
+    await page.goto("/tools/snake/");
+    const start = await page.evaluate(() => {
+      document.getElementById("play-btn").click();
+      const s = SnakeGame.engine.state;
+      const { x, y } = s.snake[0];
+      s.obstacles = [{ x: x + 1, y }];
+      s.food = { x: 0, y: 0 };
+      return { x, y };
+    });
+    const head = () => page.evaluate(() => SnakeGame.head);
+    await page.clock.runFor(300);
+    expect(await head()).toEqual(start);
+
+    await page.keyboard.press("ArrowUp");
+    await page.clock.runFor(16);
+    const first = await head();
+    expect(first.x).toBe(start.x);
+    expect(first.y).toBeLessThan(start.y);
+    expect(first.y).toBeGreaterThan(start.y - 0.3);
+
+    await page.clock.runFor(80);
+    expect(await page.evaluate(() => SnakeGame.engine.state.snake[0])).toEqual({ x: start.x, y: start.y - 1 });
+  });
 });
 
 test.describe("Snake on a phone", () => {

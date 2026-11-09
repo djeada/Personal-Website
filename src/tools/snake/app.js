@@ -8,7 +8,7 @@
     const MAX_FRAME_MS = 250;
     const SWIPE_PX = 22;
     const TURN_BOOST = 2.5;
-    const SWING_MS = 70;
+    const MAX_TURN_STEP_MS = 80;
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -55,12 +55,6 @@
     let cell = 1;
     let bestAtStart = best;
     let progress = 0;
-    let swing = {
-        x: 0,
-        y: 0
-    };
-    let swingKey = "";
-    let lastDrawAt = 0;
     let drawnHead = {
         x: 0,
         y: 0
@@ -204,46 +198,16 @@
     function drawSnake() {
         const snake = state.snake;
         const crashed = state.over && !state.won;
-        const now = performance.now();
-        const dt = Math.min(100, Math.max(0, now - lastDrawAt));
-        lastDrawAt = now;
         const live = mode === "playing" || mode === "paused";
         const look = live ? engine.peek() : null;
-        const adv = look && !look.fatal ? Math.min(1, progress) : 0;
-        const face = look ? look.dir : state.dir;
+        const adv = look && !look.fatal ? progress : 0;
+        const { x: fx, y: fy } = look ? look.dir : state.dir;
 
-        const target = {
-            x: snake[0].x + face.x * adv,
-            y: snake[0].y + face.y * adv
+        drawnHead = {
+            x: snake[0].x + fx * adv,
+            y: snake[0].y + fy * adv
         };
-        if (live) {
-            const key = `${face.x},${face.y},${look.fatal ? "f" : "o"}`;
-            if (swingKey && key !== swingKey) {
-                swing.x = drawnHead.x - target.x;
-                swing.y = drawnHead.y - target.y;
-            }
-            swingKey = key;
-            const decay = Math.exp(-dt / SWING_MS);
-            swing.x *= decay;
-            swing.y *= decay;
-        } else {
-            swing = {
-                x: 0,
-                y: 0
-            };
-            swingKey = "";
-        }
-
-        const head = {
-            x: target.x + swing.x,
-            y: target.y + swing.y
-        };
-        drawnHead = head;
-        const pts = [head];
-        snake.forEach(s => pts.push({
-            x: s.x,
-            y: s.y
-        }));
+        const pts = [drawnHead, ...snake];
         const last = pts.length - 1;
         if (adv > 0 && !look.eat && last >= 1) {
             pts[last] = {
@@ -300,17 +264,6 @@
         }
 
         const [hx, hy] = at(pts[0]);
-        let fx = face.x;
-        let fy = face.y;
-        if (pts.length > 1) {
-            const nx = pts[0].x - pts[1].x;
-            const ny = pts[0].y - pts[1].y;
-            const nl = Math.hypot(nx, ny);
-            if (nl > 0.03) {
-                fx = nx / nl;
-                fy = ny / nl;
-            }
-        }
         const px = -fy;
         const py = fx;
         ctx.fillStyle = headColor;
@@ -371,8 +324,10 @@
         if (mode !== "playing") return;
         const dt = Math.min(MAX_FRAME_MS, now - lastFrame);
         lastFrame = now;
-        carry += dt * (state.queue.length ? TURN_BOOST : 1);
         const interval = engine.speed();
+        // Keep input responsive when a turn needs to finish the current cell first.
+        const boost = state.queue.length ? Math.max(TURN_BOOST, interval / MAX_TURN_STEP_MS) : 1;
+        carry += dt * boost;
         while (carry >= interval && mode === "playing") {
             carry -= interval;
             const result = engine.step();
@@ -380,6 +335,7 @@
             else if (result.type === "crash" || result.type === "win") onEnd(result.type === "win");
         }
         progress = mode === "playing" ? Math.min(1, carry / interval) : 0;
+        if (progress > 0) engine.beginStep();
         draw();
         if (mode === "playing") rafId = requestAnimationFrame(frameLoop);
     }
@@ -435,11 +391,6 @@
         engine.reset(direction);
         carry = 0;
         progress = 0;
-        swing = {
-            x: 0,
-            y: 0
-        };
-        swingKey = "";
         bestAtStart = best;
         mode = "playing";
         hideOverlay();
@@ -488,8 +439,14 @@
     }
 
     function turn(direction) {
-        if (mode === "playing") engine.turn(direction);
-        else if (mode === "ready" || (mode === "over" && performance.now() - overAt >= RESTART_GUARD_MS)) primaryAction(direction);
+        if (mode === "playing") {
+            const blocked = progress > 0 && engine.peek().fatal;
+            if (engine.turn(direction) && blocked && !engine.peek().fatal) {
+                // The head was waiting in place. Start the escape from that cell.
+                carry = 0;
+                progress = 0;
+            }
+        } else if (mode === "ready" || (mode === "over" && performance.now() - overAt >= RESTART_GUARD_MS)) primaryAction(direction);
     }
 
     const KEYS = {

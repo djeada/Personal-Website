@@ -63,6 +63,28 @@ test("two quick turns inside one tick are both honoured on consecutive steps", (
     assert.deepEqual(head(g), { x: start.x - 1, y: start.y - 1 });
 });
 
+test("a step in motion keeps its destination and leaves later turns queued", () => {
+    const g = Snake.create({ rng: seeded(5) });
+    const { x, y } = head(g);
+    g.state.obstacles = [];
+    g.state.food = { x: x + 1, y };
+    const planned = g.peek();
+
+    g.beginStep();
+    assert.equal(g.turn("up"), true);
+    assert.equal(g.turn("left"), true);
+    assert.deepEqual(g.peek(), planned);
+    assert.equal(g.step().type, "eat");
+    assert.deepEqual(head(g), planned.next);
+
+    g.state.food = { x: 0, y: 0 };
+    g.beginStep();
+    g.step();
+    assert.deepEqual(head(g), { x: x + 1, y: y - 1 });
+    g.step();
+    assert.deepEqual(head(g), { x, y: y - 1 });
+});
+
 test("the turn queue is bounded", () => {
     const g = Snake.create({ rng: seeded(6) });
     const results = ["up", "left", "down", "right", "up"].map(d => g.turn(d));
