@@ -58,6 +58,7 @@
         const startLength = Math.min(opts.startLength || 3, Math.max(1, size - 2));
         const rng = opts.rng || Math.random;
         let pace = PACES[opts.pace] ? opts.pace : DEFAULT_PACE;
+        let activeDir = null;
 
         const state = {
             size,
@@ -187,6 +188,7 @@
         function reset(direction) {
             const dir = direction && DIRS[direction] ? DIRS[direction] : DIRS.right;
             const mid = Math.floor(size / 2);
+            activeDir = null;
             state.dir = dir;
             state.queue = [];
             state.snake = [];
@@ -218,7 +220,7 @@
         }
 
         function lookAhead() {
-            const dir = state.queue.length ? state.queue[0] : state.dir;
+            const dir = activeDir || state.queue[0] || state.dir;
             const head = state.snake[0];
             const next = {
                 x: head.x + dir.x,
@@ -247,12 +249,20 @@
             return lookAhead();
         }
 
+        function beginStep() {
+            if (activeDir) return;
+            const ahead = peek();
+            // Once the head leaves its cell, input can only change the following step.
+            if (!ahead.fatal) activeDir = ahead.dir;
+        }
+
         function step() {
             if (state.over) return {
                 type: "none"
             };
             const ahead = lookAhead();
-            if (state.queue.length) state.queue.shift();
+            if (state.queue[0] === ahead.dir) state.queue.shift();
+            activeDir = null;
             state.dir = ahead.dir;
             const next = ahead.next;
 
@@ -300,6 +310,7 @@
             DIRS,
             reset,
             turn,
+            beginStep,
             step,
             peek,
             speed,
