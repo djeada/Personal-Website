@@ -1,5 +1,31 @@
 "use strict";
 
+/*
+ * Data Structure Lab
+ *
+ * URL parameters (all optional):
+ *   structure=graph       any structure key or name: array, linkedList, stack, queue, deque,
+ *                         hashTable, set, map, bst, heap, graph, dsu (Disjoint Set), trie
+ *   speed=normal          slow | normal | fast, or an interval in ms (one animation step)
+ *   op=find               the selected operation tab; a=..., b=... fill its two inputs
+ *                         (Disjoint Set: union | find | makeset | connected, or add | search | remove | special)
+ * Disjoint Set only:
+ *   preset=redundant      redundant (Redundant Connection: 1..5, edges 1-2, 2-3, 3-4, 1-4, 1-5)
+ *                         tall (a chain 5 -> 4 -> 3 -> 2 -> 1 and 7 -> 6; find(5), then union(7, 5))
+ *                         singletons (1..5, no queued operations)
+ *   run=3                 apply the first 3 queued items at once (run=all applies every item)
+ *   step=4                then show 4 more animation frames, one at a time, and stop there
+ *   play=all              then play the rest of the queue; play=item plays only the next
+ *                         item, play=3 the next three; Speed sets the time per frame
+ *
+ * For recorders (Disjoint Set): #structure-visual and .dsu-view carry data-state
+ * (idle | running | paused | done), data-components, data-cursor (queued items finished),
+ * data-total, data-answer (the redundant edge, e.g. "1-4") and data-frame (the kind of the
+ * frame on screen: find-walk, find-root, compress, compressed, compare, link, redundant,
+ * connected, make-set). window.DisjointSetLab has load(preset), step(), next(), play(),
+ * pause(), runItems(n) and snapshot(); see the end of this file.
+ */
+
 const structureSelect = document.getElementById("structure-select");
 const valueInput = document.getElementById("value-input");
 const secondaryInput = document.getElementById("secondary-input");
@@ -54,10 +80,45 @@ const dockOperation = document.getElementById("dock-operation");
 const dockSummary = document.getElementById("dock-summary");
 const algorithmName = document.getElementById("algorithm-name");
 const algorithmDetail = document.getElementById("algorithm-detail");
+const traversalSelect = document.getElementById("graph-traversal");
+const traversalField = document.getElementById("traversal-field");
+const typeField = document.getElementById("type-field");
 
 let animationRun = 0;
 let lastAnimationTargets = [];
 let lastOutcome = null;
+
+// Disjoint Set presets. `parent` maps a label to its parent's label (missing: its own root);
+// `items` are queued operations that Step, Next and Play work through in order.
+const DSU_PRESETS = {
+    redundant: {
+        title: "Redundant Connection",
+        listTitle: "Edges in order",
+        noun: "edge",
+        answerMode: true,
+        elements: ["1", "2", "3", "4", "5"],
+        parent: {},
+        items: [["union", "1", "2"], ["union", "2", "3"], ["union", "3", "4"], ["union", "1", "4"], ["union", "1", "5"]]
+    },
+    tall: {
+        title: "Tall tree",
+        listTitle: "Operations",
+        noun: "operation",
+        answerMode: false,
+        elements: ["1", "2", "3", "4", "5", "6", "7"],
+        parent: { "2": "1", "3": "2", "4": "3", "5": "4", "7": "6" },
+        items: [["find", "5"], ["union", "7", "5"]]
+    },
+    singletons: {
+        title: "Five singletons",
+        listTitle: "Operations",
+        noun: "operation",
+        answerMode: false,
+        elements: ["1", "2", "3", "4", "5"],
+        parent: {},
+        items: []
+    }
+};
 
 const STRUCTURES = {
     array: {
@@ -276,6 +337,29 @@ const STRUCTURES = {
             special: ["Add edge", "O(1)", "O(1)", "O(1)", "Append neighbor references."]
         }
     },
+    disjointSet: {
+        name: "Disjoint Set",
+        kind: "dsu",
+        summary: "Union-Find: each group is a tree of parent pointers, named by its root.",
+        best: "Groups that only merge: connectivity, component counts, the edge that closes a cycle, Kruskal.",
+        caution: "It cannot split a group or return the path between two elements; compare roots, never parents.",
+        memory: "O(n): one parent array and one size array.",
+        initial: dsuPresetState("redundant"),
+        sampleValues: ["1", "2", "3", "4", "5"],
+        secondaryLabel: "Second element",
+        specialLabel: "Connected",
+        tabLabels: {
+            add: "Union",
+            search: "Find",
+            remove: "Make set"
+        },
+        operations: {
+            add: ["Union", "O(1)", "~O(1)", "O(log n)", "Find both roots, hang the smaller tree under the larger."],
+            search: ["Find", "O(1)", "~O(1)", "O(log n)", "Walk up to the root, then point the whole path at it."],
+            remove: ["Make set", "O(1)", "O(1)", "O(1)", "A new element is its own parent: one more group."],
+            special: ["Connected", "O(1)", "~O(1)", "O(log n)", "Connected exactly when both finds return the same root."]
+        }
+    },
     trie: {
         name: "Trie",
         kind: "trie",
@@ -441,12 +525,22 @@ function addTrace(message) {
     trace = trace.slice(0, 8);
 }
 
+// Graph search can run as BFS (the default) or DFS; the DFS variant only changes
+// the search operation's name and note, its cost is the same O(V + E).
+const GRAPH_DFS_SEARCH = ["DFS search", "O(1)", "O(V + E)", "O(V + E)", "Go deep through unvisited neighbors, backtrack at dead ends."];
+
+function graphTraversal() {
+    return traversalSelect && traversalSelect.value === "dfs" ? "dfs" : "bfs";
+}
+
 function operationConfig(operation) {
+    if (currentKey === "graph" && operation === "search" && graphTraversal() === "dfs") return GRAPH_DFS_SEARCH;
     return STRUCTURES[currentKey].operations[operation] || STRUCTURES[currentKey].operations.add;
 }
 
 function structureSize() {
     const config = STRUCTURES[currentKey];
+    if (config.kind === "dsu") return state.elements.length;
     return config.kind === "graph" ? state.nodes.length : state.length;
 }
 
@@ -457,7 +551,14 @@ function measuredTouched(detail) {
 function planForOperation(operation, primary, secondary) {
     const config = STRUCTURES[currentKey];
     const opName = operationConfig(operation)[0];
+    if (config.kind === "dsu") {
+        if (operation === "add") return [`find(${primary}) and find(${secondary}) walk up to their roots.`, "Same root: union returns False, the edge closes a cycle.", "Otherwise hang the smaller root under the larger and add the sizes."];
+        if (operation === "search") return [`Walk parent pointers from ${primary} up to the root.`, "On the way back, point every node on the path at the root.", "Return the root."];
+        if (operation === "special") return [`find(${primary}) and find(${secondary}).`, "Compare the two roots.", "The same root means connected."];
+        return ["Append the new element.", "parent[x] = x and size[x] = 1.", "One more component."];
+    }
     if (config.kind === "graph") {
+        if (operation === "search" && graphTraversal() === "dfs") return [`Push ${state.nodes[0] || "the first vertex"} on the stack and mark it visited.`, `Follow the first unvisited neighbor; backtrack at dead ends until ${primary} is reached.`, "A visited neighbor that is not the parent closes a cycle."];
         if (operation === "search") return [`Start BFS at ${state.nodes[0] || "the first vertex"}.`, `Expand the FIFO frontier until ${primary} is reached.`, "Stop immediately when the target is found."];
         if (operation === "special") return [`Ensure vertices ${primary} and ${secondary} exist.`, "Check whether the edge already exists.", "Store neighbor references."];
         if (operation === "remove") return [`Find vertex ${primary}.`, "Delete it from the vertex list.", "Remove all incident edges."];
@@ -508,8 +609,9 @@ function setOperation(operation) {
 function resetState() {
     cancelAnimation();
     const config = STRUCTURES[currentKey];
-    state = cloneInitial(config.initial);
-    trace = [`Loaded ${config.name}.`];
+    state = config.kind === "dsu" ? dsuPresetState(dsuPresetKey) : cloneInitial(config.initial);
+    if (config.kind === "dsu") dsuResetPlayer();
+    trace = [`Loaded ${config.kind === "dsu" ? `${config.name}: ${state.title}` : config.name}.`];
     setHighlight({});
     selectedRef = null;
     setOperation("search");
@@ -560,6 +662,7 @@ function distinctRandom(count, make) {
 function randomDataset(key) {
     const config = STRUCTURES[key];
     const count = randomInt(5, 8);
+    if (config.kind === "dsu") return dsuRandomState();
     if (config.kind === "graph") {
         const vertices = Array.from({
             length: randomInt(5, 7)
@@ -598,6 +701,7 @@ function randomizeState() {
     const config = STRUCTURES[currentKey];
     state = randomDataset(currentKey);
     if (config.kind === "heap") heapifyState();
+    if (config.kind === "dsu") dsuResetPlayer();
     addTrace(`Randomized ${config.name} with ${structureSize()} ${structureSize() === 1 ? "item" : "items"}.`);
     setHighlight({});
     selectedRef = null;
@@ -623,6 +727,19 @@ function updateStructureUI() {
     const specialLabel = specialAction.querySelector("span");
     if (specialLabel) specialLabel.textContent = config.specialLabel;
     else specialAction.textContent = config.specialLabel;
+    const defaultTabs = {
+        add: "Add",
+        search: "Search",
+        remove: "Remove"
+    };
+    operationButtons.forEach((button) => {
+        const operation = button.dataset.operation;
+        const label = button.querySelector("span");
+        if (operation === "special" || !label) return;
+        label.textContent = (config.tabLabels && config.tabLabels[operation]) || defaultTabs[operation];
+    });
+    editValueInput.disabled = config.kind === "dsu";
+    updateSelectedButton.disabled = config.kind === "dsu";
     secondaryInput.placeholder = config.secondaryLabel;
     valueInput.placeholder = config.kind === "map" ? "key" : "value";
     editSecondaryInput.disabled = currentKey !== "map";
@@ -645,15 +762,33 @@ function updateCommandUI() {
     };
     valueLabel.textContent = labels[operation];
     secondaryLabel.textContent = currentKey === "array" && operation === "special" ? "Index to access" : currentKey === "graph" && operation === "special" ? "Connect to vertex" : currentKey === "map" && operation === "add" ? "Value to store" : currentKey === "trie" && operation === "special" ? "Prefix to find" : config.secondaryLabel;
-    const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add") || (currentKey === "trie" && operation === "special");
+    const graphSearch = currentKey === "graph" && operation === "search";
+    if (graphSearch) valueLabel.textContent = "Vertex to find (empty: visit all)";
+    valueInput.placeholder = graphSearch ? "empty = full traversal" : config.kind === "map" ? "key" : "value";
+    if (traversalField) traversalField.hidden = !graphSearch;
+    if (typeField) typeField.hidden = graphSearch;
+    const dsu = config.kind === "dsu";
+    if (dsu) {
+        valueLabel.textContent = {
+            add: "First element (a)",
+            search: "Element to find",
+            remove: "New element (empty: next number)",
+            special: "First element (a)"
+        }[operation];
+        secondaryLabel.textContent = ["add", "special"].includes(operation) ? "Second element (b)" : "Not used";
+        valueInput.placeholder = operation === "remove" ? "next number" : "element";
+        if (typeField) typeField.hidden = true;
+    }
+    const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add") || (currentKey === "trie" && operation === "special") || (dsu && ["add", "special"].includes(operation));
     const optionalSecondary = currentKey === "deque" && operation === "add";
     secondaryField.classList.toggle("is-required", needsSecondary);
     secondaryField.classList.toggle("is-muted", !needsSecondary && !optionalSecondary);
     primaryField.classList.toggle("is-muted", (["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation)) || (["array", "deque", "heap", "bst", "hashTable", "trie"].includes(currentKey) && operation === "special"));
-    executeOperationButton.querySelector("span").textContent = `Run ${op[0].toLowerCase()}`;
+    // Lower-case ordinary words but keep acronyms such as BFS and DFS.
+    executeOperationButton.querySelector("span").textContent = `Run ${op[0].replace(/\b[A-Z][a-z]+/g, (word) => word.toLowerCase())}`;
     dockOperation.textContent = op[0];
-    const primary = valueInput.value || "value";
-    const secondary = optionalSecondary ? dequeEnd(secondaryInput.value) : secondaryInput.value || config.secondaryLabel.toLowerCase();
+    const primary = valueInput.value || (graphSearch || (dsu && operation === "remove") ? "" : dsu ? "a" : "value");
+    const secondary = optionalSecondary ? dequeEnd(secondaryInput.value) : secondaryInput.value || (dsu ? "b" : config.secondaryLabel.toLowerCase());
     const args = needsSecondary || optionalSecondary ? `${primary}, ${secondary}` : primary;
     commandPreview.innerHTML = `<code>${escapeHTML(op[0].toLowerCase().replace(/\s+/g, "_"))}(${escapeHTML(args)})</code><span>${escapeHTML(op[4])}</span>`;
     const algorithm = algorithmFor(currentKey, operation);
@@ -676,7 +811,24 @@ function algorithmFor(key, operation) {
             detail
         };
     }
+    if (config.kind === "dsu") {
+        const algorithms = {
+            add: ["Union by size", "Find both roots. If they differ, hang the root of the smaller tree under the root of the larger one and add the sizes; the same root means the two were already connected, so union returns False."],
+            search: ["Recursive find with path compression", "Follow parent pointers up to the root, then on the way back set every node on the path to point straight at the root."],
+            remove: ["Make set", "Append a new element that is its own parent with size 1; the component count goes up by one."],
+            special: ["Root comparison", "Two elements are in the same group exactly when find returns the same root for both."]
+        };
+        const [name, detail] = algorithms[operation];
+        return {
+            name,
+            detail
+        };
+    }
     if (config.kind === "graph") {
+        if (operation === "search" && graphTraversal() === "dfs") return {
+            name: "Depth-first search (DFS)",
+            detail: "Go as deep as possible through unvisited neighbors in insertion order, backtrack at dead ends, and report a visited neighbor that is not the parent as a cycle."
+        };
         const algorithms = {
             add: ["Adjacency-list vertex insertion", "Create a vertex and an empty neighbor list in constant time."],
             search: ["Breadth-first search (BFS)", "Use a FIFO frontier and visit every reachable vertex level by level until the target is found."],
@@ -753,7 +905,7 @@ function showIdleResult() {
 
 function renderComplexity() {
     const operations = STRUCTURES[currentKey].operations;
-    complexityList.innerHTML = Object.entries(operations).map(([key, op]) => `
+    complexityList.innerHTML = Object.keys(operations).map((key) => [key, operationConfig(key)]).map(([key, op]) => `
         <article class="complexity-card ${activeOperation === key ? "active" : ""}">
             <div class="complexity-top">
                 <span>${op[0]}</span>
@@ -793,7 +945,7 @@ function renderComparison() {
     const operation = activeOperation || "search";
     const n = Math.max(1, structureSize());
     const rows = Object.entries(STRUCTURES)
-        .filter(([, config]) => config.operations[operation])
+        .filter(([key, config]) => config.operations[operation] && (config.kind !== "dsu" || key === currentKey))
         .map(([key, config]) => {
             const growth = config.operations[operation][2];
             return {
@@ -857,6 +1009,10 @@ async function performOperation(operation) {
     cancelAnimation();
     const config = STRUCTURES[currentKey];
     if (!validateOperationInput(operation)) return;
+    if (config.kind === "dsu") {
+        dsuRunCommand(operation);
+        return;
+    }
     const originalState = cloneInitial(state);
     const beforeSize = structureSize();
     const requestedValue = normalizeValue(valueInput.value) || config.sampleValues[sampleCursor % config.sampleValues.length];
@@ -914,8 +1070,10 @@ function validateOperationInput(operation) {
     secondaryField.classList.remove("is-invalid");
     valueInput.removeAttribute("aria-invalid");
     secondaryInput.removeAttribute("aria-invalid");
+    if (STRUCTURES[currentKey].kind === "dsu") return dsuValidate(operation);
     const primary = normalizeValue(valueInput.value);
     const primaryOptional = (operation === "remove" && ["stack", "queue"].includes(currentKey)) ||
+        (operation === "search" && currentKey === "graph") ||
         (operation === "special" && ["array", "stack", "queue", "deque", "heap", "bst", "hashTable"].includes(currentKey));
     if (!primary && !primaryOptional && !(currentKey === "trie" && operation === "special")) {
         return showInputError(primaryField, valueInput, "Enter a value before running this operation.", "No sample or fallback value will be used.");
@@ -961,6 +1119,20 @@ function buildOutcome(operation, requestedValue, beforeSize) {
     let success = true;
     let title = trace[0] || `${operationConfig(operation)[0]} completed.`;
     let returned = "void";
+    if (operation === "search" && highlight.traversal) {
+        // A full traversal has no target, so it cannot "miss"; a cycle is its finding.
+        const summary = highlight.traversal;
+        return {
+            success: true,
+            traversal: true,
+            tone: summary.cycle ? "is-info" : "is-success",
+            status: summary.cycle ? "Cycle found" : "Traversal complete",
+            title: summary.cycle || summary.coverage,
+            returned: summary.cycle ? "cycle" : `${summary.count} visited`,
+            detail: summary.cycle ? summary.coverage : operationConfig(operation)[4],
+            steps: lastMetrics.touched
+        };
+    }
     if (operation === "search") {
         success = found;
         returned = found ? (highlight.value ?? requestedValue) : "not found";
@@ -985,7 +1157,7 @@ function buildOutcome(operation, requestedValue, beforeSize) {
         status,
         title,
         returned: String(returned ?? "null"),
-        detail: operationConfig(operation)[4],
+        detail: highlight.note || operationConfig(operation)[4],
         steps: lastMetrics.touched
     };
 }
@@ -1002,8 +1174,8 @@ function showRunningResult(outcome) {
 
 function showCompletedResult(outcome) {
     if (!outcome) return;
-    resultBanner.className = `result-banner ${outcome.success ? "is-success" : "is-failure"}`;
-    resultIcon.innerHTML = `<span aria-hidden="true">${outcome.success ? "&check;" : "&times;"}</span>`;
+    resultBanner.className = `result-banner ${outcome.tone || (outcome.success ? "is-success" : "is-failure")}`;
+    resultIcon.innerHTML = `<span aria-hidden="true">${outcome.tone === "is-info" ? "!" : outcome.success ? "&check;" : "&times;"}</span>`;
     resultState.textContent = outcome.status;
     resultTitle.textContent = outcome.title;
     resultDetail.textContent = outcome.detail;
@@ -1014,6 +1186,7 @@ function showCompletedResult(outcome) {
 
 function cancelAnimation() {
     animationRun += 1;
+    dsuStopTimer();
     visualStage.classList.remove("is-playing", "is-starting", "is-finishing");
     animationStatus.textContent = "Ready";
     comparisonBubble.hidden = true;
@@ -1120,7 +1293,7 @@ async function animateTargets(targets, label) {
     result.classList.add(missed ? "animation-miss" : "animation-result");
     visualStage.classList.remove("is-playing");
     visualStage.classList.add("is-finishing");
-    comparisonBubble.textContent = lastOutcome && lastOutcome.success ? "Match confirmed" : "Traversal complete";
+    comparisonBubble.textContent = lastOutcome && lastOutcome.success && !lastOutcome.traversal ? "Match confirmed" : "Traversal complete";
     await delay(Math.min(300, interval));
     comparisonBubble.hidden = true;
     await delay(420);
@@ -1701,7 +1874,10 @@ function sinkDown(startIndex) {
 }
 
 function performGraphOperation(operation) {
-    const value = getPrimaryValue().toUpperCase();
+    // An empty "Vertex to find" turns graph search into a full traversal from the
+    // first vertex: no target, every reachable vertex is visited.
+    const fullTraversal = operation === "search" && !normalizeValue(valueInput.value);
+    const value = fullTraversal ? "" : getPrimaryValue().toUpperCase();
     const secondary = (getSecondaryValue() || state.nodes[0] || "A").toUpperCase();
     const hasNode = state.nodes.includes(value);
 
@@ -1721,18 +1897,67 @@ function performGraphOperation(operation) {
             secondary,
             touched: 1
         });
+    } else if (operation === "search" && graphTraversal() === "dfs") {
+        const start = state.nodes[0];
+        const {
+            order,
+            found,
+            cycle
+        } = dfsOrder(start, fullTraversal ? null : value);
+        const visitedText = order.join(" -> ") || "no vertices";
+        const line = fullTraversal ?
+            `DFS from ${start} visited ${visitedText}.` :
+            found ?
+            `DFS from ${start} visited ${visitedText} and found ${value}.` :
+            hasNode ?
+            `DFS from ${start} visited ${visitedText}; ${value} exists but is not reachable from ${start}.` :
+            `DFS from ${start} visited ${visitedText}; ${value} is not in the graph.`;
+        let note = null;
+        if (cycle) {
+            note = `Edge ${cycle[0]} - ${cycle[1]} leads back to visited ${cycle[1]}: the graph has a cycle.`;
+        } else if (!found && order.length) {
+            note = `No edge led back to a visited vertex other than the parent: no cycle in ${start}'s component.`;
+        }
+        // Newest trace entries sit on top, so the note goes in first and reads below the order.
+        if (note) addTrace(note);
+        addTrace(line);
+        setHighlight(fullTraversal ? {
+            mode: "traversal",
+            scan: order,
+            cycleEdge: cycle,
+            note,
+            traversal: traversalSummary("DFS", start, order, cycle)
+        } : {
+            value,
+            mode: found ? "hit" : "scan",
+            scan: order,
+            cycleEdge: cycle,
+            note
+        });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: Math.max(1, order.length),
+            plan: fullTraversal ? [`Push ${start} on the stack and mark it visited.`, "Follow the first unvisited neighbor; backtrack at dead ends until the stack is empty.", "A visited neighbor that is not the parent closes a cycle."] : undefined
+        });
     } else if (operation === "search") {
         const start = state.nodes[0];
         const {
             order,
             found
-        } = bfsOrder(start, value);
-        addTrace(found ?
+        } = bfsOrder(start, fullTraversal ? null : value);
+        addTrace(fullTraversal ?
+            `BFS from ${start} dequeued ${order.join(" -> ") || "no vertices"}.` :
+            found ?
             `BFS from ${start} dequeued ${order.join(" -> ")} and found ${value}.` :
             hasNode ?
             `BFS from ${start} dequeued ${order.join(" -> ") || "no vertices"}; ${value} exists but is not reachable from ${start}.` :
             `BFS from ${start} dequeued ${order.join(" -> ") || "no vertices"}; ${value} is not in the graph.`);
-        setHighlight({
+        setHighlight(fullTraversal ? {
+            mode: "traversal",
+            scan: order,
+            traversal: traversalSummary("BFS", start, order, null)
+        } : {
             value,
             mode: found ? "hit" : "scan",
             scan: order
@@ -1740,7 +1965,8 @@ function performGraphOperation(operation) {
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: Math.max(1, order.length)
+            touched: Math.max(1, order.length),
+            plan: fullTraversal ? [`Start BFS at ${start}.`, "Dequeue the front vertex and enqueue its unvisited neighbors.", "Stop when the queue is empty: every reachable vertex was visited."] : undefined
         });
     } else if (operation === "remove") {
         
@@ -1749,7 +1975,9 @@ function performGraphOperation(operation) {
         const incident = state.edges.filter((edge) => edge[0] === value || edge[1] === value).length;
         state.nodes = state.nodes.filter((node) => node !== value);
         state.edges = state.edges.filter((edge) => edge[0] !== value && edge[1] !== value);
-        addTrace(hasNode ? `Removed vertex ${value} and ${incident} incident ${incident === 1 ? "edge" : "edges"}.` : `${value} was not present.`);
+        const components = componentCount();
+        const shape = !state.nodes.length ? "" : components === 1 ? " The graph is still connected." : ` The graph now has ${components} components.`;
+        addTrace(hasNode ? `Removed vertex ${value} and ${incident} incident ${incident === 1 ? "edge" : "edges"}.${shape}` : `${value} was not present.`);
         setHighlight({
             value,
             mode: "remove"
@@ -1811,6 +2039,103 @@ function bfsOrder(start, target) {
         order,
         found: false
     };
+}
+
+// Iterative DFS with (vertex, parent, neighbor cursor) frames, neighbors in insertion
+// order. A visited neighbor that is not the vertex's parent is an undirected cycle.
+function dfsOrder(start, target) {
+    if (!state.nodes.includes(start)) return {
+        order: [],
+        found: false,
+        cycle: null
+    };
+    const order = [start];
+    const visited = new Set([start]);
+    let cycle = null;
+    if (start === target) return {
+        order,
+        found: true,
+        cycle
+    };
+    const stack = [{
+        node: start,
+        parent: null,
+        neighbors: neighborsOf(start),
+        next: 0
+    }];
+    while (stack.length) {
+        const top = stack[stack.length - 1];
+        if (top.next >= top.neighbors.length) {
+            stack.pop();
+            continue;
+        }
+        const next = top.neighbors[top.next++];
+        if (visited.has(next)) {
+            if (next !== top.parent && !cycle) cycle = [top.node, next];
+            continue;
+        }
+        visited.add(next);
+        order.push(next);
+        if (next === target) return {
+            order,
+            found: true,
+            cycle
+        };
+        stack.push({
+            node: next,
+            parent: top.node,
+            neighbors: neighborsOf(next),
+            next: 0
+        });
+    }
+    return {
+        order,
+        found: false,
+        cycle
+    };
+}
+
+function traversalSummary(kind, start, order, cycle) {
+    const total = state.nodes.length;
+    const visited = order.join(" -> ") || "no vertices";
+    const coverage = order.length === total ?
+        `${kind} visited all ${total} vertices: ${visited}` :
+        `${kind} from ${start} visited ${order.length} of ${total} vertices (the rest are not reachable): ${visited}`;
+    return {
+        coverage,
+        count: order.length,
+        cycle: cycle ? `Cycle found: edge ${cycle[0]} - ${cycle[1]} leads back to visited ${cycle[1]}` : null
+    };
+}
+
+function componentCount() {
+    const seen = new Set();
+    let count = 0;
+    state.nodes.forEach((node) => {
+        if (seen.has(node)) return;
+        count += 1;
+        const queue = [node];
+        seen.add(node);
+        while (queue.length) {
+            neighborsOf(queue.shift()).forEach((next) => {
+                if (!seen.has(next)) {
+                    seen.add(next);
+                    queue.push(next);
+                }
+            });
+        }
+    });
+    return count;
+}
+
+function graphModelHTML() {
+    const rows = state.nodes.map((node) => {
+        const neighbors = neighborsOf(node);
+        return `<span class="adj-row"><b>${escapeHTML(node)}:</b> <span>${neighbors.length ? neighbors.map(escapeHTML).join(", ") : '<i>none</i>'}</span></span>`;
+    }).join("");
+    const edges = state.edges.map((edge) => `${escapeHTML(edge[0])}-${escapeHTML(edge[1])}`).join("  ");
+    return `<span class="model-heading">Adjacency list</span>${rows}` +
+        `<span class="model-heading">Edges (${state.edges.length})</span><span class="adj-edges">${edges || "<i>none</i>"}</span>`;
 }
 
 function neighborsOf(node) {
@@ -1884,6 +2209,7 @@ function selectionLabel(ref) {
     if (!ref) return "Click a node, cell, bucket item, vertex, or trie node to inspect it.";
     if (ref.kind === "map") return `key "${ref.key}" maps to "${ref.value}"`;
     if (ref.kind === "graph-edge") return `edge ${ref.a} - ${ref.b}`;
+    if (ref.kind === "dsu") return dsuSelectionLabel(ref.value);
     if (ref.kind === "trie") return ref.value ? `prefix "${ref.value}"` : "trie root";
     return `${STRUCTURES[currentKey].name} item ${ref.index}: "${ref.value}"`;
 }
@@ -1906,6 +2232,10 @@ function renderSelection() {
 
 function refreshSelectedFromState() {
     if (!selectedRef) return;
+    if (selectedRef.kind === "dsu") {
+        if (!state.elements || !state.elements.includes(selectedRef.value)) selectedRef = null;
+        return;
+    }
     if (selectedRef.kind === "graph") {
         if (!state.nodes.includes(selectedRef.value)) selectedRef = null;
         return;
@@ -1929,10 +2259,21 @@ function refreshSelectedFromState() {
 function render() {
     renderComplexity();
     const config = STRUCTURES[currentKey];
-    const size = config.kind === "graph" ? state.nodes.length : state.length;
+    const size = structureSize();
     sizePill.textContent = `n = ${size}`;
-    modelView.textContent = JSON.stringify(typedModel(), null, 2);
-    traceList.innerHTML = trace.map((item) => `<li>${escapeHTML(item)}</li>`).join("");
+    if (config.kind !== "dsu") dsuClearAttributes();
+    if (config.kind === "dsu") {
+        modelView.innerHTML = dsuModelHTML();
+        modelView.classList.add("is-adjacency");
+    } else if (config.kind === "graph") {
+        modelView.innerHTML = graphModelHTML();
+        modelView.classList.add("is-adjacency");
+    } else {
+        modelView.classList.remove("is-adjacency");
+        modelView.textContent = JSON.stringify(typedModel(), null, 2);
+    }
+    // Keep each "->" together so a long traversal order never wraps inside an arrow.
+    traceList.innerHTML = trace.map((item) => `<li>${escapeHTML(item).replace(/-&gt;/g, '<span class="trace-arrow">-&gt;</span>')}</li>`).join("");
     refreshSelectedFromState();
     renderSelection();
     renderMetrics();
@@ -1952,6 +2293,7 @@ function render() {
     if (config.kind === "tree") renderTree(buildBST(state), false);
     if (config.kind === "heap") renderTree(buildHeapTree(state), true);
     if (config.kind === "graph") renderGraph();
+    if (config.kind === "dsu") renderDisjointSet();
     if (config.kind === "trie") renderTrie();
     fitStageContent();
 }
@@ -2230,32 +2572,112 @@ function renderTree(root, includeArray) {
 
 const GRAPH_NODE_RADIUS = 34;
 
+// Each connected component is laid out in BFS layers from its first vertex, and the
+// components sit side by side. A tree drawn this way has no crossing edges, its rows
+// are the BFS levels, and a disconnected piece is visibly apart from the rest.
+function graphComponents() {
+    const components = [];
+    const seen = new Set();
+    state.nodes.forEach((root) => {
+        if (seen.has(root)) return;
+        seen.add(root);
+        const layers = [];
+        let frontier = [root];
+        while (frontier.length) {
+            layers.push(frontier);
+            const next = [];
+            frontier.forEach((node) => neighborsOf(node).forEach((neighbor) => {
+                if (!seen.has(neighbor)) {
+                    seen.add(neighbor);
+                    next.push(neighbor);
+                }
+            }));
+            frontier = next;
+        }
+        components.push(layers);
+    });
+    return components;
+}
+
+const GRAPH_SLOT = 150;
+const GRAPH_LEVEL = 118;
+const GRAPH_COMPONENT_GAP = 60;
+
+function graphLayout() {
+    const components = graphComponents();
+    const columns = components.map((layers) => Math.max(...layers.map((layer) => layer.length)));
+    const depth = Math.max(...components.map((layers) => layers.length));
+    const naturalWidth = columns.reduce((sum, count) => sum + count * GRAPH_SLOT, 0) + (components.length - 1) * GRAPH_COMPONENT_GAP + 40;
+    const ratio = Math.min(1, availableStageWidth() / naturalWidth);
+    if (Math.max(...columns) > 5 || depth > 6 || ratio < 0.6) return null;
+    const nodeRadius = Math.round(GRAPH_NODE_RADIUS * Math.max(0.75, ratio));
+    const slot = GRAPH_SLOT * ratio;
+    const width = Math.max(280, Math.round(naturalWidth * ratio));
+    const level = Math.max(nodeRadius * 2 + 34, GRAPH_LEVEL * Math.max(0.8, ratio));
+    const height = Math.max(300, Math.round(depth * level + 24));
+    const top = (height - (depth - 1) * level) / 2;
+    const positions = new Map();
+    let left = (width - (naturalWidth - 40) * ratio) / 2;
+    components.forEach((layers, index) => {
+        const blockWidth = columns[index] * slot;
+        layers.forEach((layer, row) => {
+            const offset = left + blockWidth / 2 - ((layer.length - 1) * slot) / 2;
+            layer.forEach((node, column) => positions.set(node, {
+                x: offset + column * slot,
+                y: top + row * level
+            }));
+        });
+        left += blockWidth + GRAPH_COMPONENT_GAP * ratio;
+    });
+    return {
+        positions,
+        nodeRadius,
+        width,
+        height
+    };
+}
+
 function renderGraph() {
     const count = state.nodes.length;
-    
-    
-    
-    const naturalRing = Math.max(150, (GRAPH_NODE_RADIUS + 26) / Math.sin(Math.PI / Math.max(3, count)));
-    const naturalSize = (naturalRing + GRAPH_NODE_RADIUS + 20) * 2;
-    const ratio = Math.max(0.6, Math.min(1, availableStageWidth() / naturalSize));
-    const nodeRadius = Math.round(GRAPH_NODE_RADIUS * ratio);
-    const ringRadius = naturalRing * ratio;
-    const size = Math.round((ringRadius + nodeRadius + 20) * 2);
-    const width = Math.max(280, size);
-    const height = Math.max(300, size);
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const positions = new Map();
-    state.nodes.forEach((node, index) => {
-        const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
-        positions.set(node, {
-            x: centerX + Math.cos(angle) * ringRadius,
-            y: centerY + Math.sin(angle) * ringRadius
+    let layout = graphLayout();
+    if (!layout) {
+        // Too wide for layers (a star, or a big random graph): fall back to a ring.
+        const naturalRing = Math.max(150, (GRAPH_NODE_RADIUS + 26) / Math.sin(Math.PI / Math.max(3, count)));
+        const naturalSize = (naturalRing + GRAPH_NODE_RADIUS + 20) * 2;
+        const ratio = Math.max(0.6, Math.min(1, availableStageWidth() / naturalSize));
+        const nodeRadius = Math.round(GRAPH_NODE_RADIUS * ratio);
+        const ringRadius = naturalRing * ratio;
+        const size = Math.round((ringRadius + nodeRadius + 20) * 2);
+        const width = Math.max(280, size);
+        const height = Math.max(300, size);
+        const positions = new Map();
+        state.nodes.forEach((node, index) => {
+            const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
+            positions.set(node, {
+                x: width / 2 + Math.cos(angle) * ringRadius,
+                y: height / 2 + Math.sin(angle) * ringRadius
+            });
         });
-    });
+        layout = {
+            positions,
+            nodeRadius,
+            width,
+            height
+        };
+    }
+    const {
+        positions,
+        nodeRadius,
+        width,
+        height
+    } = layout;
 
     const highlightedEdges = new Set();
     if (highlight.edge) highlightedEdges.add([highlight.edge[0], highlight.edge[1]].sort().join("\u0000"));
+    // Traversal order (BFS or DFS) as small numbers; CSS reveals each one as the
+    // animation reaches that vertex.
+    const visitOrder = new Map((highlight.scan || []).map((node, index) => [String(node), index + 1]));
+    const cycleKey = highlight.cycleEdge ? [highlight.cycleEdge[0], highlight.cycleEdge[1]].sort().join("\u0000") : null;
 
     visual.innerHTML = `<div class="graph-canvas" style="width:${width}px; height:${height}px; --node-w:${nodeRadius * 2}px">
         <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
@@ -2270,14 +2692,18 @@ function renderGraph() {
                 const length = Math.hypot(dx, dy) || 1;
                 const ux = dx / length;
                 const uy = dy / length;
-                const active = highlightedEdges.has([edge[0], edge[1]].sort().join("\u0000"));
-                return `<line class="graph-edge ${active ? "is-active-edge" : ""}" x1="${(a.x + ux * nodeRadius).toFixed(1)}" y1="${(a.y + uy * nodeRadius).toFixed(1)}" x2="${(b.x - ux * nodeRadius).toFixed(1)}" y2="${(b.y - uy * nodeRadius).toFixed(1)}" stroke-width="2" />`;
+                const key = [edge[0], edge[1]].sort().join("\u0000");
+                const active = highlightedEdges.has(key);
+                const cycleClass = key === cycleKey ? " is-cycle-edge" : "";
+                return `<line class="graph-edge ${active ? "is-active-edge" : ""}${cycleClass}" data-edge="${escapeHTML(edge[0])}-${escapeHTML(edge[1])}" x1="${(a.x + ux * nodeRadius).toFixed(1)}" y1="${(a.y + uy * nodeRadius).toFixed(1)}" x2="${(b.x - ux * nodeRadius).toFixed(1)}" y2="${(b.y - uy * nodeRadius).toFixed(1)}" stroke-width="2" />`;
             }).join("")}
         </svg>
         ${state.nodes.map((node, index) => {
             const point = positions.get(node);
             const degree = neighborsOf(node).length;
-            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${(point.x - nodeRadius).toFixed(1)}px; top:${(point.y - nodeRadius).toFixed(1)}px" title="${escapeHTML(node)} - degree ${degree}" type="button"><span>${escapeHTML(node)}</span><small class="degree-badge">${degree}</small></button>`;
+            const visit = visitOrder.get(node);
+            const visitBadge = visit ? `<small class="visit-badge" title="Visited ${visit}${visit === 1 ? "st" : visit === 2 ? "nd" : visit === 3 ? "rd" : "th"}">${visit}</small>` : "";
+            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${(point.x - nodeRadius).toFixed(1)}px; top:${(point.y - nodeRadius).toFixed(1)}px" title="${escapeHTML(node)} - degree ${degree}" type="button"><span>${escapeHTML(node)}</span>${visitBadge}<small class="degree-badge">${degree}</small></button>`;
         }).join("")}
     </div>`;
 }
@@ -2373,6 +2799,1129 @@ function buildTrie(words) {
     return root;
 }
 
+/* ---------------------------------------------------------------------------
+ * Disjoint Set (Union-Find)
+ *
+ * The model is one parent array and one size array over the elements' positions,
+ * exactly like the course code:
+ *
+ *     def find(x):
+ *         if parent[x] != x:
+ *             parent[x] = find(parent[x])
+ *         return parent[x]
+ *
+ *     def union(a, b):
+ *         ra, rb = find(a), find(b)
+ *         if ra == rb: return False
+ *         if size[ra] < size[rb]: ra, rb = rb, ra
+ *         parent[rb] = ra
+ *         size[ra] += size[rb]
+ *         return True
+ *
+ * Every operation is turned into a list of frames up front. A frame is a full copy
+ * of the state after that step plus what to highlight, so Step, Play, Replay and the
+ * URL setup all show exactly the same pictures.
+ * ------------------------------------------------------------------------- */
+
+const DSU_RADIUS = 27;
+const DSU_SLOT = 96;
+const DSU_LEVEL = 90;
+const DSU_QUEUE_WIDTH = 188;
+const DSU_OPERATION_FOR = {
+    union: "add",
+    find: "search",
+    connected: "special",
+    makeset: "remove"
+};
+
+let dsuPresetKey = "redundant";
+let dsuPending = [];
+let dsuFrame = null;
+let dsuTimer = 0;
+let dsuPlaying = false;
+let dsuStopAtItemEnd = false;
+let dsuItemsLeft = Infinity;
+let dsuLastWasCommand = false;
+let dsuLastRun = null;
+let dsuReplaying = false;
+let dsuDepthLevels = 0;
+
+function dsuItemLabel(preset, op, a, b) {
+    if (op === "union" && preset.noun === "edge") return `${a}-${b}`;
+    if (op === "union" || op === "connected") return `${op}(${a}, ${b})`;
+    return `${op}(${a})`;
+}
+
+function dsuBuildState(key, preset) {
+    const elements = preset.elements.slice();
+    const parent = elements.map((label, index) => {
+        const target = preset.parent[label];
+        return target !== undefined && elements.includes(target) ? elements.indexOf(target) : index;
+    });
+    // A preset's sizes are its subtree sizes: every element adds one to each ancestor.
+    const size = elements.map(() => 1);
+    elements.forEach((unused, index) => {
+        let node = index;
+        let guard = 0;
+        while (parent[node] !== node && guard < elements.length) {
+            node = parent[node];
+            size[node] += 1;
+            guard += 1;
+        }
+    });
+    return {
+        preset: key,
+        title: preset.title,
+        listTitle: preset.listTitle,
+        noun: preset.noun,
+        answerMode: Boolean(preset.answerMode),
+        elements,
+        parent,
+        size,
+        components: parent.filter((p, index) => p === index).length,
+        queue: preset.items.map(([op, a, b]) => ({
+            op,
+            a,
+            b,
+            label: dsuItemLabel(preset, op, a, b),
+            status: "pending"
+        })),
+        cursor: 0,
+        answer: null,
+        answerPair: null
+    };
+}
+
+function dsuPresetState(key) {
+    const name = DSU_PRESETS[key] ? key : "redundant";
+    return dsuBuildState(name, DSU_PRESETS[name]);
+}
+
+// A random tree over 6 to 8 elements plus one extra edge, shuffled: a fresh Redundant Connection.
+function dsuRandomState() {
+    const n = randomInt(6, 8);
+    const elements = Array.from({
+        length: n
+    }, (unused, index) => String(index + 1));
+    const edges = elements.slice(1).map((label, index) => [elements[randomInt(0, index)], label]);
+    for (let guard = 0; guard < 20; guard += 1) {
+        const a = randomInt(1, n);
+        const b = randomInt(1, n);
+        if (a !== b && !edges.some(([x, y]) => (x === String(a) && y === String(b)) || (x === String(b) && y === String(a)))) {
+            edges.push([String(Math.min(a, b)), String(Math.max(a, b))]);
+            break;
+        }
+    }
+    return dsuBuildState("random", {
+        title: "Random edges",
+        listTitle: "Edges in order",
+        noun: "edge",
+        answerMode: true,
+        elements,
+        parent: {},
+        items: shuffled(edges).map(([a, b]) => ["union", a, b])
+    });
+}
+
+function dsuRootOf(work, index) {
+    let node = index;
+    let guard = 0;
+    while (work.parent[node] !== node && guard <= work.parent.length) {
+        node = work.parent[node];
+        guard += 1;
+    }
+    return node;
+}
+
+function dsuListText(labels) {
+    if (labels.length <= 1) return labels.join("");
+    return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
+function dsuRecorder(work) {
+    const frames = [];
+    return {
+        frames,
+        push(focus, caption) {
+            frames.push({
+                state: cloneInitial(work),
+                focus,
+                caption
+            });
+        }
+    };
+}
+
+// Recursive find, shown as the walk up (one frame per parent read) and then the unwind:
+// parent[x] = find(parent[x]) re-points the nodes from the one nearest the root down to x.
+function dsuFindFrames(work, rec, x, opText, extra = {}) {
+    const L = (index) => work.elements[index];
+    const layout = work.parent.slice();
+    const path = [x];
+    let node = x;
+    for (let guard = 0; guard <= work.parent.length; guard += 1) {
+        const parent = work.parent[node];
+        if (parent === node) {
+            rec.push({
+                ...extra,
+                type: "find-root",
+                op: opText,
+                path: path.slice(),
+                current: node,
+                root: node,
+                layout,
+                read: [node]
+            }, path.length === 1 ? `find(${L(x)}): parent[${L(node)}] = ${L(node)}, so ${L(node)} is its own root` : `find(${L(x)}): parent[${L(node)}] = ${L(node)}, so ${L(node)} is the root`);
+            break;
+        }
+        rec.push({
+            ...extra,
+            type: "find-walk",
+            op: opText,
+            path: path.slice(),
+            current: node,
+            layout,
+            read: [node]
+        }, `find(${L(x)}): parent[${L(node)}] = ${L(parent)}, walk up to ${L(parent)}`);
+        node = parent;
+        path.push(node);
+    }
+    const root = node;
+    const repointed = [];
+    for (let k = path.length - 3; k >= 0; k -= 1) {
+        const target = path[k];
+        const old = work.parent[target];
+        work.parent[target] = root;
+        repointed.push(target);
+        rec.push({
+            ...extra,
+            type: "compress",
+            op: opText,
+            path: path.slice(),
+            root,
+            layout,
+            repointed: repointed.slice(),
+            newRepoint: target,
+            ghost: [target, old],
+            written: [target]
+        }, `parent[${L(target)}] = find(${L(old)}) = ${L(root)}, it was ${L(old)}`);
+    }
+    if (repointed.length) {
+        rec.push({
+            ...extra,
+            type: "compressed",
+            op: opText,
+            root,
+            repointed: repointed.slice(),
+            settled: true
+        }, `Path compressed: ${dsuListText(repointed.map(L))} now point${repointed.length === 1 ? "s" : ""} straight at ${L(root)}`);
+    }
+    return {
+        root,
+        reads: path.length,
+        repointed
+    };
+}
+
+function dsuUnionFrames(work, rec, a, b, opText) {
+    const L = (index) => work.elements[index];
+    const first = dsuFindFrames(work, rec, a, opText);
+    const second = dsuFindFrames(work, rec, b, opText, {
+        found: [first.root],
+        tags: {
+            [first.root]: "ra"
+        }
+    });
+    const reads = first.reads + second.reads;
+    if (first.root === second.root) {
+        rec.push({
+            type: "redundant",
+            op: opText,
+            root: first.root,
+            found: [first.root],
+            redundant: [a, b],
+            tags: {
+                [first.root]: "ra = rb"
+            }
+        }, `find(${L(a)}) = find(${L(b)}) = ${L(first.root)}: already connected, union returns False`);
+        return {
+            merged: false,
+            root: first.root,
+            reads,
+            repointed: first.repointed.concat(second.repointed)
+        };
+    }
+    let ra = first.root;
+    let rb = second.root;
+    const sizeA = work.size[ra];
+    const sizeB = work.size[rb];
+    const swap = sizeA < sizeB;
+    if (swap) [ra, rb] = [rb, ra];
+    const compare = swap ?
+        `size[${L(first.root)}] = ${sizeA} < size[${L(second.root)}] = ${sizeB}: swap, so the smaller root ${L(rb)} goes under ${L(ra)}` :
+        sizeA === sizeB ?
+        `size[${L(ra)}] = ${sizeA}, size[${L(rb)}] = ${sizeB}: equal, so ${L(rb)} goes under ${L(ra)}` :
+        `size[${L(ra)}] = ${sizeA} > size[${L(rb)}] = ${sizeB}: the smaller root ${L(rb)} goes under ${L(ra)}`;
+    rec.push({
+        type: "compare",
+        op: opText,
+        compare: [ra, rb],
+        found: [ra, rb],
+        tags: {
+            [ra]: "ra",
+            [rb]: "rb"
+        },
+        readSize: [ra, rb]
+    }, compare);
+    const moved = work.parent.map((unused, index) => index).filter((index) => dsuRootOf(work, index) === rb);
+    work.parent[rb] = ra;
+    work.size[ra] += work.size[rb];
+    work.components -= 1;
+    rec.push({
+        type: "link",
+        op: opText,
+        link: [rb, ra],
+        moved,
+        root: ra,
+        found: [ra],
+        tags: {
+            [ra]: "ra",
+            [rb]: "rb"
+        },
+        written: [rb],
+        writtenSize: [ra],
+        counter: true
+    }, `parent[${L(rb)}] = ${L(ra)}, size[${L(ra)}] = ${work.size[ra]}. Components ${work.components + 1} to ${work.components}`);
+    return {
+        merged: true,
+        ra,
+        rb,
+        swap,
+        reads,
+        repointed: first.repointed.concat(second.repointed)
+    };
+}
+
+// Frames for one operation on a copy of `source`. `index` is the queue position for a
+// queued item, or null for a command typed into the controls.
+function dsuOperationFrames(source, op, aLabel, bLabel, index) {
+    const work = cloneInitial(source);
+    const rec = dsuRecorder(work);
+    const L = (i) => work.elements[i];
+    const item = index === null ? null : work.queue[index];
+    if (item) item.status = "current";
+    const opText = item && op === "union" && work.noun === "edge" ? `union(${aLabel}, ${bLabel})` : op === "makeset" ? `make_set(${aLabel})` : op === "union" || op === "connected" ? `${op}(${aLabel}, ${bLabel})` : `find(${aLabel})`;
+    const a = work.elements.indexOf(aLabel);
+    const b = work.elements.indexOf(bLabel);
+    let outcome;
+    let status = "done";
+
+    if (op === "makeset") {
+        work.elements.push(aLabel);
+        work.parent.push(work.elements.length - 1);
+        work.size.push(1);
+        work.components += 1;
+        const added = work.elements.length - 1;
+        rec.push({
+            type: "make-set",
+            op: opText,
+            current: added,
+            written: [added],
+            writtenSize: [added],
+            counter: true
+        }, `parent[${aLabel}] = ${aLabel}, size[${aLabel}] = 1: a new group of one. Components ${work.components - 1} to ${work.components}`);
+        outcome = {
+            tone: "is-success",
+            status: "Element added",
+            title: `make_set(${aLabel}): ${aLabel} is its own root`,
+            detail: `Components ${work.components - 1} to ${work.components}.`,
+            returned: aLabel,
+            steps: 1,
+            trace: `make_set(${aLabel}): new group {${aLabel}}. Components ${work.components}.`
+        };
+    } else if (op === "find") {
+        const result = dsuFindFrames(work, rec, a, opText);
+        const compressed = result.repointed.map(L);
+        outcome = {
+            tone: "is-success",
+            status: "Root found",
+            title: `find(${aLabel}) = ${L(result.root)}`,
+            detail: compressed.length ? `Path compression re-pointed ${dsuListText(compressed)} straight at ${L(result.root)}.` : `${aLabel} was ${result.reads === 1 ? "a root already" : "one step from its root"}: nothing to compress.`,
+            returned: L(result.root),
+            steps: result.reads,
+            trace: compressed.length ? `find(${aLabel}) walked ${result.reads - 1} steps to ${L(result.root)} and re-pointed ${dsuListText(compressed)}.` : `find(${aLabel}) = ${L(result.root)} after ${result.reads} ${result.reads === 1 ? "read" : "reads"}.`
+        };
+        status = `root ${L(result.root)}`;
+    } else if (op === "connected") {
+        const first = dsuFindFrames(work, rec, a, opText);
+        const second = dsuFindFrames(work, rec, b, opText, {
+            found: [first.root],
+            tags: {
+                [first.root]: "ra"
+            }
+        });
+        const same = first.root === second.root;
+        rec.push({
+            type: "connected",
+            op: opText,
+            found: same ? [first.root] : [first.root, second.root],
+            tags: same ? {
+                [first.root]: "ra = rb"
+            } : {
+                [first.root]: "ra",
+                [second.root]: "rb"
+            },
+            pair: [a, b],
+            connected: same
+        }, same ? `find(${aLabel}) = find(${bLabel}) = ${L(first.root)}: connected, True` : `find(${aLabel}) = ${L(first.root)}, find(${bLabel}) = ${L(second.root)}: different roots, False`);
+        outcome = {
+            tone: same ? "is-success" : "is-info",
+            status: same ? "Same group" : "Different groups",
+            title: `connected(${aLabel}, ${bLabel}) = ${same ? "True" : "False"}`,
+            detail: same ? `Both finds return ${L(first.root)}.` : `find(${aLabel}) = ${L(first.root)} but find(${bLabel}) = ${L(second.root)}.`,
+            returned: same ? "True" : "False",
+            steps: first.reads + second.reads,
+            trace: `connected(${aLabel}, ${bLabel}): roots ${L(first.root)} and ${L(second.root)}, ${same ? "True" : "False"}.`
+        };
+        status = same ? "True" : "False";
+    } else {
+        const result = dsuUnionFrames(work, rec, a, b, opText);
+        if (result.merged) {
+            outcome = {
+                tone: "is-success",
+                status: "union returned True",
+                title: `${opText}: ${L(result.rb)} now hangs under ${L(result.ra)}`,
+                detail: `size[${L(result.ra)}] = ${work.size[result.ra]}. Components ${work.components + 1} to ${work.components}.`,
+                returned: "True",
+                steps: result.reads,
+                trace: `${opText}: ${L(result.rb)} hangs under ${L(result.ra)} (size ${work.size[result.ra]}). Components ${work.components}.`
+            };
+            status = "merged";
+        } else {
+            const isAnswer = Boolean(item) && work.answerMode && !work.answer;
+            const edge = `${aLabel}-${bLabel}`;
+            if (isAnswer) {
+                work.answer = edge;
+                work.answerPair = [a, b];
+            }
+            outcome = {
+                tone: "is-info",
+                status: isAnswer ? "Redundant edge found" : "union returned False",
+                title: `${opText} returned False: ${aLabel} and ${bLabel} already share root ${L(result.root)}`,
+                detail: isAnswer ? `Edge ${edge} closes a cycle, so it is the answer: [${aLabel}, ${bLabel}].` : "Both ends were already in one group, so nothing was merged.",
+                returned: "False",
+                steps: result.reads,
+                trace: isAnswer ? `${opText} returned False: same root ${L(result.root)}. Redundant edge ${edge}.` : `${opText} returned False: same root ${L(result.root)}.`
+            };
+            status = isAnswer ? "answer" : item && work.answerMode ? "cycle" : "same root";
+        }
+    }
+
+    const frames = rec.frames;
+    const last = frames[frames.length - 1];
+    if (item) {
+        last.state.queue[index].status = status;
+        last.state.cursor = index + 1;
+        last.state.answer = work.answer;
+        last.state.answerPair = work.answerPair;
+        if (last.state.cursor === last.state.queue.length && last.state.answer) {
+            outcome.detail += ` All ${last.state.queue.length} ${last.state.noun}s processed; the answer is [${last.state.answer.replace("-", ", ")}].`;
+        }
+    }
+    frames.forEach((frame, position) => {
+        frame.index = position + 1;
+        frame.total = frames.length;
+        frame.operation = DSU_OPERATION_FOR[op];
+        frame.opText = opText;
+    });
+    last.outcome = outcome;
+    return frames;
+}
+
+function dsuItemFrames(index) {
+    const item = state.queue[index];
+    return dsuOperationFrames(state, item.op, item.a, item.b, index);
+}
+
+/* ---- player ---- */
+
+function dsuInterval() {
+    return Math.max(60, Number(animationSpeed.value) || 500);
+}
+
+function dsuStopTimer() {
+    window.clearTimeout(dsuTimer);
+    dsuTimer = 0;
+    if (dsuPlaying) {
+        dsuPlaying = false;
+        dsuSync();
+    }
+}
+
+function dsuResetPlayer() {
+    window.clearTimeout(dsuTimer);
+    dsuTimer = 0;
+    dsuPlaying = false;
+    dsuPending = [];
+    dsuFrame = null;
+    dsuLastWasCommand = false;
+    dsuLastRun = null;
+    dsuDepthLevels = 0;
+}
+
+function dsuMore() {
+    return dsuPending.length > 0 || state.cursor < state.queue.length;
+}
+
+function dsuMode() {
+    if (dsuPlaying) return "running";
+    if (dsuPending.length) return "paused";
+    if (!dsuFrame) return "idle";
+    if (!dsuLastWasCommand && state.cursor < state.queue.length) return "paused";
+    return "done";
+}
+
+function dsuBeginNextItem() {
+    if (state.cursor >= state.queue.length) return false;
+    const frames = dsuItemFrames(state.cursor);
+    dsuLastRun = {
+        before: cloneInitial(state),
+        frames: frames.slice(),
+        command: false
+    };
+    dsuLastWasCommand = false;
+    dsuPending = frames;
+    return true;
+}
+
+function dsuApply(frame) {
+    state = cloneInitial(frame.state);
+    dsuFrame = frame;
+    const opName = STRUCTURES.disjointSet.operations[frame.operation][0];
+    if (activeOperation !== frame.operation) setOperation(frame.operation);
+    if (frame.index === 1) {
+        resultBanner.className = "result-banner is-running";
+        resultIcon.innerHTML = '<span aria-hidden="true">&hellip;</span>';
+        resultState.textContent = "Operation running";
+        resultTitle.textContent = frame.opText;
+        resultDetail.textContent = "Follow the highlighted path in the visualization.";
+        resultValue.textContent = "pending";
+    }
+    resultSteps.textContent = `${frame.index} / ${frame.total}`;
+    animationStatus.textContent = frame.outcome ? `${opName} complete` : `${opName} - step ${frame.index} of ${frame.total}`;
+    if (frame.outcome) dsuShowOutcome(frame);
+    render();
+}
+
+function dsuShowOutcome(frame) {
+    const outcome = frame.outcome;
+    resultBanner.className = `result-banner ${outcome.tone}`;
+    resultIcon.innerHTML = `<span aria-hidden="true">${outcome.tone === "is-info" ? "!" : "&check;"}</span>`;
+    resultState.textContent = outcome.status;
+    resultTitle.textContent = outcome.title;
+    resultDetail.textContent = outcome.detail;
+    resultSteps.textContent = String(outcome.steps);
+    resultValue.textContent = outcome.returned;
+    dockSummary.textContent = `${outcome.steps} parent ${outcome.steps === 1 ? "read" : "reads"}`;
+    if (!dsuReplaying) addTrace(outcome.trace);
+    const args = ((frame.opText.match(/\(([^)]*)\)/) || [])[1] || "").split(", ");
+    setMetrics(frame.operation, {
+        touched: outcome.steps,
+        plan: planForOperation(frame.operation, args[0] || "a", args[1] || "b")
+    });
+}
+
+// One frame forward; a new queued item starts when the previous one has been shown in full.
+function dsuStep() {
+    if (!dsuPending.length && !dsuBeginNextItem()) {
+        dsuSync();
+        return false;
+    }
+    dsuApply(dsuPending.shift());
+    if (!dsuPending.length) dsuReplaying = false;
+    return true;
+}
+
+// Play to the end of the queue, or with `untilItemEnd` to the end of the item on screen
+// (or the next one); `items` caps how many queued items are played.
+function dsuPlay(untilItemEnd = false, items = Infinity) {
+    window.clearTimeout(dsuTimer);
+    if (!dsuMore()) {
+        dsuSync();
+        return false;
+    }
+    dsuPlaying = true;
+    dsuStopAtItemEnd = untilItemEnd;
+    dsuItemsLeft = items;
+    visualStage.classList.add("is-playing");
+    dsuTick();
+    return true;
+}
+
+function dsuTick() {
+    dsuTimer = 0;
+    const moved = dsuStep();
+    const itemEnded = !dsuPending.length;
+    if (moved && itemEnded) dsuItemsLeft -= 1;
+    if (!moved || (itemEnded && (dsuStopAtItemEnd || dsuItemsLeft <= 0 || dsuLastWasCommand || state.cursor >= state.queue.length))) {
+        dsuPlaying = false;
+        dsuSync();
+        return;
+    }
+    dsuSync();
+    dsuTimer = window.setTimeout(dsuTick, dsuInterval());
+}
+
+// Apply every remaining frame of the item on screen at once (before a typed command).
+function dsuFinishPending() {
+    if (!dsuPending.length) return;
+    const last = dsuPending[dsuPending.length - 1];
+    dsuPending = [];
+    dsuApply(last);
+}
+
+// Apply `count` queued items at once, without animation (URL run=, runItems()).
+function dsuRunInstant(count) {
+    dsuStopTimer();
+    dsuFinishPending();
+    let done = 0;
+    let last = null;
+    while (done < count && state.cursor < state.queue.length) {
+        if (last) addTrace(last.outcome.trace);
+        const frames = dsuItemFrames(state.cursor);
+        last = frames[frames.length - 1];
+        state = cloneInitial(last.state);
+        done += 1;
+    }
+    if (last) {
+        dsuLastWasCommand = false;
+        dsuApply(last);
+    }
+    return done;
+}
+
+function dsuRunCommand(operation) {
+    dsuStopTimer();
+    dsuFinishPending();
+    const op = Object.keys(DSU_OPERATION_FOR).find((key) => DSU_OPERATION_FOR[key] === operation);
+    const a = normalizeValue(valueInput.value) || (op === "makeset" ? dsuNextLabel() : "");
+    const b = normalizeValue(secondaryInput.value);
+    const frames = dsuOperationFrames(state, op, a, b, null);
+    dsuLastRun = {
+        before: cloneInitial(state),
+        frames: frames.slice(),
+        command: true
+    };
+    dsuLastWasCommand = true;
+    dsuPending = frames;
+    dsuPlay(true);
+}
+
+function dsuReplay() {
+    if (!dsuLastRun) return;
+    dsuStopTimer();
+    state = cloneInitial(dsuLastRun.before);
+    dsuPending = dsuLastRun.frames.slice();
+    dsuLastWasCommand = dsuLastRun.command;
+    dsuReplaying = true;
+    dsuPlay(true);
+}
+
+function dsuNextLabel() {
+    const numbers = state.elements.map(Number).filter(Number.isFinite);
+    return String((numbers.length ? Math.max(...numbers) : 0) + 1);
+}
+
+function dsuLoadPreset(key) {
+    if (!DSU_PRESETS[key] && key !== "random") return false;
+    if (currentKey !== "disjointSet") {
+        currentKey = "disjointSet";
+        structureSelect.value = currentKey;
+        activeOperation = null;
+    }
+    if (key === "random") {
+        resetState();
+        randomizeState();
+        return true;
+    }
+    dsuPresetKey = key;
+    resetState();
+    return true;
+}
+
+function dsuValidate(operation) {
+    const a = normalizeValue(valueInput.value);
+    const b = normalizeValue(secondaryInput.value);
+    const has = (label) => state.elements.includes(label);
+    const list = `Elements: ${state.elements.join(", ")}.`;
+    if (operation === "remove") {
+        if (a && has(a)) return showInputError(primaryField, valueInput, `${a} is already an element.`, "Make set adds a new group of one; leave the field empty for the next number.");
+        return true;
+    }
+    if (!a) return showInputError(primaryField, valueInput, "Enter an element first.", list);
+    if (!has(a)) return showInputError(primaryField, valueInput, `${a} is not an element.`, `${list} Use Make set to add a new one.`);
+    if (operation === "add" || operation === "special") {
+        if (!b) return showInputError(secondaryField, secondaryInput, "Enter the second element.", `${operation === "add" ? "Union" : "Connected"} takes two elements. ${list}`);
+        if (!has(b)) return showInputError(secondaryField, secondaryInput, `${b} is not an element.`, `${list} Use Make set to add a new one.`);
+    }
+    return true;
+}
+
+function dsuHandleClick(event) {
+    const action = event.target.closest("[data-dsu]");
+    if (action) {
+        const kind = action.dataset.dsu;
+        if (kind === "step") {
+            dsuStopTimer();
+            dsuStep();
+            dsuSync();
+        } else if (kind === "next") {
+            dsuPlay(true);
+        } else if (kind === "play") {
+            if (dsuPlaying) dsuStopTimer();
+            else dsuPlay(false);
+        }
+        return true;
+    }
+    const node = event.target.closest(".dsu-node");
+    if (!node) return Boolean(event.target.closest(".dsu-view"));
+    selectedRef = {
+        kind: "dsu",
+        index: Number(node.dataset.index),
+        value: node.dataset.value
+    };
+    valueInput.value = node.dataset.value;
+    updateCommandUI();
+    render();
+    return true;
+}
+
+function dsuSelectionLabel(label) {
+    const index = state.elements ? state.elements.indexOf(label) : -1;
+    if (index < 0) return `element ${label}`;
+    const parent = state.parent[index];
+    const root = dsuRootOf(state, index);
+    const members = state.elements.filter((unused, i) => dsuRootOf(state, i) === root).length;
+    return parent === index ?
+        `element ${label}: a root, its group has ${members} ${members === 1 ? "element" : "elements"}` :
+        `element ${label}: parent ${state.elements[parent]}, root ${state.elements[root]}`;
+}
+
+function dsuGroups() {
+    const groups = new Map();
+    state.elements.forEach((label, index) => {
+        const root = dsuRootOf(state, index);
+        if (!groups.has(root)) groups.set(root, []);
+        groups.get(root).push(label);
+    });
+    return Array.from(groups.values());
+}
+
+function dsuModelHTML() {
+    const rows = state.elements.map((label, index) => {
+        const root = state.parent[index] === index;
+        return `<span class="adj-row"><b>${escapeHTML(label)}:</b> <span>${root ? "root" : `parent ${escapeHTML(state.elements[state.parent[index]])}`}, size ${state.size[index]}</span></span>`;
+    }).join("");
+    const groups = dsuGroups().map((group) => `{${group.map(escapeHTML).join(", ")}}`).join("  ");
+    return `<span class="model-heading">parent and size</span>${rows}` +
+        `<span class="model-heading">Groups (${state.components})</span><span class="adj-edges">${groups}</span>`;
+}
+
+/* ---- drawing ---- */
+
+// Each group is drawn as a tree, root on top; groups sit side by side, ordered by
+// their smallest element so a group keeps its place as it grows.
+function dsuForestLayout(parent) {
+    const n = parent.length;
+    const children = parent.map(() => []);
+    const roots = [];
+    parent.forEach((p, index) => {
+        if (p === index) roots.push(index);
+        else if (p >= 0 && p < n) children[p].push(index);
+    });
+    const smallest = (root) => {
+        let min = root;
+        const stack = [root];
+        while (stack.length) {
+            const node = stack.pop();
+            min = Math.min(min, node);
+            stack.push(...children[node]);
+        }
+        return min;
+    };
+    roots.sort((x, y) => smallest(x) - smallest(y));
+    const col = new Array(n);
+    const depth = new Array(n);
+    let cursor = 0;
+    let maxDepth = 0;
+    const place = (node, d) => {
+        depth[node] = d;
+        maxDepth = Math.max(maxDepth, d);
+        const kids = children[node];
+        if (!kids.length || d > n) {
+            col[node] = cursor;
+            cursor += 1;
+            return;
+        }
+        kids.forEach((kid) => place(kid, d + 1));
+        col[node] = (col[kids[0]] + col[kids[kids.length - 1]]) / 2;
+    };
+    roots.forEach((root, k) => {
+        if (k) cursor += 0.5;
+        place(root, 0);
+    });
+    return {
+        col,
+        depth,
+        columns: Math.max(1, cursor),
+        maxDepth
+    };
+}
+
+function dsuArrowHead(tip, ux, uy, size = 9) {
+    const bx = tip.x - ux * size;
+    const by = tip.y - uy * size;
+    const px = -uy * size * 0.5;
+    const py = ux * size * 0.5;
+    return `<path class="dsu-arrow" d="M${tip.x.toFixed(1)} ${tip.y.toFixed(1)}L${(bx + px).toFixed(1)} ${(by + py).toFixed(1)}L${(bx - px).toFixed(1)} ${(by - py).toFixed(1)}Z" />`;
+}
+
+// A parent pointer: from the child's rim to the parent's rim, arrowhead at the parent.
+function dsuStraight(from, to, radius, className, data) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length;
+    const uy = dy / length;
+    const tip = {
+        x: to.x - ux * (radius + 2),
+        y: to.y - uy * (radius + 2)
+    };
+    return `<g class="dsu-wire ${className}" ${data}><line x1="${(from.x + ux * radius).toFixed(1)}" y1="${(from.y + uy * radius).toFixed(1)}" x2="${(tip.x - ux * 7).toFixed(1)}" y2="${(tip.y - uy * 7).toFixed(1)}" />${dsuArrowHead(tip, ux, uy)}</g>`;
+}
+
+// A bent line, so it never lies on top of a straight parent pointer. Re-pointed
+// pointers bow to the left of the chain (or upward for a nearly horizontal pair);
+// the redundant edge and a connected() query bow outward: up, or right when vertical.
+function dsuCurveGeometry(from, to, bowScale = 1, outer = false) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    let nx = -dy / length;
+    let ny = dx / length;
+    const flip = outer ?
+        (Math.abs(ny) > 0.2 ? ny > 0 : nx < 0) :
+        (Math.abs(nx) > 0.2 ? nx > 0 : ny > 0);
+    if (flip) {
+        nx = -nx;
+        ny = -ny;
+    }
+    const bow = (24 + length * 0.3) * bowScale;
+    return {
+        control: {
+            x: (from.x + to.x) / 2 + nx * bow,
+            y: (from.y + to.y) / 2 + ny * bow
+        },
+        length
+    };
+}
+
+function dsuCurve(from, to, radius, className, data, arrow = true, bowScale = 1) {
+    const { control } = dsuCurveGeometry(from, to, bowScale, !arrow);
+    const sx = control.x - from.x;
+    const sy = control.y - from.y;
+    const sLength = Math.hypot(sx, sy) || 1;
+    const start = {
+        x: from.x + (sx / sLength) * radius,
+        y: from.y + (sy / sLength) * radius
+    };
+    const ex = to.x - control.x;
+    const ey = to.y - control.y;
+    const eLength = Math.hypot(ex, ey) || 1;
+    const ux = ex / eLength;
+    const uy = ey / eLength;
+    const tip = {
+        x: to.x - ux * (radius + 2),
+        y: to.y - uy * (radius + 2)
+    };
+    const end = arrow ? {
+        x: tip.x - ux * 7,
+        y: tip.y - uy * 7
+    } : tip;
+    return `<g class="dsu-wire ${className}" ${data}><path class="dsu-line" d="M${start.x.toFixed(1)} ${start.y.toFixed(1)}Q${control.x.toFixed(1)} ${control.y.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}" />${arrow ? dsuArrowHead(tip, ux, uy) : ""}</g>`;
+}
+
+function dsuCurveMidpoint(from, to, bowScale = 1) {
+    const { control } = dsuCurveGeometry(from, to, bowScale, true);
+    return {
+        x: 0.25 * from.x + 0.5 * control.x + 0.25 * to.x,
+        y: 0.25 * from.y + 0.5 * control.y + 0.25 * to.y
+    };
+}
+
+function dsuIdleCaption() {
+    if (state.queue.length && state.cursor === 0) {
+        if (state.noun === "edge") return `${state.elements.length} elements, each its own root. Add the ${state.queue.length} edges in order with Step, Next edge or Play.`;
+        return `Queued: ${state.queue.map((item) => item.label).join(", ")}. Press Step, Next operation or Play.`;
+    }
+    return `${state.elements.length} elements in ${state.components} ${state.components === 1 ? "group" : "groups"}. Run union, find or connected from the controls above.`;
+}
+
+function renderDisjointSet() {
+    const frame = dsuFrame || {
+        focus: {},
+        caption: ""
+    };
+    const focus = frame.focus || {};
+    const n = state.elements.length;
+    const L = (index) => state.elements[index];
+    const layoutParent = focus.layout && focus.layout.length === n ? focus.layout : state.parent;
+    const layout = dsuForestLayout(layoutParent);
+    dsuDepthLevels = Math.max(dsuDepthLevels, layout.maxDepth);
+    const hasQueue = state.queue.length > 0;
+    const forestWidth = Math.max(260, Math.round(availableStageWidth() - (hasQueue ? DSU_QUEUE_WIDTH + 20 : 0)));
+    const slot = Math.max(46, Math.min(DSU_SLOT, (forestWidth - 36) / layout.columns));
+    const radius = Math.round(Math.max(17, Math.min(DSU_RADIUS, slot * 0.3)));
+    const top = radius + 36;
+    const height = Math.round(top + Math.max(1, dsuDepthLevels) * DSU_LEVEL + radius + 26);
+    const offset = (forestWidth - layout.columns * slot) / 2;
+    const pos = state.elements.map((unused, index) => ({
+        x: offset + ((layout.col[index] ?? layout.columns) + 0.5) * slot,
+        y: top + (layout.depth[index] ?? 0) * DSU_LEVEL
+    }));
+
+    const path = focus.path || [];
+    const walked = new Set();
+    const lastOnPath = focus.current !== undefined ? path.indexOf(focus.current) : path.length - 1;
+    for (let k = 0; k < Math.max(0, lastOnPath); k += 1) walked.add(`${path[k]}>${path[k + 1]}`);
+    const repointed = new Set(focus.repointed || []);
+    const moved = new Set(focus.moved || []);
+    const found = new Set(focus.found || []);
+    if (focus.root !== undefined) found.add(focus.root);
+    // The red answer curve belongs to the frame where union returns False; afterwards the
+    // answer stays in the Redundant edge stat and the queue, out of the way of new links.
+    const redundant = focus.redundant || null;
+    const answerPair = redundant ? state.answerPair || null : null;
+
+    const wires = [];
+    if (focus.ghost) {
+        const [child, old] = focus.ghost;
+        wires.push(dsuStraight(pos[child], pos[old], radius, "is-ghost", ""));
+    }
+    state.parent.forEach((parent, index) => {
+        if (parent === index) return;
+        const data = `data-edge="${escapeHTML(L(index))}-${escapeHTML(L(parent))}"`;
+        if (parent === layoutParent[index]) {
+            let className = "";
+            if (walked.has(`${index}>${parent}`)) className = "is-walk";
+            else if (focus.link && focus.link[0] === index) className = "is-link";
+            else if (focus.settled && repointed.has(index)) className = "is-repointed";
+            wires.push(dsuStraight(pos[index], pos[parent], radius, className, data));
+        } else {
+            wires.push(dsuCurve(pos[index], pos[parent], radius, `is-repointed${focus.newRepoint === index ? " is-fresh" : ""}`, data));
+        }
+    });
+    const labels = [];
+    const pair = redundant || answerPair;
+    if (pair && pair[0] !== pair[1]) {
+        const [a, b] = pair;
+        const tone = redundant && !(answerPair && answerPair[0] === a && answerPair[1] === b) ? "is-cycle" : "is-answer";
+        wires.push(dsuCurve(pos[a], pos[b], radius, `is-redundant ${tone}${redundant ? " is-fresh" : ""}`, `data-edge="${escapeHTML(L(a))}-${escapeHTML(L(b))}"`, false, 1.9));
+        const mid = dsuCurveMidpoint(pos[a], pos[b], 1.9);
+        labels.push(`<span class="dsu-edge-label ${tone}" style="left:${mid.x.toFixed(1)}px; top:${mid.y.toFixed(1)}px">${tone === "is-answer" ? "answer" : "same root"}</span>`);
+    }
+    if (focus.pair && focus.type === "connected") {
+        const [a, b] = focus.pair;
+        if (a !== b) {
+            wires.push(dsuCurve(pos[a], pos[b], radius, `is-query ${focus.connected ? "is-yes" : "is-no"}`, "", false, 1.9));
+            const mid = dsuCurveMidpoint(pos[a], pos[b], 1.9);
+            labels.push(`<span class="dsu-edge-label ${focus.connected ? "is-yes" : "is-no"}" style="left:${mid.x.toFixed(1)}px; top:${mid.y.toFixed(1)}px">${focus.connected ? "connected" : "not connected"}</span>`);
+        }
+    }
+
+    const nodes = state.elements.map((label, index) => {
+        const classes = ["dsu-node"];
+        if (state.parent[index] === index) classes.push("is-root");
+        if (focus.current === index) classes.push("is-current");
+        else if (found.has(index)) classes.push("is-found");
+        else if (path.includes(index) && (lastOnPath < 0 || path.indexOf(index) <= lastOnPath)) classes.push("is-path");
+        if (focus.newRepoint === index) classes.push("is-repointing");
+        if (moved.has(index) && focus.type === "link") classes.push("is-moved");
+        if ((redundant && redundant.includes(index)) || (focus.pair && focus.pair.includes(index))) classes.push("is-endpoint");
+        if (selectedRef && selectedRef.kind === "dsu" && selectedRef.value === label) classes.push("is-selected");
+        const point = pos[index];
+        return `<button class="${classes.join(" ")}" data-kind="dsu" data-index="${index}" data-value="${escapeHTML(label)}" style="left:${(point.x - radius).toFixed(1)}px; top:${(point.y - radius).toFixed(1)}px" title="${escapeHTML(dsuSelectionLabel(label))}" type="button"><span>${escapeHTML(label)}</span></button>`;
+    }).join("");
+    // Above every root: its size, and during union the code's name for it (ra, rb).
+    const tags = state.elements.map((label, index) => {
+        const point = pos[index];
+        const tag = focus.tags && focus.tags[index] ? `<b class="dsu-tag">${escapeHTML(focus.tags[index])}</b>` : "";
+        if (state.parent[index] !== index) return tag ? `<span class="dsu-size" style="left:${(point.x + radius + 6).toFixed(1)}px; top:${point.y.toFixed(1)}px; transform:translateY(-50%)">${tag}</span>` : "";
+        const compare = focus.compare && focus.compare.includes(index);
+        const grown = focus.writtenSize && focus.writtenSize.includes(index) && focus.type === "link";
+        return `<span class="dsu-size${compare || grown ? " is-hot" : ""}" style="left:${point.x.toFixed(1)}px; top:${(point.y - radius - 9).toFixed(1)}px">size ${state.size[index]}${tag}</span>`;
+    }).join("");
+
+    const cell = (row, classes, text, title = "") => `<span class="dsu-cell ${classes}" data-row="${row}"${title ? ` title="${escapeHTML(title)}"` : ""}>${escapeHTML(text)}</span>`;
+    const read = new Set(focus.read || []);
+    const written = new Set(focus.written || []);
+    const readSize = new Set(focus.readSize || []);
+    const writtenSize = new Set(focus.writtenSize || []);
+    const arrayRows = [
+        `<span class="dsu-row-head">i</span>${state.elements.map((label, index) => cell("i", `is-index${focus.current === index ? " is-current" : ""}`, label)).join("")}`,
+        `<span class="dsu-row-head">parent[i]</span>${state.parent.map((parent, index) => cell("parent", [
+            parent === index ? "is-self" : "",
+            written.has(index) ? "is-written" : read.has(index) ? "is-read" : ""
+        ].join(" "), L(parent))).join("")}`,
+        `<span class="dsu-row-head">size[i]</span>${state.size.map((size, index) => cell("size", [
+            state.parent[index] === index ? "" : "is-stale",
+            writtenSize.has(index) ? "is-written" : readSize.has(index) ? "is-read" : ""
+        ].join(" "), String(size), state.parent[index] === index ? "" : "Only read at a root")).join("")}`
+    ].join("");
+
+    const queue = hasQueue ? `<aside class="dsu-queue" aria-label="${escapeHTML(state.listTitle)}">
+            <h4>${escapeHTML(state.listTitle)}</h4>
+            <ol>${state.queue.map((item, index) => {
+                const status = item.status === "pending" ? "" : item.status === "current" ? "now" : item.status;
+                const tone = item.status === "pending" ? "is-pending" : item.status === "current" ? "is-current" : item.status === "merged" ? "is-merged" : item.status === "answer" ? "is-answer" : item.status === "cycle" ? "is-cycle" : "is-done";
+                return `<li class="${tone}" data-item="${index}"><code>${escapeHTML(item.label)}</code><em>${escapeHTML(status)}</em></li>`;
+            }).join("")}</ol>
+        </aside>` : "";
+
+    const counterHot = focus.counter ? " is-hot" : "";
+    const caption = dsuFrame ? `<code>${escapeHTML(dsuFrame.opText || "")}</code><span>${escapeHTML(dsuFrame.caption)}</span>` : `<code>${escapeHTML(state.title)}</code><span>${escapeHTML(dsuIdleCaption())}</span>`;
+    const stats = `<div class="dsu-stat${counterHot}"><span>Components</span><strong id="dsu-components">${state.components}</strong></div>` +
+        (state.answer ? `<div class="dsu-stat is-answer"><span>Redundant edge</span><strong>${escapeHTML(state.answer)}</strong></div>` : "");
+    const body = `<div class="dsu-forest" style="width:${forestWidth}px; height:${height}px; --dsu-node:${radius * 2}px">
+                <svg class="dsu-wires" width="${forestWidth}" height="${height}" viewBox="0 0 ${forestWidth} ${height}" aria-hidden="true">${wires.join("")}</svg>
+                ${nodes}${tags}${labels.join("")}
+            </div>${queue}`;
+
+    // The controls are built once and kept across frames, so a click on Pause or Step
+    // never lands on a button that the next frame has just replaced.
+    let view = visual.querySelector(".dsu-view");
+    if (!view) {
+        visual.innerHTML = `<div class="dsu-view">
+        <div class="dsu-head">
+            <div class="dsu-stats"></div>
+            <div class="dsu-controls">
+                <label class="dsu-preset-field"><span>Preset</span><select class="dsu-preset" aria-label="Disjoint Set preset"></select></label>
+                <button class="dsu-button" data-dsu="step" type="button">Step</button>
+                <button class="dsu-button" data-dsu="next" type="button">Next</button>
+                <button class="dsu-button is-primary" data-dsu="play" type="button">Play</button>
+            </div>
+        </div>
+        <p class="dsu-caption"></p>
+        <div class="dsu-body"></div>
+        <div class="dsu-array" aria-label="Parent and size arrays"></div>
+        <div class="dsu-legend" aria-hidden="true">
+            <span><i class="sw-root"></i>root</span>
+            <span><i class="sw-current"></i>find is here</span>
+            <span><i class="sw-path"></i>path walked</span>
+            <span><i class="sw-found"></i>root found</span>
+            <span><i class="sw-repointed"></i>re-pointed at the root</span>
+            <span><i class="sw-link"></i>new link</span>
+            <span><i class="sw-answer"></i>redundant edge</span>
+        </div>
+    </div>`;
+        view = visual.querySelector(".dsu-view");
+    }
+    const select = view.querySelector(".dsu-preset");
+    const presetKeys = Object.keys(DSU_PRESETS).concat(["random"]);
+    if (select.options.length !== presetKeys.length) {
+        select.innerHTML = presetKeys.map((key) => `<option value="${key}">${escapeHTML(DSU_PRESETS[key] ? DSU_PRESETS[key].title : "Random edges")}</option>`).join("");
+    }
+    if (select.value !== state.preset) select.value = state.preset;
+    view.querySelector(".dsu-stats").innerHTML = stats;
+    const captionNode = view.querySelector(".dsu-caption");
+    captionNode.className = `dsu-caption${focus.type === "redundant" ? " is-answer" : ""}`;
+    captionNode.innerHTML = caption;
+    view.querySelector(".dsu-body").innerHTML = body;
+    const array = view.querySelector(".dsu-array");
+    array.style.setProperty("--dsu-cols", String(n));
+    array.innerHTML = arrayRows;
+    view.querySelector('[data-dsu="next"]').textContent = `Next ${state.noun || "operation"}`;
+    dsuSync();
+}
+
+function dsuAttributes() {
+    const focus = dsuFrame ? dsuFrame.focus : {};
+    return {
+        state: dsuMode(),
+        components: String(state.components),
+        cursor: String(state.cursor),
+        total: String(state.queue.length),
+        answer: state.answer || "",
+        frame: focus.type || "",
+        preset: state.preset || ""
+    };
+}
+
+function dsuSync() {
+    if (STRUCTURES[currentKey].kind !== "dsu" || !state || !state.elements) return;
+    const attributes = dsuAttributes();
+    const view = visual.querySelector(".dsu-view");
+    Object.entries(attributes).forEach(([key, value]) => {
+        visual.dataset[key] = value;
+        if (view) view.dataset[key] = value;
+    });
+    visualStage.classList.toggle("is-playing", dsuPlaying);
+    if (!view) return;
+    const more = dsuMore();
+    const play = view.querySelector('[data-dsu="play"]');
+    if (play) {
+        play.textContent = dsuPlaying ? "Pause" : "Play";
+        play.disabled = !(more || dsuPlaying);
+    }
+    view.querySelectorAll('[data-dsu="step"], [data-dsu="next"]').forEach((button) => {
+        button.disabled = !more;
+    });
+}
+
+function dsuClearAttributes() {
+    ["state", "components", "cursor", "total", "answer", "frame", "preset"].forEach((key) => {
+        delete visual.dataset[key];
+    });
+}
+
+function dsuSnapshot() {
+    if (STRUCTURES[currentKey].kind !== "dsu") return null;
+    const L = (index) => state.elements[index];
+    const focus = dsuFrame ? dsuFrame.focus : null;
+    const list = (value) => (value || []).map(L);
+    return {
+        state: dsuMode(),
+        preset: state.preset,
+        elements: state.elements.slice(),
+        parent: state.parent.map(L),
+        size: state.size.slice(),
+        roots: state.elements.filter((unused, index) => state.parent[index] === index),
+        components: state.components,
+        queue: state.queue.map((item) => ({
+            label: item.label,
+            op: item.op,
+            status: item.status
+        })),
+        cursor: state.cursor,
+        answer: state.answer,
+        pendingFrames: dsuPending.length,
+        frame: focus ? {
+            type: focus.type,
+            op: dsuFrame.opText,
+            caption: dsuFrame.caption,
+            index: dsuFrame.index,
+            total: dsuFrame.total,
+            path: list(focus.path),
+            current: focus.current !== undefined ? L(focus.current) : null,
+            root: focus.root !== undefined ? L(focus.root) : null,
+            repointed: list(focus.repointed),
+            link: focus.link ? list(focus.link) : null,
+            compare: focus.compare ? list(focus.compare) : null,
+            redundant: focus.redundant ? list(focus.redundant) : null
+        } : null
+    };
+}
+
 function escapeHTML(value) {
     return String(value)
         .replace(/&/g, "&amp;")
@@ -2417,7 +3966,7 @@ function selectRenderedItem(target) {
 }
 
 function updateSelected() {
-    if (!selectedRef) return;
+    if (!selectedRef || selectedRef.kind === "dsu") return;
     const nextValue = typedInputValue(editValueInput.value);
     const nextSecondary = typedOptionalValue(editSecondaryInput.value);
 
@@ -2487,6 +4036,10 @@ operationButtons.forEach((button) => {
 });
 
 executeOperationButton.addEventListener("click", () => performOperation(activeOperation || "search"));
+if (traversalSelect) traversalSelect.addEventListener("change", () => {
+    updateCommandUI();
+    renderComplexity();
+});
 [valueInput, secondaryInput].forEach((input) => {
     input.addEventListener("input", () => {
         input.closest("label")?.classList.remove("is-invalid");
@@ -2499,6 +4052,10 @@ executeOperationButton.addEventListener("click", () => performOperation(activeOp
 });
 
 replayAnimationButton.addEventListener("click", () => {
+    if (STRUCTURES[currentKey].kind === "dsu") {
+        dsuReplay();
+        return;
+    }
     const targets = animationTargets();
     lastAnimationTargets = targets;
     animateTargets(targets, lastMetrics.label);
@@ -2511,11 +4068,128 @@ window.addEventListener("resize", () => {
 });
 randomizeButton.addEventListener("click", randomizeState);
 resetButton.addEventListener("click", resetState);
-visual.addEventListener("click", (event) => selectRenderedItem(event.target));
+visual.addEventListener("click", (event) => {
+    if (STRUCTURES[currentKey].kind === "dsu" && dsuHandleClick(event)) return;
+    selectRenderedItem(event.target);
+});
+visual.addEventListener("change", (event) => {
+    if (event.target.matches(".dsu-preset")) dsuLoadPreset(event.target.value);
+});
 updateSelectedButton.addEventListener("click", updateSelected);
 clearSelectedButton.addEventListener("click", () => {
     selectedRef = null;
     render();
 });
 
-resetState();
+/* ---- URL setup and the recorder API (see the comment at the top of this file) ---- */
+
+const STRUCTURE_ALIASES = {
+    dsu: "disjointSet",
+    unionfind: "disjointSet",
+    disjointset: "disjointSet",
+    disjointsetunion: "disjointSet",
+    linkedlist: "linkedList",
+    list: "linkedList",
+    hashtable: "hashTable",
+    hash: "hashTable",
+    binarysearchtree: "bst"
+};
+
+function resolveStructureKey(raw) {
+    const wanted = String(raw || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!wanted) return null;
+    if (STRUCTURE_ALIASES[wanted]) return STRUCTURE_ALIASES[wanted];
+    return Object.keys(STRUCTURES).find((key) => key.toLowerCase() === wanted || STRUCTURES[key].name.toLowerCase().replace(/[^a-z]/g, "") === wanted) || null;
+}
+
+function setAnimationSpeed(raw) {
+    const named = {
+        slow: "850",
+        normal: "500",
+        fast: "260"
+    };
+    const value = named[String(raw).toLowerCase()] || (Number(raw) > 0 ? String(Math.round(Number(raw))) : null);
+    if (!value) return;
+    if (!Array.from(animationSpeed.options).some((option) => option.value === value)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = `${value} ms`;
+        animationSpeed.appendChild(option);
+    }
+    animationSpeed.value = value;
+}
+
+const OPERATION_ALIASES = {
+    union: "add",
+    find: "search",
+    makeset: "remove",
+    connected: "special",
+    add: "add",
+    search: "search",
+    remove: "remove",
+    special: "special"
+};
+
+function applyUrlSetup() {
+    const params = new URLSearchParams(window.location.search);
+    const key = resolveStructureKey(params.get("structure") || params.get("ds"));
+    if (key) {
+        currentKey = key;
+        structureSelect.value = key;
+    }
+    if (params.has("speed")) setAnimationSpeed(params.get("speed"));
+    const presetName = (params.get("preset") || "").toLowerCase();
+    if (STRUCTURES[currentKey].kind === "dsu" && DSU_PRESETS[presetName]) dsuPresetKey = presetName;
+    resetState();
+    if (STRUCTURES[currentKey].kind === "dsu" && presetName === "random") randomizeState();
+    const operation = OPERATION_ALIASES[(params.get("op") || "").toLowerCase().replace(/[^a-z]/g, "")];
+    if (operation) setOperation(operation);
+    if (params.has("a")) valueInput.value = params.get("a");
+    if (params.has("b")) secondaryInput.value = params.get("b");
+    if (operation || params.has("a") || params.has("b")) updateCommandUI();
+    if (STRUCTURES[currentKey].kind !== "dsu") return;
+    const run = params.get("run");
+    if (run) dsuRunInstant(run === "all" ? Infinity : Math.max(0, Number(run) || 0));
+    const steps = Math.max(0, Number(params.get("step")) || 0);
+    for (let k = 0; k < steps; k += 1) {
+        if (!dsuStep()) break;
+    }
+    const play = (params.get("play") || "").toLowerCase();
+    if (play === "item" || play === "next") dsuPlay(true);
+    else if (play === "all") dsuPlay(false);
+    else if (Number(play) > 0) dsuPlay(false, Number(play));
+}
+
+// For recorders and tests. Every call returns the snapshot afterwards.
+window.DisjointSetLab = {
+    load(preset = "redundant") {
+        dsuLoadPreset(preset);
+        return dsuSnapshot();
+    },
+    step() {
+        if (STRUCTURES[currentKey].kind !== "dsu") return null;
+        dsuStopTimer();
+        dsuStep();
+        dsuSync();
+        return dsuSnapshot();
+    },
+    next() {
+        if (STRUCTURES[currentKey].kind === "dsu") dsuPlay(true);
+        return dsuSnapshot();
+    },
+    play(items = Infinity) {
+        if (STRUCTURES[currentKey].kind === "dsu") dsuPlay(false, items);
+        return dsuSnapshot();
+    },
+    pause() {
+        dsuStopTimer();
+        return dsuSnapshot();
+    },
+    runItems(count = Infinity) {
+        if (STRUCTURES[currentKey].kind === "dsu") dsuRunInstant(count);
+        return dsuSnapshot();
+    },
+    snapshot: () => dsuSnapshot()
+};
+
+applyUrlSetup();

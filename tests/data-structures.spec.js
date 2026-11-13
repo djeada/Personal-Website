@@ -154,13 +154,13 @@ test("prefix search returns the completions it found", async ({ page }) => {
 test("every structure draws inside the stage without clipping the page", async ({ page }) => {
   await open(page);
   const keys = await page.evaluate(() => Array.from(document.querySelectorAll("#structure-select option")).map((o) => o.value));
-  expect(keys.length).toBe(12);
+  expect(keys.length).toBe(13);
 
   for (const key of keys) {
     await page.selectOption("#structure-select", key);
     const layout = await page.evaluate(() => {
       const stage = document.getElementById("visual-stage");
-      const nodes = Array.from(document.querySelectorAll("#structure-visual .selectable"));
+      const nodes = Array.from(document.querySelectorAll("#structure-visual .selectable, #structure-visual .dsu-node"));
       const box = stage.getBoundingClientRect();
       return {
         nodes: nodes.length,
@@ -179,10 +179,10 @@ test("every structure draws inside the stage without clipping the page", async (
 
 test("absolute-positioned drawings do not overlap each other", async ({ page }) => {
   await open(page);
-  for (const key of ["bst", "heap", "trie", "graph"]) {
+  for (const key of ["bst", "heap", "trie", "graph", "disjointSet"]) {
     await page.selectOption("#structure-select", key);
     const overlaps = await page.evaluate(() => {
-      const boxes = Array.from(document.querySelectorAll("#structure-visual .selectable")).map((n) => n.getBoundingClientRect());
+      const boxes = Array.from(document.querySelectorAll("#structure-visual .selectable, #structure-visual .dsu-node")).map((n) => n.getBoundingClientRect());
       let hits = 0;
       for (let i = 0; i < boxes.length; i += 1) {
         for (let j = i + 1; j < boxes.length; j += 1) {
@@ -241,4 +241,204 @@ test("a failed search does not end on a success-coloured node", async ({ page })
   }));
   expect(found.hit).toBe(1);
   expect(found.miss).toBe(0);
+});
+
+test.describe("disjoint set (Union-Find)", () => {
+  async function openDsu(page, query) {
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route(/google|googlesyndication/, (route) => route.abort());
+    await page.goto(`${tool}?structure=dsu&speed=60&${query}`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.DisjointSetLab && document.querySelector(".dsu-view"));
+    return errors;
+  }
+
+  const snapshot = (page) => page.evaluate(() => window.DisjointSetLab.snapshot());
+  const step = (page) => page.evaluate(() => window.DisjointSetLab.step());
+  const row = (page, name) => page.$$eval(`.dsu-array [data-row="${name}"]`, (cells) => cells.map((cell) => cell.textContent.trim()));
+  const view = (page) => page.locator(".dsu-view");
+
+  async function nextItem(page, cursor) {
+    await page.click('[data-dsu="next"]');
+    await expect(view(page)).toHaveAttribute("data-cursor", String(cursor));
+    await expect(view(page)).not.toHaveAttribute("data-state", "running");
+  }
+
+  test("Redundant Connection: components 5, 4, 3, 2, the parent array, and 1-4 as the answer", async ({ page }) => {
+    const errors = await openDsu(page, "preset=redundant");
+    await expect(view(page)).toHaveAttribute("data-state", "idle");
+    await expect(view(page)).toHaveAttribute("data-components", "5");
+    expect(await row(page, "parent")).toEqual(["1", "2", "3", "4", "5"]);
+    await expect(page.locator(".dsu-queue li")).toHaveText([/^1-2/, /^2-3/, /^3-4/, /^1-4/, /^1-5/]);
+
+    for (const [cursor, components] of [[1, "4"], [2, "3"], [3, "2"]]) {
+      await nextItem(page, cursor);
+      await expect(view(page)).toHaveAttribute("data-components", components);
+      await expect(page.locator("#dsu-components")).toHaveText(components);
+    }
+    // Union by size with equal sizes keeps a's root, and 1's group is the larger one after that.
+    expect(await row(page, "parent")).toEqual(["1", "1", "1", "1", "5"]);
+    expect(await row(page, "size")).toEqual(["4", "1", "1", "1", "1"]);
+    await expect(page.locator(".dsu-queue li.is-merged")).toHaveCount(3);
+
+    await nextItem(page, 4);
+    await expect(view(page)).toHaveAttribute("data-components", "2");
+    await expect(view(page)).toHaveAttribute("data-answer", "1-4");
+    await expect(view(page)).toHaveAttribute("data-frame", "redundant");
+    await expect(page.locator(".dsu-queue li.is-answer")).toHaveText(/1-4\s*answer/i);
+    await expect(page.locator('.dsu-wire.is-redundant.is-answer[data-edge="1-4"]')).toHaveCount(1);
+    await expect(page.locator(".dsu-edge-label.is-answer")).toHaveText(/answer/i);
+    await expect(page.locator("#result-value")).toHaveText("False");
+    expect(await row(page, "parent")).toEqual(["1", "1", "1", "1", "5"]);
+
+    await nextItem(page, 5);
+    await expect(view(page)).toHaveAttribute("data-state", "done");
+    await expect(view(page)).toHaveAttribute("data-components", "1");
+    await expect(view(page)).toHaveAttribute("data-answer", "1-4");
+    expect(await row(page, "parent")).toEqual(["1", "1", "1", "1", "1"]);
+    await expect(page.locator('[data-dsu="next"]')).toBeDisabled();
+    expect(errors).toEqual([]);
+  });
+
+  test("on 1-4 both finds reach root 1 before union returns False", async ({ page }) => {
+    await openDsu(page, "preset=redundant&run=3");
+    const frames = [];
+    for (let k = 0; k < 4; k++) frames.push((await step(page)).frame);
+    expect(frames.map((frame) => frame.type)).toEqual(["find-root", "find-walk", "find-root", "redundant"]);
+    expect(frames.map((frame) => frame.op)).toEqual(Array(4).fill("union(1, 4)"));
+    expect(frames[0].root).toBe("1");
+    expect(frames[1].path).toEqual(["4"]);
+    expect(frames[2].path).toEqual(["4", "1"]);
+    expect(frames[2].root).toBe("1");
+    expect(frames[3].redundant).toEqual(["1", "4"]);
+    const done = await snapshot(page);
+    expect(done.answer).toBe("1-4");
+    expect(done.queue.map((item) => item.status)).toEqual(["merged", "merged", "merged", "answer", "pending"]);
+    expect(done.components).toBe(2);
+  });
+
+  test("find(5) on the tall tree walks to the root, then path compression re-points the whole path", async ({ page }) => {
+    await openDsu(page, "preset=tall");
+    expect((await snapshot(page)).parent).toEqual(["1", "1", "2", "3", "4", "6", "6"]);
+    const frames = [];
+    for (let k = 0; k < 9; k++) frames.push(await step(page));
+    expect(frames.map((s) => s.frame.type)).toEqual([
+      "find-walk", "find-walk", "find-walk", "find-walk", "find-root",
+      "compress", "compress", "compress", "compressed",
+    ]);
+    expect(frames[4].frame.path).toEqual(["5", "4", "3", "2", "1"]);
+    // The recursive find unwinds from the node nearest the root: 3, then 4, then 5 (2 already points at 1).
+    expect(frames.slice(5, 8).map((s) => s.frame.repointed)).toEqual([["3"], ["3", "4"], ["3", "4", "5"]]);
+    expect(frames[5].parent).toEqual(["1", "1", "1", "3", "4", "6", "6"]);
+    expect(frames[6].parent).toEqual(["1", "1", "1", "1", "4", "6", "6"]);
+    expect(frames[7].parent).toEqual(["1", "1", "1", "1", "1", "6", "6"]);
+    expect(frames[8].frame.caption).toBe("Path compressed: 3, 4 and 5 now point straight at 1");
+    expect(await row(page, "parent")).toEqual(["1", "1", "1", "1", "1", "6", "6"]);
+    await expect(page.locator(".dsu-queue li").first()).toHaveText(/find\(5\)\s*root 1/i);
+
+    // The same find through the page's own controls.
+    await openDsu(page, "preset=tall");
+    await page.click('[data-operation="search"]');
+    await page.fill("#value-input", "5");
+    await page.click("#execute-operation");
+    await expect(page.locator("#animation-status")).toHaveText("Find complete");
+    await expect(page.locator("#result-title")).toHaveText("find(5) = 1");
+    await expect(page.locator("#result-detail")).toHaveText("Path compression re-pointed 3, 4 and 5 straight at 1.");
+    expect(await row(page, "parent")).toEqual(["1", "1", "1", "1", "1", "6", "6"]);
+  });
+
+  test("a compression frame draws the new pointer and the old one it replaces", async ({ page }) => {
+    await openDsu(page, "preset=tall&step=7");
+    await expect(view(page)).toHaveAttribute("data-frame", "compress");
+    await expect(page.locator('.dsu-wire.is-repointed.is-fresh[data-edge="4-1"]')).toHaveCount(1);
+    await expect(page.locator('.dsu-wire.is-repointed[data-edge="3-1"]')).toHaveCount(1);
+    await expect(page.locator(".dsu-wire.is-ghost")).toHaveCount(1);
+    await expect(page.locator('.dsu-array [data-row="parent"].is-written')).toHaveText(["1"]);
+  });
+
+  test("union by size keeps the larger root, whichever argument it came from", async ({ page }) => {
+    await openDsu(page, "preset=tall&run=1");
+    for (let k = 0; k < 4; k++) await step(page);
+    const compare = await step(page);
+    expect(compare.frame.type).toBe("compare");
+    expect(compare.frame.op).toBe("union(7, 5)");
+    // ra, rb = find(7), find(5) = 6, 1; size[6] = 2 < size[1] = 5, so they swap.
+    expect(compare.frame.compare).toEqual(["1", "6"]);
+    expect(compare.frame.caption).toContain("swap");
+    await expect(page.locator(".dsu-size.is-hot")).toHaveText([/size 5/, /size 2/]);
+    const link = await step(page);
+    expect(link.frame.type).toBe("link");
+    expect(link.frame.link).toEqual(["6", "1"]);
+    expect(link.parent).toEqual(["1", "1", "1", "1", "1", "1", "6"]);
+    expect(link.size[0]).toBe(7);
+    expect(link.roots).toEqual(["1"]);
+    expect(link.components).toBe(1);
+    expect(link.state).toBe("done");
+
+    // Typed into the controls on five singletons: union(1, 2) ties, so 1 stays the root;
+    // union(3, 1) puts the single 3 under 1, although 3 is the first argument.
+    await openDsu(page, "preset=singletons");
+    for (const [a, b] of [["1", "2"], ["3", "1"]]) {
+      await page.click('[data-operation="add"]');
+      await page.fill("#value-input", a);
+      await page.fill("#secondary-input", b);
+      await page.click("#execute-operation");
+      await expect(view(page)).toHaveAttribute("data-state", "done");
+    }
+    const after = await snapshot(page);
+    expect(after.parent).toEqual(["1", "1", "1", "4", "5"]);
+    expect(after.size[0]).toBe(3);
+    expect(after.components).toBe(3);
+    await expect(page.locator("#result-title")).toHaveText("union(3, 1): 3 now hangs under 1");
+
+    // A union inside one group returns False and leaves the counter alone.
+    await page.fill("#value-input", "2");
+    await page.fill("#secondary-input", "3");
+    await page.click("#execute-operation");
+    await expect(page.locator("#result-value")).toHaveText("False");
+    expect((await snapshot(page)).components).toBe(3);
+  });
+
+  test("connected, make set and input checks", async ({ page }) => {
+    await openDsu(page, "preset=redundant&run=3");
+    await page.click('[data-operation="special"]');
+    await page.fill("#value-input", "2");
+    await page.fill("#secondary-input", "4");
+    await page.click("#execute-operation");
+    await expect(page.locator("#result-value")).toHaveText("True");
+    await page.fill("#secondary-input", "5");
+    await page.click("#execute-operation");
+    await expect(page.locator("#result-value")).toHaveText("False");
+
+    await page.click('[data-operation="remove"]');
+    await page.fill("#value-input", "");
+    await page.click("#execute-operation");
+    await expect(view(page)).toHaveAttribute("data-components", "3");
+    expect((await snapshot(page)).elements).toEqual(["1", "2", "3", "4", "5", "6"]);
+
+    await page.click('[data-operation="add"]');
+    await page.fill("#value-input", "9");
+    await page.fill("#secondary-input", "1");
+    await page.click("#execute-operation");
+    await expect(page.locator("#result-banner")).toHaveClass(/is-failure/);
+    await expect(page.locator("#result-title")).toHaveText("9 is not an element.");
+  });
+
+  test("the URL reproduces the filmed frames", async ({ page }) => {
+    const errors = await openDsu(page, "preset=redundant&run=3&step=4");
+    await expect(view(page)).toHaveAttribute("data-frame", "redundant");
+    await expect(view(page)).toHaveAttribute("data-state", "paused");
+    await expect(page.locator(".dsu-caption")).toHaveText(/find\(1\) = find\(4\) = 1: already connected, union returns False/);
+
+    await openDsu(page, "preset=redundant&play=3");
+    await expect(view(page)).toHaveAttribute("data-cursor", "3");
+    await expect(view(page)).toHaveAttribute("data-state", "paused");
+    await expect(view(page)).toHaveAttribute("data-components", "2");
+
+    await openDsu(page, "preset=redundant&run=all");
+    await expect(view(page)).toHaveAttribute("data-state", "done");
+    await expect(page.locator("#structure-select")).toHaveValue("disjointSet");
+    await expect(page.locator("#animation-speed")).toHaveValue("60");
+    expect(errors).toEqual([]);
+  });
 });

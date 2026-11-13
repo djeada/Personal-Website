@@ -572,6 +572,17 @@ html body.tool-page.data-structures-page main#main-content #execute-operation.ex
     border-color: var(--g-verdigris);
 }
 
+.result-banner.is-info {
+    border-color: var(--g-gold);
+    background: color-mix(in srgb, var(--g-gold) 8%, var(--g-panel));
+}
+
+.result-banner.is-info .result-icon,
+.result-banner.is-info #result-state {
+    color: var(--g-gold);
+    border-color: var(--g-gold);
+}
+
 .result-banner.is-failure {
     border-color: var(--g-rose);
     background: color-mix(in srgb, var(--g-rose) 8%, var(--g-panel));
@@ -641,7 +652,7 @@ html body.tool-page.data-structures-page main#main-content #execute-operation.ex
 }
 
 .visual-stage.is-playing .selectable {
-    opacity: .28;
+    opacity: .55;
     filter: saturate(.45);
 }
 
@@ -1333,8 +1344,8 @@ body.tool-page.data-structures-page main#main-content #visual-stage button.selec
 .trace-list li {
     margin: 0;
     color: var(--ds-muted);
-    font-size: .7rem;
-    line-height: 1.35;
+    font-size: .76rem;
+    line-height: 1.4;
 }
 
 .plan-list {
@@ -1586,5 +1597,781 @@ body.tool-page.data-structures-page main#main-content #visual-stage button.selec
     .ds-tool *::after {
         animation-duration: .01ms !important;
         transition-duration: .01ms !important;
+    }
+}
+/* ---- Graph traversal choice, cycle edge, adjacency list model ---- */
+
+.command-inputs label[hidden] {
+    display: none;
+}
+
+.link-layer .graph-edge.is-cycle-edge {
+    stroke: var(--g-rose);
+    stroke-dasharray: none;
+    stroke-width: 3.5;
+}
+
+#model-view.is-adjacency {
+    display: grid;
+    gap: 3px;
+    max-height: none;
+    font-size: .8rem;
+    line-height: 1.45;
+    white-space: normal;
+}
+
+#model-view .model-heading {
+    margin-top: 6px;
+    font-family: var(--g-font-sans);
+    font-size: .64rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--g-ink-3);
+}
+
+#model-view .model-heading:first-child {
+    margin-top: 0;
+}
+
+#model-view .adj-row {
+    display: grid;
+    grid-template-columns: 2.2em minmax(0, 1fr);
+    align-items: baseline;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--g-rule);
+    color: var(--g-ink-2);
+}
+
+#model-view .adj-row b {
+    font-weight: 600;
+    color: var(--g-ink);
+}
+
+#model-view i {
+    font-style: normal;
+    color: var(--g-ink-3);
+}
+
+#model-view .adj-edges {
+    color: var(--g-ink-2);
+    word-spacing: .2em;
+}
+
+.trace-arrow {
+    white-space: nowrap;
+}
+
+/* ---- Graph drawing: solid edges, readable labels, quiet degree badges ---- */
+
+.link-layer .graph-edge {
+    stroke: var(--g-ink-3);
+    stroke-dasharray: none;
+    stroke-width: 2;
+    animation-name: graph-link-draw;
+}
+
+.link-layer .graph-edge.is-active-edge {
+    stroke: var(--g-gold);
+    stroke-width: 3;
+}
+
+@keyframes graph-link-draw {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: .9;
+    }
+}
+
+.graph-node span:not(.type-badge) {
+    font-size: clamp(.9rem, calc(var(--node-w, 62px) * .32), 1.4rem) !important;
+    font-weight: 600 !important;
+}
+
+.graph-node .degree-badge {
+    right: -6px;
+    bottom: -6px;
+    min-width: 20px;
+    border: 1px solid var(--g-rule-strong);
+    background: var(--g-panel);
+    color: var(--g-ink-3);
+    line-height: 18px;
+}
+
+.graph-node .visit-badge {
+    position: absolute;
+    left: -8px;
+    top: -8px;
+    min-width: 22px;
+    padding: 0 4px;
+    border: 1px solid var(--g-gold);
+    background: var(--g-panel);
+    color: var(--g-gold);
+    font-family: var(--g-font-mono);
+    font-size: .68rem;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.graph-node.animation-focus .visit-badge,
+.graph-node.animation-done .visit-badge,
+.graph-node.animation-result .visit-badge,
+.graph-node.animation-miss .visit-badge {
+    opacity: 1;
+}
+
+.graph-node.animation-focus .visit-badge {
+    background: var(--g-gold);
+    color: var(--g-on-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .graph-node .visit-badge {
+        transition: none;
+    }
+}
+
+/* Degree badges stay out of the picture during traversals; hover or select a vertex
+   to read its degree (it is also in the vertex tooltip). */
+.graph-node .degree-badge {
+    display: none;
+}
+
+.graph-node:hover .degree-badge,
+.graph-node:focus-visible .degree-badge,
+.graph-node.is-selected .degree-badge {
+    display: block;
+}
+
+/* ---- Disjoint Set (Union-Find): forest, parent array, queue, counter ---- */
+
+.dsu-view {
+    --dsu-wire: var(--g-ink-3);
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    font-family: var(--g-font-sans);
+    color: var(--g-ink);
+}
+
+.dsu-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.dsu-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dsu-stat {
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    min-width: 128px;
+    padding: 6px 14px 7px;
+    border: 1px solid var(--g-rule);
+    background: var(--g-panel);
+}
+
+.dsu-stat span {
+    color: var(--g-ink-3);
+    font-family: var(--g-font-mono);
+    font-size: .62rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.dsu-stat strong {
+    font-family: var(--g-font-mono);
+    font-size: 1.85rem;
+    font-weight: 600;
+    line-height: 1.05;
+    transition: color 160ms ease;
+}
+
+.dsu-stat.is-hot {
+    border-color: var(--g-accent);
+}
+
+.dsu-stat.is-hot strong {
+    color: var(--g-accent);
+}
+
+.dsu-stat.is-answer {
+    border-color: var(--g-rose);
+    background: color-mix(in srgb, var(--g-rose) 8%, var(--g-panel));
+}
+
+.dsu-stat.is-answer span,
+.dsu-stat.is-answer strong {
+    color: var(--g-rose);
+}
+
+.dsu-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.dsu-preset-field {
+    display: grid;
+    gap: 3px;
+}
+
+.dsu-preset-field span {
+    color: var(--g-ink-3);
+    font-family: var(--g-font-mono);
+    font-size: .6rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage .dsu-preset {
+    min-height: 34px;
+    padding: 4px 8px;
+    border: 1px solid var(--g-rule-strong);
+    border-radius: 0;
+    background: var(--g-panel);
+    color: var(--g-ink);
+    font-family: var(--g-font-sans);
+    font-size: .8rem;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-button {
+    min-height: 34px !important;
+    padding: 6px 13px !important;
+    font-size: .8rem !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-button.is-primary {
+    border-color: var(--g-accent) !important;
+    background: var(--g-accent) !important;
+    color: var(--g-on-accent) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-button.is-primary:hover {
+    border-color: var(--g-ink) !important;
+    background: var(--g-ink) !important;
+    color: var(--g-bg) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-button:disabled {
+    cursor: default;
+    opacity: .4;
+}
+
+.dsu-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    min-height: 2.9em;
+    margin: 0;
+    padding: 9px 14px;
+    border-left: 2px solid var(--g-accent);
+    background: var(--g-panel-2);
+    color: var(--g-ink);
+    font-size: .98rem;
+    line-height: 1.4;
+}
+
+.dsu-caption code {
+    color: var(--g-accent);
+    font-family: var(--g-font-mono);
+    font-size: .9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dsu-caption.is-answer {
+    border-left-color: var(--g-rose);
+}
+
+.dsu-caption.is-answer code {
+    color: var(--g-rose);
+}
+
+.dsu-body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+}
+
+.dsu-forest {
+    position: relative;
+    flex: none;
+}
+
+.dsu-wires {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.dsu-wire {
+    color: var(--dsu-wire);
+}
+
+.dsu-wire line,
+.dsu-wire .dsu-line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.dsu-wire .dsu-arrow {
+    fill: currentColor;
+    stroke: none;
+}
+
+.dsu-wire.is-walk {
+    color: var(--g-accent);
+}
+
+.dsu-wire.is-walk line {
+    stroke-width: 3.5;
+}
+
+.dsu-wire.is-link {
+    color: var(--g-accent);
+}
+
+.dsu-wire.is-link line {
+    stroke-width: 4;
+}
+
+.dsu-wire.is-repointed {
+    color: var(--g-verdigris);
+}
+
+.dsu-wire.is-repointed line,
+.dsu-wire.is-repointed .dsu-line {
+    stroke-width: 2.5;
+}
+
+.dsu-wire.is-repointed.is-fresh .dsu-line {
+    stroke-width: 4;
+}
+
+.dsu-wire.is-ghost {
+    color: var(--g-rule-strong);
+}
+
+.dsu-wire.is-ghost line {
+    stroke-dasharray: 5 5;
+}
+
+.dsu-wire.is-redundant .dsu-line {
+    stroke-dasharray: 8 6;
+    stroke-width: 3;
+}
+
+.dsu-wire.is-redundant.is-answer {
+    color: var(--g-rose);
+}
+
+.dsu-wire.is-redundant.is-answer.is-fresh .dsu-line {
+    stroke-width: 4;
+}
+
+.dsu-wire.is-redundant.is-cycle {
+    color: var(--g-ember);
+}
+
+.dsu-wire.is-query .dsu-line {
+    stroke-dasharray: 3 6;
+    stroke-width: 2.5;
+}
+
+.dsu-wire.is-query.is-yes {
+    color: var(--g-verdigris);
+}
+
+.dsu-wire.is-query.is-no {
+    color: var(--g-ink-3);
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--dsu-node);
+    height: var(--dsu-node);
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 1.5px solid var(--g-rule-strong) !important;
+    border-radius: 50% !important;
+    background: var(--g-panel) !important;
+    color: var(--g-ink) !important;
+    font-family: var(--g-font-mono) !important;
+    font-size: clamp(.85rem, calc(var(--dsu-node) * .36), 1.3rem) !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-root {
+    border: 2px solid var(--g-ink-2) !important;
+    outline: 1px solid var(--g-rule-strong);
+    outline-offset: 3px;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-path,
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-moved {
+    border: 2px solid var(--g-accent) !important;
+    background: color-mix(in srgb, var(--g-accent) 14%, var(--g-panel)) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-current {
+    border: 2px solid var(--g-accent) !important;
+    background: var(--g-accent) !important;
+    color: var(--g-on-accent) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-found {
+    border: 2.5px solid var(--g-verdigris) !important;
+    background: color-mix(in srgb, var(--g-verdigris) 18%, var(--g-panel)) !important;
+    outline-color: var(--g-verdigris);
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-current.is-root {
+    outline-color: var(--g-accent);
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-repointing {
+    border: 2.5px solid var(--g-verdigris) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage .dsu-view[data-frame="redundant"] button.dsu-node.is-endpoint {
+    border: 2.5px solid var(--g-rose) !important;
+    background: color-mix(in srgb, var(--g-rose) 12%, var(--g-panel)) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node:hover {
+    border-color: var(--g-accent) !important;
+}
+
+body.tool-page.data-structures-page main#main-content #visual-stage button.dsu-node.is-selected {
+    outline: 1px dashed var(--g-accent);
+    outline-offset: 5px;
+}
+
+.dsu-size,
+.dsu-tag,
+.dsu-edge-label {
+    position: absolute;
+    z-index: 3;
+    font-family: var(--g-font-mono);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.dsu-size {
+    transform: translate(-50%, -100%);
+    color: var(--g-ink-3);
+    font-size: .72rem;
+    font-weight: 500;
+}
+
+.dsu-size.is-hot {
+    color: var(--g-accent);
+    font-weight: 600;
+}
+
+.dsu-tag {
+    margin-left: 6px;
+    padding: 0 5px;
+    border: 1px solid var(--g-verdigris);
+    background: var(--g-panel);
+    color: var(--g-verdigris);
+    font-size: .7rem;
+    font-weight: 600;
+}
+
+.dsu-edge-label {
+    transform: translate(-50%, -50%);
+    padding: 2px 7px;
+    border: 1px solid currentColor;
+    background: var(--g-panel);
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.dsu-edge-label.is-answer {
+    color: var(--g-rose);
+}
+
+.dsu-edge-label.is-cycle {
+    color: var(--g-ember);
+}
+
+.dsu-edge-label.is-yes {
+    color: var(--g-verdigris);
+}
+
+.dsu-edge-label.is-no {
+    color: var(--g-ink-3);
+}
+
+.dsu-queue {
+    flex: none;
+    width: 188px;
+}
+
+.dsu-queue h4 {
+    margin: 0 0 8px;
+    color: var(--g-ink-3);
+    font-family: var(--g-font-mono);
+    font-size: .64rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.dsu-queue ol {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dsu-queue li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--g-rule);
+    border-left-width: 3px;
+    background: var(--g-panel);
+}
+
+.dsu-queue code {
+    color: var(--g-ink);
+    font-family: var(--g-font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.dsu-queue em {
+    font-family: var(--g-font-mono);
+    font-size: .64rem;
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.dsu-queue li.is-pending code {
+    color: var(--g-ink-3);
+    font-weight: 500;
+}
+
+.dsu-queue li.is-current {
+    border-color: var(--g-accent);
+}
+
+.dsu-queue li.is-current code,
+.dsu-queue li.is-current em {
+    color: var(--g-accent);
+}
+
+.dsu-queue li.is-merged {
+    border-left-color: var(--g-verdigris);
+}
+
+.dsu-queue li.is-merged em {
+    color: var(--g-verdigris);
+}
+
+.dsu-queue li.is-done em {
+    color: var(--g-ink-2);
+}
+
+.dsu-queue li.is-answer {
+    border-color: var(--g-rose);
+    background: color-mix(in srgb, var(--g-rose) 10%, var(--g-panel));
+}
+
+.dsu-queue li.is-answer code,
+.dsu-queue li.is-answer em {
+    color: var(--g-rose);
+}
+
+.dsu-queue li.is-cycle {
+    border-left-color: var(--g-ember);
+}
+
+.dsu-queue li.is-cycle em {
+    color: var(--g-ember);
+}
+
+.dsu-array {
+    display: grid;
+    grid-template-columns: 6.5em repeat(var(--dsu-cols), minmax(2.4em, 3.4em));
+    justify-content: center;
+    gap: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--g-rule);
+    overflow-x: auto;
+}
+
+.dsu-row-head {
+    align-self: center;
+    padding-right: 8px;
+    color: var(--g-ink-3);
+    font-family: var(--g-font-mono);
+    font-size: .74rem;
+    text-align: right;
+}
+
+.dsu-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.3em;
+    border: 1px solid var(--g-rule-strong);
+    background: var(--g-panel);
+    color: var(--g-ink);
+    font-family: var(--g-font-mono);
+    font-size: 1.02rem;
+    font-weight: 600;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.dsu-cell.is-index {
+    height: 1.7em;
+    border-color: transparent;
+    background: transparent;
+    color: var(--g-ink-3);
+    font-size: .8rem;
+    font-weight: 500;
+}
+
+.dsu-cell.is-index.is-current {
+    color: var(--g-accent);
+    font-weight: 700;
+}
+
+.dsu-cell.is-stale {
+    color: var(--g-ink-3);
+    font-weight: 400;
+    border-style: dashed;
+}
+
+.dsu-cell.is-read {
+    border: 2px solid var(--g-accent);
+    color: var(--g-accent);
+}
+
+.dsu-cell.is-written {
+    border-color: var(--g-accent);
+    background: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+.dsu-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 16px;
+    color: var(--g-ink-3);
+    font-family: var(--g-font-mono);
+    font-size: .68rem;
+}
+
+.dsu-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dsu-legend i {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid var(--g-rule-strong);
+    border-radius: 50%;
+    background: var(--g-panel);
+}
+
+.dsu-legend .sw-root {
+    border: 2px solid var(--g-ink-2);
+    outline: 1px solid var(--g-rule-strong);
+    outline-offset: 2px;
+}
+
+.dsu-legend .sw-current {
+    border-color: var(--g-accent);
+    background: var(--g-accent);
+}
+
+.dsu-legend .sw-path {
+    border: 2px solid var(--g-accent);
+}
+
+.dsu-legend .sw-found {
+    border: 2px solid var(--g-verdigris);
+    background: color-mix(in srgb, var(--g-verdigris) 18%, var(--g-panel));
+}
+
+.dsu-legend .sw-repointed,
+.dsu-legend .sw-link,
+.dsu-legend .sw-answer {
+    width: 18px;
+    height: 0;
+    border: 0;
+    border-top: 2.5px solid var(--g-verdigris);
+    border-radius: 0;
+    background: none;
+}
+
+.dsu-legend .sw-link {
+    border-top: 3.5px solid var(--g-accent);
+}
+
+.dsu-legend .sw-answer {
+    border-top: 2.5px dashed var(--g-rose);
+}
+
+@media (max-width: 760px) {
+    .dsu-head {
+        padding-top: 30px;
+    }
+
+    .dsu-controls {
+        margin-left: 0;
+    }
+
+    .dsu-body {
+        flex-wrap: wrap;
+    }
+
+    .dsu-queue {
+        width: 100%;
     }
 }
