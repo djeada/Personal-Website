@@ -33,6 +33,7 @@
     <link href="../shared/simulation.css" rel="stylesheet" type="text/css" />
     <link href="../shared/algorithm-visualizer.css" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
+    <link href="network.css" rel="stylesheet" type="text/css" />
     <link href="../shared/grimoire.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -130,6 +131,18 @@
                 <span class="stat-value" id="path-length">0</span>
                 <span class="stat-label">Path Length</span>
             </div>
+            <div class="stat-item" id="path-cost-stat">
+                <span class="stat-value" id="path-cost">0</span>
+                <span class="stat-label">Path Cost</span>
+            </div>
+            <div class="stat-item" hidden id="level-stat">
+                <span class="stat-value" id="level-count">0</span>
+                <span class="stat-label">Level</span>
+            </div>
+            <div class="stat-item" hidden id="islands-stat">
+                <span class="stat-value" id="islands-count">0</span>
+                <span class="stat-label">Islands</span>
+            </div>
             <div class="stat-item">
                 <span class="stat-value" id="elapsed-time">0ms</span>
                 <span class="stat-label">Time</span>
@@ -157,6 +170,9 @@
                             <option value="bfs">Breadth-First Search (BFS)</option>
                             <option value="dijkstra">Dijkstra's Algorithm</option>
                             <option value="astar">A* Algorithm</option>
+                            <option value="multi">Multi-source BFS (levels)</option>
+                            <option value="islands">Count islands</option>
+                            <option value="zeroone">0-1 BFS (deque)</option>
                         </select>
                     </div>
                 </div>
@@ -172,8 +188,21 @@
                             <input id="grid-size" max="50" min="5" type="number" value="20" />
                         </div>
                         <div class="input-group">
-                            <label for="wall-density">Wall Density</label>
-                            <input id="wall-density" max="50" min="0" step="5" type="range" value="30" />
+                            <label class="range-label" for="wall-density"><span>Wall Density</span><output id="wall-density-value" for="wall-density">30%</output></label>
+                            <input id="wall-density" max="70" min="0" step="5" type="range" value="30" />
+                        </div>
+                        <div class="input-group">
+                            <label class="range-label" for="mud-density"><span>Mud Density</span><output id="mud-density-value" for="mud-density">0%</output></label>
+                            <input id="mud-density" max="50" min="0" step="5" type="range" value="0" />
+                            <p class="input-note">Mud costs 5 to step into. Dijkstra and A* pay it; BFS and DFS count every cell as 1.</p>
+                        </div>
+                        <div class="input-group seed-group">
+                            <label for="seed">Seed</label>
+                            <div class="seed-row">
+                                <input id="seed" max="2147483646" min="1" step="1" type="number" value="" />
+                                <button class="action-btn" id="new-maze" title="Generate the next maze (seed + 1)" type="button">New maze</button>
+                            </div>
+                            <p class="input-note">Same seed, size and density give the same maze.</p>
                         </div>
                     </div>
                 </div>
@@ -195,6 +224,25 @@
                             </label>
                             <span class="option-label">Show Grid Lines</span>
                         </div>
+                        <div class="option-item" title="Write each visited cell's distance from the start (grids up to 20 x 20)">
+                            <label class="toggle-switch">
+                                <input id="show-distances" type="checkbox" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="option-label">Show Distances</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Click mode: walls and mud in every path mode, sources in multi-source BFS -->
+                <div class="option-card" hidden id="click-mode-card">
+                    <h3>Click to place</h3>
+                    <div class="card-content">
+                        <div class="segmented" role="radiogroup" aria-label="What a click on the grid places">
+                            <label><input checked name="click-mode" type="radio" value="walls" /><span>Walls</span></label>
+                            <label><input name="click-mode" type="radio" value="mud" /><span>Mud</span></label>
+                            <label><input name="click-mode" type="radio" value="sources" /><span>Sources</span></label>
+                        </div>
+                        <p class="input-note" id="click-mode-note">The start cell is a source until you place your own.</p>
                     </div>
                 </div>
                 <!-- Controls Info -->
@@ -202,10 +250,13 @@
                     <h3>Controls</h3>
                     <div class="card-content">
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.6;">
-                            • Click cells to add/remove walls<br />
+                            • Click cells to add/remove walls, or pick Mud to paint mud<br />
                             • Start (blue-green) is at top-left<br />
                             • End (rose) is at bottom-right<br />
-                            • Use Step for manual control
+                            • Use Step for manual control<br />
+                            • Step level runs one whole BFS level<br />
+                            • Count islands: open cells are land, walls are water<br />
+                            • 0-1 BFS: open cells cost 0, breaking a wall costs 1
                         </p>
                     </div>
                 </div>
@@ -215,10 +266,22 @@
                 <!-- Canvas Container -->
                 <div class="canvas-container">
                     <div class="canvas-header">
-                        <span class="canvas-title">Pathfinding Grid</span>
+                        <span class="canvas-title" id="canvas-title">Pathfinding Grid</span>
+                        <span class="search-status" data-state="idle" id="search-status">Ready</span>
                     </div>
                     <div class="canvas-wrapper">
                         <canvas id="maze-canvas"></canvas>
+                    </div>
+                    <div class="deque-panel" hidden id="deque-panel">
+                        <div class="deque-head">
+                            <span class="deque-title">Deque</span>
+                            <span class="deque-rule"><b>0</b> joins the front, <b>1</b> joins the back</span>
+                        </div>
+                        <div class="deque-row">
+                            <span class="deque-end">Front</span>
+                            <ol aria-label="Deque contents, front first" class="deque-list" id="deque-list"></ol>
+                            <span class="deque-end">Back</span>
+                        </div>
                     </div>
                 </div>
                 <!-- Action Buttons -->
@@ -235,6 +298,7 @@
                         <button class="action-btn" id="step" title="Step through one iteration">
                             Step
                         </button>
+                        <button class="action-btn" hidden id="step-level" title="Run until the current level is finished">Step level</button>
                         <button class="action-btn danger" id="reset" title="Reset the grid">
                             Reset
                         </button>
@@ -246,29 +310,65 @@
                         <h3>Legend</h3>
                     </div>
                     <div class="legend-content">
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar zeroone">
                             <div class="legend-color visual-success"></div>
                             <span class="legend-label">Start</span>
                         </div>
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="multi" hidden>
+                            <div class="legend-color visual-success"></div>
+                            <span class="legend-label">Source (level 0)</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar zeroone">
                             <div class="legend-color visual-danger"></div>
                             <span class="legend-label">End</span>
                         </div>
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar multi">
                             <div class="legend-color visual-wall"></div>
                             <span class="legend-label">Wall</span>
                         </div>
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="zeroone" hidden>
+                            <div class="legend-color visual-wall"></div>
+                            <span class="legend-label">Wall: breaking it costs 1</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar multi" data-legend-mud hidden>
+                            <div class="legend-color visual-mud"></div>
+                            <span class="legend-label">Mud (costs 5)</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="bfs dijkstra astar multi">
                             <div class="legend-color visual-frontier"></div>
-                            <span class="legend-label">Open Set</span>
+                            <span class="legend-label">Frontier (in the queue)</span>
                         </div>
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="zeroone" hidden>
+                            <div class="legend-color visual-frontier"></div>
+                            <span class="legend-label">In the deque</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="dfs">
+                            <div class="legend-color visual-stack"></div>
+                            <span class="legend-label">Stack: path from start</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar multi zeroone">
                             <div class="legend-color visual-visited"></div>
-                            <span class="legend-label">Visited</span>
+                            <span class="legend-label" data-dfs-label="Visited, backtracked">Visited</span>
                         </div>
-                        <div class="legend-item">
+                        <div class="legend-item" data-legend-modes="dfs bfs dijkstra astar zeroone">
                             <div class="legend-color visual-path"></div>
                             <span class="legend-label">Path</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="islands" hidden>
+                            <div class="legend-color visual-water"></div>
+                            <span class="legend-label">Water (wall)</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="islands" hidden>
+                            <div class="legend-color visual-land"></div>
+                            <span class="legend-label">Land, not yet scanned</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="islands" hidden>
+                            <div class="legend-color visual-island"><i></i><i></i><i></i></div>
+                            <span class="legend-label">One colour per island</span>
+                        </div>
+                        <div class="legend-item" data-legend-modes="islands" hidden>
+                            <div class="legend-color visual-scan"></div>
+                            <span class="legend-label">Scan pointer</span>
                         </div>
                     </div>
                 </div>
@@ -283,6 +383,10 @@
                 <li>Click on cells to manually add or remove walls.</li>
                 <li>Click "Start Search" to visualize the pathfinding algorithm.</li>
                 <li>Use "Step" to advance one iteration at a time for detailed analysis.</li>
+                <li>"Step level" runs one whole BFS level (or one island's flood) and stops.</li>
+                <li>The seed fixes the maze: share a link such as <code>?algo=bfs&amp;size=15&amp;density=25&amp;seed=7</code> to reproduce it.</li>
+                <li>Mud Density adds brown mud cells that cost 5 to enter. Compare BFS and Dijkstra on <code>?algo=dijkstra&amp;size=15&amp;density=25&amp;mud=20&amp;seed=82</code>: BFS takes the fewest steps through the mud, Dijkstra the cheapest way round it.</li>
+                <li>0-1 BFS treats open cells as free and walls as costing 1 to break through, and shows its deque under the grid.</li>
                 <li>The stats bar shows real-time metrics during the search.</li>
                 <li>Different colors represent different states (see Legend).</li>
             </ul>
@@ -365,6 +469,44 @@
                         <strong>Applications:</strong> Finding shortest paths in unweighted graphs, web crawling,
                         social networking (degrees of separation), broadcasting in networks, and GPS navigation in uniform cost scenarios.
                     </p>
+                </div>
+                <div class="explanation-card">
+                    <h3>Multi-source BFS (levels)</h3>
+                    <p>
+                        <strong>Strategy:</strong> put <em>every</em> source in the queue at level 0, then process the
+                        queue one level at a time: read the queue length when a level starts, dequeue exactly that many
+                        cells, and push their unvisited neighbours as the next level. Each cell ends up labelled with its
+                        distance to the <em>nearest</em> source.
+                    </p>
+                    <div class="formula-box">
+                        <p><strong>Algorithm:</strong></p>
+                        <p>1. Enqueue all sources, mark them, level = 0</p>
+                        <p>2. While the queue is not empty:</p>
+                        <p>   a. size = queue length</p>
+                        <p>   b. Dequeue size cells, enqueue and mark their unvisited neighbours</p>
+                        <p>   c. If the queue is not empty, level = level + 1</p>
+                    </div>
+                    <p>
+                        <strong>Rotting Oranges:</strong> the rotten oranges are the sources, fresh oranges are open
+                        cells and the final level is the number of minutes needed. Open cells that are never reached
+                        mean the answer is -1. Use <em>Click to place: Sources</em> to add or remove sources.
+                    </p>
+                </div>
+                <div class="explanation-card">
+                    <h3>Counting islands (connected components)</h3>
+                    <p>
+                        <strong>Strategy:</strong> scan the grid row by row. Every time the scan meets land that no
+                        flood has reached yet, that is a new island: count it, then flood it with BFS so all of its land
+                        is marked and the scan will skip it later. The number of floods is the number of components.
+                    </p>
+                    <div class="formula-box">
+                        <p><strong>Algorithm:</strong></p>
+                        <p>1. islands = 0</p>
+                        <p>2. For each cell in row order:</p>
+                        <p>   if it is land and not visited: islands += 1, flood it</p>
+                    </div>
+                    <p><strong>Complexity:</strong> O(rows x cols), because each cell is scanned once and flooded at most once.
+                        A water density around 50-60% gives many islands.</p>
                 </div>
                 <div class="explanation-card">
                     <h3>Dijkstra's Algorithm</h3>
@@ -642,6 +784,7 @@
     </footer>
     <script src="../shared/base.js"></script>
     <script src="app.js"></script>
+    <script src="network.js"></script>
 </body>
 
 </html>

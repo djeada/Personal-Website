@@ -1,0 +1,681 @@
+/* ---- Graphs tool: Network mode (network.js) ---- */
+
+/* Which view shows what. Grid-only parts are everything that is not marked as
+   network or shared, so cards added to the grid later stay grid-only. */
+body.tool-page:not(.graphs-network) .net-card,
+body.tool-page:not(.graphs-network) .net-container,
+body.tool-page:not(.graphs-network) .net-legend,
+body.tool-page:not(.graphs-network) .net-stat,
+body.tool-page:not(.graphs-network) .net-only {
+    display: none !important;
+}
+
+body.tool-page.graphs-network .options-sidebar > .option-card:not(.net-card):not(.mode-card),
+body.tool-page.graphs-network .canvas-area > .canvas-container:not(.net-container),
+body.tool-page.graphs-network .canvas-area > .legend-panel:not(.net-legend),
+body.tool-page.graphs-network .stats-bar > .stat-item:not(.net-stat),
+body.tool-page.graphs-network #step-level {
+    display: none !important;
+}
+
+.net-card [hidden] {
+    display: none !important;
+}
+
+.mode-card .segmented span {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+}
+
+.segmented.segmented-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.segmented.segmented-4 span {
+    padding-inline: 4px;
+}
+
+.net-edit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.net-edit-row .input-group {
+    margin: 0;
+}
+
+.net-edit-row input {
+    min-width: 0;
+    font-family: var(--g-font-mono);
+}
+
+/* ---- Stage: the graph and its data panel, filmed as one block ---- */
+
+.net-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 16px;
+}
+
+.net-canvas-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+#network-canvas {
+    display: block;
+    max-width: 100%;
+    background: var(--g-canvas);
+    border: 1px solid var(--g-rule-strong);
+    touch-action: none;
+    cursor: grab;
+}
+
+#network-canvas[data-tool="node"],
+#network-canvas[data-tool="edge"],
+#network-canvas[data-tool="delete"] {
+    cursor: crosshair;
+}
+
+#network-canvas:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: 2px;
+}
+
+.net-panel {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--g-rule-strong);
+    border-top: 0;
+    background: var(--g-panel);
+}
+
+.net-panel:empty {
+    display: none;
+}
+
+.net-row {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 54px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--g-rule);
+}
+
+.net-row:first-child {
+    border-top: 0;
+}
+
+.net-row.muted .net-cells {
+    opacity: 0.45;
+}
+
+.net-row-label {
+    font-family: var(--g-font-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--g-ink-3);
+}
+
+.net-row-note {
+    font-family: var(--g-font-mono);
+    font-size: 0.72rem;
+    color: var(--g-ink-3);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.net-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.net-empty {
+    font-family: var(--g-font-mono);
+    font-size: 0.9rem;
+    color: var(--g-ink-3);
+}
+
+.net-cell {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 36px;
+    padding: 4px 9px;
+    border: 1px solid var(--g-rule-strong);
+    background: var(--g-canvas);
+    font-family: var(--g-font-mono);
+    color: var(--g-ink);
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.net-cell b {
+    color: inherit; /* beats the site's .dark-mode b */
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.net-cell i {
+    font-style: normal;
+    font-size: 0.66rem;
+    line-height: 1.1;
+    color: var(--g-ink-3);
+}
+
+.net-cell em {
+    font-style: normal;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    color: var(--g-ink-3);
+}
+
+.net-cell.keyed {
+    min-width: 46px;
+}
+
+/* Cell tones */
+.net-cell.pending {
+    color: var(--g-ink-3);
+    border-style: dashed;
+}
+
+.net-cell.muted {
+    color: var(--g-ink-3);
+    border-color: var(--g-rule);
+}
+
+.net-cell.current {
+    background: var(--g-accent);
+    border-color: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+.net-cell.current i,
+.net-cell.current em {
+    color: var(--g-on-accent);
+}
+
+.net-cell.queued,
+.net-cell.new {
+    background: color-mix(in srgb, var(--g-accent) 12%, var(--g-canvas));
+    border: 2px solid var(--g-accent);
+    padding: 3px 8px;
+}
+
+.net-cell.changed {
+    border: 2px solid var(--g-accent);
+    padding: 3px 8px;
+    box-shadow: none;
+}
+
+.net-cell.changed b {
+    color: var(--g-accent);
+}
+
+.net-cell.done {
+    background: color-mix(in srgb, var(--g-moon) 16%, var(--g-canvas));
+    border-color: color-mix(in srgb, var(--g-moon) 60%, var(--g-canvas));
+}
+
+.net-cell.zero {
+    border: 2px solid var(--g-verdigris);
+    padding: 3px 8px;
+}
+
+.net-cell.zero b {
+    color: var(--g-verdigris);
+}
+
+.net-cell.stale {
+    border-style: dashed;
+    color: var(--g-ink-3);
+}
+
+.net-cell.stale b {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--g-rose);
+}
+
+.net-cell.stale em {
+    color: var(--g-rose);
+}
+
+.net-cell.stale.current {
+    background: color-mix(in srgb, var(--g-rose) 14%, var(--g-canvas));
+    border: 2px solid var(--g-rose);
+    color: var(--g-ink);
+}
+
+.net-cell.stale.current em {
+    color: var(--g-rose);
+}
+
+.net-cell.accepted {
+    border: 2px solid var(--g-accent);
+    padding: 3px 8px;
+    background: color-mix(in srgb, var(--g-accent) 12%, var(--g-canvas));
+}
+
+.net-cell.accepted.current {
+    background: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+.net-cell.rejected {
+    border-color: var(--g-rose);
+    border-style: dashed;
+    color: var(--g-rose);
+}
+
+.net-cell.rejected b {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+
+.net-cell.rejected.current {
+    background: color-mix(in srgb, var(--g-rose) 14%, var(--g-canvas));
+    border: 2px solid var(--g-rose);
+}
+
+.net-cell.read {
+    border: 2px solid var(--g-moon);
+    padding: 3px 8px;
+    background: color-mix(in srgb, var(--g-moon) 16%, var(--g-canvas));
+}
+
+.net-cell.frozen {
+    background: var(--g-panel-2);
+}
+
+.net-cell.target {
+    border-color: var(--g-rose);
+}
+
+.net-cell.wrong {
+    background: color-mix(in srgb, var(--g-rose) 16%, var(--g-canvas));
+    border: 2px solid var(--g-rose);
+    padding: 3px 8px;
+}
+
+.net-cell.wrong b {
+    color: var(--g-rose);
+}
+
+.net-cell.wrong::after {
+    content: "wrong";
+    position: absolute;
+    top: -16px;
+    right: -4px;
+    padding: 0 4px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--g-rose);
+    color: var(--g-canvas);
+}
+
+/* Three-color DFS */
+.net-cell.white {
+    background: var(--g-canvas);
+}
+
+.net-cell.gray {
+    background: var(--g-rule-strong);
+    border-color: var(--g-rule-strong);
+    color: var(--g-ink);
+}
+
+.net-cell.black {
+    background: var(--g-ink);
+    border-color: var(--g-ink);
+    color: var(--g-canvas);
+}
+
+.net-cell.gray i,
+.net-cell.black i {
+    color: inherit;
+    opacity: 0.75;
+}
+
+body.dark-mode .net-cell.white {
+    background: var(--g-ink);
+    color: var(--g-bg);
+}
+
+body.dark-mode .net-cell.white i {
+    color: var(--g-bg);
+    opacity: 0.75;
+}
+
+body.dark-mode .net-cell.black {
+    background: var(--g-bg);
+    border-color: var(--g-ink-3);
+    color: var(--g-ink);
+}
+
+/* Two colors (bipartite) and four flower types (greedy) */
+.net-cell.c0,
+.net-cell.g0 {
+    background: var(--g-accent);
+    border-color: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+.net-cell.c1,
+.net-cell.g2 {
+    background: var(--g-ember);
+    border-color: var(--g-ember);
+    color: var(--g-on-accent);
+}
+
+.net-cell.g1 {
+    background: var(--g-verdigris);
+    border-color: var(--g-verdigris);
+    color: var(--g-on-accent);
+}
+
+.net-cell.g3 {
+    background: var(--g-moon);
+    border-color: var(--g-moon);
+    color: var(--g-on-accent);
+}
+
+.net-cell.c0 i, .net-cell.c1 i, .net-cell.g0 i, .net-cell.g1 i, .net-cell.g2 i, .net-cell.g3 i {
+    color: inherit;
+    opacity: 0.8;
+}
+
+.net-cell.c0.changed, .net-cell.c1.changed, .net-cell.g0.changed, .net-cell.g1.changed, .net-cell.g2.changed, .net-cell.g3.changed {
+    outline: 2px solid var(--g-ink);
+    outline-offset: 2px;
+    padding: 4px 9px;
+    border-width: 1px;
+}
+
+.net-cell.c0.changed b, .net-cell.c1.changed b, .net-cell.g0.changed b, .net-cell.g1.changed b, .net-cell.g2.changed b, .net-cell.g3.changed b {
+    color: inherit;
+}
+
+/* Directed edge "a > b" inside a cell: a drawn arrow, not a typed glyph. */
+.net-arrow {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    margin: 0 3px;
+    vertical-align: 1px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M0 4h10V0l4 5-4 5V6H0z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M0 4h10V0l4 5-4 5V6H0z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Badges row */
+.net-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 0;
+    padding-block: 10px;
+}
+
+.net-badge {
+    padding: 4px 10px;
+    border: 1px solid var(--g-rule-strong);
+    font-family: var(--g-font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--g-ink-2);
+}
+
+.net-badge.accent {
+    border-color: var(--g-accent);
+    color: var(--g-accent);
+}
+
+.net-badge.warn {
+    border-color: var(--g-rose);
+    color: var(--g-rose);
+}
+
+/* Floyd-Warshall matrix */
+.net-matrix-row {
+    grid-template-columns: 132px auto;
+    justify-content: start;
+}
+
+.net-matrix {
+    margin: 0;
+    border-collapse: collapse;
+    font-family: var(--g-font-mono);
+}
+
+.net-matrix th,
+.net-matrix td {
+    width: 64px;
+    height: 44px;
+    border: 1px solid var(--g-rule-strong);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.net-matrix th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--g-ink-3);
+    background: var(--g-panel-2);
+}
+
+.net-matrix th.net-corner {
+    font-size: 0.66rem;
+}
+
+.net-matrix th.k {
+    color: var(--g-on-accent);
+    background: var(--g-ember);
+}
+
+.net-matrix td {
+    background: var(--g-canvas);
+    color: var(--g-ink);
+}
+
+.net-matrix td b {
+    color: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.net-matrix td s {
+    display: block;
+    font-size: 0.66rem;
+    line-height: 1;
+    color: var(--g-ink-3);
+}
+
+.net-matrix td.diag {
+    color: var(--g-ink-3);
+}
+
+.net-matrix td.k {
+    background: color-mix(in srgb, var(--g-ember) 12%, var(--g-canvas));
+}
+
+.net-matrix td.changed {
+    background: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+.net-matrix td.changed s {
+    color: var(--g-on-accent);
+    opacity: 0.75;
+}
+
+/* ---- Legend swatches ---- */
+.net-swatch {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--g-ink-3);
+    background: var(--g-canvas);
+    border-radius: 50% !important;
+}
+
+.net-swatch.node-queued { border-color: var(--g-accent); background: color-mix(in srgb, var(--g-accent) 14%, var(--g-canvas)); }
+.net-swatch.node-current { border: 3px double var(--g-ink); }
+.net-swatch.node-done { border-color: var(--g-moon); background: color-mix(in srgb, var(--g-moon) 22%, var(--g-canvas)); }
+.net-swatch.node-rejected { border-color: var(--g-rose); background: color-mix(in srgb, var(--g-rose) 14%, var(--g-canvas)); }
+.net-swatch.node-target { border-color: var(--g-rose); }
+.net-swatch.node-white { background: var(--g-canvas); border-color: var(--g-ink-3); }
+.net-swatch.node-gray { background: var(--g-rule-strong); border-color: var(--g-rule-strong); }
+.net-swatch.node-black { background: var(--g-ink); border-color: var(--g-ink-3); }
+body.dark-mode .net-swatch.node-white { background: var(--g-ink); }
+body.dark-mode .net-swatch.node-black { background: var(--g-bg); }
+.net-swatch.node-k { background: var(--g-ember); border-color: var(--g-ember); }
+.net-swatch.node-c0, .net-swatch.node-g0, .net-swatch.node-t0 { background: var(--g-accent); border-color: var(--g-accent); }
+.net-swatch.node-c1, .net-swatch.node-g2, .net-swatch.node-t1 { background: var(--g-ember); border-color: var(--g-ember); }
+.net-swatch.node-g1 { background: var(--g-verdigris); border-color: var(--g-verdigris); }
+.net-swatch.node-g3 { background: var(--g-moon); border-color: var(--g-moon); }
+
+.net-swatch[class*="edge-"] {
+    width: 28px;
+    height: 0;
+    border: 0;
+    border-top: 4px solid var(--g-accent);
+    border-radius: 0 !important;
+    background: none;
+}
+
+.net-swatch.edge-used { border-top: 2px dashed var(--g-rule-strong); }
+.net-swatch.edge-conflict { border-top-color: var(--g-rose); }
+.net-swatch.edge-rejected { border-top: 2px dashed var(--g-rose); }
+.net-swatch.edge-checked { border-top-color: var(--g-verdigris); }
+.net-swatch.edge-seen { border-top-color: var(--g-ember); }
+.net-swatch.edge-candidate { border-top: 2px dashed var(--g-ink-2); }
+
+.net-swatch.tag {
+    width: 20px;
+    height: 16px;
+    border: 1.5px solid var(--g-ink-2);
+    border-radius: 0 !important;
+}
+
+.net-swatch.outline {
+    width: 28px;
+    height: 16px;
+    border: 0;
+    border-radius: 0 !important;
+    background: color-mix(in srgb, var(--g-rose) 22%, var(--g-canvas));
+}
+
+.net-swatch.cell-changed {
+    border-radius: 0 !important;
+    border: 0;
+    background: var(--g-accent);
+}
+
+.net-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 720px) {
+    .net-stage {
+        padding: 8px;
+    }
+
+    .net-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .net-row-note {
+        text-align: left;
+    }
+
+    .net-matrix th,
+    .net-matrix td {
+        width: 44px;
+        height: 38px;
+    }
+}
+
+/* Floyd-Warshall: graph on the left, a large matrix on the right. */
+.net-stage.split {
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.net-stage.split .net-canvas-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.net-stage.split .net-panel {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    border-top: 1px solid var(--g-rule-strong);
+    border-left: 0;
+}
+
+.net-stage.split .net-matrix-row {
+    grid-template-columns: 1fr;
+    align-content: start;
+    min-height: 0;
+    gap: 10px;
+    padding: 14px 18px 18px;
+}
+
+.net-stage.split .net-matrix th,
+.net-stage.split .net-matrix td {
+    width: 74px;
+    height: 62px;
+}
+
+.net-stage.split .net-matrix td b {
+    font-size: 1.4rem;
+}
+
+.net-stage.split .net-matrix td s {
+    font-size: 0.8rem;
+}
+
+.net-stage.split .net-matrix th {
+    font-size: 1rem;
+}
+
+.net-matrix th.net-corner {
+    white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+    .net-stage.split {
+        flex-direction: column;
+    }
+
+    .net-stage.split .net-panel {
+        border-top: 0;
+        border-left: 1px solid var(--g-rule-strong);
+    }
+}
+
+.net-card .net-clear {
+    width: 100%;
+    margin-top: 10px;
+}
